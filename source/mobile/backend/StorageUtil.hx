@@ -18,11 +18,16 @@ class StorageUtil
 	{
 		var daPath:String = '';
 		#if android
+		#if !MODS_ALLOWED
+		daPath = AndroidVersion.SDK_INT > AndroidVersionCode.R ? AndroidContext.getObbDir() : AndroidContext.getExternalFilesDir();
+		#else
 		if (!FileSystem.exists(rootDir + 'storagetype.txt'))
 			File.saveContent(rootDir + 'storagetype.txt', ClientPrefs.data.storageType);
 		var curStorageType:String = File.getContent(rootDir + 'storagetype.txt');
 		daPath = force ? StorageType.fromStrForce(curStorageType) : StorageType.fromStr(curStorageType);
+		#end
 		daPath = Path.addTrailingSlash(daPath);
+		
 		#elseif ios
 		daPath = LimeSystem.documentsDirectory;
 		#end

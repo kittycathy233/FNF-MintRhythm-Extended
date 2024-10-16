@@ -1567,12 +1567,20 @@ class FunkinLua {
 		}
 
 		try{
-			var isString:Bool = !FileSystem.exists(scriptName);
 			var result:Dynamic = null;
+			#if MODS_ALLOWED
+			var isString:Bool = !FileSystem.exists(scriptName);
 			if(!isString)
 				result = LuaL.dofile(lua, scriptName);
 			else
 				result = LuaL.dostring(lua, scriptName);
+			#else
+			var isString:Bool = !Assets.exists(scriptName);
+			if(!isString)
+				result = LuaL.dostring(lua, Assets.getText(scriptName));
+			else
+				result = LuaL.dostring(lua, scriptName);
+			#end
 
 			var resultStr:String = Lua.tostring(lua, result);
 			if(resultStr != null && result != 0) {
@@ -1798,7 +1806,7 @@ class FunkinLua {
 		Lua_helper.add_callback(lua, name, null); //just so that it gets called
 	}
 
-	#if (MODS_ALLOWED && !flash && sys)
+	#if (!flash && sys)
 	public var runtimeShaders:Map<String, Array<String>> = new Map<String, Array<String>>();
 	#end
 
@@ -1806,7 +1814,7 @@ class FunkinLua {
 	{
 		if(!ClientPrefs.data.shaders) return false;
 
-		#if (MODS_ALLOWED && !flash && sys)
+		#if (!flash && sys)
 		if(runtimeShaders.exists(name))
 		{
 			var shaderData:Array<String> = runtimeShaders.get(name);
@@ -1817,15 +1825,18 @@ class FunkinLua {
 			}
 		}
 
-		var foldersToCheck:Array<String> = [Paths.mods('shaders/')];
+		var foldersToCheck:Array<String> = [#if MODS_ALLOWED Paths.mods('shaders/'), #end Paths.getSharedPath('shaders/')];
+		#if MODS_ALLOWED
 		if(Mods.currentModDirectory != null && Mods.currentModDirectory.length > 0)
 			foldersToCheck.insert(0, Paths.mods(Mods.currentModDirectory + '/shaders/'));
 
 		for(mod in Mods.getGlobalMods())
 			foldersToCheck.insert(0, Paths.mods(mod + '/shaders/'));
+		#end
 
 		for (folder in foldersToCheck)
 		{
+			#if MODS_ALLOWED
 			if(FileSystem.exists(folder))
 			{
 				var frag:String = folder + name + '.frag';
@@ -1852,6 +1863,29 @@ class FunkinLua {
 					return true;
 				}
 			}
+			#else
+			var frag:String = Paths.getAssetWithLibrary(folder + name + '.frag');
+			var vert:String = Paths.getAssetWithLibrary(folder + name + '.vert');
+			var found:Bool = false;
+			if(Assets.exists(frag))
+			{
+				frag = Assets.getText(frag);
+				found = true;
+			}
+			else frag = null;
+			if(Assets.exists(vert))
+			{
+				vert = Assets.getText(vert);
+				found = true;
+			}
+			else vert = null;
+			if(found)
+			{
+				runtimeShaders.set(name, [frag, vert]);
+				//trace('Found shader $name!');
+				return true;
+			}
+			#end
 		}
 		luaTrace('Missing shader $name .frag AND .vert files!', false, false, FlxColor.RED);
 		#else

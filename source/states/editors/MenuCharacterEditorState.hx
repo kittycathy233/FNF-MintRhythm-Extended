@@ -283,7 +283,7 @@ class MenuCharacterEditorState extends MusicBeatState implements PsychUIEventHan
 		_file.removeEventListener(Event.CANCEL, onLoadCancel);
 		_file.removeEventListener(IOErrorEvent.IO_ERROR, onLoadError);
 
-		#if sys
+		#if MODS_ALLOWED
 		var fullPath:String = null;
 		@:privateAccess
 		if(_file.__path != null) fullPath = _file.__path;

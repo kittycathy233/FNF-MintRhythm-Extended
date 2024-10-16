@@ -351,9 +351,10 @@ class LoadingState extends MusicBeatState
 				#if MODS_ALLOWED
 				var moddyFile:String = Paths.modsJson('$folder/preload');
 				if (FileSystem.exists(moddyFile)) json = Json.parse(File.getContent(moddyFile));
-				else json = Json.parse(File.getContent(path));
+				else if(Assets.exists(path)) json = Json.parse(File.getContent(path));
 				#else
-				json = Json.parse(Assets.getText(path));
+				if(Assets.exists(path))
+					json = Json.parse(Assets.getText(path));
 				#end
 
 				if(json != null)
@@ -486,7 +487,7 @@ class LoadingState extends MusicBeatState
 			{
 				for (subfolder in Mods.directoriesWithFile(Paths.getSharedPath(), '$prefix/$nam'))
 				{
-					for (file in FileSystem.readDirectory(subfolder))
+					for (file in Paths.readDirectory(subfolder))
 					{
 						if(file.endsWith(ext))
 						{
@@ -616,9 +617,9 @@ class LoadingState extends MusicBeatState
 		//trace('precaching sound: $file');
 		if(!Paths.currentTrackedSounds.exists(file))
 		{
-			if (#if sys FileSystem.exists(file) || #end OpenFlAssets.exists(file, SOUND))
+			if (#if MODS_ALLOWED FileSystem.exists(file) || #end OpenFlAssets.exists(file, SOUND))
 			{
-				var sound:Sound = #if sys Sound.fromFile(file) #else OpenFlAssets.getSound(file, false) #end;
+				var sound:Sound = #if MODS_ALLOWED Sound.fromFile(file) #else OpenFlAssets.getSound(file, false) #end;
 				mutex.acquire();
 				Paths.currentTrackedSounds.set(file, sound);
 				mutex.release();
@@ -648,9 +649,9 @@ class LoadingState extends MusicBeatState
 			if (!Paths.currentTrackedAssets.exists(requestKey))
 			{
 				var file:String = Paths.getPath(requestKey, IMAGE);
-				if (#if sys FileSystem.exists(file) || #end OpenFlAssets.exists(file, IMAGE))
+				if (#if MODS_ALLOWED FileSystem.exists(file) || #end OpenFlAssets.exists(file, IMAGE))
 				{
-					#if sys
+					#if MODS_ALLOWED
 					var bitmap:BitmapData = BitmapData.fromFile(file);
 					#else
 					var bitmap:BitmapData = OpenFlAssets.getBitmapData(file, false);

@@ -626,8 +626,8 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		tab_group.add(new FlxText(objX, objY - 18, 150, 'Compiled Assets:'));
 
 		var folderList:Array<String> = [''];
-		#if sys
-		for (folder in FileSystem.readDirectory('assets/'))
+		#if MODS_ALLOWED
+		for (folder in Paths.readDirectory('assets/'))
 			if(FileSystem.isDirectory('assets/$folder') && folder != 'shared' && !Mods.ignoreModFolders.contains(folder))
 				folderList.push(folder);
 		#end
@@ -1007,7 +1007,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		var characterList = Mods.mergeAllTextsNamed('data/characterList.txt');
 		var foldersToCheck:Array<String> = Mods.directoriesWithFile(Paths.getSharedPath(), 'characters/');
 		for (folder in foldersToCheck)
-			for (file in FileSystem.readDirectory(folder))
+			for (file in Paths.readDirectory(folder))
 				if(file.toLowerCase().endsWith('.json'))
 				{
 					var charToCheck:String = file.substr(0, file.length - 5);
@@ -1298,7 +1298,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		var stageList:Array<String> = [];
 		var foldersToCheck:Array<String> = Mods.directoriesWithFile(Paths.getSharedPath(), 'stages/');
 		for (folder in foldersToCheck)
-			for (file in FileSystem.readDirectory(folder))
+			for (file in Paths.readDirectory(folder))
 				if(file.toLowerCase().endsWith('.json'))
 				{
 					var stageToCheck:String = file.substr(0, file.length - '.json'.length);
@@ -1704,7 +1704,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		_file.removeEventListener(Event.CANCEL, onLoadCancel);
 		_file.removeEventListener(IOErrorEvent.IO_ERROR, onLoadError);
 
-		#if sys
+		#if MODS_ALLOWED
 		var fullPath:String = null;
 		@:privateAccess
 		if(_file.__path != null) fullPath = _file.__path;

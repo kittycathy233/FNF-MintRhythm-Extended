@@ -239,12 +239,18 @@ class ExtraFunctions
 		});
 		funk.set("directoryFileList", function(folder:String) {
 			var list:Array<String> = [];
-			#if sys
+			#if MODS_ALLOWED
 			if(FileSystem.exists(folder)) {
-				for (folder in FileSystem.readDirectory(folder)) {
+				for (folder in Paths.readDirectory(folder)) {
 					if (!list.contains(folder)) {
 						list.push(folder);
 					}
+				}
+			}
+			#else
+			for (folder in Paths.readDirectory(folder)) {
+				if (!list.contains(folder)) {
+					list.push(folder);
 				}
 			}
 			#end

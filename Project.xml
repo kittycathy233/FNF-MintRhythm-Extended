@@ -20,7 +20,7 @@
 	
 	<!-- ______________________ PSYCH ENGINE CUSTOMIZATION ______________________ -->
 
-	<define name="MODS_ALLOWED" if="desktop || mobile" />
+	<!--<define name="MODS_ALLOWED" if="desktop || mobile" />-->
 	<define name="HSCRIPT_ALLOWED" if="desktop || mobile" />
 	<define name="LUA_ALLOWED" if="cpp" />
 	<define name="ACHIEVEMENTS_ALLOWED" />
@@ -173,8 +173,17 @@
 	<!-- pretty (haxeflixel default), indent, classic (haxe compiler default) -->
 	<haxedef name="message.reporting" value="pretty" />
 
-	<!-- Do whatever you want I'm tired uninstall and install everytime -->
-	<certificate path="key.keystore" password="psychengine" alias="psychport" alias-password="psychengine" if="android" unless="debug" />
+	<section if="android">
+		<!-- Do whatever you want I'm tired uninstall and install everytime -->
+		<certificate path="key.keystore" password="psychengine" alias="psychport" alias-password="psychengine" if="android" unless="debug" />
+
+		<section unless="MODS_ALLOWED">
+			<config:android permission="android.permission.WAKE_LOCK" />
+			<config:android permission="android.permission.INTERNET" />
+			<config:android permission="android.permission.VIBRATE" />
+			<config:android permission="android.permission.ACCESS_NETWORK_STATE" />
+		</section>
+	</section>
 
 	<!--Macro fixes-->
 	<haxeflag name="--macro" value="allowPackage('flash')" />

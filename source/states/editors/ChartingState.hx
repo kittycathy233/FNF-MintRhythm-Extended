@@ -705,7 +705,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 				if(backupLimit > 0)
 				{
-					var files:Array<String> = FileSystem.readDirectory('backups/').filter((file:String) -> file.endsWith('.$BACKUP_EXT'));
+					var files:Array<String> = Paths.readDirectory('backups/').filter((file:String) -> file.endsWith('.$BACKUP_EXT'));
 					if(files.length > backupLimit)
 					{
 						var incorrect:Array<String> = [];
@@ -3586,7 +3586,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 				return;
 			}
 			
-			var fileList:Array<String> = FileSystem.readDirectory('backups/').filter((file:String) -> file.endsWith('.$BACKUP_EXT'));
+			var fileList:Array<String> = Paths.readDirectory('backups/').filter((file:String) -> file.endsWith('.$BACKUP_EXT'));
 			if(fileList.length < 1)
 			{
 				showOutput('No autosave files found.', true);
@@ -4972,7 +4972,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		#if MODS_ALLOWED
 		for (directory in Mods.directoriesWithFile(Paths.getSharedPath(), mainFolder))
 		{
-			for (file in FileSystem.readDirectory(directory))
+			for (file in Paths.readDirectory(directory))
 			{
 				var path = haxe.io.Path.join([directory, file.trim()]);
 				if (!FileSystem.isDirectory(path) && !file.startsWith('readme.'))

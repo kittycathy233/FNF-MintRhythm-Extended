@@ -53,7 +53,7 @@ class Mods
 		#if MODS_ALLOWED
 		var modsFolder:String = Paths.mods();
 		if(FileSystem.exists(modsFolder)) {
-			for (folder in FileSystem.readDirectory(modsFolder))
+			for (folder in Paths.readDirectory(modsFolder))
 			{
 				var path = haxe.io.Path.join([modsFolder, folder]);
 				if (FileSystem.isDirectory(path) && !ignoreModFolders.contains(folder.toLowerCase()) && !list.contains(folder))
@@ -70,6 +70,9 @@ class Mods
 		defaultDirectory = defaultDirectory.trim();
 		if(!defaultDirectory.endsWith('/')) defaultDirectory += '/';
 		if(!defaultDirectory.startsWith('assets/')) defaultDirectory = 'assets/$defaultDirectory';
+
+		if (path.indexOf(defaultDirectory) == 0)
+			path = path.substr(defaultDirectory.length);
 
 		var mergedList:Array<String> = [];
 		var paths:Array<String> = directoriesWithFile(defaultDirectory, path);
@@ -94,6 +97,8 @@ class Mods
 	inline public static function directoriesWithFile(path:String, fileToFind:String, mods:Bool = true)
 	{
 		var foldersToCheck:Array<String> = [];
+
+		#if MODS_ALLOWED
 		if(FileSystem.exists(path + fileToFind))
 			foldersToCheck.push(path + fileToFind);
 
@@ -104,7 +109,6 @@ class Mods
 				foldersToCheck.push(pth);
 		}
 
-		#if MODS_ALLOWED
 		if(mods)
 		{
 			// Global mods first
@@ -124,6 +128,17 @@ class Mods
 				var folder:String = Paths.mods(Mods.currentModDirectory + '/' + fileToFind);
 				if(FileSystem.exists(folder) && !foldersToCheck.contains(folder)) foldersToCheck.push(folder);
 			}
+		}
+		#else
+		if (fileToFind.indexOf(path) == 0)
+			fileToFind = fileToFind.substr(path.length);
+
+		foldersToCheck.push(path + fileToFind);
+
+		if(Paths.currentLevel != null && Paths.currentLevel != path)
+		{
+			var pth:String = Paths.getFolderPath(fileToFind, Paths.currentLevel);
+			foldersToCheck.push(pth);
 		}
 		#end
 		return foldersToCheck;

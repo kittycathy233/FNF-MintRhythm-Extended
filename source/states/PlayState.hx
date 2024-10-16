@@ -420,7 +420,7 @@ class PlayState extends MusicBeatState
 		#if (LUA_ALLOWED || HSCRIPT_ALLOWED)
 		// "SCRIPTS FOLDER" SCRIPTS
 		for (folder in Mods.directoriesWithFile(Paths.getSharedPath(), 'scripts/'))
-			for (file in FileSystem.readDirectory(folder))
+			for (file in Paths.readDirectory(folder))
 			{
 				#if LUA_ALLOWED
 				if(file.toLowerCase().endsWith('.lua'))
@@ -581,9 +581,9 @@ class PlayState extends MusicBeatState
 		}
 
 		// SONG SPECIFIC SCRIPTS
-		#if ((LUA_ALLOWED || HSCRIPT_ALLOWED) && sys)
+		#if (LUA_ALLOWED || HSCRIPT_ALLOWED)
 		for (folder in Mods.directoriesWithFile(Paths.getSharedPath(), 'data/$songName/'))
-			for (file in FileSystem.readDirectory(folder))
+			for (file in Paths.readDirectory(folder))
 			{
 				#if LUA_ALLOWED
 				if(file.toLowerCase().endsWith('.lua'))
@@ -829,7 +829,7 @@ class PlayState extends MusicBeatState
 		var foundFile:Bool = false;
 		var fileName:String = Paths.video(name);
 
-		#if sys
+		#if MODS_ALLOWED
 		if (FileSystem.exists(fileName))
 		#else
 		if (OpenFlAssets.exists(fileName))
@@ -3267,7 +3267,7 @@ class PlayState extends MusicBeatState
 			luaToLoad = Paths.getSharedPath(luaFile);
 
 		if(FileSystem.exists(luaToLoad))
-		#elseif sys
+		#else
 		var luaToLoad:String = Paths.getSharedPath(luaFile);
 		if(OpenFlAssets.exists(luaToLoad))
 		#end
@@ -3293,7 +3293,7 @@ class PlayState extends MusicBeatState
 		var scriptToLoad:String = Paths.getSharedPath(scriptFile);
 		#end
 
-		if(#if sys FileSystem.exists(scriptToLoad) #else OpenFlAssets.exists(scriptToLoad) #end)
+		if(#if MODS_ALLOWED FileSystem.exists(scriptToLoad) #else OpenFlAssets.exists(scriptToLoad) #end)
 		{
 			if (Iris.instances.exists(scriptToLoad)) return false;
 
@@ -3582,9 +3582,10 @@ class PlayState extends MusicBeatState
 
 		for (folder in Mods.directoriesWithFile(Paths.getSharedPath(), 'shaders/'))
 		{
+						var found:Bool = false;
+			#if MODS_ALLOWED
 			var frag:String = folder + name + '.frag';
 			var vert:String = folder + name + '.vert';
-			var found:Bool = false;
 			if(FileSystem.exists(frag))
 			{
 				frag = File.getContent(frag);
@@ -3598,6 +3599,22 @@ class PlayState extends MusicBeatState
 				found = true;
 			}
 			else vert = null;
+			#else
+			var frag:String = Paths.getAssetWithLibrary(folder + name + '.frag');
+			var vert:String = Paths.getAssetWithLibrary(folder + name + '.vert');
+			if(Assets.exists(frag))
+			{
+				frag = Assets.getText(frag);
+				found = true;
+			}
+			else frag = null;
+			if(Assets.exists(vert))
+			{
+				vert = Assets.getText(vert);
+				found = true;
+			}
+			else vert = null;
+			#end
 
 			if(found)
 			{

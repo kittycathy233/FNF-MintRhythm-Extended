@@ -327,7 +327,7 @@ class NoteSplashDebugState extends MusicBeatState implements PsychUIEventHandler
 
 	function saveFile()
 	{
-		#if sys
+		#if MODS_ALLOWED
 		var maxLen:Int = maxAnims * Note.colArray.length;
 		var curLen:Int = config.offsets.length;
 		while(curLen > maxLen)

@@ -235,7 +235,7 @@ class Paths
 	inline static public function getTextFromFile(key:String, ?ignoreMods:Bool = false):String
 	{
 		var path:String = getPath(key, TEXT, !ignoreMods);
-		#if sys
+		#if MODS_ALLOWED
 		return (FileSystem.exists(path)) ? File.getContent(path) : null;
 		#else
 		return (OpenFlAssets.exists(path, TEXT)) ? Assets.getText(path) : null;
@@ -379,7 +379,7 @@ class Paths
 		//trace('precaching sound: $file');
 		if(!currentTrackedSounds.exists(file))
 		{
-			#if sys
+			#if MODS_ALLOWED
 			if(FileSystem.exists(file))
 				currentTrackedSounds.set(file, Sound.fromFile(file));
 			#else
@@ -454,13 +454,13 @@ class Paths
 		if(spriteJson != null)
 		{
 			changedAtlasJson = true;
-			spriteJson = File.getContent(spriteJson);
+			spriteJson = #if MODS_ALLOWED File.getContent#else openfl.utils.Assets.getText#end(spriteJson);
 		}
 
 		if(animationJson != null) 
 		{
 			changedAnimJson = true;
-			animationJson = File.getContent(animationJson);
+			animationJson = #if MODS_ALLOWED File.getContent#else openfl.utils.Assets.getText#end(animationJson);
 		}
 
 		// is folder or image path
@@ -518,7 +518,7 @@ class Paths
 	public static function readDirectory(directory:String):Array<String>
 	{
 		#if MODS_ALLOWED
-		return FileSystem.readDirectory(directory);
+		return Paths.readDirectory(directory);
 		#else
 		var dirs:Array<String> = [];
 		for(dir in Assets.list().filter(folder -> folder.startsWith(directory)))
@@ -532,7 +532,19 @@ class Paths
 					dirs.push(dir);
 			}
 		}
-		return dirs;
+		return dirs.map(dir -> dir.substr(dir.lastIndexOf("/") + 1));
 		#end
+	}
+
+	public static function getAssetWithLibrary(file:String):String
+	{
+		if(file.contains(":")) file = file.split(":")[1];
+		
+		@:privateAccess
+		for(library in lime.utils.Assets.libraries.keys()){
+			if(OpenFlAssets.exists('$library:$file') && library != 'default')
+				return '$library:$file';
+		}
+		return file;
 	}
 }
