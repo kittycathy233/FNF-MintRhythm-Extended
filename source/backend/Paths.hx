@@ -521,17 +521,11 @@ class Paths
 		return FileSystem.readDirectory(directory);
 		#else
 		var dirs:Array<String> = [];
+
 		for(dir in Assets.list().filter(folder -> folder.startsWith(directory)))
-		{
-			@:privateAccess
-			for(library in lime.utils.Assets.libraries.keys())
-			{
-				if(library != 'default' && Assets.exists('$library:$dir') && (!dirs.contains('$library:$dir') || !dirs.contains(dir)))
-					dirs.push('$library:$dir');
-				else if(Assets.exists(dir) && !dirs.contains(dir))
-					dirs.push(dir);
-			}
-		}
+			if(Assets.exists(dir) && !dirs.contains(dir))
+				dirs.push(dir);
+
 		return dirs.map(dir -> dir.substr(dir.lastIndexOf("/") + 1));
 		#end
 	}
