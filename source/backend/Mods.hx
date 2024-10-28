@@ -135,11 +135,11 @@ class Mods
 
 		foldersToCheck.push(path + fileToFind);
 
-		if(Paths.currentLevel != null && Paths.currentLevel != path)
+		/*if(Paths.currentLevel != null && Paths.currentLevel != path)
 		{
 			var pth:String = Paths.getFolderPath(fileToFind, Paths.currentLevel);
 			foldersToCheck.push(pth);
-		}
+		}*/
 		#end
 		return foldersToCheck;
 	}
