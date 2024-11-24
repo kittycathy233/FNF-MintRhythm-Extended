@@ -348,17 +348,16 @@ class DialogueCharacterEditorState extends MusicBeatState implements PsychUIEven
 		var reloadImageButton:PsychUIButton = new PsychUIButton(10, scaleStepper.y + 60, "Reload Image", function() {
 			reloadCharacter();
 		});
-		
-		#if !mobile
+
 		var loadButton:PsychUIButton = new PsychUIButton(reloadImageButton.x + 100, reloadImageButton.y, "Load Character", function() {
 			loadCharacter();
 		});
-		#end
-		var saveButton:PsychUIButton = new PsychUIButton(#if !mobile loadButton.x #else reloadImageButton.x + 100 #end, reloadImageButton.y - 25, "Save Character", function() {
+
+		var saveButton:PsychUIButton = new PsychUIButton(loadButton.x, reloadImageButton.y - 25, "Save Character", function() {
 			saveCharacter();
 		});
 		tab_group.add(reloadImageButton);
-		#if !mobile tab_group.add(loadButton); #end
+		tab_group.add(loadButton);
 		tab_group.add(saveButton);
 	}
 	
@@ -719,16 +718,11 @@ class DialogueCharacterEditorState extends MusicBeatState implements PsychUIEven
 			var splittedImage:Array<String> = imageInputText.text.trim().split('_');
 			var characterName:String = splittedImage[0].toLowerCase().replace(' ', '');
 
-			#if mobile
-			unsavedProgress = false;
-			StorageUtil.saveContent('$characterName.json', data);
-			#else
 			_file = new FileReference();
 			_file.addEventListener(#if desktop Event.SELECT #else Event.COMPLETE #end, onSaveComplete);
 			_file.addEventListener(Event.CANCEL, onSaveCancel);
 			_file.addEventListener(IOErrorEvent.IO_ERROR, onSaveError);
 			_file.save(data, characterName + ".json");
-			#end
 		}
 	}
 

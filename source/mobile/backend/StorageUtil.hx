@@ -54,24 +54,6 @@ class StorageUtil
 		return daPath;
 	}
 
-	public static function saveContent(fileName:String, fileData:String, ?alert:Bool = true):Void
-	{
-		try
-		{
-			if (!FileSystem.exists('saves'))
-				FileSystem.createDirectory('saves');
-
-			File.saveContent('saves/$fileName', fileData);
-			if (alert)
-				CoolUtil.showPopUp('$fileName has been saved.', "Success!");
-		}
-		catch (e:Exception)
-			if (alert)
-				CoolUtil.showPopUp('$fileName couldn\'t be saved.\n(${e.message})', "Error!")
-			else
-				trace('$fileName couldn\'t be saved. (${e.message})');
-	}
-
 	#if android
 	public static function requestPermissions():Void
 	{

@@ -83,22 +83,18 @@ class MenuCharacterEditorState extends MusicBeatState implements PsychUIEventHan
 		addCharacterUI();
 		add(UI_mainbox);
 
-		#if !mobile
 		var loadButton:PsychUIButton = new PsychUIButton(0, 480, "Load Character", function() {
 			loadCharacter();
 		});
 		loadButton.screenCenter(X);
 		loadButton.x -= 60;
 		add(loadButton);
-		#end
 	
 		var saveButton:PsychUIButton = new PsychUIButton(0, 480, "Save Character", function() {
 			saveCharacter();
 		});
 		saveButton.screenCenter(X);
-		#if !mobile
 		saveButton.x += 60;
-		#end
 		add(saveButton);
 	}
 
@@ -345,16 +341,11 @@ class MenuCharacterEditorState extends MusicBeatState implements PsychUIEventHan
 			var splittedImage:Array<String> = imageInputText.text.trim().split('_');
 			var characterName:String = splittedImage[splittedImage.length-1].toLowerCase().replace(' ', '');
 
-			#if mobile
-			unsavedProgress = false;
-			StorageUtil.saveContent('$characterName.json', data);
-			#else
 			_file = new FileReference();
 			_file.addEventListener(#if desktop Event.SELECT #else Event.COMPLETE #end, onSaveComplete);
 			_file.addEventListener(Event.CANCEL, onSaveCancel);
 			_file.addEventListener(IOErrorEvent.IO_ERROR, onSaveError);
 			_file.save(data, characterName + ".json");
-			#end
 		}
 	}
 

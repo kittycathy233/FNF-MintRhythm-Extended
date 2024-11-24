@@ -358,10 +358,8 @@ class NoteSplashEditorState extends MusicBeatState
         templateButton = new PsychUIButton(20, 155, "Template");
         ui.add(templateButton);
 
-        #if !mobile
         var loadButton:PsychUIButton = new PsychUIButton(180, 155, "Convert TXT", loadTxt);
         ui.add(loadButton);
-        #end
 
         var allowRGBCheck:PsychUICheckBox = new PsychUICheckBox(20, 105, "", 1);
         function check()
@@ -830,15 +828,11 @@ class NoteSplashEditorState extends MusicBeatState
         var data:String = Json.stringify(config, "\t");
         if (data.length > 0)
         {
-            #if mobile
-            StorageUtil.saveContent('${imageSkin.split("/").pop()}.json', data);
-            #else
             _file = new FileReference();
 			_file.addEventListener(Event.COMPLETE, onSaveComplete);
 			_file.addEventListener(Event.CANCEL, onSaveCancel);
 			_file.addEventListener(IOErrorEvent.IO_ERROR, onSaveError);
 			_file.save(data, imageSkin + ".json");
-            #end
         }
     }
 

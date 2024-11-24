@@ -126,12 +126,12 @@ class DialogueEditorState extends MusicBeatState implements PsychUIEventHandler.
 			else PsychUIInputText.focusOn = null;
 		};
 
-		#if !mobile
+
 		var loadButton:PsychUIButton = new PsychUIButton(20, lineInputText.y + 25, "Load Dialogue", function() {
 			loadDialogue();
 		});
-		#end
-		var saveButton:PsychUIButton = new PsychUIButton(#if mobile 85, lineInputText.y + 25 #else loadButton.x + 120, loadButton.y #end, "Save Dialogue", function() {
+
+		var saveButton:PsychUIButton = new PsychUIButton(loadButton.x + 120, loadButton.y, "Save Dialogue", function() {
 			saveDialogue();
 		});
 
@@ -144,7 +144,7 @@ class DialogueEditorState extends MusicBeatState implements PsychUIEventHandler.
 		tab_group.add(speedStepper);
 		tab_group.add(soundInputText);
 		tab_group.add(lineInputText);
-		#if !mobile tab_group.add(loadButton); #end
+		tab_group.add(loadButton);
 		tab_group.add(saveButton);
 	}
 
@@ -486,16 +486,11 @@ class DialogueEditorState extends MusicBeatState implements PsychUIEventHandler.
 		var data:String = haxe.Json.stringify(dialogueFile, "\t");
 		if (data.length > 0)
 		{
-			#if mobile
-			unsavedProgress = false;
-			StorageUtil.saveContent("dialogue.json", data);
-			#else
 			_file = new FileReference();
 			_file.addEventListener(#if desktop Event.SELECT #else Event.COMPLETE #end, onSaveComplete);
 			_file.addEventListener(Event.CANCEL, onSaveCancel);
 			_file.addEventListener(IOErrorEvent.IO_ERROR, onSaveError);
 			_file.save(data, "dialogue.json");
-			#end
 		}
 	}
 
