@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Mobile Porting Team
+ * Copyright (C) 2025 Mobile Porting Team
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -22,6 +22,8 @@
 
 package mobile.objects;
 
+import flixel.util.FlxSignal.FlxTypedSignal;
+
 /**
  * ...
  * @author: Karim Akra
@@ -35,4 +37,6 @@ interface IMobileControls
 	public var buttonExtra:TouchButton;
 	public var buttonExtra2:TouchButton;
 	public var instance:MobileInputManager;
+	public var onButtonDown:FlxTypedSignal<TouchButton->Void>;
+	public var onButtonUp:FlxTypedSignal<TouchButton->Void>;
 }

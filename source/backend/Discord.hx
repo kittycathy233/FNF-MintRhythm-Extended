@@ -154,10 +154,10 @@ class DiscordClient
 	#end
 
 	#if LUA_ALLOWED
-	public static function addLuaCallbacks(funk:psychlua.FunkinLua)
+	public static function addLuaCallbacks(lua:State)
 	{
-		funk.set("changeDiscordPresence", changePresence);
-		funk.set("changeDiscordClientID", function(?newID:String) {
+		Lua_helper.add_callback(lua, "changeDiscordPresence", changePresence);
+		Lua_helper.add_callback(lua, "changeDiscordClientID", function(?newID:String) {
 			if(newID == null) newID = _defaultID;
 			clientID = newID;
 		});

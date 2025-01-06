@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Mobile Porting Team
+ * Copyright (C) 2025 Mobile Porting Team
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -38,11 +38,12 @@ class MobileFunctions
 {
 	public static function implement(funk:FunkinLua)
 	{
-		funk.set('mobileC', Controls.instance.mobileC);
+		var lua:State = funk.lua;
+		Lua_helper.add_callback(lua, 'mobileC', Controls.instance.mobileC);
 
-		funk.set('mobileControlsMode', getMobileControlsAsString());
+		Lua_helper.add_callback(lua, 'mobileControlsMode', getMobileControlsAsString());
 
-		funk.set("extraButtonPressed", (button:String) ->
+		Lua_helper.add_callback(lua, "extraButtonPressed", (button:String) ->
 		{
 			button = button.toLowerCase();
 			if (MusicBeatState.getState().mobileControls != null)
@@ -58,7 +59,7 @@ class MobileFunctions
 			return false;
 		});
 
-		funk.set("extraButtonJustPressed", (button:String) ->
+		Lua_helper.add_callback(lua, "extraButtonJustPressed", (button:String) ->
 		{
 			button = button.toLowerCase();
 			if (MusicBeatState.getState().mobileControls != null)
@@ -74,7 +75,7 @@ class MobileFunctions
 			return false;
 		});
 
-		funk.set("extraButtonJustReleased", (button:String) ->
+		Lua_helper.add_callback(lua, "extraButtonJustReleased", (button:String) ->
 		{
 			button = button.toLowerCase();
 			if (MusicBeatState.getState().mobileControls != null)
@@ -90,7 +91,7 @@ class MobileFunctions
 			return false;
 		});
 
-		funk.set("extraButtonReleased", (button:String) ->
+		Lua_helper.add_callback(lua, "extraButtonReleased", (button:String) ->
 		{
 			button = button.toLowerCase();
 			if (MusicBeatState.getState().mobileControls != null)
@@ -106,7 +107,7 @@ class MobileFunctions
 			return false;
 		});
 
-		funk.set("vibrate", (?duration:Int, ?period:Int) ->
+		Lua_helper.add_callback(lua, "vibrate", (?duration:Int, ?period:Int) ->
 		{
 			if (duration == null)
 				return FunkinLua.luaTrace('vibrate: No duration specified.');
@@ -115,7 +116,7 @@ class MobileFunctions
 			return Haptic.vibrate(period, duration);
 		});
 
-		funk.set("addTouchPad", (DPadMode:String, ActionMode:String, ?addToCustomSubstate:Bool = false, ?posAtCustomSubstate:Int = -1) ->
+		Lua_helper.add_callback(lua, "addTouchPad", (DPadMode:String, ActionMode:String, ?addToCustomSubstate:Bool = false, ?posAtCustomSubstate:Int = -1) ->
 		{
 			PlayState.instance.makeLuaTouchPad(DPadMode, ActionMode);
 			if (addToCustomSubstate)
@@ -127,12 +128,12 @@ class MobileFunctions
 				PlayState.instance.addLuaTouchPad();
 		});
 
-		funk.set("removeTouchPad", () ->
+		Lua_helper.add_callback(lua, "removeTouchPad", () ->
 		{
 			PlayState.instance.removeLuaTouchPad();
 		});
 
-		funk.set("addTouchPadCamera", () ->
+		Lua_helper.add_callback(lua, "addTouchPadCamera", () ->
 		{
 			if (PlayState.instance.luaTouchPad == null)
 			{
@@ -142,7 +143,7 @@ class MobileFunctions
 			PlayState.instance.addLuaTouchPadCamera();
 		});
 
-		funk.set("touchPadJustPressed", function(button:Dynamic):Bool
+		Lua_helper.add_callback(lua, "touchPadJustPressed", function(button:Dynamic):Bool
 		{
 			if (PlayState.instance.luaTouchPad == null)
 			{
@@ -151,7 +152,7 @@ class MobileFunctions
 			return PlayState.instance.luaTouchPadJustPressed(button);
 		});
 
-		funk.set("touchPadPressed", function(button:Dynamic):Bool
+		Lua_helper.add_callback(lua, "touchPadPressed", function(button:Dynamic):Bool
 		{
 			if (PlayState.instance.luaTouchPad == null)
 			{
@@ -160,7 +161,7 @@ class MobileFunctions
 			return PlayState.instance.luaTouchPadPressed(button);
 		});
 
-		funk.set("touchPadJustReleased", function(button:Dynamic):Bool
+		Lua_helper.add_callback(lua, "touchPadJustReleased", function(button:Dynamic):Bool
 		{
 			if (PlayState.instance.luaTouchPad == null)
 			{
@@ -169,7 +170,7 @@ class MobileFunctions
 			return PlayState.instance.luaTouchPadJustReleased(button);
 		});
 
-		funk.set("touchPadReleased", function(button:Dynamic):Bool
+		Lua_helper.add_callback(lua, "touchPadReleased", function(button:Dynamic):Bool
 		{
 			if (PlayState.instance.luaTouchPad == null)
 			{
@@ -178,11 +179,11 @@ class MobileFunctions
 			return PlayState.instance.luaTouchPadReleased(button);
 		});
 
-		funk.set("touchJustPressed", TouchUtil.justPressed);
-		funk.set("touchPressed", TouchUtil.pressed);
-		funk.set("touchJustReleased", TouchUtil.justReleased);
-		funk.set("touchReleased", TouchUtil.released);
-		funk.set("touchPressedObject", function(object:String, ?camera:String):Bool
+		Lua_helper.add_callback(lua, "touchJustPressed", TouchUtil.justPressed);
+		Lua_helper.add_callback(lua, "touchPressed", TouchUtil.pressed);
+		Lua_helper.add_callback(lua, "touchJustReleased", TouchUtil.justReleased);
+		Lua_helper.add_callback(lua, "touchReleased", TouchUtil.released);
+		Lua_helper.add_callback(lua, "touchPressedObject", function(object:String, ?camera:String):Bool
 		{
 			var obj = PlayState.instance.getLuaObject(object);
 			var cam:FlxCamera = LuaUtils.cameraFromString(camera);
@@ -194,7 +195,7 @@ class MobileFunctions
 			return TouchUtil.overlaps(obj, cam) && TouchUtil.pressed;
 		});
 
-		funk.set("touchJustPressedObject", function(object:String, ?camera:String):Bool
+		Lua_helper.add_callback(lua, "touchJustPressedObject", function(object:String, ?camera:String):Bool
 		{
 			var obj = PlayState.instance.getLuaObject(object);
 			var cam:FlxCamera = LuaUtils.cameraFromString(camera);
@@ -206,7 +207,7 @@ class MobileFunctions
 			return TouchUtil.overlaps(obj, cam) && TouchUtil.justPressed;
 		});
 
-		funk.set("touchJustReleasedObject", function(object:String, ?camera:String):Bool
+		Lua_helper.add_callback(lua, "touchJustReleasedObject", function(object:String, ?camera:String):Bool
 		{
 			var obj = PlayState.instance.getLuaObject(object);
 			var cam:FlxCamera = LuaUtils.cameraFromString(camera);
@@ -218,7 +219,7 @@ class MobileFunctions
 			return TouchUtil.overlaps(obj, cam) && TouchUtil.justReleased;
 		});
 
-		funk.set("touchReleasedObject", function(object:String, ?camera:String):Bool
+		Lua_helper.add_callback(lua, "touchReleasedObject", function(object:String, ?camera:String):Bool
 		{
 			var obj = PlayState.instance.getLuaObject(object);
 			var cam:FlxCamera = LuaUtils.cameraFromString(camera);
@@ -230,7 +231,7 @@ class MobileFunctions
 			return TouchUtil.overlaps(obj, cam) && TouchUtil.released;
 		});
 
-		funk.set("touchPressedObjectComplex", function(object:String, ?camera:String):Bool
+		Lua_helper.add_callback(lua, "touchPressedObjectComplex", function(object:String, ?camera:String):Bool
 		{
 			var obj = PlayState.instance.getLuaObject(object);
 			var cam:FlxCamera = LuaUtils.cameraFromString(camera);
@@ -242,7 +243,7 @@ class MobileFunctions
 			return TouchUtil.overlapsComplex(obj, cam) && TouchUtil.pressed;
 		});
 
-		funk.set("touchJustPressedObjectComplex", function(object:String, ?camera:String):Bool
+		Lua_helper.add_callback(lua, "touchJustPressedObjectComplex", function(object:String, ?camera:String):Bool
 		{
 			var obj = PlayState.instance.getLuaObject(object);
 			var cam:FlxCamera = LuaUtils.cameraFromString(camera);
@@ -254,7 +255,7 @@ class MobileFunctions
 			return TouchUtil.overlapsComplex(obj, cam) && TouchUtil.justPressed;
 		});
 
-		funk.set("touchJustReleasedObjectComplex", function(object:String, ?camera:String):Bool
+		Lua_helper.add_callback(lua, "touchJustReleasedObjectComplex", function(object:String, ?camera:String):Bool
 		{
 			var obj = PlayState.instance.getLuaObject(object);
 			var cam:FlxCamera = LuaUtils.cameraFromString(camera);
@@ -266,7 +267,7 @@ class MobileFunctions
 			return TouchUtil.overlapsComplex(obj, cam) && TouchUtil.justReleased;
 		});
 
-		funk.set("touchReleasedObjectComplex", function(object:String, ?camera:String):Bool
+		Lua_helper.add_callback(lua, "touchReleasedObjectComplex", function(object:String, ?camera:String):Bool
 		{
 			var obj = PlayState.instance.getLuaObject(object);
 			var cam:FlxCamera = LuaUtils.cameraFromString(camera);
@@ -278,7 +279,7 @@ class MobileFunctions
 			return TouchUtil.overlapsComplex(obj, cam) && TouchUtil.released;
 		});
 
-		funk.set("touchOverlapsObject", function(object:String, ?camera:String):Bool
+		Lua_helper.add_callback(lua, "touchOverlapsObject", function(object:String, ?camera:String):Bool
 		{
 			var obj = PlayState.instance.getLuaObject(object);
 			var cam:FlxCamera = LuaUtils.cameraFromString(camera);
@@ -290,7 +291,7 @@ class MobileFunctions
 			return TouchUtil.overlaps(obj, cam);
 		});
 
-		funk.set("touchOverlapsObjectComplex", function(object:String, ?camera:String):Bool
+		Lua_helper.add_callback(lua, "touchOverlapsObjectComplex", function(object:String, ?camera:String):Bool
 		{
 			var obj = PlayState.instance.getLuaObject(object);
 			var cam:FlxCamera = LuaUtils.cameraFromString(camera);
@@ -327,24 +328,25 @@ class AndroidFunctions
 	// static var spicyPillow:AndroidBatteryManager = new AndroidBatteryManager();
 	public static function implement(funk:FunkinLua)
 	{
-		// funk.set("isRooted", AndroidTools.isRooted());
-		funk.set("isDolbyAtmos", AndroidTools.isDolbyAtmos());
-		funk.set("isAndroidTV", AndroidTools.isAndroidTV());
-		funk.set("isTablet", AndroidTools.isTablet());
-		funk.set("isChromebook", AndroidTools.isChromebook());
-		funk.set("isDeXMode", AndroidTools.isDeXMode());
-		// funk.set("isCharging", spicyPillow.isCharging());
+		var lua:State = funk.lua;
+		// Lua_helper.add_callback(lua, "isRooted", AndroidTools.isRooted());
+		Lua_helper.add_callback(lua, "isDolbyAtmos", AndroidTools.isDolbyAtmos());
+		Lua_helper.add_callback(lua, "isAndroidTV", AndroidTools.isAndroidTV());
+		Lua_helper.add_callback(lua, "isTablet", AndroidTools.isTablet());
+		Lua_helper.add_callback(lua, "isChromebook", AndroidTools.isChromebook());
+		Lua_helper.add_callback(lua, "isDeXMode", AndroidTools.isDeXMode());
+		// Lua_helper.add_callback(lua, "isCharging", spicyPillow.isCharging());
 
-		funk.set("backJustPressed", FlxG.android.justPressed.BACK);
-		funk.set("backPressed", FlxG.android.pressed.BACK);
-		funk.set("backJustReleased", FlxG.android.justReleased.BACK);
+		Lua_helper.add_callback(lua, "backJustPressed", FlxG.android.justPressed.BACK);
+		Lua_helper.add_callback(lua, "backPressed", FlxG.android.pressed.BACK);
+		Lua_helper.add_callback(lua, "backJustReleased", FlxG.android.justReleased.BACK);
 
-		funk.set("menuJustPressed", FlxG.android.justPressed.MENU);
-		funk.set("menuPressed", FlxG.android.pressed.MENU);
-		funk.set("menuJustReleased", FlxG.android.justReleased.MENU);
+		Lua_helper.add_callback(lua, "menuJustPressed", FlxG.android.justPressed.MENU);
+		Lua_helper.add_callback(lua, "menuPressed", FlxG.android.pressed.MENU);
+		Lua_helper.add_callback(lua, "menuJustReleased", FlxG.android.justReleased.MENU);
 
-		funk.set("getCurrentOrientation", () -> PsychJNI.getCurrentOrientationAsString());
-		funk.set("setOrientation", function(?hint:String):Void
+		Lua_helper.add_callback(lua, "getCurrentOrientation", () -> PsychJNI.getCurrentOrientationAsString());
+		Lua_helper.add_callback(lua, "setOrientation", function(?hint:String):Void
 		{
 			switch (hint.toLowerCase())
 			{
@@ -364,9 +366,9 @@ class AndroidFunctions
 			PsychJNI.setOrientation(FlxG.stage.stageWidth, FlxG.stage.stageHeight, false, hint);
 		});
 
-		funk.set("minimizeWindow", () -> AndroidTools.minimizeWindow());
+		Lua_helper.add_callback(lua, "minimizeWindow", () -> AndroidTools.minimizeWindow());
 
-		funk.set("showToast", function(text:String, ?duration:Int, ?xOffset:Int, ?yOffset:Int) /* , ?gravity:Int*/
+		Lua_helper.add_callback(lua, "showToast", function(text:String, ?duration:Int, ?xOffset:Int, ?yOffset:Int) /* , ?gravity:Int*/
 		{
 			if (text == null)
 				return FunkinLua.luaTrace('showToast: No text specified.');
@@ -381,20 +383,20 @@ class AndroidFunctions
 			AndroidToast.makeText(text, duration, -1, xOffset, yOffset);
 		});
 
-		funk.set("isScreenKeyboardShown", () -> PsychJNI.isScreenKeyboardShown());
+		Lua_helper.add_callback(lua, "isScreenKeyboardShown", () -> PsychJNI.isScreenKeyboardShown());
 
-		funk.set("clipboardHasText", () -> PsychJNI.clipboardHasText());
-		funk.set("clipboardGetText", () -> PsychJNI.clipboardGetText());
-		funk.set("clipboardSetText", function(?text:String):Void
+		Lua_helper.add_callback(lua, "clipboardHasText", () -> PsychJNI.clipboardHasText());
+		Lua_helper.add_callback(lua, "clipboardGetText", () -> PsychJNI.clipboardGetText());
+		Lua_helper.add_callback(lua, "clipboardSetText", function(?text:String):Void
 		{
 			if (text != null)
 				return FunkinLua.luaTrace('clipboardSetText: No text specified.');
 			PsychJNI.clipboardSetText(text);
 		});
 
-		funk.set("manualBackButton", () -> PsychJNI.manualBackButton());
+		Lua_helper.add_callback(lua, "manualBackButton", () -> PsychJNI.manualBackButton());
 
-		funk.set("setActivityTitle", function(text:String):Void
+		Lua_helper.add_callback(lua, "setActivityTitle", function(text:String):Void
 		{
 			if (text != null)
 				return FunkinLua.luaTrace('setActivityTitle: No text specified.');

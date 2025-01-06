@@ -13,7 +13,7 @@ class OutdatedState extends MusicBeatState
 		add(bg);
 
 		final bro:String = #if mobile 'kiddo' #else 'bro' #end;
-		final escape:String = controls.mobileC ? 'B' : 'ESCAPE';
+		final escape:String = (controls.mobileC) ? 'B' : 'ESCAPE';
 
 		warnText = new FlxText(0, 0, FlxG.width,
 			"Sup " + bro + ", looks like you're running an   \n

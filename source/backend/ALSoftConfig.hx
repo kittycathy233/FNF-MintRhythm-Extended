@@ -3,17 +3,20 @@ package backend;
 import lime.system.System;
 import haxe.macro.Context;
 import haxe.macro.Expr;
-import sys.FileSystem;
 import haxe.io.Path;
-import sys.io.File;
 #if android
 import lime.system.JNI;
 #end
 
-/*
-A class that simply points OpenALSoft to a custom configuration file when the game starts up.
-The config overrides a few global OpenALSoft settings with the aim of improving audio quality on desktop targets.
-*/
+#if sys
+import sys.io.File;
+import sys.FileSystem;
+#end
+
+/**
+ * A class that simply points OpenALSoft to a custom configuration file when the game starts up.
+ * The config overrides a few global OpenALSoft settings with the aim of improving audio quality on desktop targets.
+ */
 #if (!macro && android)
 @:build(backend.ALSoftConfig.setupConfig())
 #end

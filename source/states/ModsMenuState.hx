@@ -5,7 +5,7 @@ import backend.Mods;
 
 import flixel.FlxBasic;
 import flixel.graphics.FlxGraphic;
-import openfl.geom.Rectangle;
+import flash.geom.Rectangle;
 import haxe.Json;
 
 import flixel.util.FlxSpriteUtil;
@@ -14,7 +14,6 @@ import options.ModSettingsSubState;
 
 import openfl.display.BitmapData;
 import lime.utils.Assets;
-import mobile.backend.TouchUtil;
 
 class ModsMenuState extends MusicBeatState
 {
@@ -37,8 +36,8 @@ class ModsMenuState extends MusicBeatState
 	var bgDescription:FlxSprite;
 	var bgButtons:FlxSprite;
 
-	public static var modsGroup:FlxTypedGroup<ModItem>;
-	public static var curSelectedMod:Int = 0;
+	var modsGroup:FlxTypedGroup<ModItem>;
+	var curSelectedMod:Int = 0;
 	
 	var hoveringOnMods:Bool = true;
 	var curSelectedButton:Int = 0; ///-1 = Enable/Disable All, -2 = Reload
@@ -104,7 +103,7 @@ class ModsMenuState extends MusicBeatState
 		var buttonWidth = Std.int(bgList.width);
 		var buttonHeight = 80;
 		var daY = 0;
-		if(controls.mobileC)
+		if (controls.mobileC)
 			daY = 70;
 		else
 			daY = 20;
@@ -173,7 +172,7 @@ class ModsMenuState extends MusicBeatState
 			buttonEnableAll.visible = true;
 
 			var myX = bgList.x + bgList.width + 20;
-			noModsTxt = new FlxText(myX, 0, FlxG.width - myX - 20, Language.getPhrase('no_mods_installed', "NO MODS INSTALLED\nPRESS " + daButton + " TO EXIT OR INSTALL A MOD"), 48);
+			noModsTxt = new FlxText(myX, 0, FlxG.width - myX - 20, Language.getPhrase('no_mods_installed', "NO MODS INSTALLED\nPRESS {1} TO EXIT OR INSTALL A MOD", [daButton]), 48);
 			if(FlxG.random.bool(0.1)) noModsTxt.text += '\nBITCH.'; //meanie
 			noModsTxt.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			noModsTxt.borderSize = 2;
@@ -312,14 +311,14 @@ class ModsMenuState extends MusicBeatState
 		bottomBG.alpha = 0.6;
 		add(bottomBG);
 
-		var bottomText = new FlxText(bottomBG.x, bottomBG.y + 4, FlxG.width, Language.getPhrase('mods_leave', "Press " + daButton + " To Leave"), 16);
+		var bottomText = new FlxText(bottomBG.x, bottomBG.y + 4, FlxG.width, Language.getPhrase('mods_leave', "Press {1} To Leave", [daButton]), 16);
 		bottomText.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, CENTER);
 		bottomText.scrollFactor.set();
 		add(bottomText);
 
 		addTouchPad('UP_DOWN', 'B');
 		touchPad.y -= 215; // so that you can press the buttons.
-		if(controls.mobileC)
+		if (controls.mobileC)
 			touchPad.alpha = 0.3;
 		super.create();
 	}

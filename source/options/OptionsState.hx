@@ -2,10 +2,6 @@ package options;
 
 import states.MainMenuState;
 import backend.StageData;
-#if (target.threaded)
-import sys.thread.Thread;
-import sys.thread.Mutex;
-#end
 
 class OptionsState extends MusicBeatState
 {
@@ -23,7 +19,6 @@ class OptionsState extends MusicBeatState
 	private static var curSelected:Int = 0;
 	public static var menuBG:FlxSprite;
 	public static var onPlayState:Bool = false;
-	#if (target.threaded) var mutex:Mutex = new Mutex(); #end
 
 	function openSelectedSubstate(label:String) {
 		if (label != "Adjust Delay and Combo"){
@@ -52,10 +47,8 @@ class OptionsState extends MusicBeatState
 				MusicBeatState.switchState(new options.NoteOffsetState());
 			case 'Mobile Options':
 				openSubState(new mobile.options.MobileOptionsSubState());
-			#if TRANSLATIONS_ALLOWED
 			case 'Language':
 				openSubState(new options.LanguageSubState());
-			#end
 		}
 	}
 
@@ -96,20 +89,6 @@ class OptionsState extends MusicBeatState
 		ClientPrefs.saveSettings();
 
 		addTouchPad('UP_DOWN', 'A_B');
-
-		#if (target.threaded)
-		Thread.create(()->{
-			mutex.acquire();
-
-			for (music in VisualsSettingsSubState.pauseMusics)
-			{
-				if (music.toLowerCase() != "none")
-					Paths.music(Paths.formatToSongPath(music));
-			}
-
-			mutex.release();
-		});
-		#end
 
 		super.create();
 	}

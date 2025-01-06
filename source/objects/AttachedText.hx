@@ -28,10 +28,4 @@ class AttachedText extends Alphabet
 
 		super.update(elapsed);
 	}
-
-	override function destroy()
-	{
-		sprTracker = FlxDestroyUtil.destroy(sprTracker);
-		super.destroy();
-	}
 }

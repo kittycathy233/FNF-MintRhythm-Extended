@@ -73,7 +73,7 @@ class Tank extends BaseStage
 		// Default GFs
 		if(songName == 'stress') setDefaultGF('pico-speaker');
 		else setDefaultGF('gf-tankmen');
-		#if flxanimate
+		
 		if (isStoryMode && !seenCutscene)
 		{
 			switch (songName)
@@ -86,7 +86,6 @@ class Tank extends BaseStage
 					setStartCallback(stressIntro);
 			}
 		}
-		#end
 	}
 	override function createPost()
 	{
@@ -130,7 +129,7 @@ class Tank extends BaseStage
 			spr.dance();
 		});
 	}
-	#if flxanimate
+
 	// Cutscenes
 	var cutsceneHandler:CutsceneHandler;
 	var tankman:FlxAnimate;
@@ -399,7 +398,6 @@ class Tank extends BaseStage
 			zoomBack();
 		});
 	}
-	#end
 
 	function zoomBack()
 	{

@@ -11,8 +11,9 @@ class ExtraFunctions
 {
 	public static function implement(funk:FunkinLua)
 	{
+		var lua:State = funk.lua;
 		// Keyboard & Gamepads
-		funk.set("keyboardJustPressed", function(name:String)
+		Lua_helper.add_callback(lua, "keyboardJustPressed", function(name:String)
 		{
 			switch (name.toUpperCase())
 			{
@@ -28,7 +29,7 @@ class ExtraFunctions
 					return Reflect.getProperty(FlxG.keys.justPressed, name.toUpperCase());
 			}
 		});
-		funk.set("keyboardPressed", function(name:String)
+		Lua_helper.add_callback(lua, "keyboardPressed", function(name:String)
 		{
 			switch (name.toUpperCase())
 			{
@@ -44,7 +45,7 @@ class ExtraFunctions
 					return Reflect.getProperty(FlxG.keys.pressed, name.toUpperCase());
 			}
 		});
-		funk.set("keyboardReleased", function(name:String)
+		Lua_helper.add_callback(lua, "keyboardReleased", function(name:String)
 		{
 			switch (name.toUpperCase())
 			{
@@ -61,39 +62,39 @@ class ExtraFunctions
 			}
 		});
 	
-		funk.set("anyGamepadJustPressed", function(name:String) return FlxG.gamepads.anyJustPressed(name.toUpperCase()));
-		funk.set("anyGamepadPressed", function(name:String) return FlxG.gamepads.anyPressed(name.toUpperCase()));
-		funk.set("anyGamepadReleased", function(name:String) return FlxG.gamepads.anyJustReleased(name.toUpperCase()));
+		Lua_helper.add_callback(lua, "anyGamepadJustPressed", function(name:String) return FlxG.gamepads.anyJustPressed(name.toUpperCase()));
+		Lua_helper.add_callback(lua, "anyGamepadPressed", function(name:String) return FlxG.gamepads.anyPressed(name.toUpperCase()));
+		Lua_helper.add_callback(lua, "anyGamepadReleased", function(name:String) return FlxG.gamepads.anyJustReleased(name.toUpperCase()));
 
-		funk.set("gamepadAnalogX", function(id:Int, ?leftStick:Bool = true)
+		Lua_helper.add_callback(lua, "gamepadAnalogX", function(id:Int, ?leftStick:Bool = true)
 		{
 			var controller = FlxG.gamepads.getByID(id);
 			if (controller == null) return 0.0;
 
 			return controller.getXAxis(leftStick ? LEFT_ANALOG_STICK : RIGHT_ANALOG_STICK);
 		});
-		funk.set("gamepadAnalogY", function(id:Int, ?leftStick:Bool = true)
+		Lua_helper.add_callback(lua, "gamepadAnalogY", function(id:Int, ?leftStick:Bool = true)
 		{
 			var controller = FlxG.gamepads.getByID(id);
 			if (controller == null) return 0.0;
 
 			return controller.getYAxis(leftStick ? LEFT_ANALOG_STICK : RIGHT_ANALOG_STICK);
 		});
-		funk.set("gamepadJustPressed", function(id:Int, name:String)
+		Lua_helper.add_callback(lua, "gamepadJustPressed", function(id:Int, name:String)
 		{
 			var controller = FlxG.gamepads.getByID(id);
 			if (controller == null) return false;
 
 			return Reflect.getProperty(controller.justPressed, name) == true;
 		});
-		funk.set("gamepadPressed", function(id:Int, name:String)
+		Lua_helper.add_callback(lua, "gamepadPressed", function(id:Int, name:String)
 		{
 			var controller = FlxG.gamepads.getByID(id);
 			if (controller == null) return false;
 
 			return Reflect.getProperty(controller.pressed, name) == true;
 		});
-		funk.set("gamepadReleased", function(id:Int, name:String)
+		Lua_helper.add_callback(lua, "gamepadReleased", function(id:Int, name:String)
 		{
 			var controller = FlxG.gamepads.getByID(id);
 			if (controller == null) return false;
@@ -101,42 +102,60 @@ class ExtraFunctions
 			return Reflect.getProperty(controller.justReleased, name) == true;
 		});
 
-		funk.set("keyJustPressed", function(name:String = '') {
+		Lua_helper.add_callback(lua, "keyJustPressed", function(name:String = '') {
 			name = name.toLowerCase().trim();
 			switch(name) {
 				case 'left': return PlayState.instance.controls.NOTE_LEFT_P;
 				case 'down': return PlayState.instance.controls.NOTE_DOWN_P;
 				case 'up': return PlayState.instance.controls.NOTE_UP_P;
 				case 'right': return PlayState.instance.controls.NOTE_RIGHT_P;
+				case 'space':
+					var mobileShit:Bool = false;
+					if (Controls.instance.mobileC)
+						if (MusicBeatState.getState().mobileControls != null)
+							mobileShit = MusicBeatState.getState().mobileControls.buttonExtra.justPressed;
+					return PlayState.instance.controls.justPressed('space') || mobileShit;
 				default: return PlayState.instance.controls.justPressed(name);
 			}
 			return false;
 		});
-		funk.set("keyPressed", function(name:String = '') {
+		Lua_helper.add_callback(lua, "keyPressed", function(name:String = '') {
 			name = name.toLowerCase().trim();
 			switch(name) {
 				case 'left': return PlayState.instance.controls.NOTE_LEFT;
 				case 'down': return PlayState.instance.controls.NOTE_DOWN;
 				case 'up': return PlayState.instance.controls.NOTE_UP;
 				case 'right': return PlayState.instance.controls.NOTE_RIGHT;
+				case 'space':
+					var mobileShit:Bool = false;
+					if (Controls.instance.mobileC)
+						if (MusicBeatState.getState().mobileControls != null)
+							mobileShit = MusicBeatState.getState().mobileControls.buttonExtra.pressed;
+					return PlayState.instance.controls.pressed('space') || mobileShit;
 				default: return PlayState.instance.controls.pressed(name);
 			}
 			return false;
 		});
-		funk.set("keyReleased", function(name:String = '') {
+		Lua_helper.add_callback(lua, "keyReleased", function(name:String = '') {
 			name = name.toLowerCase().trim();
 			switch(name) {
 				case 'left': return PlayState.instance.controls.NOTE_LEFT_R;
 				case 'down': return PlayState.instance.controls.NOTE_DOWN_R;
 				case 'up': return PlayState.instance.controls.NOTE_UP_R;
 				case 'right': return PlayState.instance.controls.NOTE_RIGHT_R;
+				case 'space':
+					var mobileShit:Bool = false;
+					if (Controls.instance.mobileC)
+						if (MusicBeatState.getState().mobileControls != null)
+							mobileShit = MusicBeatState.getState().mobileControls.buttonExtra.justReleased;
+					return PlayState.instance.controls.justReleased('space') || mobileShit;
 				default: return PlayState.instance.controls.justReleased(name);
 			}
 			return false;
 		});
 
 		// Save data management
-		funk.set("initSaveData", function(name:String, ?folder:String = 'psychenginemods') {
+		Lua_helper.add_callback(lua, "initSaveData", function(name:String, ?folder:String = 'psychenginemods') {
 			var variables = MusicBeatState.getVariables();
 			if(!variables.exists('save_$name'))
 			{
@@ -148,7 +167,7 @@ class ExtraFunctions
 			}
 			FunkinLua.luaTrace('initSaveData: Save file already initialized: ' + name);
 		});
-		funk.set("flushSaveData", function(name:String) {
+		Lua_helper.add_callback(lua, "flushSaveData", function(name:String) {
 			var variables = MusicBeatState.getVariables();
 			if(variables.exists('save_$name'))
 			{
@@ -157,7 +176,7 @@ class ExtraFunctions
 			}
 			FunkinLua.luaTrace('flushSaveData: Save file not initialized: ' + name, false, false, FlxColor.RED);
 		});
-		funk.set("getDataFromSave", function(name:String, field:String, ?defaultValue:Dynamic = null) {
+		Lua_helper.add_callback(lua, "getDataFromSave", function(name:String, field:String, ?defaultValue:Dynamic = null) {
 			var variables = MusicBeatState.getVariables();
 			if(variables.exists('save_$name'))
 			{
@@ -170,7 +189,7 @@ class ExtraFunctions
 			FunkinLua.luaTrace('getDataFromSave: Save file not initialized: ' + name, false, false, FlxColor.RED);
 			return defaultValue;
 		});
-		funk.set("setDataFromSave", function(name:String, field:String, value:Dynamic) {
+		Lua_helper.add_callback(lua, "setDataFromSave", function(name:String, field:String, value:Dynamic) {
 			var variables = MusicBeatState.getVariables();
 			if(variables.exists('save_$name'))
 			{
@@ -179,7 +198,7 @@ class ExtraFunctions
 			}
 			FunkinLua.luaTrace('setDataFromSave: Save file not initialized: ' + name, false, false, FlxColor.RED);
 		});
-		funk.set("eraseSaveData", function(name:String)
+		Lua_helper.add_callback(lua, "eraseSaveData", function(name:String)
 		{
 			var variables = MusicBeatState.getVariables();
 			if (variables.exists('save_$name'))
@@ -191,7 +210,7 @@ class ExtraFunctions
 		});
 
 		// File management
-		funk.set("checkFileExists", function(filename:String, ?absolute:Bool = false) {
+		Lua_helper.add_callback(lua, "checkFileExists", function(filename:String, ?absolute:Bool = false) {
 			#if MODS_ALLOWED
 			if(absolute) return FileSystem.exists(filename);
 
@@ -203,7 +222,7 @@ class ExtraFunctions
 			return Assets.exists(Paths.getPath(filename, TEXT));
 			#end
 		});
-		funk.set("saveFile", function(path:String, content:String, ?absolute:Bool = false)
+		Lua_helper.add_callback(lua, "saveFile", function(path:String, content:String, ?absolute:Bool = false)
 		{
 			try {
 				#if MODS_ALLOWED
@@ -219,7 +238,7 @@ class ExtraFunctions
 			}
 			return false;
 		});
-		funk.set("deleteFile", function(path:String, ?ignoreModFolders:Bool = false, ?absolute:Bool = false)
+		Lua_helper.add_callback(lua, "deleteFile", function(path:String, ?ignoreModFolders:Bool = false, ?absolute:Bool = false)
 		{
 			try {
 				var lePath:String = path;
@@ -234,14 +253,14 @@ class ExtraFunctions
 			}
 			return false;
 		});
-		funk.set("getTextFromFile", function(path:String, ?ignoreModFolders:Bool = false) {
+		Lua_helper.add_callback(lua, "getTextFromFile", function(path:String, ?ignoreModFolders:Bool = false) {
 			return Paths.getTextFromFile(path, ignoreModFolders);
 		});
-		funk.set("directoryFileList", function(folder:String) {
+		Lua_helper.add_callback(lua, "directoryFileList", function(folder:String) {
 			var list:Array<String> = [];
 			#if sys
 			if(FileSystem.exists(folder)) {
-				for (folder in FileSystem.readDirectory(folder)) {
+				for (folder in Paths.readDirectory(folder)) {
 					if (!list.contains(folder)) {
 						list.push(folder);
 					}
@@ -252,21 +271,21 @@ class ExtraFunctions
 		});
 
 		// String tools
-		funk.set("stringStartsWith", function(str:String, start:String) {
+		Lua_helper.add_callback(lua, "stringStartsWith", function(str:String, start:String) {
 			return str.startsWith(start);
 		});
-		funk.set("stringEndsWith", function(str:String, end:String) {
+		Lua_helper.add_callback(lua, "stringEndsWith", function(str:String, end:String) {
 			return str.endsWith(end);
 		});
-		funk.set("stringSplit", function(str:String, split:String) {
+		Lua_helper.add_callback(lua, "stringSplit", function(str:String, split:String) {
 			return str.split(split);
 		});
-		funk.set("stringTrim", function(str:String) {
+		Lua_helper.add_callback(lua, "stringTrim", function(str:String) {
 			return str.trim();
 		});
 
 		// Randomization
-		funk.set("getRandomInt", function(min:Int, max:Int = FlxMath.MAX_VALUE_INT, exclude:String = '') {
+		Lua_helper.add_callback(lua, "getRandomInt", function(min:Int, max:Int = FlxMath.MAX_VALUE_INT, exclude:String = '') {
 			var excludeArray:Array<String> = exclude.split(',');
 			var toExclude:Array<Int> = [];
 			for (i in 0...excludeArray.length)
@@ -276,7 +295,7 @@ class ExtraFunctions
 			}
 			return FlxG.random.int(min, max, toExclude);
 		});
-		funk.set("getRandomFloat", function(min:Float, max:Float = 1, exclude:String = '') {
+		Lua_helper.add_callback(lua, "getRandomFloat", function(min:Float, max:Float = 1, exclude:String = '') {
 			var excludeArray:Array<String> = exclude.split(',');
 			var toExclude:Array<Float> = [];
 			for (i in 0...excludeArray.length)
@@ -286,7 +305,7 @@ class ExtraFunctions
 			}
 			return FlxG.random.float(min, max, toExclude);
 		});
-		funk.set("getRandomBool", function(chance:Float = 50) {
+		Lua_helper.add_callback(lua, "getRandomBool", function(chance:Float = 50) {
 			return FlxG.random.bool(chance);
 		});
 	}

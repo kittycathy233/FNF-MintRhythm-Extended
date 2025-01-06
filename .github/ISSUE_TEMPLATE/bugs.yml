@@ -51,7 +51,8 @@ body:
         - "DevBuild"
         - "1.0 (Final)"
         - "1.0 (Prerelease)"
-        - "0.7.x or older"
+        - "0.7.x"
+        - "0.6.x or older"
     validations:
       required: true
 

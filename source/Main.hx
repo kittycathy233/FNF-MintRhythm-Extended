@@ -3,7 +3,6 @@ package;
 import debug.FPSCounter;
 import backend.Highscore;
 import flixel.FlxGame;
-import haxe.io.Path;
 import openfl.Lib;
 import openfl.display.Sprite;
 import openfl.events.Event;
@@ -193,7 +192,7 @@ class Main extends Sprite
 	}
 
 	function toggleFullScreen(event:KeyboardEvent) {
-		if(Controls.instance.justReleased('fullscreen'))
+		if (Controls.instance.justReleased('fullscreen'))
 			FlxG.fullscreen = !FlxG.fullscreen;
 	}
 }

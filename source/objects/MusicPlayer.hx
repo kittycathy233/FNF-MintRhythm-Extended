@@ -259,7 +259,11 @@ class MusicPlayer extends FlxGroup
 
 		if (playingMusic)
 		{
-			instance.bottomText.text = Language.getPhrase('musicplayer_tip', (instance.controls.mobileC) ? 'Press X to Pause / Press B to Exit / Press C to Reset the Song' : 'Press SPACE to Pause / Press ESCAPE to Exit / Press R to Reset the Song');
+			final space:String = (instance.controls.mobileC) ? "X" : "SPACE";
+			final escape:String = (instance.controls.mobileC) ? "B" : "ESCAPE";
+			final reset:String = (instance.controls.mobileC) ? "C" : "R";
+
+			instance.bottomText.text = Language.getPhrase('musicplayer_tip', 'Press {1} to Pause / Press {2} to Exit / Press {3} to Reset the Song', [space, escape, reset]);
 			positionSong();
 			
 			progressBar.setRange(0, FlxG.sound.music.length);

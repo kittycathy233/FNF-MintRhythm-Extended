@@ -20,9 +20,9 @@ class MusicBeatState extends FlxState
 	}
 
 	public var touchPad:TouchPad;
+	public var touchPadCam:FlxCamera;
 	public var mobileControls:IMobileControls;
-	public var camControls:FlxCamera;
-	public var tpadCam:FlxCamera;
+	public var mobileControlsCam:FlxCamera;
 
 	public function addTouchPad(DPad:String, Action:String)
 	{
@@ -38,10 +38,10 @@ class MusicBeatState extends FlxState
 			touchPad = FlxDestroyUtil.destroy(touchPad);
 		}
 
-		if(tpadCam != null)
+		if(touchPadCam != null)
 		{
-			FlxG.cameras.remove(tpadCam);
-			tpadCam = FlxDestroyUtil.destroy(tpadCam);
+			FlxG.cameras.remove(touchPadCam);
+			touchPadCam = FlxDestroyUtil.destroy(touchPadCam);
 		}
 	}
 
@@ -62,11 +62,11 @@ class MusicBeatState extends FlxState
 		}
 
 		mobileControls.instance = MobileData.setButtonsColors(mobileControls.instance);
-		camControls = new FlxCamera();
-		camControls.bgColor.alpha = 0;
-		FlxG.cameras.add(camControls, defaultDrawTarget);
+		mobileControlsCam = new FlxCamera();
+		mobileControlsCam.bgColor.alpha = 0;
+		FlxG.cameras.add(mobileControlsCam, defaultDrawTarget);
 
-		mobileControls.instance.cameras = [camControls];
+		mobileControls.instance.cameras = [mobileControlsCam];
 		mobileControls.instance.visible = false;
 		add(mobileControls.instance);
 	}
@@ -80,10 +80,10 @@ class MusicBeatState extends FlxState
 			mobileControls = null;
 		}
 
-		if(camControls != null)
+		if (mobileControlsCam != null)
 		{
-			FlxG.cameras.remove(camControls);
-			camControls = FlxDestroyUtil.destroy(camControls);
+			FlxG.cameras.remove(mobileControlsCam);
+			mobileControlsCam = FlxDestroyUtil.destroy(mobileControlsCam);
 		}
 	}
 
@@ -91,10 +91,10 @@ class MusicBeatState extends FlxState
 	{
 		if (touchPad != null)
 		{
-			tpadCam = new FlxCamera();
-			tpadCam.bgColor.alpha = 0;
-			FlxG.cameras.add(tpadCam, defaultDrawTarget);
-			touchPad.cameras = [tpadCam];
+			touchPadCam = new FlxCamera();
+			touchPadCam.bgColor.alpha = 0;
+			FlxG.cameras.add(touchPadCam, defaultDrawTarget);
+			touchPad.cameras = [touchPadCam];
 		}
 	}
 

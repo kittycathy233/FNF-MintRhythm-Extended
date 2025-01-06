@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Mobile Porting Team
+ * Copyright (C) 2025 Mobile Porting Team
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -83,6 +83,9 @@ enum abstract MobileInputID(Int) from Int to Int
 	var HITBOX_DOWN = 39;
 	var HITBOX_LEFT = 40;
 	var HITBOX_RIGHT = 41;
+	// Extra Buttons
+	var EXTRA_1 = 42;
+	var EXTRA_2 = 43;
 
 	@:from
 	public static inline function fromString(s:String)

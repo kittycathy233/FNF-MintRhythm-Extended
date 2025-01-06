@@ -3,7 +3,7 @@ package states.editors;
 import openfl.net.FileReference;
 import openfl.events.Event;
 import openfl.events.IOErrorEvent;
-import openfl.net.FileFilter;
+import flash.net.FileFilter;
 import haxe.Json;
 
 import objects.TypedAlphabet;
@@ -64,7 +64,7 @@ class DialogueEditorState extends MusicBeatState implements PsychUIEventHandler.
 		addEditorBox();
 		FlxG.mouse.visible = true;
 
-		var addLineText:FlxText = new FlxText(10, 10, FlxG.width - 20, 'Press ${controls.mobileC ? 'A' : 'O'} to remove the current dialogue line, Press ${controls.mobileC ? 'X' : 'P'} to add another line after the current one.', 8);
+		var addLineText:FlxText = new FlxText(10, 10, FlxG.width - 20, 'Press ${(controls.mobileC) ? 'A' : 'O'} to remove the current dialogue line, Press ${(controls.mobileC) ? 'X' : 'P'} to add another line after the current one.', 8);
 		addLineText.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		addLineText.scrollFactor.set();
 		add(addLineText);
@@ -202,7 +202,7 @@ class DialogueEditorState extends MusicBeatState implements PsychUIEventHandler.
 		characterAnimSpeed();
 
 		if(character.animation.curAnim != null && character.jsonFile.animations != null) {
-			animText.text = 'Animation: ' + character.jsonFile.animations[curAnim].anim + ' (' + (curAnim + 1) +' / ' + character.jsonFile.animations.length + ') - Press ${controls.mobileC ? 'UP' : 'W'} or ${controls.mobileC ? 'DOWN' : 'S'} to scroll';
+			animText.text = 'Animation: ' + character.jsonFile.animations[curAnim].anim + ' (' + (curAnim + 1) +' / ' + character.jsonFile.animations.length + ') - Press ${(controls.mobileC) ? 'UP' : 'W'} or ${(controls.mobileC) ? 'DOWN' : 'S'} to scroll';
 		} else {
 			animText.text = 'ERROR! NO ANIMATIONS FOUND';
 		}
@@ -252,7 +252,7 @@ class DialogueEditorState extends MusicBeatState implements PsychUIEventHandler.
 					curAnim = 0;
 					if(character.jsonFile.animations.length > curAnim && character.jsonFile.animations[curAnim] != null) {
 						character.playAnim(character.jsonFile.animations[curAnim].anim, daText.finishedText);
-						animText.text = 'Animation: ' + character.jsonFile.animations[curAnim].anim + ' (' + (curAnim + 1) +' / ' + character.jsonFile.animations.length + ') - Press ${controls.mobileC ? 'UP' : 'W'} or ${controls.mobileC ? 'DOWN' : 'S'} to scroll';
+						animText.text = 'Animation: ' + character.jsonFile.animations[curAnim].anim + ' (' + (curAnim + 1) +' / ' + character.jsonFile.animations.length + ') - Press ${(controls.mobileC) ? 'UP' : 'W'} or ${(controls.mobileC) ? 'DOWN' : 'S'} to scroll';
 					} else {
 						animText.text = 'ERROR! NO ANIMATIONS FOUND';
 					}
@@ -338,7 +338,7 @@ class DialogueEditorState extends MusicBeatState implements PsychUIEventHandler.
 						character.playAnim(animToPlay, daText.finishedText);
 						dialogueFile.dialogue[curSelected].expression = animToPlay;
 					}
-					animText.text = 'Animation: ' + animToPlay + ' (' + (curAnim + 1) +' / ' + character.jsonFile.animations.length + ') - Press ${controls.mobileC ? 'UP' : 'W'} or ${controls.mobileC ? 'DOWN' : 'S'} to scroll';
+					animText.text = 'Animation: ' + animToPlay + ' (' + (curAnim + 1) +' / ' + character.jsonFile.animations.length + ') - Press ${(controls.mobileC) ? 'UP' : 'W'} or ${(controls.mobileC) ? 'DOWN' : 'S'} to scroll';
 				}
 				if(controlText[i]) {
 					changeText(negaMult[i]);
@@ -398,12 +398,12 @@ class DialogueEditorState extends MusicBeatState implements PsychUIEventHandler.
 
 			var selectedAnim:String = character.jsonFile.animations[curAnim].anim;
 			character.playAnim(selectedAnim, daText.finishedText);
-			animText.text = 'Animation: $selectedAnim (${curAnim + 1} / ${character.jsonFile.animations.length} ) - Press ${controls.mobileC ? 'UP' : 'W'} or ${controls.mobileC ? 'DOWN' : 'S'} to scroll';
+			animText.text = 'Animation: $selectedAnim (${curAnim + 1} / ${character.jsonFile.animations.length} ) - Press ${(controls.mobileC) ? 'UP' : 'W'} or ${(controls.mobileC) ? 'DOWN' : 'S'} to scroll';
 		}
 		else animText.text = 'ERROR! NO ANIMATIONS FOUND';
 		characterAnimSpeed();
 
-		selectedText.text = 'Line: (' + (curSelected + 1) + ' / ' + dialogueFile.dialogue.length + ') - Press ${controls.mobileC ? 'LEFT' : 'A'} or ${controls.mobileC ? 'RIGHT' : 'D'} to scroll';
+		selectedText.text = 'Line: (' + (curSelected + 1) + ' / ' + dialogueFile.dialogue.length + ') - Press ${(controls.mobileC) ? 'LEFT' : 'A'} or ${(controls.mobileC) ? 'RIGHT' : 'D'} to scroll';
 	}
 
 	function characterAnimSpeed() {

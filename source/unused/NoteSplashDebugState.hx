@@ -137,19 +137,18 @@ class NoteSplashDebugState extends MusicBeatState implements PsychUIEventHandler
 		curAnimText.scrollFactor.set();
 		add(curAnimText);
 
-                var sillyText:String;
+		var sillyText:String;
 
-                if (controls.mobileC) {
-                sillyText = "Press Y to Reset animation\n
+		if (controls.mobileC)
+			sillyText = "Press Y to Reset animation\n
                         Press A twice to save to the loaded Note Splash PNG's folder\n
                         Press Top LEFT/RIGHT to change selected note - Arrow Keys to change offset\n
                         C/V - Copy & Paste";
-                } else {
-                sillyText = "Press SPACE to Reset animation\n
+		else
+			sillyText = "Press SPACE to Reset animation\n
                         Press ENTER twice to save to the loaded Note Splash PNG's folder\n
                         A/D change selected note - Arrow Keys to change offset (Hold shift for 10x)\n
                         Ctrl + C/V - Copy & Paste";
-                }
 
 		var text:FlxText = new FlxText(0, 520, FlxG.width, sillyText, 16);
 		text.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -256,7 +255,7 @@ class NoteSplashDebugState extends MusicBeatState implements PsychUIEventHandler
 
 		if(FlxG.keys.justPressed.ENTER || touchPad.buttonA.justPressed)
 		{
-			savedText.text = 'Press ${controls.mobileC ? 'A' : 'ENTER'} again to save.';
+			savedText.text = 'Press ${(controls.mobileC) ? 'A' : 'ENTER'} again to save.';
 			if(pressEnterToSave > 0) //save
 			{
 				saveFile();
@@ -412,8 +411,8 @@ class NoteSplashDebugState extends MusicBeatState implements PsychUIEventHandler
 			curAnim += change;
 			if(curAnim > maxAnims) curAnim = 1;
 			else if(curAnim < 1) curAnim = maxAnims;
-			curAnimText.text = 'Current Animation: $curAnim / $maxAnims\n(Press ${controls.mobileC ? 'Top UP/DOWN' : 'W/S'} to change)';
-			curFrameText.text = 'Force Frame Disabled\n(Press ${controls.mobileC ? 'Q/E' : 'X/E'} to change)';
+			curAnimText.text = 'Current Animation: $curAnim / $maxAnims\n(Press ${(controls.mobileC) ? 'Top UP/DOWN' : 'W/S'} to change)';
+			curFrameText.text = 'Force Frame Disabled\n(Press ${(controls.mobileC) ? 'Q/E' : 'X/E'} to change)';
 
 			for (i in 0...maxNotes)
 			{

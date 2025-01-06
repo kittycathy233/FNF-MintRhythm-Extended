@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Mobile Porting Team
+ * Copyright (C) 2025 Mobile Porting Team
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -82,7 +82,7 @@ class MobileOptionsSubState extends BaseOptionsMenu
 			addOption(option);
 
 			option = new Option('Hitbox Position', 'If checked, the hitbox will be put at the bottom of the screen, otherwise will stay at the top.',
-				'hitbox2', BOOL);
+				'hitboxPos', BOOL);
 			addOption(option);
 		}
 
@@ -109,7 +109,8 @@ class MobileOptionsSubState extends BaseOptionsMenu
 
 		try
 		{
-			Sys.command('rm', ['-rf', lastStoragePath]);
+			if (ClientPrefs.data.storageType != "EXTERNAL")
+				Sys.command('rm', ['-rf', lastStoragePath]);
 		}
 		catch (e:haxe.Exception)
 			trace('Failed to remove last directory. (${e.message})');
@@ -123,7 +124,7 @@ class MobileOptionsSubState extends BaseOptionsMenu
 		if (ClientPrefs.data.storageType != lastStorageType)
 		{
 			onStorageChange();
-			CoolUtil.showPopUp('Storage Type has been changed and you needed restart the game!!\nPress OK to close the game.', 'Notice!');
+			CoolUtil.showPopUp(Language.getPhrase('storage_type_change_message', 'Storage Type has been changed and you need restart the game!!\nPress OK to close the game.'), Language.getPhrase('mobile_notice', 'Notice!'));
 			lime.system.System.exit(0);
 		}
 		#end

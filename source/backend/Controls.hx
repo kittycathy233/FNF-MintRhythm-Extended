@@ -174,78 +174,54 @@ class Controls
 	private function touchPadPressed(keys:Array<MobileInputID>):Bool
 	{
 		if (keys != null && requestedInstance.touchPad != null)
-		{
 			if (requestedInstance.touchPad.anyPressed(keys) == true)
-			{
-				controllerMode = true; // !!DO NOT DISABLE THIS IF YOU DONT WANT TO KILL THE INPUT FOR MOBILE!!
 				return true;
-			}
-		}
+
 		return false;
 	}
 
 	private function touchPadJustPressed(keys:Array<MobileInputID>):Bool
 	{
 		if (keys != null && requestedInstance.touchPad != null)
-		{
 			if (requestedInstance.touchPad.anyJustPressed(keys) == true)
-			{
-				controllerMode = true;
 				return true;
-			}
-		}
+
 		return false;
 	}
 
 	private function touchPadJustReleased(keys:Array<MobileInputID>):Bool
 	{
 		if (keys != null && requestedInstance.touchPad != null)
-		{
 			if (requestedInstance.touchPad.anyJustReleased(keys) == true)
-			{
-				controllerMode = true;
 				return true;
-			}
-		}
+
 		return false;
 	}
 
 	private function mobileCPressed(keys:Array<MobileInputID>):Bool
 	{
 		if (keys != null && requestedMobileC != null)
-		{
 			if (requestedMobileC.instance.anyPressed(keys))
-			{
-				controllerMode = true;
 				return true;
-			}
-		}
+
 		return false;
 	}
 
 	private function mobileCJustPressed(keys:Array<MobileInputID>):Bool
 	{
 		if (keys != null && requestedMobileC != null)
-		{
 			if (requestedMobileC.instance.anyJustPressed(keys))
-			{
-				controllerMode = true;
 				return true;
-			}
-		}
+
 		return false;
 	}
 
 	private function mobileCJustReleased(keys:Array<MobileInputID>):Bool
 	{
 		if (keys != null && requestedMobileC != null)
-		{
 			if (requestedMobileC.instance.anyJustReleased(keys))
-			{
-				controllerMode = true;
 				return true;
-			}
-		}
+
 		return false;
 	}
 

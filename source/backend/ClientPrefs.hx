@@ -10,7 +10,7 @@ import states.TitleState;
 @:structInit class SaveVariables {
 	// Mobile and Mobile Controls Releated
 	public var extraButtons:String = "NONE"; // mobile extra button option
-	public var hitbox2:Bool = true; // hitbox extra button position option
+	public var hitboxPos:Bool = true; // hitbox extra button position option
 	public var dynamicColors:Bool = true; // yes cause its cool -Karim
 	public var controlsAlpha:Float = FlxG.onMobile ? 0.6 : 0;
 	public var screensaver:Bool = false;
@@ -142,15 +142,15 @@ class ClientPrefs {
 		'reset'			=> [BACK]
 	];
 	public static var mobileBinds:Map<String, Array<MobileInputID>> = [
-		'note_up'		=> [NOTE_UP, UP2],
-		'note_left'		=> [NOTE_LEFT, LEFT2],
-		'note_down'		=> [NOTE_DOWN, DOWN2],
-		'note_right'	=> [NOTE_RIGHT, RIGHT2],
+		'note_up'		=> [NOTE_UP],
+		'note_left'		=> [NOTE_LEFT],
+		'note_down'		=> [NOTE_DOWN],
+		'note_right'	=> [NOTE_RIGHT],
 
-		'ui_up'			=> [UP, NOTE_UP],
-		'ui_left'		=> [LEFT, NOTE_LEFT],
-		'ui_down'		=> [DOWN, NOTE_DOWN],
-		'ui_right'		=> [RIGHT, NOTE_RIGHT],
+		'ui_up'			=> [UP],
+		'ui_left'		=> [LEFT],
+		'ui_down'		=> [DOWN],
+		'ui_right'		=> [RIGHT],
 
 		'accept'		=> [A],
 		'back'			=> [B],
@@ -271,9 +271,9 @@ class ClientPrefs {
 					if(gamepadBinds.exists(control)) gamepadBinds.set(control, keys);
 			}
 			if(save.data.mobile != null) {
-					var loadedControls:Map<String, Array<MobileInputID>> = save.data.mobile;
-					for (control => keys in loadedControls)
-						if(mobileBinds.exists(control)) mobileBinds.set(control, keys);
+				var loadedControls:Map<String, Array<MobileInputID>> = save.data.mobile;
+				for (control => keys in loadedControls)
+					if(mobileBinds.exists(control)) mobileBinds.set(control, keys);
 			}
 			reloadVolumeKeys();
 		}

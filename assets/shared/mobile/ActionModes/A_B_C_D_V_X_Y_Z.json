@@ -5,8 +5,6 @@
       "graphic": "v",
       "x": 770,
       "y": 462,
-      "width": 132,
-      "height": 125,
       "color": "0x49A9B2"
     },
     {
@@ -14,8 +12,6 @@
       "graphic": "d",
       "x": 770,
       "y": 587,
-      "width": 132,
-      "height": 125,
       "color": "0x0078FF"
     },
     {
@@ -23,8 +19,6 @@
       "graphic": "x",
       "x": 896,
       "y": 462,
-      "width": 132,
-      "height": 125,
       "color": "0x99062D"
     },
     {
@@ -32,8 +26,6 @@
       "graphic": "c",
       "x": 896,
       "y": 587,
-      "width": 132,
-      "height": 125,
       "color": "0x44FF00"
     },
     {
@@ -41,8 +33,6 @@
       "graphic": "y",
       "x": 1148,
       "y": 462,
-      "width": 132,
-      "height": 125,
       "color": "0x4A35B9"
     },
     {
@@ -50,8 +40,6 @@
       "graphic": "b",
       "x": 1022,
       "y": 587,
-      "width": 132,
-      "height": 125,
       "color": "0xFFCB00"
     },
     {
@@ -59,8 +47,6 @@
       "graphic": "z",
       "x": 1274,
       "y": 462,
-      "width": 132,
-      "height": 125,
       "color": "0xCCB98E"
     },
     {
@@ -68,8 +54,6 @@
       "graphic": "a",
       "x": 1274,
       "y": 587,
-      "width": 132,
-      "height": 125,
       "color": "0xFF0000"
     }
   ]

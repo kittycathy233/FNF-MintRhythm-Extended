@@ -128,9 +128,4 @@ class CutsceneHandler extends FlxBasic
 	{
 		return FlxSort.byValues(FlxSort.ASCENDING, Obj1.time, Obj2.time);
 	}
-
-	override function destroy(){
-		active = false;
-		super.destroy();
-	}
 }

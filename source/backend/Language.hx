@@ -3,7 +3,9 @@ package backend;
 class Language
 {
 	public static var defaultLangName:String = 'English (US)'; //en-US
+	#if TRANSLATIONS_ALLOWED
 	private static var phrases:Map<String, String> = [];
+	#end
 
 	public static function reloadPhrases()
 	{
@@ -91,12 +93,12 @@ class Language
 	#end
 
 	#if LUA_ALLOWED
-	public static function addLuaCallbacks(funk:psychlua.FunkinLua) {
-		funk.set("getTranslationPhrase", function(key:String, ?defaultPhrase:String, ?values:Array<Dynamic> = null) {
+	public static function addLuaCallbacks(lua:State) {
+		Lua_helper.add_callback(lua, "getTranslationPhrase", function(key:String, ?defaultPhrase:String, ?values:Array<Dynamic> = null) {
 			return getPhrase(key, defaultPhrase, values);
 		});
 
-		funk.set("getFileTranslation", function(key:String) {
+		Lua_helper.add_callback(lua, "getFileTranslation", function(key:String) {
 			return getFileTranslation(key);
 		});
 	}
