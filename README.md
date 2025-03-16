@@ -13,7 +13,7 @@ To start you off, disabling *Video Cutscenes* should be simple, simply delete th
 Same goes for *Lua Scripts*, comment out or delete the line with `LUA_ALLOWED`, this and other customization options are all available within the `Project.xml` file.
 
 ## Mobile Credits:
-* Lily - Head Porter and linc_luajit-rewriten.
+* Lily - Head Porter.
 * Karim - Second Porter.
 * Moxie - Helper.
 
