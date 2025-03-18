@@ -17,7 +17,7 @@ import mobile.backend.MobileScaleMode;
 import openfl.events.KeyboardEvent;
 import lime.system.System as LimeSystem;
 
-#if linux
+#if (linux || mac)
 import lime.graphics.Image;
 #end
 #if COPYSTATE_ALLOWED
@@ -188,7 +188,7 @@ class Main extends Sprite
 			fpsVar.visible = ClientPrefs.data.showFPS;
 		}
 
-		#if linux
+		#if (linux || mac) // fix the app icon not showing up on the Linux Panel / Mac Dock
 		var icon = Image.fromFile("icon.png");
 		Lib.current.stage.window.setIcon(icon);
 		#end
