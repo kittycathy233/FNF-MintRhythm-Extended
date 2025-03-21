@@ -186,11 +186,12 @@ class Main extends Sprite
 		
 		#if desktop FlxG.stage.addEventListener(KeyboardEvent.KEY_UP, toggleFullScreen); #end
 
-		#if android FlxG.android.preventDefaultKeys = [BACK]; #end
-
 		#if mobile
+		#if android FlxG.android.preventDefaultKeys = [BACK]; #end
 		LimeSystem.allowScreenTimeout = ClientPrefs.data.screensaver;
 		#end
+
+		Application.current.window.vsync = ClientPrefs.data.vsync;
 
 		// shader coords fix
 		FlxG.signals.gameResized.add(function (w, h) {
