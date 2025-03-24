@@ -21,7 +21,7 @@ jobs:
             artifactName: linuxBuild-x86_64
             artifactPath: export/release/linux/bin/*
           - name: macOS x86_64
-            os: macos-15
+            os: macos-13
             setupCommand: sh ./setup/unix.sh
             buildArgs: "mac -64 -D HXCPP_M64"
             artifactName: macOSBuild-x86_64
