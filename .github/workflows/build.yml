@@ -52,7 +52,7 @@ jobs:
 
       - name: Install Rosetta 2
         if: inputs.name == 'iOS'
-        run: softwareupdate --install-rosetta | echo "A"
+        run: echo "A" | softwareupdate --install-rosetta
 
       - name: Install Libraries
         run: ${{ inputs.setupCommand }}
