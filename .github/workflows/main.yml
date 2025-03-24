@@ -26,12 +26,6 @@ jobs:
             buildArgs: "mac -64 -D HXCPP_M64"
             artifactName: macOSBuild-x86_64
             artifactPath: export/release/macos/bin/*
-          - name: macOS AArch64
-            os: macos-15
-            buildArgs: mac
-            setupCommand: sh ./setup/unix.sh
-            artifactName: macOSBuild-arm64
-            artifactPath: export/release/macos/bin/*
           - name: Android
             os: macos-15
             buildArgs: "android -ONLY_ARMV7"
