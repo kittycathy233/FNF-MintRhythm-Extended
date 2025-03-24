@@ -51,7 +51,7 @@ jobs:
         run: sudo apt install libvlc-dev libvlccore-dev
 
       - name: Install Rosetta 2
-        if: inputs.name == "iOS"
+        if: inputs.name == 'iOS'
         run: softwareupdate --install-rosetta
 
       - name: Install Libraries
