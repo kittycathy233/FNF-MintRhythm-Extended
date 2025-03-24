@@ -35,30 +35,16 @@ jobs:
         uses: actions/checkout@main
 
       - name: Setup Haxe
-        if: inputs.name != 'Linux ARM64'
         uses: krdlab/setup-haxe@master
         with:
           haxe-version: ${{ env.HAXE_VERSION }}
-
-      - name: Setup Haxe (Linux ARM64 Workaround)
-        if: inputs.name == 'Linux ARM64'
-        run: |
-          sudo add-apt-repository ppa:haxe/releases -y
-          sudo apt-get update
-          sudo apt install haxe -y
 
       - name: Setup Android NDK
         if: inputs.name == 'Android'
         uses: nttld/setup-ndk@main
         with:
-          ndk-version: r29-beta1
+          ndk-version: r27c
           add-to-path: false
-
-      - name: Setup MSVC ARM64
-        if: inputs.name == 'Windows ARM64'
-        uses: TheMrMilchmann/setup-msvc-dev@v3
-        with:
-          arch: amd64_arm64
 
       - name: Install libVLC
         if: contains(inputs.name, 'Linux')
