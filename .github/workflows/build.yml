@@ -41,6 +41,7 @@ jobs:
 
       - name: Setup Android NDK
         if: inputs.name == 'Android'
+        id: setup-ndk
         uses: nttld/setup-ndk@main
         with:
           ndk-version: r27c
