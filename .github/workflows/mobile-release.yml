@@ -40,7 +40,7 @@ jobs:
       matrix:
         include:
           - name: Android
-            os: ubuntu-24.04
+            os: macos-15
             buildArgs: "android -final -D officialBuild"
             setupCommand: sh ./setup/unix.sh
             artifactName: androidBuild

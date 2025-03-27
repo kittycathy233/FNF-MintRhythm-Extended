@@ -21,19 +21,25 @@ jobs:
             artifactName: linuxBuild-x86_64
             artifactPath: export/release/linux/bin/*
           - name: macOS x86_64
-            os: macos-13
+            os: macos-15
             setupCommand: sh ./setup/unix.sh
             buildArgs: "mac -64 -D HXCPP_M64"
             artifactName: macOSBuild-x86_64
             artifactPath: export/release/macos/bin/*
+          - name: macOS ARM64
+            os: macos-15
+            setupCommand: sh ./setup/unix.sh
+            buildArgs: "mac -arm64 -D HXCPP_ARM64"
+            artifactName: macOSBuild-arm64
+            artifactPath: export/release/macos/bin/*
           - name: Android
-            os: ubuntu-24.04
+            os: macos-15
             buildArgs: "android -ONLY_ARMV7"
             setupCommand: sh ./setup/unix.sh
             artifactName: androidBuild
             artifactPath: "export/release/android/bin/app/build/outputs/apk/release/*.apk"
           - name: iOS
-            os: macos-13
+            os: macos-15
             buildArgs: "ios -nosign"
             setupCommand: sh ./setup/unix.sh
             artifactName: iOSBuild
