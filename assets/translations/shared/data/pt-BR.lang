@@ -188,6 +188,8 @@ setting_gpu_caching: "Caching na GPU"
 description_gpu_caching: "Se marcado, permite que a GPU seja usada para armazenar texturas, reduzindo uso da memória RAM.\nNão ligue isso se sua Placa de Vídeo é ruim."
 setting_framerate: "Taxa de Atualização"
 description_framerate: "Também chamado de "Framerate", preciso explicar?"
+setting_fps_rework: "FPS Reajustado"
+description_fps_rework: "Se marcado, isso evitará que o jogo fique \"lento\" e \"suave\" quando o FPS atual for menor que o limite de FPS."
 
 // Visuals Settings
 setting_note_skins: "Estilo de Notas"

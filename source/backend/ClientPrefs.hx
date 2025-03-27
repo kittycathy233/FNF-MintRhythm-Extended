@@ -19,6 +19,7 @@ import states.TitleState;
 	public var popUpRating:Bool = true;
 	public var vsync:Bool = false;
 	public var gameOverVibration:Bool = false;
+	public var fpsRework:Bool = false;
 	
 	public var downScroll:Bool = false;
 	public var middleScroll:Bool = false;
@@ -224,13 +225,20 @@ class ClientPrefs {
 		}
 		#end
 
-		if(data.framerate > FlxG.stage.window.frameRate)
-		{
+		if (data.fpsRework)
 			FlxG.stage.window.frameRate = data.framerate;
-		}
 		else
 		{
-			FlxG.stage.window.frameRate = data.framerate;
+			if (data.framerate > FlxG.drawFramerate)
+			{
+				FlxG.updateFramerate = data.framerate;
+				FlxG.drawFramerate = data.framerate;
+			}
+			else
+			{
+				FlxG.drawFramerate = data.framerate;
+				FlxG.updateFramerate = data.framerate;
+			}
 		}
 
 		if(FlxG.save.data.gameplaySettings != null)

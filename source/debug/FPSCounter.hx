@@ -33,6 +33,7 @@ class FPSCounter extends TextField
 	**/
 	public var memoryMegas(get, never):Float;
 
+	@:noCompletion private var times:Array<Float>;
 	@:noCompletion private var lastFramerateUpdateTime:Float;
 	@:noCompletion private var updateTime:Int;
 	@:noCompletion private var framesCount:Int;
@@ -61,6 +62,7 @@ class FPSCounter extends TextField
 		multiline = true;
 		text = "FPS: ";
 
+		times = [];
 		lastFramerateUpdateTime = Timer.stamp();
 		prevTime = Lib.getTimer();
 		updateTime = prevTime + 500;
@@ -79,31 +81,51 @@ class FPSCounter extends TextField
 			textColor = 0xFFFF0000;
 	}
 
+	var deltaTimeout:Float = 0.0;
 	private override function __enterFrame(deltaTime:Float):Void
 	{
-		// Flixel keeps reseting this to 60 on focus gained
-		if (FlxG.stage.window.frameRate != ClientPrefs.data.framerate && FlxG.stage.window.frameRate != FlxG.game.focusLostFramerate)
-			FlxG.stage.window.frameRate = ClientPrefs.data.framerate;
-
-		var currentTime = openfl.Lib.getTimer();
-		framesCount++;
-
-		if (currentTime >= updateTime)
+		if (ClientPrefs.data.fpsRework)
 		{
-			var elapsed = currentTime - prevTime;
-			currentFPS = Math.ceil((framesCount * 1000) / elapsed);
-			framesCount = 0;
-			prevTime = currentTime;
-			updateTime = currentTime + 500;
+			// Flixel keeps reseting this to 60 on focus gained
+			if (FlxG.stage.window.frameRate != ClientPrefs.data.framerate && FlxG.stage.window.frameRate != FlxG.game.focusLostFramerate)
+				FlxG.stage.window.frameRate = ClientPrefs.data.framerate;
+
+			var currentTime = openfl.Lib.getTimer();
+			framesCount++;
+
+			if (currentTime >= updateTime)
+			{
+				var elapsed = currentTime - prevTime;
+				currentFPS = Math.ceil((framesCount * 1000) / elapsed);
+				framesCount = 0;
+				prevTime = currentTime;
+				updateTime = currentTime + 500;
+			}
+
+			// Set Update and Draw framerate to the current FPS every 1.5 second to prevent "slowness" issue
+			if ((FlxG.updateFramerate >= currentFPS + 5 || FlxG.updateFramerate <= currentFPS - 5)
+				&& haxe.Timer.stamp() - lastFramerateUpdateTime >= 1.5
+				&& currentFPS >= 30)
+			{
+				FlxG.updateFramerate = FlxG.drawFramerate = currentFPS;
+				lastFramerateUpdateTime = haxe.Timer.stamp();
+			}
 		}
-
-		// Set Update and Draw framerate to the current FPS every 1.5 second to prevent "slowness" issue
-		if ((FlxG.updateFramerate >= currentFPS + 5 || FlxG.updateFramerate <= currentFPS - 5)
-			&& haxe.Timer.stamp() - lastFramerateUpdateTime >= 1.5
-			&& currentFPS >= 30)
+		else
 		{
-			FlxG.updateFramerate = FlxG.drawFramerate = currentFPS;
-			lastFramerateUpdateTime = haxe.Timer.stamp();
+			final now:Float = haxe.Timer.stamp() * 1000;
+			times.push(now);
+			while (times[0] < now - 1000)
+				times.shift();
+			// prevents the overlay from updating every frame, why would you need to anyways @crowplexus
+			if (deltaTimeout < 50)
+			{
+				deltaTimeout += deltaTime;
+				return;
+			}
+
+			currentFPS = times.length < FlxG.updateFramerate ? times.length : FlxG.updateFramerate;
+			deltaTimeout = 0.0;
 		}
 
 		updateText();
