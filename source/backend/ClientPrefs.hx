@@ -224,15 +224,13 @@ class ClientPrefs {
 		}
 		#end
 
-		if(data.framerate > FlxG.drawFramerate)
+		if(data.framerate > FlxG.stage.window.frameRate)
 		{
-			FlxG.updateFramerate = data.framerate;
-			FlxG.drawFramerate = data.framerate;
+			FlxG.stage.window.frameRate = data.framerate;
 		}
 		else
 		{
-			FlxG.drawFramerate = data.framerate;
-			FlxG.updateFramerate = data.framerate;
+			FlxG.stage.window.frameRate = data.framerate;
 		}
 
 		if(FlxG.save.data.gameplaySettings != null)
