@@ -62,8 +62,8 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 
 		var option:Option = new Option('FPS Rework',
 			"If checked, this works around the game becoming \"slow\" and \"smooth\" when the current FPS is lower than the FPS cap.",
-			'framerate',
-			INT);
+			'fpsRework',
+			BOOL);
 		addOption(option);
 
 		super();
