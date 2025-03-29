@@ -32,7 +32,7 @@ import mobile.backend.TouchUtil;
 
 /**
  * ...
- * @author: Karim Akra and Lily Ross (mcagabe19)
+ * @author: Karim Akra and Homura Akemi (HomuHomu833)
  */
 class MobileFunctions
 {

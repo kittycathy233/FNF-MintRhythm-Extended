@@ -26,7 +26,7 @@ import flixel.util.FlxSignal.FlxTypedSignal;
 
 /**
  * ...
- * @author: Karim Akra and Lily Ross (mcagabe19)
+ * @author: Karim Akra and Homura Akemi (HomuHomu833)
  */
 @:access(mobile.objects.TouchButton)
 class TouchPad extends MobileInputManager implements IMobileControls
