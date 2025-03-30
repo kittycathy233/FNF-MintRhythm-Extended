@@ -86,22 +86,22 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		if(ClientPrefs.data.framerate > FlxG.drawFramerate)
 		{
 			if (ClientPrefs.data.fpsRework)
+				FlxG.stage.window.frameRate = ClientPrefs.data.framerate;
+			else
 			{
 				FlxG.updateFramerate = ClientPrefs.data.framerate;
 				FlxG.drawFramerate = ClientPrefs.data.framerate;
 			}
-			else
-				FlxG.stage.window.frameRate = ClientPrefs.data.framerate;
 		}
 		else
 		{
 			if (ClientPrefs.data.fpsRework)
+				FlxG.stage.window.frameRate = ClientPrefs.data.framerate;
+			else
 			{
 				FlxG.drawFramerate = ClientPrefs.data.framerate;
 				FlxG.updateFramerate = ClientPrefs.data.framerate;
 			}
-			else
-				FlxG.stage.window.frameRate = ClientPrefs.data.framerate;
 		}
 	}
 
