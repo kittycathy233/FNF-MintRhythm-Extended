@@ -32,10 +32,6 @@ class StorageUtil
 	public static function getStorageDirectory():String
 		return #if android haxe.io.Path.addTrailingSlash(AndroidContext.getExternalFilesDir()) #elseif ios lime.system.System.documentsDirectory #else Sys.getCwd() #end;
 
-	// always force path due to haxe
-	public static function getExternalStorageDirectory():String
-		return '/storage/emulated/0/.PsychEngine/';
-
 	public static function saveContent(fileName:String, fileData:String, ?alert:Bool = true):Void
 	{
 		final folder:String = #if android StorageUtil.getExternalStorageDirectory() + #else Sys.getCwd() + #end 'saves/';
@@ -56,6 +52,10 @@ class StorageUtil
 	}
 
 	#if android
+	// always force path due to haxe
+	public static function getExternalStorageDirectory():String
+		return '/storage/emulated/0/.PsychEngine/';
+
 	public static function requestPermissions():Void
 	{
 		if (AndroidVersion.SDK_INT >= AndroidVersionCode.TIRAMISU)
