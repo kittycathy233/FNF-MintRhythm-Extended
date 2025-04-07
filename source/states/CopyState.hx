@@ -149,7 +149,16 @@ class CopyState extends MusicBeatState
 					if (textFilesExtensions.contains(Path.extension(file)))
 						createContentFromInternal(file);
 					else
-						File.saveBytes(file, getFileBytes(getFile(file)));
+					{
+						var path:String = '';
+						#if android
+						if (file.startsWith('mods/'))
+							path = StorageUtil.getExternalStorageDirectory() + file;
+						else
+						#end
+							path = file;
+						File.saveBytes(path, getFileBytes(getFile(file)));
+					}		
 				}
 				else
 				{
@@ -169,6 +178,10 @@ class CopyState extends MusicBeatState
 	{
 		var fileName = Path.withoutDirectory(file);
 		var directory = Path.directory(file);
+		#if android
+		if (fileName.startsWith('mods/'))
+			directory = StorageUtil.getExternalStorageDirectory() + directory;
+		#end
 		try
 		{
 			var fileData:String = OpenFLAssets.getText(getFile(file));
@@ -220,6 +233,11 @@ class CopyState extends MusicBeatState
 		var mods = locatedFiles.filter(folder -> folder.startsWith('mods/'));
 		locatedFiles = assets.concat(mods);
 		locatedFiles = locatedFiles.filter(file -> !FileSystem.exists(file));
+		#if android
+		for (file in locatedFiles)
+			if (file.startsWith('mods/'))
+				locatedFiles = locatedFiles.filter(file -> !FileSystem.exists(StorageUtil.getExternalStorageDirectory() + file));
+		#end
 
 		var filesToRemove:Array<String> = [];
 

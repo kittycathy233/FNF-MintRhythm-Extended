@@ -190,8 +190,8 @@
 	<config:ios category_type="public.app-category.music-games" />
 	<config:mac category_type="public.app-category.music-games" />
 
-	<!-- Allow Access to Engine Files in mobile -->
-	<haxedef name="SHARE_MOBILE_FILES" if="mobile" />
+	<!-- Allow Access to Engine Files in iOS -->
+	<haxedef name="SHARE_MOBILE_FILES" if="ios" />
 
 	<!--Macro fixes-->
 	<haxeflag name="--macro" value="allowPackage('flash')" />
