@@ -34,12 +34,13 @@ class StorageUtil
 
 	public static function saveContent(fileName:String, fileData:String, ?alert:Bool = true):Void
 	{
+		final folder:String = #if android StorageUtil.getExternalStorageDirectory() + #else Sys.getCwd() + #end 'saves/';
 		try
 		{
-			if (!FileSystem.exists('saves'))
-				FileSystem.createDirectory('saves');
+			if (!FileSystem.exists(folder))
+				FileSystem.createDirectory(folder);
 
-			File.saveContent('saves/$fileName', fileData);
+			File.saveContent('$folder/$fileName', fileData);
 			if (alert)
 				CoolUtil.showPopUp(Language.getPhrase('file_save_success', '{1} has been saved.', [fileName]), Language.getPhrase('mobile_success', "Success!"));
 		}
@@ -51,6 +52,10 @@ class StorageUtil
 	}
 
 	#if android
+	// always force path due to haxe
+	public static function getExternalStorageDirectory():String
+		return '/storage/emulated/0/.PsychEngine/';
+
 	public static function requestPermissions():Void
 	{
 		if (AndroidVersion.SDK_INT >= AndroidVersionCode.TIRAMISU)
@@ -76,6 +81,17 @@ class StorageUtil
 		catch (e:Dynamic)
 		{
 			CoolUtil.showPopUp(Language.getPhrase('create_directory_error', 'Please create directory to\n{1}\nPress OK to close the game', [StorageUtil.getStorageDirectory()]), Language.getPhrase('mobile_error', "Error!"));
+			lime.system.System.exit(1);
+		}
+
+		try
+		{
+			if (!FileSystem.exists(StorageUtil.getExternalStorageDirectory()))
+				FileSystem.createDirectory(StorageUtil.getExternalStorageDirectory());
+		}
+		catch (e:Dynamic)
+		{
+			CoolUtil.showPopUp(Language.getPhrase('create_directory_error', 'Please create directory to\n{1}\nPress OK to close the game', [StorageUtil.getExternalStorageDirectory()]), Language.getPhrase('mobile_error', "Error!"));
 			lime.system.System.exit(1);
 		}
 	}
