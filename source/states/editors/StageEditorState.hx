@@ -856,10 +856,10 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 				return;
 			}
 
-			destroySubStates = false;
-			persistentDraw = false;
+			destroySubStates = persistentUpdate = persistentDraw = false;
 			animationEditor.target = selected;
 			unsavedProgress = true;
+			removeTouchPad();
 			openSubState(animationEditor);
 		});
 		tab_group.add(animationsButton);
@@ -1343,6 +1343,16 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		}
 	}
 
+	override function closeSubState()
+	{
+		super.closeSubState();
+		controls.isInSubstate = false;
+		removeTouchPad();
+		addTouchPad('LEFT_FULL', 'CHARACTER_EDITOR');
+		addTouchPadCamera();
+		persistentUpdate = true;
+	}
+
 	var outputTime:Float = 0;
 	override function update(elapsed:Float)
 	{
@@ -1741,6 +1751,9 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		{
 			fullPath = fullPath.replace('\\', '/');
 			var exePath = Sys.getCwd().replace('\\', '/');
+			#if android
+			var externalPath = StorageUtil.getExternalStorageDirectory();
+			#end
 			if(fullPath.startsWith(exePath))
 			{
 				fullPath = fullPath.substr(exePath.length);
@@ -1751,6 +1764,18 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 					return;
 				}
 			}
+			#if android
+			else if(fullPath.startsWith(externalPath))
+			{
+				fullPath = fullPath.substr(externalPath.length);
+				if((fullPath.startsWith('assets/') #if MODS_ALLOWED || fullPath.startsWith('mods/') #end) && fullPath.contains('/images/'))
+				{
+					loadSprite(fullPath.substring(fullPath.indexOf('/images/') + '/images/'.length, fullPath.lastIndexOf('.')));
+					//trace('Inside Psych Engine Folder');
+					return;
+				}
+			}
+			#end
 
 			createPopup.visible = createPopup.active = false;
 			#if MODS_ALLOWED
@@ -2034,6 +2059,7 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 	var camHUD:FlxCamera = cast(FlxG.state, StageEditorState).camHUD;
 	public function new()
 	{
+		controls.isInSubstate = true;
 		super();
 
 		var grid:FlxBackdrop = new FlxBackdrop(FlxGridOverlay.createGrid(50, 50, 100, 100, true, 0xFFAAAAAA, 0xFF666666));
@@ -2084,6 +2110,9 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 				playAnim(target.firstAnimation);
 			}
 		};
+
+		addTouchPad('LEFT_FULL', 'CHARACTER_EDITOR');
+		addTouchPadCamera();
 	}
 
 	var animationDropDown:PsychUIDropDownMenu;
@@ -2426,6 +2455,7 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 		if(FlxG.keys.justPressed.ESCAPE #if android || FlxG.android.justReleased.BACK #end || touchPad.buttonB.justPressed)
 		{
 			persistentDraw = true;
+			controls.isInSubstate = false;
 			close();
 		}
 	}
