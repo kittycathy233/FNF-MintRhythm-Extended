@@ -68,9 +68,12 @@ jobs:
       - name: Make IPA
         if: inputs.name == 'iOS'
         run: |
-          cd export/release/ios/build/Release-iphoneos
+          brew install ldid
+          cd export/release/ios/build/Release-iphoneos/${{ env.PROJECT_NAME }}.app
+          ldid -S../../../${{ env.PROJECT_NAME }}/${{ env.PROJECT_NAME }}.entitlements ${{ env.PROJECT_NAME }}
+          cd ..
           mkdir Payload
-          mv *.app Payload
+          mv ${{ env.PROJECT_NAME }}.app Payload
           zip -r ${{ env.PROJECT_NAME }}.ipa Payload
 
       - name: Upload Artifact
