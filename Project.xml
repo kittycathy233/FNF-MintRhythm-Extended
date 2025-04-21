@@ -185,9 +185,6 @@
 
 	<!-- Do whatever you want I'm tired uninstall and install everytime -->
 	<certificate path="key.keystore" password="psychengine" alias="psychport" alias-password="psychengine" if="android" unless="debug" />
-	
-	<!-- Stupid shit for iOS -->
-	<launchStoryboard path="LaunchScreen.storyboard" />
 
 	<!-- Category Type for Apple Systems -->
 	<config:ios category_type="public.app-category.music-games" />
