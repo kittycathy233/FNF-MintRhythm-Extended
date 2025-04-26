@@ -80,7 +80,7 @@ import states.TitleState;
 		'opponentplay' => false
 	];
 
-	public var comboOffset:Array<Int> = [0, 0, 0, 0];
+	public var comboOffset:Array<Int> = [0, 0, 0, 0, 0, 0];
 	public var ratingOffset:Int = 0;
 	public var sickWindow:Float = 45.0;
 	public var goodWindow:Float = 90.0;
@@ -90,6 +90,41 @@ import states.TitleState;
 	public var discordRPC:Bool = true;
 	public var loadingScreen:Bool = true;
 	public var language:String = 'en-US';
+
+	//杂七杂八的特性
+	public var fpsCounterSize:Int = 14;
+	public var perfectWindow:Float = 25.5;
+	public var rainbowfpscounter:Bool = false;
+	public var exgameversion:Bool = true;
+	public var exratingDisplay:Bool = true;
+	public var rmperfect:Bool = false;	
+	public var ratbounce:Bool = true;
+	public var scoretxtstyle:String = 'MintRhythm';
+	public var rmmsTimeTxt:Bool = false;
+	public var scoretxtbounce:Bool = false;
+	public var exratbounce:Bool = false;
+	public var iconbopstyle:String = 'MintRhythm';
+	public var healthbarstyle:String = 'Psych';
+	public var ratingsAlpha:Float = 1;
+	public var customFadeStyle:String = 'Vanilla';
+	public var showRunningOS:Bool = true;
+	//NFE的特性
+	//public var CustomFadeSound:Bool = true;
+	//public var CustomFadeText:Bool = true;
+
+	//用于MRE加载图片更改，之后也许需要优化
+	public var randomIndex :Int = 32;
+
+	public var smoothHP:Bool = true;
+	public var forceSingleSplashAnim:Bool = false;
+	public var volumeTheme:String = "Psych";
+	public var cpuStrums: Bool = true;
+	public var tabiBar: Bool = true;
+	public var botplayStyle:String = "Psych(New)";
+	public var showcaseStyle:String = "Psych";
+	public var fpstxtStyle:String = "Psych";
+	public var timebarStyle:String = "Psych";
+	
 }
 
 class ClientPrefs {

@@ -22,6 +22,13 @@ class NoteOffsetState extends MusicBeatState
 	var comboNums:FlxSpriteGroup;
 	var dumbTexts:FlxTypedGroup<FlxText>;
 
+	//新东西
+	var theEXrating:FlxSprite;
+	public var scoreTxt:FlxText;
+	var scoreTxtTween:FlxTween;
+	public var health:Float = 1;
+	public var healthBar:Bar;
+
 	var barPercent:Float = 0;
 	var delayMin:Int = -500;
 	var delayMax:Int = 500;
@@ -77,13 +84,43 @@ class NoteOffsetState extends MusicBeatState
 		coolText.screenCenter();
 		coolText.x = FlxG.width * 0.35;
 
-		rating = new FlxSprite().loadGraphic(Paths.image('sick'));
+		//rating = new FlxSprite().loadGraphic(Paths.image('sick'));
+		if(!ClientPrefs.data.rmperfect)
+			{
+				theEXrating = new FlxSprite().loadGraphic(Paths.image('perfect-extra'));
+				rating = new FlxSprite().loadGraphic(Paths.image('perfect'));
+			} else {
+				theEXrating = new FlxSprite().loadGraphic(Paths.image('sick-extra'));
+				rating = new FlxSprite().loadGraphic(Paths.image('sick'));
+			}
 		rating.cameras = [camHUD];
 		rating.antialiasing = ClientPrefs.data.antialiasing;
 		rating.setGraphicSize(Std.int(rating.width * 0.7));
 		rating.updateHitbox();
 		
 		add(rating);
+
+		theEXrating.cameras = [camHUD];
+		theEXrating.setGraphicSize(Std.int(theEXrating.width * 0.65));
+		theEXrating.updateHitbox();
+		theEXrating.antialiasing = ClientPrefs.data.antialiasing;
+
+		if(ClientPrefs.data.exratingDisplay) add(theEXrating);
+
+		healthBar = new Bar(0, FlxG.height * (!ClientPrefs.data.downScroll ? 0.89 : 0.11), 'healthBar', function() return health, 0, 2);
+		healthBar.screenCenter(X);
+		healthBar.leftToRight = false;
+		healthBar.scrollFactor.set();
+		healthBar.visible = !ClientPrefs.data.hideHud;
+		healthBar.alpha = ClientPrefs.data.healthBarAlpha;
+		add(healthBar);
+
+		scoreTxt = new FlxText(0, healthBar.y + 40, FlxG.width, "Score: 1145140 | Misses: 191 | Rating: Great (81%)", 20);
+		scoreTxt.setFormat(Paths.font("vcr.ttf"), 20, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		scoreTxt.scrollFactor.set();
+		scoreTxt.borderSize = 1.25;
+		scoreTxt.visible = !ClientPrefs.data.hideHud;
+		add(scoreTxt);
 
 		comboNums = new FlxSpriteGroup();
 		comboNums.cameras = [camHUD];
@@ -516,8 +553,11 @@ class NoteOffsetState extends MusicBeatState
 	function updateMode()
 	{
 		rating.visible = onComboMenu;
+		theEXrating.visible = onComboMenu;
 		comboNums.visible = onComboMenu;
 		dumbTexts.visible = onComboMenu;
+		healthBar.visible = onComboMenu;
+		scoreTxt.visible = onComboMenu;
 		
 		timeBar.visible = !onComboMenu;
 		timeTxt.visible = !onComboMenu;

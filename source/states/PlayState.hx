@@ -55,6 +55,7 @@ import crowplexus.iris.Iris;
 import crowplexus.hscript.Expr.Error as IrisError;
 import crowplexus.hscript.Printer;
 #end
+import lime.app.Application;
 
 /**
  * This is where all the Gameplay stuff happens and is managed
@@ -74,6 +75,36 @@ import crowplexus.hscript.Printer;
 **/
 class PlayState extends MusicBeatState
 {
+	//杂七杂八的新特性
+	var notesHitArray:Array<Date> = [];
+	var nps:Int = 0;
+	var maxNPS:Int = 0;
+	var npsCheck:Int = 0;
+	var allNotesMs:Float = 0;
+	var averageMs:Float = 0;
+	var msTimeTxt:FlxText;
+	var msTimeTxtTween1:FlxTween;
+	var msTimeTxtTween2:FlxTween;
+	var scoreTxtTweenAngle:FlxTween;
+	var dancingLeft:Bool = false;
+	var ratingexspr:String = '';
+	var exratingexspr:String = '-extra';
+	var ratingAlpha:Float = ClientPrefs.data.ratingsAlpha;
+	var iconP1InitialY:Float;
+	var iconP2InitialY:Float;
+	var botCheck:Bool = false; // 默认血条范围是0-2
+	var totalEvents:Int = 0; // 添加在类变量区
+	var eventAlerts:Array<FlxText> = [];
+	var debugTexts:FlxTypedGroup<FlxText>;
+	var chartingInfo:FlxText;
+	var fpsVarInitialX:Float = 10;
+	
+	// 在类变量区添加
+	var displayedHealth:Float = 1; // 用于显示的血量
+	var healthLerp:Float = 1; // 用于平滑过渡的血量
+	var maxHealth:Float = 2; // 默认血条最大值
+	//var iconsAnimations:Bool = true; // 控制图标动画的开关
+	
 	public static var STRUM_X = 42;
 	public static var STRUM_X_MIDDLESCROLL = -278;
 
@@ -208,6 +239,7 @@ class PlayState extends MusicBeatState
 	public var camHUD:FlxCamera;
 	public var camGame:FlxCamera;
 	public var camOther:FlxCamera;
+	public var camArchived:FlxCamera;
 	public var luaTpadCam:FlxCamera;
 	public var cameraSpeed:Float = 1;
 
@@ -319,13 +351,16 @@ class PlayState extends MusicBeatState
 		camGame = initPsychCamera();
 		camHUD = new FlxCamera();
 		camOther = new FlxCamera();
+		camArchived = new FlxCamera();
 		luaTpadCam = new FlxCamera();
 		camHUD.bgColor.alpha = 0;
 		camOther.bgColor.alpha = 0;
+		camArchived.bgColor.alpha = 0;
 		luaTpadCam.bgColor.alpha = 0;
 
 		FlxG.cameras.add(camHUD, false);
 		FlxG.cameras.add(camOther, false);
+		FlxG.cameras.add(camArchived, false);
 		FlxG.cameras.add(luaTpadCam, false);
 
 		persistentUpdate = true;
@@ -407,7 +442,7 @@ class PlayState extends MusicBeatState
 
 		#if (LUA_ALLOWED || HSCRIPT_ALLOWED)
 		luaDebugGroup = new FlxTypedGroup<psychlua.DebugLuaText>();
-		luaDebugGroup.cameras = [camOther];
+		luaDebugGroup.cameras = [camArchived];
 		add(luaDebugGroup);
 		#end
 
@@ -552,6 +587,18 @@ class PlayState extends MusicBeatState
 		reloadHealthBarColors();
 		uiGroup.add(healthBar);
 
+		msTimeTxt = new FlxText(0, 0, 200, "", 32);
+		msTimeTxt.setFormat(Paths.font('vcr.ttf'), 23, 0xFF87CEEB, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		msTimeTxt.scrollFactor.set();
+		msTimeTxt.alpha = 0;
+		msTimeTxt.visible = true;
+		msTimeTxt.borderSize = 1.3;
+		/*mstimeTxt.y = comboSpr.y + 20;
+		mstimeTxt.x += comboSpr.x + 100;*/
+		msTimeTxt.x = ClientPrefs.data.comboOffset[2] + 450;
+		msTimeTxt.y = -ClientPrefs.data.comboOffset[3] + 480 ;
+		uiGroup.add(msTimeTxt);
+
 		iconP1 = new HealthIcon(boyfriend.healthIcon, true);
 		iconP1.y = healthBar.y - 75;
 		iconP1.visible = !ClientPrefs.data.hideHud;
@@ -579,6 +626,16 @@ class PlayState extends MusicBeatState
 		uiGroup.add(botplayTxt);
 		if(ClientPrefs.data.downScroll)
 			botplayTxt.y = healthBar.y + 70;
+
+		var watermarkText = new FlxText(20, FlxG.height - 20, 0, 
+			SONG.song + "-" + Difficulty.getString().toUpperCase() + ' | MintRhythm Engine v${MainMenuState.mrEngineVersion}', 
+				14);
+		watermarkText.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		watermarkText.scrollFactor.set();
+		watermarkText.borderSize = 1.2;
+		watermarkText.alpha = 0.8;
+		watermarkText.visible = !ClientPrefs.data.hideHud;
+		uiGroup.add(watermarkText);
 
 		uiGroup.cameras = [camHUD];
 		noteGroup.cameras = [camHUD];
@@ -1195,6 +1252,7 @@ class PlayState extends MusicBeatState
 		var goods:Int = ratingsData[1].hits;
 		var bads:Int = ratingsData[2].hits;
 		var shits:Int = ratingsData[3].hits;
+        var perfects:Int = !ClientPrefs.data.rmperfect ? ratingsData[4].hits : 0;    
 
 		ratingFC = "";
 		if(songMisses == 0)
@@ -1202,6 +1260,7 @@ class PlayState extends MusicBeatState
 			if (bads > 0 || shits > 0) ratingFC = 'FC';
 			else if (goods > 0) ratingFC = 'GFC';
 			else if (sicks > 0) ratingFC = 'SFC';
+			else if (perfects > 0) ratingFC = 'PFC';
 		}
 		else {
 			if (songMisses < 10) ratingFC = 'SDCB';
@@ -1210,7 +1269,7 @@ class PlayState extends MusicBeatState
 	}
 
 	public function doScoreBop():Void {
-		if(!ClientPrefs.data.scoreZoom)
+		if (!ClientPrefs.data.scoreZoom || ClientPrefs.data.scoretxtstyle == 'Kade')
 			return;
 
 		if(scoreTxtTween != null)
@@ -1223,6 +1282,17 @@ class PlayState extends MusicBeatState
 				scoreTxtTween = null;
 			}
 		});
+
+		if (ClientPrefs.data.scoretxtbounce) 
+		{
+			scoreTxt.angle = (Math.random() * 2.5) * (Math.random() > .5 ? 1 : -1);
+			scoreTxtTweenAngle = FlxTween.tween(scoreTxt, {angle: 0}, ClientPrefs.data.scoretxtstyle == 'MintRhythm' ? 0.15 : 0.2, {
+				onComplete: function (twn: FlxTween) {
+					scoreTxtTweenAngle = null;
+				}
+			});
+		}
+
 	}
 
 	public function setSongTime(time:Float)
@@ -2578,7 +2648,9 @@ class PlayState extends MusicBeatState
 			uiFolder = uiPrefix + "UI/";
 
 		for (rating in ratingsData)
-			Paths.image(uiFolder + rating.image + uiPostfix);
+			Paths.image(uiFolder + rating.image + ratingexspr + uiPostfix);
+		for (theEXrating in ratingsData)
+			Paths.image(uiFolder + theEXrating.image + exratingexspr + uiPostfix);
 		for (i in 0...10)
 			Paths.image(uiFolder + 'num' + i + uiPostfix);
 	}
@@ -2601,6 +2673,7 @@ class PlayState extends MusicBeatState
 
 		var placement:Float = FlxG.width * 0.35;
 		var rating:FlxSprite = new FlxSprite();
+		var theEXrating:FlxSprite = new FlxSprite();
 		var score:Int = 350;
 
 		//tryna do MS based judgment due to popular demand
@@ -2635,7 +2708,7 @@ class PlayState extends MusicBeatState
 
 		if (ClientPrefs.data.popUpRating)
 		{
-			rating.loadGraphic(Paths.image(uiFolder + daRating.image + uiPostfix));
+			rating.loadGraphic(Paths.image(uiFolder + daRating.image + ratingexspr + uiPostfix));
 			rating.screenCenter();
 			rating.x = placement - 40;
 			rating.y -= 60;
@@ -2643,36 +2716,75 @@ class PlayState extends MusicBeatState
 			rating.velocity.y -= FlxG.random.int(140, 175) * playbackRate;
 			rating.velocity.x -= FlxG.random.int(0, 10) * playbackRate;
 			rating.visible = (!ClientPrefs.data.hideHud && showRating);
-			rating.x += ClientPrefs.data.comboOffset[0];
-			rating.y -= ClientPrefs.data.comboOffset[1];
+			rating.x += ClientPrefs.data.comboOffset[0] - 30;
+			rating.y -= ClientPrefs.data.comboOffset[1] - 130;
 			rating.antialiasing = antialias;
 
+			theEXrating.loadGraphic(Paths.image(uiFolder + daRating.image + exratingexspr + uiPostfix));
+			theEXrating.screenCenter();
+			theEXrating.x = placement - 40;
+			theEXrating.y -= 60;
+			theEXrating.acceleration.y = 550 * playbackRate * playbackRate;
+			theEXrating.velocity.y -= FlxG.random.int(140, 175) * playbackRate;
+			theEXrating.velocity.x -= FlxG.random.int(0, 10) * playbackRate;
+			theEXrating.visible = (!ClientPrefs.data.hideHud && showRating);
+			theEXrating.x += ClientPrefs.data.comboOffset[4] - 220;
+			theEXrating.y += -ClientPrefs.data.comboOffset[5] + 150;
+			theEXrating.antialiasing = antialias;
+	
 			var comboSpr:FlxSprite = new FlxSprite().loadGraphic(Paths.image(uiFolder + 'combo' + uiPostfix));
 			comboSpr.screenCenter();
 			comboSpr.x = placement;
 			comboSpr.acceleration.y = FlxG.random.int(200, 300) * playbackRate * playbackRate;
 			comboSpr.velocity.y -= FlxG.random.int(140, 160) * playbackRate;
 			comboSpr.visible = (!ClientPrefs.data.hideHud && showCombo);
-			comboSpr.x += ClientPrefs.data.comboOffset[0];
+			comboSpr.x += ClientPrefs.data.comboOffset[0] + 60;
 			comboSpr.y -= ClientPrefs.data.comboOffset[1];
 			comboSpr.antialiasing = antialias;
-			comboSpr.y += 60;
+			comboSpr.y += 160;
 			comboSpr.velocity.x += FlxG.random.int(1, 10) * playbackRate;
-			comboGroup.add(rating);
 
 			if (!PlayState.isPixelStage)
 			{
 				rating.setGraphicSize(Std.int(rating.width * 0.7));
+				theEXrating.setGraphicSize(Std.int(rating.width * 0.7));
 				comboSpr.setGraphicSize(Std.int(comboSpr.width * 0.7));
 			}
 			else
 			{
-				rating.setGraphicSize(Std.int(rating.width * daPixelZoom * 0.85));
+				rating.setGraphicSize(Std.int(rating.width * 0.7));
+				theEXrating.setGraphicSize(Std.int(rating.width * daPixelZoom * 0.85));
 				comboSpr.setGraphicSize(Std.int(comboSpr.width * daPixelZoom * 0.85));
 			}
 
+
+			if (ratingAlpha != 1)
+			{
+				rating.alpha = ratingAlpha;
+				theEXrating.alpha = ratingAlpha;
+				comboSpr.alpha = ratingAlpha;
+			}
+
+			if (ClientPrefs.data.exratingDisplay) comboGroup.add(theEXrating);
+			comboGroup.add(rating);
+
+			if (ClientPrefs.data.ratbounce == true && !PlayState.isPixelStage) 
+			{
+				rating.scale.set(0.85, 0.73);
+				FlxTween.tween(rating.scale, {x: 0.7, y: 0.7}, 0.3, {ease: FlxEase.circOut});
+			}
+			
+			if(ClientPrefs.data.exratbounce == true)
+			{
+				theEXrating.scale.set(0.85, 0.85);
+				theEXrating.angle = (Math.random() * 10 + 4) * (Math.random() > .3 ? 1 : -1);
+				FlxTween.tween(theEXrating, {angle: 0}, .6, {ease: FlxEase.quartOut});
+				FlxTween.tween(theEXrating.scale, {x: 0.7, y: 0.7}, 0.5, {ease: FlxEase.circOut});
+			}
+	
 			comboSpr.updateHitbox();
 			rating.updateHitbox();
+			theEXrating.updateHitbox();
 
 			var daLoop:Int = 0;
 			var xThing:Float = 0;
@@ -2719,12 +2831,16 @@ class PlayState extends MusicBeatState
 			FlxTween.tween(rating, {alpha: 0}, 0.2 / playbackRate, {
 				startDelay: Conductor.crochet * 0.001 / playbackRate
 			});
+			FlxTween.tween(theEXrating, {alpha: 0}, 0.2 / playbackRate, {
+				startDelay: Conductor.crochet * 0.00075 / playbackRate
+			});
 
 			FlxTween.tween(comboSpr, {alpha: 0}, 0.2 / playbackRate, {
 				onComplete: function(tween:FlxTween)
 				{
 					comboSpr.destroy();
 					rating.destroy();
+					theEXrating.destroy();
 				},
 				startDelay: Conductor.crochet * 0.002 / playbackRate
 			});

@@ -7,6 +7,7 @@ import openfl.text.TextField;
 import openfl.text.TextFormat;
 import openfl.system.System as OpenFlSystem;
 import lime.system.System as LimeSystem;
+import states.MainMenuState;
 
 /**
 	The FPS class provides an easy-to-use monitor to display
@@ -60,7 +61,7 @@ class FPSCounter extends TextField
 		defaultTextFormat = new TextFormat("_sans", 14, color);
 		width = FlxG.width;
 		multiline = true;
-		text = "FPS: ";
+		text = "Loading... ";
 
 		times = [];
 		lastFramerateUpdateTime = Timer.stamp();
@@ -74,6 +75,7 @@ class FPSCounter extends TextField
 		text = 
 		'FPS: $currentFPS' + 
 		'\nMemory: ${flixel.util.FlxStringUtil.formatBytes(memoryMegas)}' +
+		(ClientPrefs.data.exgameversion ? '\nMintRhythm Engine v${MainMenuState.mrEngineVersion}\nPsych Engine v${MainMenuState.psychEngineVersion}' : '') +
 		os;
 
 		textColor = 0xFFFFFFFF;
