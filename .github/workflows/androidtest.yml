@@ -5,7 +5,7 @@ permissions:
   contents: write
 
 env:
-  PROJECT_NAME: mrEngine
+  PROJECT_NAME: MintRhythmEngine
   REPO_PATH: kittycathy233/FNF-MintRhythm-Engine
 
 jobs:
