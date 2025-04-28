@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Created with Funkin Packer v0.1.3 https://neeeoo.github.io/funkin-packer/
+-->
+<TextureAtlas imagePath="shiroko1st.png" width="3893" height="1286">
+	<SubTexture name="NP0172_spr_00" x="12" y="12" width="340.8" height="1261.8" frameX="-0.6" frameY="-3" frameWidth="343.2" frameHeight="1266"/>
+	<SubTexture name="NP0172_spr_01" x="364.8" y="12" width="340.8" height="1261.8" frameX="-0.6" frameY="-3" frameWidth="343.2" frameHeight="1266"/>
+	<SubTexture name="NP0172_spr_02" x="717.6" y="12" width="340.8" height="1261.8" frameX="-0.6" frameY="-3" frameWidth="343.2" frameHeight="1266"/>
+	<SubTexture name="NP0172_spr_03" x="1070.3999999999999" y="12" width="340.8" height="1261.8" frameX="-0.6" frameY="-3" frameWidth="343.2" frameHeight="1266"/>
+	<SubTexture name="NP0172_spr_04" x="1423.2" y="12" width="340.8" height="1261.8" frameX="-0.6" frameY="-3" frameWidth="343.2" frameHeight="1266"/>
+	<SubTexture name="NP0172_spr_05" x="1776" y="12" width="340.8" height="1261.8" frameX="-0.6" frameY="-3" frameWidth="343.2" frameHeight="1266"/>
+	<SubTexture name="NP0172_spr_06" x="2128.7999999999997" y="12" width="340.8" height="1261.8" frameX="-0.6" frameY="-3" frameWidth="343.2" frameHeight="1266"/>
+	<SubTexture name="NP0172_spr_07" x="2481.6" y="12" width="340.8" height="1261.8" frameX="-0.6" frameY="-3" frameWidth="343.2" frameHeight="1266"/>
+	<SubTexture name="NP0172_spr_99" x="2834.4" y="12" width="340.8" height="1261.8" frameX="-0.6" frameY="-3" frameWidth="343.2" frameHeight="1266"/>
+	<SubTexture name="NP0172_spr_Eye_Close_01" x="3187.2" y="12" width="340.8" height="1261.8" frameX="-0.6" frameY="-3" frameWidth="343.2" frameHeight="1266"/>
+	<SubTexture name="NP0172_spr_Idle_01" x="3540" y="12" width="340.8" height="1261.8" frameX="-0.6" frameY="-3" frameWidth="343.2" frameHeight="1266"/>
+</TextureAtlas>

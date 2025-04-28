@@ -56,6 +56,8 @@ import crowplexus.hscript.Expr.Error as IrisError;
 import crowplexus.hscript.Printer;
 #end
 import lime.app.Application;
+import backend.Native;
+
 
 /**
  * This is where all the Gameplay stuff happens and is managed
@@ -87,6 +89,7 @@ class PlayState extends MusicBeatState
 	var msTimeTxtTween2:FlxTween;
 	var scoreTxtTweenAngle:FlxTween;
 	var dancingLeft:Bool = false;
+	var icondancingLeft:Bool = false;
 	var ratingexspr:String = '';
 	var exratingexspr:String = '-extra';
 	var ratingAlpha:Float = ClientPrefs.data.ratingsAlpha;
@@ -2405,6 +2408,7 @@ class PlayState extends MusicBeatState
 			case 'Play Sound':
 				if(flValue2 == null) flValue2 = 1;
 				FlxG.sound.play(Paths.sound(value1), flValue2);
+
 		}
 
 		stagesFunc(function(stage:BaseStage) stage.eventCalled(eventName, value1, value2, flValue1, flValue2, strumTime));
@@ -2796,8 +2800,9 @@ class PlayState extends MusicBeatState
 			{
 				var numScore:FlxSprite = new FlxSprite().loadGraphic(Paths.image(uiFolder + 'num' + Std.parseInt(separatedScore.charAt(i)) + uiPostfix));
 				numScore.screenCenter();
-				numScore.x = placement + (43 * daLoop) - 90 + ClientPrefs.data.comboOffset[2];
-				numScore.y += 80 - ClientPrefs.data.comboOffset[3];
+				numScore.x = placement + (43 * daLoop) - 70 + ClientPrefs.data.comboOffset[2];
+				numScore.y += 80 - ClientPrefs.data.comboOffset[3] + 110;
+				numScore.alpha = ratingAlpha;
 
 				if (!PlayState.isPixelStage)
 					numScore.setGraphicSize(Std.int(numScore.width * 0.5));
@@ -3406,8 +3411,89 @@ class PlayState extends MusicBeatState
 		if (generatedMusic)
 			notes.sort(FlxSort.byY, ClientPrefs.data.downScroll ? FlxSort.ASCENDING : FlxSort.DESCENDING);
 
-		iconP1.scale.set(1.2, 1.2);
-		iconP2.scale.set(1.2, 1.2);
+		if (ClientPrefs.data.iconbopstyle != "NONE") 
+		{
+			if (ClientPrefs.data.iconbopstyle == "Kade") {
+				iconP1.scale.set(1.4, 1.4);
+				iconP2.scale.set(1.4, 1.4);
+				}
+				else if (ClientPrefs.data.iconbopstyle == "Leather") {
+					iconP1.scale.set(1.25, 1.25);
+					iconP2.scale.set(1.25, 1.25);
+				}
+				else if (ClientPrefs.data.iconbopstyle == "Vanilla") {
+					iconP1.scale.set(1.1, 1.1);
+					iconP2.scale.set(1.1, 1.1);
+				}
+				else if (ClientPrefs.data.iconbopstyle == "VSlice") {
+					iconP1.scale.set(1.4, 1.4);
+					iconP2.scale.set(1.4, 1.4);
+					}
+				else {
+				iconP1.scale.set(1.2, 1.2);
+				iconP2.scale.set(1.2, 1.2);
+			}
+		}
+		dancingLeft = !dancingLeft;
+	
+		if (ClientPrefs.data.iconbopstyle == "OS") {
+			if (dancingLeft){
+				iconP1.angle = 8; iconP2.angle = 8; // maybe i should do it with tweens, but i'm lazy // i'll make it in -1.0.0, i promise
+			} else { 
+				iconP1.angle = -8; iconP2.angle = -8;
+			}
+		} else 	if (ClientPrefs.data.iconbopstyle == "SB") {
+			if (dancingLeft){
+				iconP1.angle = -15; iconP2.angle = 15; // maybe i should do it with tweens, but i'm lazy // i'll make it in -1.0.0, i promise
+			} else { 
+				iconP1.angle = 15; iconP2.angle = -15;
+			}
+		} else if (ClientPrefs.data.iconbopstyle == "MintRhythm") 
+		{
+			var healthPercent:Float = healthBar.percent;
+			
+			if (healthPercent < 20) 
+			{
+				// iconP1 每 4 拍旋转，iconP2 每 2 拍旋转
+				if (curBeat % 4 == 0) 
+				{
+					iconP1.angle = 30;
+					FlxTween.tween(iconP1, {angle: 0}, 0.3, {ease: FlxEase.circOut});
+				}
+				if (curBeat % 2 == 0) 
+				{
+					iconP2.angle = icondancingLeft ? -17 : 17;
+					FlxTween.tween(iconP2, {angle: 0}, 0.3, {ease: FlxEase.circOut});
+					icondancingLeft = !icondancingLeft;
+				}
+			} 
+			else if (healthPercent > 80) 
+			{
+				// iconP2 每 4 拍旋转，iconP1 每 2 拍旋转
+				if (curBeat % 4 == 0) 
+				{
+					iconP2.angle = -30;
+					FlxTween.tween(iconP2, {angle: 0}, 0.3, {ease: FlxEase.circOut});
+				}
+				if (curBeat % 2 == 0) 
+				{
+					iconP1.angle = icondancingLeft ? -17 : 17;
+					FlxTween.tween(iconP1, {angle: 0}, 0.3, {ease: FlxEase.circOut});
+					icondancingLeft = !icondancingLeft;
+				}
+			} 
+			else 
+			{
+				// 默认：双方每 4 拍同步旋转
+				if (curBeat % 4 == 0) 
+				{
+					iconP1.angle = -25;
+					iconP2.angle = 25;
+					FlxTween.tween(iconP1, {angle: 0}, 0.3, {ease: FlxEase.circOut});
+					FlxTween.tween(iconP2, {angle: 0}, 0.3, {ease: FlxEase.circOut});
+				}
+			}
+		}
 
 		iconP1.updateHitbox();
 		iconP2.updateHitbox();

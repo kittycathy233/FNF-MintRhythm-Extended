@@ -173,14 +173,39 @@ class NoteSplash extends FlxSprite
 			maxAnims++;
 		}
 
-		for (animNum in 0...maxAnims)
-		{
-			for (i => col in Note.colArray)
-			{
+		var failedToFind:Bool = false;
+		var forceSingle = ClientPrefs.data.forceSingleSplashAnim;
+		if (!forceSingle) { // 只有不强制单动画时才检查多个动画
+			while (true) {
+				for (v in Note.colArray) {
+					if (!checkForAnim('$anim $v ${maxAnims+1}')) {
+						failedToFind = true;
+						break;
+					}
+				}
+				if (failedToFind) break;
+				maxAnims++;
+			}
+		} else {
+			maxAnims = 1; // 强制设置为单动画
+		}
+	
+		// 生成动画配置时添加强制单动画处理
+		for (animNum in 0...maxAnims) {
+			for (i => col in Note.colArray) {
 				var data:Int = i % Note.colArray.length + (animNum * Note.colArray.length);
-				var name:String = animNum > 0 ? '$col' + (animNum + 1) : col;
+				// 强制单动画时使用统一名称
+				var name:String = forceSingle ? col : (animNum > 0 ? '$col${animNum+1}' : col);
+				var prefix:String = forceSingle ? '$anim $col 1' : '$anim $col ${animNum + 1}';
+				
+				// 检查动画是否存在，如果强制单动画但动画不存在时使用备用方案
+				if (forceSingle && !checkForAnim(prefix)) {
+					prefix = '$anim $col'; // 尝试不带数字的后缀
+					if (!checkForAnim(prefix)) continue; // 如果仍不存在则跳过
+				}
+				
 				var offset:Array<Float> = offsets[FlxMath.wrap(data, 0, Std.int(offsets.length-1))];
-				addAnimationToConfig(tempConfig, 1, name, '$anim $col ${animNum + 1}', fps, offset, [], data);
+				addAnimationToConfig(tempConfig, 1, name, prefix, fps, offset, [], data);
 			}
 		}
 
@@ -414,14 +439,12 @@ class NoteSplash extends FlxSprite
 	}
 
 	function set_maxAnims(value:Int)
-	{
-		if (value > 0)
-			noteData = Std.int(FlxMath.wrap(noteData, 0, (value * Note.colArray.length) - 1));
-		else
-			noteData = 0;
-
-		return maxAnims = value;
-	}
+		{
+			var maxData = (value * Note.colArray.length) - 1;
+			if (maxData < 0) maxData = 0; // 防止负值
+			noteData = Std.int(FlxMath.wrap(noteData, 0, maxData));
+			return maxAnims = value;
+		}
 }
 
 class PixelSplashShaderRef 

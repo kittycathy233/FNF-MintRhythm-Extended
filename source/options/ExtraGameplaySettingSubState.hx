@@ -62,19 +62,18 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		['Psych', 'OS', 'Kade']);
 		addOption(option);
 
-
 		var option:Option = new Option('IconBop Style',
 		"设置小图标的跳动样式",
 		'iconbopstyle',
 		STRING,
-		['Psych', 'OS', 'MintRain', 'Kade', 'NONE']);
+		['Psych', 'OS', 'MintRhythm', 'Kade', 'Leather', 'SB', 'Vanilla', 'VSlice', 'NONE']); // 补全选项
 		addOption(option);
 
 		var option:Option = new Option('ScoreTxt Style',
 		'（施工中）\n修改scoreTxt的显示样式',
 		'scoretxtstyle',
 		STRING,
-		['Psych', 'OS', 'MintRain', 'Kade']);
+		['Psych', 'OS', 'MintRhythm', 'Kade']);
 		addOption(option);
 
 		var option:Option = new Option('Remove the "ms" offset',
@@ -89,12 +88,80 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		BOOL);
 		addOption(option);
 
-		/*var option:Option = new Option('colored ScoreTxt when miss',
-		"未完成！！！！\n计划功能：当你失误的时候scoreTxt会变色",
-		'scoretxtmisscolored',
+		// 新增选项开始
+		var option:Option = new Option('Loading Style',
+		"设置加载界面的过渡样式",
+		'customFadeStyle',
+		STRING,
+		['Vanilla', 'NovaFlare Move', 'NovaFlare Alpha', 'MintRhythm']);
+		addOption(option);
+
+		var option:Option = new Option('Single Note Splash Anim',
+		"强制所有Note使用单一溅落动画",
+		'forceSingleSplashAnim',
 		BOOL);
 		addOption(option);
-*/
+
+		var option:Option = new Option('smooth HP Bar',
+		"让血条变化更平滑",
+		'smoothHP',
+		BOOL);
+		addOption(option);
+
+		var option:Option = new Option('TimeBar Style',
+		"设置时间条的显示样式",
+		'timebarStyle',
+		STRING,
+		['default', 'Kade']);
+		addOption(option);
+
+		var option:Option = new Option('CPU Strums',
+		"是否显示CPU的按键轨道",
+		'cpuStrums',
+		BOOL);
+		addOption(option);
+
+		var option:Option = new Option('BotPlayTxt Style',
+		"设置BotPlay文字的样式",
+		'botplayStyle',
+		STRING,
+		['Kade', 'Psych']);
+		addOption(option);
+
+		var option:Option = new Option('ShowCase Style',
+		"设置结算界面的展示样式",
+		'showcaseStyle',
+		STRING,
+		['Kade', 'Psych']);
+		addOption(option);
+
+		var option:Option = new Option('FPS-Txt Style',
+				"设置FPS计数器的显示样式",
+				'fpstxtStyle',
+				STRING,
+				['default', 'Kade']);
+		/*option.onChange = function() {
+			if (Main.fpsVar != null) {
+				Main.fpsVar.updateText(); // 强制刷新文本格式
+			}
+		};*/
+		addOption(option);
+
+		/*var option = new Option(
+			"Engine Language",
+			"更改引擎界面语言",
+			'language',
+			'string',
+			["en_us", "zh_cn", "zh_tw"]
+		);
+		/*option.onChange = function() {
+			ClientPrefs.saveSettings();
+			Language.load();
+			refreshAllTexts();
+		};*/
+		addOption(option);
+		// 新增选项结束
+
 		super();
 	}
 
