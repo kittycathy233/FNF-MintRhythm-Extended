@@ -1,0 +1,77 @@
+name: mobile (only android) + release
+on: workflow_dispatch
+
+permissions:
+  contents: write
+
+env:
+  PROJECT_NAME: mrEngine
+  REPO_PATH: kittycathy233/FNF-MintRhythm-Engine
+
+jobs:
+  get-commit-hash:
+    runs-on: ubuntu-latest
+    outputs:
+      commit_hash: ${{ steps.get_commit_hash.outputs.COMMIT_HASH }}
+    steps:
+      - name: Check Repository
+        run: |
+          echo "GITHUB_REPOSITORY: $GITHUB_REPOSITORY"
+          echo "REPO_PATH: ${{ env.REPO_PATH }}"
+          if [[ "$GITHUB_REPOSITORY" != "${{ env.REPO_PATH }}" ]]; then
+            echo "::error::Repository path mismatch! Expected: ${{ env.REPO_PATH }}"
+            exit 1
+          fi
+
+      - name: Get latest commit hash
+        id: get_commit_hash
+        run: |
+          commit_hash=${GITHUB_SHA::7}
+          echo "COMMIT_HASH=$commit_hash" >> $GITHUB_OUTPUT
+
+  build:
+    name: ${{ matrix.name }}
+    needs: get-commit-hash
+    strategy:
+      matrix:
+        include:
+          - name: Android
+            os: macos-latest  # 建议使用最新版本
+            buildArgs: "android -final -D officialBuild"
+            setupCommand: sh ./setup/unix.sh
+            artifactName: androidBuild
+            artifactPath: "export/release/android/bin/app/build/outputs/apk/release/*.apk"
+    uses: ./.github/workflows/build.yml
+    with:
+        name: ${{ matrix.name }}
+        os: ${{ matrix.os }}
+        setupCommand: ${{ matrix.setupCommand }}
+        buildArgs: ${{ matrix.buildArgs }}
+        artifactName: ${{ matrix.artifactName }}
+        artifactPath: ${{ matrix.artifactPath }}
+
+  Releaser:
+    needs: [get-commit-hash, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Android Build
+        uses: actions/download-artifact@v4
+        with:
+          name: androidBuild
+          path: ${{ github.workspace }}/artifacts
+
+      - name: Rename Android APK
+        run: |
+          mv ${{ github.workspace }}/artifacts/${{ env.PROJECT_NAME }}-release.apk \
+             ${{ github.workspace }}/${{ env.PROJECT_NAME }}-Android-${{ needs.get-commit-hash.outputs.commit_hash }}.apk
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "DevBuild ${{ needs.get-commit-hash.outputs.commit_hash }}"
+          tag_name: "devbuild-${{ needs.get-commit-hash.outputs.commit_hash }}"
+          prerelease: true
+          files: |
+            ${{ github.workspace }}/${{ env.PROJECT_NAME }}-Android-*.apk
