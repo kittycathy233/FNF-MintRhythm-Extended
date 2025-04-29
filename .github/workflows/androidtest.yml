@@ -1,12 +1,11 @@
-name: Mobile + Release
+name: mobile (only android) + release
 on: workflow_dispatch
 
 permissions:
   contents: write
-  discussions: write
 
 env:
-  PROJECT_NAME: mrEngine
+  PROJECT_NAME: MintRhythmEngine
   REPO_PATH: kittycathy233/FNF-MintRhythm-Engine
 
 jobs:
@@ -20,18 +19,15 @@ jobs:
           echo "GITHUB_REPOSITORY: $GITHUB_REPOSITORY"
           echo "REPO_PATH: ${{ env.REPO_PATH }}"
           if [[ "$GITHUB_REPOSITORY" != "${{ env.REPO_PATH }}" ]]; then
-            echo "Doesn't seem to be correct, returning SIGABRT..."
-            exit 6
-          else
-            echo "Seems to be correct..."
+            echo "::error::Repository path mismatch! Expected: ${{ env.REPO_PATH }}"
+            exit 1
           fi
 
       - name: Get latest commit hash
         id: get_commit_hash
         run: |
           commit_hash=${GITHUB_SHA::7}
-          echo "Latest commit hash is $commit_hash"
-          echo "::set-output name=COMMIT_HASH::$commit_hash"
+          echo "COMMIT_HASH=$commit_hash" >> $GITHUB_OUTPUT
 
   build:
     name: ${{ matrix.name }}
@@ -40,17 +36,11 @@ jobs:
       matrix:
         include:
           - name: Android
-            os: macos-15
+            os: macos-latest  # 建议使用最新版本
             buildArgs: "android -final -D officialBuild"
             setupCommand: sh ./setup/unix.sh
             artifactName: androidBuild
             artifactPath: "export/release/android/bin/app/build/outputs/apk/release/*.apk"
-          - name: iOS
-            os: macos-13
-            setupCommand: sh ./setup/unix.sh
-            buildArgs: "ios -final -nosign -D officialBuild"
-            artifactName: iOSBuild
-            artifactPath: "export/release/ios/build/Release-iphoneos/*.ipa"
     uses: ./.github/workflows/build.yml
     with:
         name: ${{ matrix.name }}
@@ -63,32 +53,25 @@ jobs:
   Releaser:
     needs: [get-commit-hash, build]
     runs-on: ubuntu-latest
-    permissions: write-all
+    permissions:
+      contents: write
     steps:
       - name: Download Android Build
-        uses: actions/download-artifact@main
+        uses: actions/download-artifact@v4
         with:
-           name: androidBuild
-           path: /home/runner
+          name: androidBuild
+          path: ${{ github.workspace }}/artifacts
 
-      - name: Move Android File
-        run: mv /home/runner/${{ env.PROJECT_NAME }}-release.apk /home/runner/${{ env.PROJECT_NAME }}-Android.apk
+      - name: Rename Android APK
+        run: |
+          mv ${{ github.workspace }}/artifacts/${{ env.PROJECT_NAME }}-release.apk \
+             ${{ github.workspace }}/${{ env.PROJECT_NAME }}-Android-${{ needs.get-commit-hash.outputs.commit_hash }}.apk
 
-      - name: Download iOS Build
-        uses: actions/download-artifact@main
-        with:
-           name: iOSBuild
-           path: ${{ github.workspace }}
-
-      - name: Zip iOS Build For Release
-        run: zip -r /home/runner/${{ env.PROJECT_NAME }}-iOS.zip ${{ github.workspace }}/${{ env.PROJECT_NAME }}.ipa
-
-      - name: Publish The Release
+      - name: Publish Release
         uses: softprops/action-gh-release@v2
         with:
           name: "DevBuild ${{ needs.get-commit-hash.outputs.commit_hash }}"
           tag_name: "devbuild-${{ needs.get-commit-hash.outputs.commit_hash }}"
           prerelease: true
           files: |
-            /home/runner/*.apk
-            /home/runner/*.zip
+            ${{ github.workspace }}/${{ env.PROJECT_NAME }}-Android-*.apk
