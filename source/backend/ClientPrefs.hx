@@ -119,7 +119,7 @@ import states.TitleState;
 	public var forceSingleSplashAnim:Bool = false;
 	public var volumeTheme:String = "Psych";
 	public var cpuStrums: Bool = true;
-	public var tabiBar: Bool = true;
+	public var extrahp: Bool = true;
 	public var botplayStyle:String = "Psych(New)";
 	public var showcaseStyle:String = "Psych";
 	public var fpstxtStyle:String = "Psych";

@@ -1442,7 +1442,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 									trace('Added event at time: $strumTime');
 									var didAdd:Bool = false;
 		
-									var eventAdded:EventMetaNote = createEvent([strumTime, [[eventsList[Std.int(Math.max(eventDropDown.selectedIndex, 0))][0], value1InputText.text, value2InputText.text]]]);
+									var eventAdded:EventMetaNote = createEvent([strumTime, [[eventsList[Std.int(Math.max(eventDropDown.selectedIndex, 0))][0], value1InputText.text, value2InputText.text, value3InputText.text, value4InputText.text]]]);
 									for (num in sectionFirstEventID...events.length)
 									{
 										var event = events[num];
@@ -1662,7 +1662,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 								trace('Added event at time: $strumTime');
 								var didAdd:Bool = false;
 	
-								var eventAdded:EventMetaNote = createEvent([strumTime, [[eventsList[Std.int(Math.max(eventDropDown.selectedIndex, 0))][0], value1InputText.text, value2InputText.text]]]);
+								var eventAdded:EventMetaNote = createEvent([strumTime, [[eventsList[Std.int(Math.max(eventDropDown.selectedIndex, 0))][0], value1InputText.text, value2InputText.text, value3InputText.text, value4InputText.text]]]);
 								for (num in sectionFirstEventID...events.length)
 								{
 									var event = events[num];
@@ -1978,6 +1978,8 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 			eventDropDown.selectedLabel = '';
 			value1InputText.text = '';
 			value2InputText.text = '';
+			value3InputText.text = '';
+			value4InputText.text = '';
 		}
 		forceDataUpdate = true;
 	}
@@ -2005,6 +2007,8 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 				}
 				value1InputText.text = (myEvent[1] != null) ? myEvent[1] : '';
 				value2InputText.text = (myEvent[2] != null) ? myEvent[2] : '';
+				value3InputText.text = (myEvent[3] != null) ? myEvent[3] : '';
+				value4InputText.text = (myEvent[4] != null) ? myEvent[4] : '';
 			}
 		}
 		else selectedEventText.visible = false;
@@ -2789,6 +2793,8 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var eventDropDown:PsychUIDropDownMenu;
 	var value1InputText:PsychUIInputText;
 	var value2InputText:PsychUIInputText;
+	var value3InputText:PsychUIInputText;
+	var value4InputText:PsychUIInputText;
 	var selectedEventText:FlxText;
 	var eventDescriptionText:FlxText;
 
@@ -2869,7 +2875,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		{
 			genericEventButton(function(event:EventMetaNote)
 			{
-				event.events.push([eventsList[Std.int(Math.max(eventDropDown.selectedIndex, 0))][0], value1InputText.text, value2InputText.text]);
+				event.events.push([eventsList[Std.int(Math.max(eventDropDown.selectedIndex, 0))][0], value1InputText.text, value2InputText.text, value3InputText.text, value4InputText.text]);
 				event.updateEventText();
 				curEventSelected++;
 			});
@@ -2918,11 +2924,19 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		value2InputText.onChange = function(old:String, cur:String) changeEventsValue(cur, 2);
 
 		objY += 40;
+		value3InputText = new PsychUIInputText(objX, objY, 120, '', 8);
+		value3InputText.onChange = function(old:String, cur:String) changeEventsValue(cur, 1);
+		value4InputText = new PsychUIInputText(objX + 150, objY, 120, '', 8);
+		value4InputText.onChange = function(old:String, cur:String) changeEventsValue(cur, 2);
+
+		objY += 40;
 		eventDescriptionText = new FlxText(objX, objY, 280, defaultEvents[0][1]);
 
 		tab_group.add(new FlxText(eventDropDown.x, eventDropDown.y - 15, 80, 'Event:'));
 		tab_group.add(new FlxText(value1InputText.x, value1InputText.y - 15, 80, 'Value 1:'));
 		tab_group.add(new FlxText(value2InputText.x, value2InputText.y - 15, 80, 'Value 2:'));
+		tab_group.add(new FlxText(value3InputText.x, value3InputText.y - 15, 80, 'Value 3:'));
+		tab_group.add(new FlxText(value4InputText.x, value4InputText.y - 15, 80, 'Value 4:'));
 
 		tab_group.add(removeButton);
 		tab_group.add(addButton);
@@ -2932,6 +2946,8 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		tab_group.add(value1InputText);
 		tab_group.add(value2InputText);
+		tab_group.add(value3InputText);
+		tab_group.add(value4InputText);
 		tab_group.add(eventDescriptionText);
 		
 		tab_group.add(eventDropDown); //lowest priority to display properly
