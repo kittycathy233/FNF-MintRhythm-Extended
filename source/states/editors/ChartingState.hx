@@ -82,10 +82,13 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		['Alt Idle Animation', "Sets a specified postfix after the idle animation name.\nYou can use this to trigger 'idle-alt' if you set\nValue 2 to -alt\n\nValue 1: Character to set (Dad, BF or GF)\nValue 2: New postfix (Leave it blank to disable)"],
 		['Screen Shake', "Value 1: Camera shake\nValue 2: HUD shake\n\nEvery value works as the following example: \"1, 0.05\".\nThe first number (1) is the duration.\nThe second number (0.05) is the intensity."],
 		['Change Character', "Value 1: Character to change (Dad, BF, GF)\nValue 2: New character's name"],
-		['Change Scroll Speed', "Value 1: Scroll Speed Multiplier (1 is default)\nValue 2: Time it takes to change fully in seconds."],
+		['Change Scroll Speed', "Value 1: Scroll Speed Multiplier (1 is default)\nValue 2: Time it takes to change fully in seconds (empty is instantly achieved)\nValue 3: Easing type (linear is default)"],
 		['Set Property', "Value 1: Variable name\nValue 2: New value"],
 		['Play Sound', "Value 1: Sound file name\nValue 2: Volume (Default: 1), ranges from 0 to 1"],
-		['Change Window Title', "Value 1: Window title name"]
+		//未完成
+		['Change Window Title', "Value 1: Window title name"],
+		['Change Opponent Scroll Speed', "same as Change Scroll Speed, but only for Opponent"],
+		['Change Player Scroll Speed', "same as Change Scroll Speed, but only for Player"]
 	];
 	
 	public static var keysArray:Array<FlxKey> = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]; //Used for Vortex Editor
@@ -2925,9 +2928,9 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		objY += 40;
 		value3InputText = new PsychUIInputText(objX, objY, 120, '', 8);
-		value3InputText.onChange = function(old:String, cur:String) changeEventsValue(cur, 1);
+		value3InputText.onChange = function(old:String, cur:String) changeEventsValue(cur, 3);
 		value4InputText = new PsychUIInputText(objX + 150, objY, 120, '', 8);
-		value4InputText.onChange = function(old:String, cur:String) changeEventsValue(cur, 2);
+		value4InputText.onChange = function(old:String, cur:String) changeEventsValue(cur, 4);
 
 		objY += 40;
 		eventDescriptionText = new FlxText(objX, objY, 280, defaultEvents[0][1]);

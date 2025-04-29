@@ -2383,15 +2383,17 @@ class PlayState extends MusicBeatState
 					if(value3 == null) value3 = 'linear';
 
 					var newValue:Float = SONG.speed * ClientPrefs.getGameplaySetting('scrollspeed') * flValue1;
-					if(flValue2 <= 0)
+					var easeFunc:EaseFunction = getEaseFunctionFromString(value3); // Helper function to get ease
+					if(flValue2 <= 0) {
 						songSpeed = newValue;
-					else
-						songSpeedTween = FlxTween.tween(this, {songSpeed: newValue}, flValue2 / playbackRate, {ease: FlxEase.sineInOut, onComplete:
-							function (twn:FlxTween)
-							{
+					} else {
+						songSpeedTween = FlxTween.tween(this, {songSpeed: newValue}, flValue2 / playbackRate, {
+							ease: easeFunc,
+							onComplete: function(twn:FlxTween) {
 								songSpeedTween = null;
 							}
 						});
+					}
 				}
 
 			case 'Set Property':
@@ -2428,6 +2430,49 @@ class PlayState extends MusicBeatState
 
 		stagesFunc(function(stage:BaseStage) stage.eventCalled(eventName, value1, value2, flValue1, flValue2, strumTime));
 		callOnScripts('onEvent', [eventName, value1, value2, value3, value4, strumTime]);
+	}
+
+	function getEaseFunctionFromString(easeName:String):EaseFunction {
+		return switch(easeName.toLowerCase()) {
+			case 'linear': FlxEase.linear;
+			case 'quadIn': FlxEase.quadIn;
+			case 'quadOut': FlxEase.quadOut;
+			case 'quadInOut': FlxEase.quadInOut;
+			case 'cubeIn': FlxEase.cubeIn;
+			case 'cubeOut': FlxEase.cubeOut;
+			case 'cubeInOut': FlxEase.cubeInOut;
+			case 'quartIn': FlxEase.quartIn;
+			case 'quartOut': FlxEase.quartOut;
+			case 'quartInOut': FlxEase.quartInOut;
+			case 'quintIn': FlxEase.quintIn;
+			case 'quintOut': FlxEase.quintOut;
+			case 'quintInOut': FlxEase.quintInOut;
+			case 'sineIn': FlxEase.sineIn;
+			case 'sineOut': FlxEase.sineOut;
+			case 'sineInOut': FlxEase.sineInOut;
+			case 'bounceIn': FlxEase.bounceIn;
+			case 'bounceOut': FlxEase.bounceOut;
+			case 'bounceInOut': FlxEase.bounceInOut;
+			case 'circIn': FlxEase.circIn;
+			case 'circOut': FlxEase.circOut;
+			case 'circInOut': FlxEase.circInOut;
+			case 'expoIn': FlxEase.expoIn;
+			case 'expoOut': FlxEase.expoOut;
+			case 'expoInOut': FlxEase.expoInOut;
+			case 'backIn': FlxEase.backIn;
+			case 'backOut': FlxEase.backOut;
+			case 'backInOut': FlxEase.backInOut;
+			case 'elasticIn': FlxEase.elasticIn;
+			case 'elasticOut': FlxEase.elasticOut;
+			case 'elasticInOut': FlxEase.elasticInOut;
+			case 'smoothStepIn': FlxEase.smoothStepIn;
+			case 'smoothStepOut': FlxEase.smoothStepOut;
+			case 'smoothStepInOut': FlxEase.smoothStepInOut;
+			case 'smootherStepIn': FlxEase.smootherStepIn;
+			case 'smootherStepOut': FlxEase.smootherStepOut;
+			case 'smootherStepInOut': FlxEase.smootherStepInOut;
+			default: FlxEase.linear; // Default to linear if unknown
+		}
 	}
 
 	public function moveCameraSection(?sec:Null<Int>):Void {
