@@ -107,7 +107,7 @@ class PlayState extends MusicBeatState
 	var healthLerp:Float = 1; // 用于平滑过渡的血量
 	var maxHealth:Float = 2; // 默认血条最大值
 	//var iconsAnimations:Bool = true; // 控制图标动画的开关
-	
+
 	public static var STRUM_X = 42;
 	public static var STRUM_X_MIDDLESCROLL = -278;
 
@@ -726,6 +726,8 @@ class PlayState extends MusicBeatState
 		#end
 
 		super.create();
+		iconP1InitialY = iconP1.y;
+   	 	iconP2InitialY = iconP2.y;
 		Paths.clearUnusedMemory();
 
 		cacheCountdown();
@@ -1985,20 +1987,56 @@ class PlayState extends MusicBeatState
 	// Health icon updaters
 	public dynamic function updateIconsScale(elapsed:Float)
 	{
-		var mult:Float = FlxMath.lerp(1, iconP1.scale.x, Math.exp(-elapsed * 9 * playbackRate));
-		iconP1.scale.set(mult, mult);
+		// MintRhythm专属缩放逻辑
+		if(ClientPrefs.data.iconbopstyle == "MintRhythm") {
+			var healthPercent:Float = healthBar.percent;
+			var targetScale:Float = 1.0;
+			
+			// 根据血量动态调整缩放强度
+			var scaleIntensity:Float = 1 - Math.abs(healthPercent - 50) / 50;
+			targetScale += 0.1 * scaleIntensity;
+			
+			// 平滑缩放过渡
+			iconP1.scale.x = FlxMath.lerp(iconP1.scale.x, targetScale, elapsed * 12);
+			iconP1.scale.y = FlxMath.lerp(iconP1.scale.y, targetScale, elapsed * 12);
+			iconP2.scale.x = FlxMath.lerp(iconP2.scale.x, targetScale, elapsed * 12);
+			iconP2.scale.y = FlxMath.lerp(iconP2.scale.y, targetScale, elapsed * 12);
+		} else {
+			// 原有其他样式的缩放逻辑
+			var mult:Float = FlxMath.lerp(1, iconP1.scale.x, Math.exp(-elapsed * 9 * playbackRate));
+			iconP1.scale.set(mult, mult);
+			var mult:Float = FlxMath.lerp(1, iconP2.scale.x, Math.exp(-elapsed * 9 * playbackRate));
+			iconP2.scale.set(mult, mult);
+		}
+		
 		iconP1.updateHitbox();
-
-		var mult:Float = FlxMath.lerp(1, iconP2.scale.x, Math.exp(-elapsed * 9 * playbackRate));
-		iconP2.scale.set(mult, mult);
 		iconP2.updateHitbox();
 	}
 
 	public dynamic function updateIconsPosition()
 	{
 		var iconOffset:Int = 26;
-		iconP1.x = healthBar.barCenter + (150 * iconP1.scale.x - 150) / 2 - iconOffset;
-		iconP2.x = healthBar.barCenter - (150 * iconP2.scale.x) / 2 - iconOffset * 2;
+		
+		// MintRhythm专属动效
+		if(ClientPrefs.data.iconbopstyle == "MintRhythm") {
+			var targetX1 = healthBar.barCenter + (150 * iconP1.scale.x - 150)/2 - iconOffset;
+			var targetX2 = healthBar.barCenter - (150 * iconP2.scale.x)/2 - iconOffset*2;
+			
+			// 平滑位置过渡
+			iconP1.x += (targetX1 - iconP1.x) * 0.1;
+			iconP2.x += (targetX2 - iconP2.x) * 0.1;
+			
+			// 垂直浮动效果
+			var wave = Math.sin(Conductor.songPosition / 400) * 1.5;
+			iconP1.y = iconP1InitialY + wave;
+			iconP2.y = iconP2InitialY - wave;
+		} else {
+			// 原有其他样式的逻辑
+			iconP1.x = healthBar.barCenter + (150 * iconP1.scale.x - 150)/2 - iconOffset;
+			iconP2.x = healthBar.barCenter - (150 * iconP2.scale.x)/2 - iconOffset*2;
+			iconP1.y = iconP1InitialY;
+			iconP2.y = iconP2InitialY;
+		}
 	}
 
 	var iconsAnimations:Bool = true;
