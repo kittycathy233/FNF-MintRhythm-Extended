@@ -236,6 +236,7 @@ class PlayState extends MusicBeatState
 
 	public var botplaySine:Float = 0;
 	public var botplayTxt:FlxText;
+	public var watermarkText:FlxText;
 
 	public var iconP1:HealthIcon;
 	public var iconP2:HealthIcon;
@@ -630,7 +631,7 @@ class PlayState extends MusicBeatState
 		if(ClientPrefs.data.downScroll)
 			botplayTxt.y = healthBar.y + 70;
 
-		var watermarkText = new FlxText(20, FlxG.height - 20, 0, 
+		watermarkText = new FlxText(20, FlxG.height - 20, 0, 
 			SONG.song + "-" + Difficulty.getString().toUpperCase() + ' | MintRhythm Engine v${MainMenuState.mrEngineVersion}', 
 				14);
 		watermarkText.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -2222,7 +2223,7 @@ class PlayState extends MusicBeatState
 				gfSpeed = Math.round(flValue1);
 
 			case 'Add Camera Zoom':
-				if(ClientPrefs.data.camZooms && FlxG.camera.zoom < 1.35) {
+				if(ClientPrefs.data.camZooms/* && FlxG.camera.zoom < 1.35*/) {
 					if(flValue1 == null) flValue1 = 0.015;
 					if(flValue2 == null) flValue2 = 0.03;
 
