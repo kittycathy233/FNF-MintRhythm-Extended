@@ -107,6 +107,7 @@ class PlayState extends MusicBeatState
 	var healthLerp:Float = 1; // 用于平滑过渡的血量
 	var maxHealth:Float = 2; // 默认血条最大值
 	//var iconsAnimations:Bool = true; // 控制图标动画的开关
+	var cpuHits:Int = 0;
 
 	public static var STRUM_X = 42;
 	public static var STRUM_X_MIDDLESCROLL = -278;
@@ -1231,7 +1232,7 @@ class PlayState extends MusicBeatState
 			return;
 
 		updateScoreText();
-		if (!miss && !cpuControlled && scoreBop)
+		if (!miss/* && !cpuControlled*/ && scoreBop)
 			doScoreBop();
 
 		callOnScripts('onUpdateScore', [miss]);
@@ -1280,6 +1281,8 @@ class PlayState extends MusicBeatState
 
 		if(scoreTxtTween != null)
 			scoreTxtTween.cancel();
+		if(scoreTxtTweenAngle != null)
+			scoreTxtTweenAngle.cancel();
 
 		scoreTxt.scale.x = 1.075;
 		scoreTxt.scale.y = 1.075;
@@ -1945,7 +1948,7 @@ class PlayState extends MusicBeatState
 							// Kill extremely late notes and cause misses
 							if (Conductor.songPosition - daNote.strumTime > noteKillOffset)
 							{
-								if (daNote.mustPress && !cpuControlled && !daNote.ignoreNote && !endingSong && (daNote.tooLate || !daNote.wasGoodHit))
+								if (daNote.mustPress /*&& !cpuControlled */&& !daNote.ignoreNote && !endingSong && (daNote.tooLate || !daNote.wasGoodHit))
 									noteMiss(daNote);
 
 								daNote.active = daNote.visible = false;
@@ -2646,9 +2649,12 @@ class PlayState extends MusicBeatState
 		if(ret != LuaUtils.Function_Stop && !transitioning)
 		{
 			#if !switch
+			if(cpuHits == 0)
+			{
 			var percent:Float = ratingPercent;
 			if(Math.isNaN(percent)) percent = 0;
 			Highscore.saveScore(Song.loadedSongName, songScore, storyDifficulty, percent);
+			}
 			#end
 			playbackRate = 1;
 
@@ -2675,7 +2681,7 @@ class PlayState extends MusicBeatState
 					MusicBeatState.switchState(new StoryMenuState());
 
 					// if ()
-					if(!ClientPrefs.getGameplaySetting('practice') && !ClientPrefs.getGameplaySetting('botplay')) {
+					if(!ClientPrefs.getGameplaySetting('practice') && !ClientPrefs.getGameplaySetting('botplay') && cpuHits != 0) {
 						StoryMenuState.weekCompleted.set(WeekData.weeksList[storyWeek], true);
 						Highscore.saveWeekScore(WeekData.getWeekFileName(), campaignScore, storyDifficulty);
 
@@ -2791,7 +2797,7 @@ class PlayState extends MusicBeatState
 		if(daRating.noteSplash && !note.noteSplashData.disabled)
 			spawnNoteSplashOnNote(note);
 
-		if(!cpuControlled) {
+		/*if(!cpuControlled) */{
 			songScore += score;
 			if(!note.ratingDisabled)
 			{
@@ -2800,6 +2806,7 @@ class PlayState extends MusicBeatState
 				RecalculateRating(false);
 			}
 		}
+		if(cpuControlled) cpuHits++;
 
 		var uiFolder:String = "";
 		var antialias:Bool = ClientPrefs.data.antialiasing;
@@ -3309,7 +3316,7 @@ class PlayState extends MusicBeatState
 	public function goodNoteHit(note:Note):Void
 	{
 		if(note.wasGoodHit) return;
-		if(cpuControlled && note.ignoreNote) return;
+		if(/*cpuControlled && */note.ignoreNote) return;
 
 		var isSus:Bool = note.isSustainNote; //GET OUT OF MY HEAD, GET OUT OF MY HEAD, GET OUT OF MY HEAD
 		var leData:Int = Math.round(Math.abs(note.noteData));
@@ -3409,7 +3416,7 @@ class PlayState extends MusicBeatState
 	}
 
 	public function invalidateNote(note:Note):Void {
-		//if(!ClientPrefs.data.lowQuality || !cpuControlled) note.kill();
+		if(!ClientPrefs.data.lowQuality || !cpuControlled) note.kill();
 		notes.remove(note, true);
 		note.destroy();
 	}
