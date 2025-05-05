@@ -1700,6 +1700,10 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		}
 		ignoreClickForThisFrame = false;
 
+		// 修复 curBeat 和 curStep 的计算
+		var curBeat:Int = Math.floor(Conductor.songPosition / Conductor.crochet);
+		var curStep:Int = Math.floor(Conductor.songPosition / (Conductor.crochet / 4));
+
 		if(Conductor.songPosition != lastTime || forceDataUpdate)
 		{
 			var curTime:String = FlxStringUtil.formatTime(Conductor.songPosition / 1000, true);
@@ -4101,9 +4105,9 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 												{
 													if(event == null) continue;
 													pack.chart.events.push(event);
+													@:privateAccess pack.chart.events.sort(VSlice.sortByTime);
 												}
 											}
-											@:privateAccess pack.chart.events.sort(VSlice.sortByTime);
 										}
 									}
 
