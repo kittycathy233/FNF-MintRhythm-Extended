@@ -1704,6 +1704,17 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		var curBeat:Int = Math.floor(Conductor.songPosition / Conductor.crochet);
 		var curStep:Int = Math.floor(Conductor.songPosition / (Conductor.crochet / 4));
 
+		// Add icon bounce effect on every beat
+		if (curBeat != lastBeatHit) {
+			var mustHitSection:Bool = (PlayState.SONG.notes[curSec] != null && PlayState.SONG.notes[curSec].mustHitSection);
+			for (icon in icons) {
+				if ((mustHitSection && icon.ID == 1) || (!mustHitSection && icon.ID == 2)) {
+					icon.scale.set(0.35, 0.35); // Slightly increase the size for the bounce effect
+					FlxTween.tween(icon.scale, {x: 0.3, y: 0.3}, 0.17, {ease: FlxEase.linear}); // Smoothly return to original size
+				}
+			}
+		}
+
 		if(Conductor.songPosition != lastTime || forceDataUpdate)
 		{
 			var curTime:String = FlxStringUtil.formatTime(Conductor.songPosition / 1000, true);
