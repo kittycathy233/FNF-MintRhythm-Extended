@@ -2780,6 +2780,27 @@ class PlayState extends MusicBeatState
 			}
 		}
 
+		if (!ClientPrefs.data.rmmsTimeTxt) {
+			msTimeTxt.alpha = ClientPrefs.data.ratingsAlpha;
+			msTimeTxt.scale.set(1.35, 1.2);
+			if(cpuControlled) msTimeTxt.text = Std.string(Math.round(noteDiff)) + "ms(BOT)";
+			else msTimeTxt.text = Std.string(Math.round(noteDiff)) + "ms";
+
+			if (msTimeTxtTween1 != null){
+				msTimeTxtTween1.cancel(); msTimeTxtTween1.destroy(); // top 10 awesome code
+			}
+			msTimeTxtTween1 = FlxTween.tween(msTimeTxt, {alpha: 0}, 0.2, {
+				onComplete: function(tw:FlxTween) {msTimeTxtTween1 = null;}, startDelay: 0.3
+			});
+
+			if (msTimeTxtTween2 != null){
+				msTimeTxtTween2.cancel(); msTimeTxtTween2.destroy(); // top 10 awesome code
+			}
+			msTimeTxtTween2 = FlxTween.tween(msTimeTxt.scale, {x: 1, y: 1}, 0.4, {
+				ease: FlxEase.circOut,
+			});
+		}
+
 		var placement:Float = FlxG.width * 0.35;
 		var rating:FlxSprite = new FlxSprite();
 		var theEXrating:FlxSprite = new FlxSprite();
