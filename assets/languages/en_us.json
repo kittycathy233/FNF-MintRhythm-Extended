@@ -26,5 +26,7 @@
     "exrating_bounce_desc": "Enhance the bounce animation for extended rating icons.\nNote: This option may have stability issues.",
     "rating_opac_desc": "Adjust the opacity of rating textures (100% = original opacity).",
     "rm_perfect_judge_desc": "Remove the 'Perfect!' rating display.\nAlso affects extended rating textures.",
-    "timebar_style_desc": "Modify the visual style of the timebar in gameplay."
+    "timebar_style_desc": "Modify the visual style of the timebar in gameplay.",
+    "score_best_desc": "PERSONAL BEST:",
+    "game_font": "vcr.ttf"
 }

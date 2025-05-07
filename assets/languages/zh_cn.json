@@ -26,5 +26,8 @@
     "exrating_bounce_desc": "增强扩展评分图标的跳动动画\n注意：此选项可能存在稳定性问题",
     "rating_opac_desc": "调整评分图标的不透明度（100%为原始值）",
     "rm_perfect_judge_desc": "移除“Perfect!”评分显示\n同时影响扩展评分图标",
-    "timebar_style_desc": "更改游戏内时间条的视觉样式"
+    "timebar_style_desc": "更改游戏内时间条的视觉样式",
+    "game_font": "ResourceHanRoundedCN-Bold.ttf",
+    "score_best_desc": "最佳个人成绩："
+
 }
