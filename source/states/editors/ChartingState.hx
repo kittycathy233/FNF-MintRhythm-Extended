@@ -152,7 +152,9 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var nextGridBg:ChartingGridSprite;
 	var waveformSprite:FlxSprite;
 	var scrollY:Float = 0;
-	
+
+	var iconbopTween:FlxTween;
+
 	var zoomList:Array<Float> = [
 		0.25,
 		0.5,
@@ -378,16 +380,16 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		selectionBox.visible = false;
 		add(selectionBox);
 
-		infoBox = new PsychUIBox(infoBoxPosition.x #if mobile - 900 #end, infoBoxPosition.y #if mobile - 250 #end, 220, 220, ['Information']);
+		infoBox = new PsychUIBox(infoBoxPosition.x #if mobile - 900 #end, infoBoxPosition.y #if mobile - 250 #end, 220, 220, ['播放信息']);
 		infoBox.scrollFactor.set();
 		infoBox.cameras = [camUI];
 		infoText = new FlxText(15, 15, 230, '', 16);
 		infoText.scrollFactor.set();
-		infoBox.getTab('Information').menu.add(infoText);
+		infoBox.getTab('播放信息').menu.add(infoText); //Information
 		add(infoBox);
 
-		mainBox = new PsychUIBox(mainBoxPosition.x, mainBoxPosition.y, 300, 280, ['Charting', 'Data', 'Events', 'Note', 'Section', 'Song']);
-		mainBox.selectedName = 'Song';
+		mainBox = new PsychUIBox(mainBoxPosition.x, mainBoxPosition.y, 350, 300, ['制谱', '数据', '事件', '音符', '小节', '曲目信息']);
+		mainBox.selectedName = '曲目信息';
 		mainBox.scrollFactor.set();
 		mainBox.cameras = [camUI];
 		add(mainBox);
@@ -406,7 +408,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		if(chartEditorSave.data.infoBoxPosition != null && chartEditorSave.data.infoBoxPosition.length > 1)
 			infoBox.setPosition(chartEditorSave.data.infoBoxPosition[0], chartEditorSave.data.infoBoxPosition[1]);
 
-		upperBox = new PsychUIBox(40, 40, 330, 300, ['File', 'Edit', 'View']);
+		upperBox = new PsychUIBox(40, 40, 330, 300, ['文件', '编辑', '视图']);
 		upperBox.scrollFactor.set();
 		upperBox.isMinimized = true;
 		upperBox.minimizeOnFocusLost = true;
@@ -477,9 +479,9 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		stageDropDown.list = loadFileList('stages/', 'data/stageList.txt');
 		onChartLoaded();
 
-		var tipText:FlxText = new FlxText(FlxG.width - 210, FlxG.height - 30, 200, 'Press ${(controls.mobileC) ? 'F' : 'F1'} for Help', 20);
+		var tipText:FlxText = new FlxText(FlxG.width - 210, FlxG.height - 30, 200, '按下 ${(controls.mobileC) ? 'F' : 'F1'} 键以查看帮助', 20);
 		tipText.cameras = [camUI];
-		tipText.setFormat(null, 16, FlxColor.WHITE, RIGHT);
+		tipText.setFormat(Paths.font("unifont-16.0.02.otf"), 18, FlxColor.WHITE, RIGHT);
 		tipText.borderColor = FlxColor.BLACK;
 		tipText.scrollFactor.set();
 		tipText.borderSize = 1;
@@ -1707,11 +1709,17 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		// Add icon bounce effect on every beat
 		if (curBeat != lastBeatHit) {
 			var mustHitSection:Bool = (PlayState.SONG.notes[curSec] != null && PlayState.SONG.notes[curSec].mustHitSection);
+			if(iconbopTween != null)
+				iconbopTween.cancel();
 			for (icon in icons) {
 				if ((mustHitSection && icon.ID == 1) || (!mustHitSection && icon.ID == 2)) {
-					icon.scale.set(0.35, 0.35); // Slightly increase the size for the bounce effect
-					FlxTween.tween(icon.scale, {x: 0.3, y: 0.3}, 0.17, {ease: FlxEase.linear}); // Smoothly return to original size
-				}
+					icon.scale.set(0.4, 0.4); // Slightly increase the size for the bounce effect
+					//FlxTween.tween(icon.scale, {x: 0.3, y: 0.3}, 0.17, {ease: FlxEase.linear}); // Smoothly return to original size
+					iconbopTween = FlxTween.tween(icon.scale, {x: 0.3, y: 0.3}, 0.12, {
+						onComplete: function(twn:FlxTween) {
+							iconbopTween = null;
+						}});
+			}
 			}
 		}
 
@@ -2647,7 +2655,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var opponentMuteCheckBox:PsychUICheckBox;
 	function addChartingTab()
 	{
-		var tab_group = mainBox.getTab('Charting').menu;
+		var tab_group = mainBox.getTab('制谱').menu;
 		var objX = 10;
 		var objY = 10;
 
@@ -2715,7 +2723,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var noteSplashesInputText:PsychUIInputText;
 	function addDataTab()
 	{
-		var tab_group = mainBox.getTab('Data').menu;
+		var tab_group = mainBox.getTab('数据').menu;
 		var objX = 10;
 		var objY = 25;
 		gameOverCharDropDown = new PsychUIDropDownMenu(objX, objY, [''], function(id:Int, character:String)
@@ -2820,7 +2828,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var curEventSelected:Int = 0;
 	function addEventsTab()
 	{
-		var tab_group = mainBox.getTab('Events').menu;
+		var tab_group = mainBox.getTab('事件').menu;
 		var objX = 10;
 		var objY = 25;
 
@@ -2978,7 +2986,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var noteTypes:Array<String>;
 	function addNoteTab()
 	{
-		var tab_group = mainBox.getTab('Note').menu;
+		var tab_group = mainBox.getTab('音符').menu;
 		var objX = 10;
 		var objY = 25;
 
@@ -3074,7 +3082,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		var affectNotes:PsychUICheckBox = null;
 		var affectEvents:PsychUICheckBox = null;
 		var copyLastSecStepper:PsychUINumericStepper = null;
-		var tab_group = mainBox.getTab('Section').menu;
+		var tab_group = mainBox.getTab('小节').menu;
 		var objX = 10;
 		var objY = 10;
 		function copyNotesOnSection(?secOff:Int = 0, ?showMessage:Bool = true) //Used on "Copy Section" and "Copy Last Section" buttons
@@ -3173,7 +3181,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		});
 
 		objY += 25;
-		changeBpmStepper = new PsychUINumericStepper(objX, objY, 1, 0, 1, 400, 3);
+		changeBpmStepper = new PsychUINumericStepper(objX, objY, 1, 0, 1, 10000, 3);
 		changeBpmStepper.onValueChange = function()
 		{
 			var sec = getCurChartSection();
@@ -3487,7 +3495,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	
 	function addSongTab()
 	{
-		var tab_group = mainBox.getTab('Song').menu;
+		var tab_group = mainBox.getTab('曲目信息').menu;
 		var objX = 10;
 		var objY = 25;
 
@@ -3536,7 +3544,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		objY += 65;
 		//(x:Float = 0, y:Float = 0, step:Float = 1, defValue:Float = 0, min:Float = -999, max:Float = 999, decimals:Int = 0, ?wid:Int = 60, ?isPercent:Bool = false)
-		bpmStepper = new PsychUINumericStepper(objX, objY, 1, 1, 1, 400, 3);
+		bpmStepper = new PsychUINumericStepper(objX, objY, 1, 1, 1, 10000, 3);
 		bpmStepper.onValueChange = function()
 		{
 			var oldTimes:Array<Float> = cachedSectionTimes.copy();
@@ -3544,7 +3552,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 			adaptNotesToNewTimes(oldTimes);
 		};
 
-		scrollSpeedStepper = new PsychUINumericStepper(objX + 90, objY, 0.1, 1, 0.1, 10, 2);
+		scrollSpeedStepper = new PsychUINumericStepper(objX + 90, objY, 0.1, 1, 0.1, 10000, 2);
 		scrollSpeedStepper.onValueChange = function() PlayState.SONG.speed = scrollSpeedStepper.value;
 
 		audioOffsetStepper = new PsychUINumericStepper(objX + 180, objY, 1, 0, -500, 500, 0);
@@ -3618,7 +3626,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 	function addFileTab()
 	{
-		var tab = upperBox.getTab('File');
+		var tab = upperBox.getTab('文件');
 		var tab_group = tab.menu;
 		var btnX = tab.x - upperBox.x;
 		var btnY = 1;
@@ -4356,7 +4364,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var lockedEvents:Bool = false;
 	function addEditTab()
 	{
-		var tab = upperBox.getTab('Edit');
+		var tab = upperBox.getTab('编辑');
 		var tab_group = tab.menu;
 		var btnX = tab.x - upperBox.x;
 		var btnY = 1;
@@ -4517,7 +4525,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var vortexEditorButton:PsychUIButton;
 	function addViewTab()
 	{
-		var tab = upperBox.getTab('View');
+		var tab = upperBox.getTab('视图');
 		var tab_group = tab.menu;
 		var btnX = tab.x - upperBox.x;
 		var btnY = 1;
