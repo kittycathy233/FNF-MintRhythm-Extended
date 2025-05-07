@@ -95,7 +95,7 @@ class FlashingState extends MusicBeatState
 
 	function updateItems() {
 		// it's clunky but it works.
-		texts.members[1].alpha = isYes ? 1.0 : 0.6;
-		texts.members[2].alpha = isYes ? 0.6 : 1.0;
+		texts.members[1].color = isYes ? 0xFF87CEEB : 0xFFFFFFFF; // 天蓝色 (SKYBLUE) 和 白色 (WHITE)
+		texts.members[2].color = isYes ? 0xFFFFFFFF : 0xFF87CEEB;
 	}
 }
