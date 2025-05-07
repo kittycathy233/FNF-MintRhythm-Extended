@@ -21,7 +21,7 @@ class LanguageSubState extends MusicBeatSubstate
 		add(grpLanguages);
 
 		languages.push(ClientPrefs.defaultData.language); //English (US)
-		displayLanguages.set(ClientPrefs.defaultData.language, Language.defaultLangName);
+		displayLanguages.set(ClientPrefs.defaultData.language, LanguageBasic.defaultLangName);
 		var directories:Array<String> = Mods.directoriesWithFile(Paths.getSharedPath(), 'data/');
 		for (directory in directories)
 		{
@@ -63,13 +63,13 @@ class LanguageSubState extends MusicBeatSubstate
 			return 0;
 		});
 
-		//trace(ClientPrefs.data.language);
-		curSelected = languages.indexOf(ClientPrefs.data.language);
+		//trace(ClientPrefs.data.basiclanguage);
+		curSelected = languages.indexOf(ClientPrefs.data.basiclanguage);
 		if(curSelected < 0)
 		{
-			//trace('Language not found: ' + ClientPrefs.data.language);
-			ClientPrefs.data.language = ClientPrefs.defaultData.language;
-			curSelected = Std.int(Math.max(0, languages.indexOf(ClientPrefs.data.language)));
+			//trace('Language not found: ' + ClientPrefs.data.basiclanguage);
+			ClientPrefs.data.basiclanguage = ClientPrefs.defaultData.language;
+			curSelected = Std.int(Math.max(0, languages.indexOf(ClientPrefs.data.basiclanguage)));
 		}
 
 		for (num => lang in languages)
@@ -124,10 +124,10 @@ class LanguageSubState extends MusicBeatSubstate
 		if(controls.ACCEPT)
 		{
 			FlxG.sound.play(Paths.sound('confirmMenu'), 0.6);
-			ClientPrefs.data.language = languages[curSelected];
-			//trace(ClientPrefs.data.language);
+			ClientPrefs.data.basiclanguage = languages[curSelected];
+			//trace(ClientPrefs.data.basiclanguage);
 			ClientPrefs.saveSettings();
-			Language.reloadPhrases();
+			LanguageBasic.reloadPhrases();
 			changedLanguage = true;
 		}
 	}

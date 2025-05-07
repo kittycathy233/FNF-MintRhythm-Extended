@@ -1245,7 +1245,7 @@ class FunkinLua {
 			var path:String;
 			var songPath:String = Paths.formatToSongPath(Song.loadedSongName);
 			#if TRANSLATIONS_ALLOWED
-			path = Paths.getPath('data/$songPath/${dialogueFile}_${ClientPrefs.data.language}.json', TEXT);
+			path = Paths.getPath('data/$songPath/${dialogueFile}_${ClientPrefs.data.basiclanguage}.json', TEXT);
 			#if MODS_ALLOWED
 			if(!FileSystem.exists(path))
 			#else
@@ -1559,7 +1559,7 @@ class FunkinLua {
 
 		#if DISCORD_ALLOWED DiscordClient.addLuaCallbacks(lua); #end
 		#if ACHIEVEMENTS_ALLOWED Achievements.addLuaCallbacks(lua); #end
-		#if TRANSLATIONS_ALLOWED Language.addLuaCallbacks(lua); #end
+		#if TRANSLATIONS_ALLOWED LanguageBasic.addLuaCallbacks(lua); #end
 		HScript.implement(this);
 		#if flxanimate FlxAnimateFunctions.implement(this); #end
 		ReflectionFunctions.implement(this);

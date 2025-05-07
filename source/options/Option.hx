@@ -45,8 +45,8 @@ class Option
 	{
 		_name = name;
 		_translationKey = translation != null ? translation : _name;
-		this.name = Language.getPhrase('setting_$_translationKey', name);
-		this.description = Language.getPhrase('description_$_translationKey', description);
+		this.name = LanguageBasic.getPhrase('setting_$_translationKey', name);
+		this.description = LanguageBasic.getPhrase('description_$_translationKey', description);
 		this.variable = variable;
 		this.type = type;
 		this.options = options;
@@ -132,7 +132,7 @@ class Option
 		if(child != null)
 		{
 			_text = newValue;
-			child.text = Language.getPhrase('setting_$_translationKey-${getValue()}', _text);
+			child.text = LanguageBasic.getPhrase('setting_$_translationKey-${getValue()}', _text);
 			return _text;
 		}
 		return null;

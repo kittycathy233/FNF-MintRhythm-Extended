@@ -152,7 +152,7 @@ class NoteOffsetState extends MusicBeatState
 		repositionCombo();
 
 		// Note delay stuff
-		beatText = new Alphabet(0, 0, Language.getPhrase('delay_beat_hit', 'Beat Hit!'), true);
+		beatText = new Alphabet(0, 0, LanguageBasic.getPhrase('delay_beat_hit', 'Beat Hit!'), true);
 		beatText.setScale(0.6, 0.6);
 		beatText.x += 260;
 		beatText.alpha = 0;
@@ -589,9 +589,9 @@ class NoteOffsetState extends MusicBeatState
 		{
 			switch(i)
 			{
-				case 0: dumbTexts.members[i].text = Language.getPhrase('combo_rating_offset', 'Rating Offset:');
+				case 0: dumbTexts.members[i].text = LanguageBasic.getPhrase('combo_rating_offset', 'Rating Offset:');
 				case 1: dumbTexts.members[i].text = '[' + ClientPrefs.data.comboOffset[0] + ', ' + ClientPrefs.data.comboOffset[1] + ']';
-				case 2: dumbTexts.members[i].text = Language.getPhrase('combo_numbers_offset', 'Numbers Offset:');
+				case 2: dumbTexts.members[i].text = LanguageBasic.getPhrase('combo_numbers_offset', 'Numbers Offset:');
 				case 3: dumbTexts.members[i].text = '[' + ClientPrefs.data.comboOffset[2] + ', ' + ClientPrefs.data.comboOffset[3] + ']';
 				case 4: dumbTexts.members[i].text = 'Extra Rating Offset:';
 				case 5: dumbTexts.members[i].text = '[' + ClientPrefs.data.comboOffset[4] + ', ' + ClientPrefs.data.comboOffset[5] + ']';
@@ -602,7 +602,7 @@ class NoteOffsetState extends MusicBeatState
 	function updateNoteDelay()
 	{
 		ClientPrefs.data.noteOffset = Math.round(barPercent);
-		timeTxt.text = Language.getPhrase('delay_current_offset', 'Current offset: {1} ms', [Math.floor(barPercent)]);
+		timeTxt.text = LanguageBasic.getPhrase('delay_current_offset', 'Current offset: {1} ms', [Math.floor(barPercent)]);
 	}
 
 	function updateMode()
@@ -633,16 +633,16 @@ class NoteOffsetState extends MusicBeatState
 		final accept:String = (controls.mobileC) ? "A" : (!controls.controllerMode) ? "ACCEPT" : "Start";
 		if(onComboMenu)
 		{
-			str = Language.getPhrase('combo_offset', 'Combo Offset');
+			str = LanguageBasic.getPhrase('combo_offset', 'Combo Offset');
 			addTouchPad('NONE', 'A_B_C');
 			addTouchPadCamera();
 		} else {
-			str = Language.getPhrase('note_delay', 'Note/Beat Delay');
+			str = LanguageBasic.getPhrase('note_delay', 'Note/Beat Delay');
 			addTouchPad('LEFT_RIGHT', 'A_B_C');
 			addTouchPadCamera();
 		}
 
-		str2 = Language.getPhrase('switch_on_button', '(Press {1} to Switch)', [accept]);
+		str2 = LanguageBasic.getPhrase('switch_on_button', '(Press {1} to Switch)', [accept]);
 
 		changeModeText.text = '< ${str.toUpperCase()} ${str2.toUpperCase()} >';
 	}

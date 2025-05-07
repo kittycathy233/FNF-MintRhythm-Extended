@@ -109,13 +109,13 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		positionText.cameras = [ui];
 		add(positionText);
 
-		var exit = new UIButton(0, itemText.y - 25, Language.getPhrase('mobileC_exitandsave', "Exit & Save"), () ->
+		var exit = new UIButton(0, itemText.y - 25, LanguageBasic.getPhrase('mobileC_exitandsave', "Exit & Save"), () ->
 		{
 			if (options[curOption].toLowerCase().contains('pad'))
 				control.touchPad.setExtrasDefaultPos();
 			if (options[curOption] == 'Pad-Extra')
 			{
-				var nuhuh = new FlxText(0, 0, FlxG.width / 2, Language.getPhrase('pad-extra_save', 'Pad-Extra Is Just A Binding Option\nPlease Select A Different Option To Exit.'));
+				var nuhuh = new FlxText(0, 0, FlxG.width / 2, LanguageBasic.getPhrase('pad-extra_save', 'Pad-Extra Is Just A Binding Option\nPlease Select A Different Option To Exit.'));
 				nuhuh.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, FlxTextAlign.CENTER);
 				nuhuh.screenCenter();
 				nuhuh.cameras = [ui];
@@ -149,7 +149,7 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		exit.cameras = [ui];
 		add(exit);
 
-		reset = new UIButton(exit.x, exit.height + exit.y + 20, Language.getPhrase('mobileC_reset', "Reset"), () ->
+		reset = new UIButton(exit.x, exit.height + exit.y + 20, LanguageBasic.getPhrase('mobileC_reset', "Reset"), () ->
 		{
 			changeOption(0); // realods the current control mode ig?
 			FlxG.sound.play(Paths.sound('cancelMenu'));
@@ -307,7 +307,7 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 			positionText.visible = positionTextBg.visible = true;
 			if (optionName == 'Pad-Custom')
 			{
-				positionText.text = '${Language.getPhrase('mobileC_left', 'LEFT')} X: ${control.touchPad.buttonLeft.x} - Y: ${control.touchPad.buttonLeft.y}\n${Language.getPhrase('mobileC_down', 'DOWN')} X: ${control.touchPad.buttonDown.x} - Y: ${control.touchPad.buttonDown.y}\n\n${Language.getPhrase('mobileC_up', 'UP')} X: ${control.touchPad.buttonUp.x} - Y: ${control.touchPad.buttonUp.y}\n${Language.getPhrase('mobileC_right', 'RIGHT')} X: ${control.touchPad.buttonRight.x} - Y: ${control.touchPad.buttonRight.y}';
+				positionText.text = '${LanguageBasic.getPhrase('mobileC_left', 'LEFT')} X: ${control.touchPad.buttonLeft.x} - Y: ${control.touchPad.buttonLeft.y}\n${LanguageBasic.getPhrase('mobileC_down', 'DOWN')} X: ${control.touchPad.buttonDown.x} - Y: ${control.touchPad.buttonDown.y}\n\n${LanguageBasic.getPhrase('mobileC_up', 'UP')} X: ${control.touchPad.buttonUp.x} - Y: ${control.touchPad.buttonUp.y}\n${LanguageBasic.getPhrase('mobileC_right', 'RIGHT')} X: ${control.touchPad.buttonRight.x} - Y: ${control.touchPad.buttonRight.y}';
 			}
 			else
 			{

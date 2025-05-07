@@ -73,7 +73,7 @@ class TitleState extends MusicBeatState
 		if(!initialized)
 		{
 			ClientPrefs.loadPrefs();
-			Language.reloadPhrases();
+			LanguageBasic.reloadPhrases();
 		}
 
 		curWacky = FlxG.random.getObject(getIntroTextShit());
@@ -369,6 +369,8 @@ class TitleState extends MusicBeatState
 				titleText.color = FlxColor.WHITE;
 				titleText.alpha = 1;
 				
+				Language.load();
+
 				if(titleText != null) titleText.animation.play('press');
 
 				FlxG.camera.flash(ClientPrefs.data.flashing ? FlxColor.WHITE : 0x4CFFFFFF, 1);

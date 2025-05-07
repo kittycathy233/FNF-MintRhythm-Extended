@@ -92,7 +92,7 @@ class DialogueBoxPsych extends FlxSpriteGroup
 		daText.setScale(0.7);
 		add(daText);
 
-		skipText = new FlxText(FlxG.width - 320, FlxG.height - 30, 300, Language.getPhrase('dialogue_skip', 'Press BACK to Skip'), 16);
+		skipText = new FlxText(FlxG.width - 320, FlxG.height - 30, 300, LanguageBasic.getPhrase('dialogue_skip', 'Press BACK to Skip'), 16);
 		skipText.setFormat(null, 16, FlxColor.WHITE, RIGHT, OUTLINE_FAST, FlxColor.BLACK);
 		skipText.borderSize = 2;
 		add(skipText);

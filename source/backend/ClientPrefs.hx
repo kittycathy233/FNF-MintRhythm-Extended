@@ -89,7 +89,8 @@ import states.TitleState;
 	public var guitarHeroSustains:Bool = true;
 	public var discordRPC:Bool = true;
 	public var loadingScreen:Bool = true;
-	public var language:String = 'en-US';
+	public var basiclanguage:String = 'en-US';
+	public var language:String = 'zh_cn';
 
 	//杂七杂八的特性
 	public var fpsCounterSize:Int = 14;

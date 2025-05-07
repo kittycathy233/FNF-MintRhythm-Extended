@@ -66,7 +66,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		add(titleText);
 
 		descText = new FlxText(50, 600, 1180, "", 32);
-		descText.setFormat(Paths.font("SourceHanSansCN-Bold.otf"), 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		descText.setFormat(Paths.font("ResourceHanRoundedCN-Bold.ttf"), 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		descText.scrollFactor.set();
 		descText.borderSize = 2.4;
 		add(descText);
@@ -171,14 +171,14 @@ class BaseOptionsMenu extends MusicBeatSubstate
 						FlxTween.tween(bindingBlack, {alpha: 0.6}, 0.35, {ease: FlxEase.linear});
 						add(bindingBlack);
 	
-						bindingText = new Alphabet(FlxG.width / 2, 160, Language.getPhrase('controls_rebinding', 'Rebinding {1}', [curOption.name]), false);
+						bindingText = new Alphabet(FlxG.width / 2, 160, LanguageBasic.getPhrase('controls_rebinding', 'Rebinding {1}', [curOption.name]), false);
 						bindingText.alignment = CENTERED;
 						add(bindingText);
 
 						final escape:String = (controls.mobileC) ? "B" : "ESC";
 						final backspace:String = (controls.mobileC) ? "C" : "Backspace";
 						
-						bindingText2 = new Alphabet(FlxG.width / 2, 340, Language.getPhrase('controls_rebinding2', 'Hold {1} to Cancel\nHold {2} to Delete', [escape, backspace]), true);
+						bindingText2 = new Alphabet(FlxG.width / 2, 340, LanguageBasic.getPhrase('controls_rebinding2', 'Hold {1} to Cancel\nHold {2} to Delete', [escape, backspace]), true);
 						bindingText2.alignment = CENTERED;
 						add(bindingText2);
 	
@@ -510,4 +510,18 @@ class BaseOptionsMenu extends MusicBeatSubstate
 	function reloadCheckboxes()
 		for (checkbox in checkboxGroup)
 			checkbox.daValue = Std.string(optionsArray[checkbox.ID].getValue()) == 'true'; //Do not take off the Std.string() from this, it will break a thing in Mod Settings Menu
+	
+	function refreshAllTexts() {
+		// 刷新标题
+		//titleText.text = title;
+	
+		// 刷新选项文本
+		for (i in 0...grpOptions.length) {
+			var opt = grpOptions.members[i];
+			opt.text = optionsArray[i].name;
+		}
+	
+		// 刷新描述
+		descText.text = optionsArray[curSelected].description;
+	}
 }

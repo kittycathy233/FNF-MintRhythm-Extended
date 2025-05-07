@@ -155,7 +155,7 @@ class NotesColorSubState extends MusicBeatSubstate
 		} else
 			reset = "RESET";
 
-		var tip:FlxText = new FlxText(tipX, tipY, 0, Language.getPhrase('note_colors_tip', 'Press {1} to Reset the selected Note Part.', [reset]), 16);
+		var tip:FlxText = new FlxText(tipX, tipY, 0, LanguageBasic.getPhrase('note_colors_tip', 'Press {1} to Reset the selected Note Part.', [reset]), 16);
 		tip.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		tip.borderSize = 2;
 		add(tip);
@@ -185,9 +185,9 @@ class NotesColorSubState extends MusicBeatSubstate
 
 	function updateTip()
 	{
-		var key:String = !controls.controllerMode ? Language.getPhrase('note_colors_shift', 'Shift') : Language.getPhrase('note_colors_lb', 'Left Shoulder Button');
+		var key:String = !controls.controllerMode ? LanguageBasic.getPhrase('note_colors_shift', 'Shift') : LanguageBasic.getPhrase('note_colors_lb', 'Left Shoulder Button');
 		if (!controls.mobileC)
-			tipTxt.text = Language.getPhrase('note_colors_hold_tip', 'Hold {1} + Press RESET key to fully reset the selected Note.', [key]);
+			tipTxt.text = LanguageBasic.getPhrase('note_colors_hold_tip', 'Hold {1} + Press RESET key to fully reset the selected Note.', [key]);
 	}
 
 	var _storedColor:FlxColor;

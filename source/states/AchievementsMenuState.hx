@@ -140,8 +140,8 @@ class AchievementsMenuState extends MusicBeatState
 	{
 		return {
 			name: achievement,
-			displayName: unlocked ? Language.getPhrase('achievement_$achievement', data.name) : '???',
-			description: Language.getPhrase('description_$achievement', data.description),
+			displayName: unlocked ? LanguageBasic.getPhrase('achievement_$achievement', data.name) : '???',
+			description: LanguageBasic.getPhrase('description_$achievement', data.description),
 			curProgress: data.maxScore > 0 ? Achievements.getScore(achievement) : 0,
 			maxProgress: data.maxScore > 0 ? data.maxScore : 0,
 			decProgress: data.maxScore > 0 ? data.maxDecimals : 0,
@@ -278,7 +278,7 @@ class ResetAchievementSubstate extends MusicBeatSubstate
 		add(bg);
 		FlxTween.tween(bg, {alpha: 0.6}, 0.4, {ease: FlxEase.quartInOut});
 
-		var text:Alphabet = new Alphabet(0, 180, Language.getPhrase('reset_achievement', 'Reset Achievement:'), true);
+		var text:Alphabet = new Alphabet(0, 180, LanguageBasic.getPhrase('reset_achievement', 'Reset Achievement:'), true);
 		text.screenCenter(X);
 		text.scrollFactor.set();
 		add(text);
@@ -290,13 +290,13 @@ class ResetAchievementSubstate extends MusicBeatSubstate
 		text.borderSize = 2;
 		add(text);
 		
-		yesText = new Alphabet(0, text.y + 120, Language.getPhrase('Yes'), true);
+		yesText = new Alphabet(0, text.y + 120, LanguageBasic.getPhrase('Yes'), true);
 		yesText.screenCenter(X);
 		yesText.x -= 200;
 		yesText.scrollFactor.set();
 		for(letter in yesText.letters) letter.color = FlxColor.RED;
 		add(yesText);
-		noText = new Alphabet(0, text.y + 120, Language.getPhrase('No'), true);
+		noText = new Alphabet(0, text.y + 120, LanguageBasic.getPhrase('No'), true);
 		noText.screenCenter(X);
 		noText.x += 200;
 		noText.scrollFactor.set();
