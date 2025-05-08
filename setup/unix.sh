@@ -9,9 +9,9 @@ echo Installing dependencies...
 echo This might take a few moments depending on your internet speed.
 haxelib git hxcpp https://github.com/MobilePorting/hxcpp --quiet
 haxelib git lime https://github.com/MobilePorting/lime --quiet
-haxelib install openfl 9.3.3 --quiet
+haxelib install openfl 9.4.1 --quiet
 haxelib git flixel https://github.com/MobilePorting/flixel 5.6.1 --quiet
-haxelib install flixel-addons 3.2.2 --quiet
+haxelib install flixel-addons 3.3.2 --quiet
 haxelib install flixel-tools 1.5.1 --quiet
 haxelib install hscript-iris 1.1.3 --quiet
 haxelib install tjson 1.4.0 --quiet
