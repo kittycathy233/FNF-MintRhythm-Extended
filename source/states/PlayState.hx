@@ -313,6 +313,9 @@ class PlayState extends MusicBeatState
 
 	public var luaTouchPad:TouchPad;
 
+	// 添加一个变量用于平滑血条
+	private var smoothHealth:Float = 1;
+
 	override public function create()
 	{
 		//trace('Playback Rate: ' + playbackRate);
@@ -1834,6 +1837,17 @@ class PlayState extends MusicBeatState
 		if (healthBar.bounds.max != null && health > healthBar.bounds.max)
 			health = healthBar.bounds.max;
 
+		// 平滑血条逻辑
+		if (ClientPrefs.data.smoothHP)
+		{
+			smoothHealth += (health - smoothHealth) * elapsed * 10; // 平滑过渡
+			healthBar.percent = FlxMath.remapToRange(smoothHealth, healthBar.bounds.min, healthBar.bounds.max, 0, 100);
+		}
+		else
+		{
+			healthBar.percent = FlxMath.remapToRange(health, healthBar.bounds.min, healthBar.bounds.max, 0, 100);
+		}
+
 		updateIconsScale(elapsed);
 		updateIconsPosition();
 
@@ -2467,7 +2481,13 @@ class PlayState extends MusicBeatState
 			case 'Play Sound':
 				if(flValue2 == null) flValue2 = 1;
 				FlxG.sound.play(Paths.sound(value1), flValue2);
-
+				
+			case 'Change Window Title':
+				if (value1 != null && value1.trim() != "") {
+					FlxG.stage.window.title = value1.trim();
+				} else {
+					FlxG.stage.window.title = 'IDK';
+				}
 		}
 
 		stagesFunc(function(stage:BaseStage) stage.eventCalled(eventName, value1, value2, flValue1, flValue2, strumTime));
