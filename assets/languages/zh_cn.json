@@ -5,7 +5,7 @@
     "downscroll_desc": "开启后音符会向下滚动而非向上",
     "rating_offset_desc": "调整'Sick!'判定的时间偏移（单位：毫秒）",
     "ms_format": "%v ms",
-    "bamenu_desc": "（施工中）\n蓝档风格的主菜单界面",
+    "bamenu_desc": "（开发中）\n蓝档风格的主菜单界面",
     "loading_style_desc": "设置场景切换时的过渡风格",
     "rm_ms_offset_desc": "移除音符命中时显示的“xx 毫秒”数值\n某些模组可能需要此功能",
     "scoretxt_bounce_desc": "音符命中时为分数文字添加角度跳动效果",
@@ -28,6 +28,50 @@
     "rm_perfect_judge_desc": "移除“Perfect!”评分显示\n同时影响扩展评分图标",
     "timebar_style_desc": "更改游戏内时间条的视觉样式",
     "game_font": "ResourceHanRoundedCN-Bold.ttf",
-    "score_best_desc": "最佳个人成绩："
+    "checkbox_font_size": 10,
+    "charting_font_size": 12,
+    "charting_tab_size": 12,
+    "button_text_size": 10,
 
+
+    "charting_file_text": "文件",
+    "charting_edit_text": "编辑",
+    "charting_view_text": "视图",
+    "uitab_font": "SourceHanSansCN-Bold.otf",
+    "charting_infobar": "ResourceHanRoundedCN-Bold.ttf",
+    "score_best_desc": "最佳个人成绩：",
+    "charting_forhelptext": "按下 ${(controls.mobileC) ? 'F' : 'F1'} 键以查看帮助",
+    "charting_charting_text": "制谱",
+    "charting_data_text": "数据",
+    "charting_events_text": "事件",
+    "charting_notes_text": "箭头",
+    "charting_section_text": "小节",
+    "charting_song_text": "曲目",
+    "charting_infotab_text": "播放信息",
+    "charting_charting_tip": "在这个标签页的所有更改是不会影响游戏游玩的喵~",
+
+    "charting_mute_text": "静音",
+    "charting_playerhitsound_text": "玩家命中箭头声音:",
+    "charting_mousescrsnap_text": "鼠标滚轮自动对齐",
+    "charting_ignwarning_text":"忽略一些必要的二次确认提示",
+    "charting_musthitsec_text": "是否为玩家段",
+    "charting_gfsec_text": "是否为GF段",
+    "charting_altanim_text": "使用Alt动画",
+    "charting_changebpm_text": "改变曲目BPM",
+    "charting_allvoc_text": "启用人声",
+    "charting_disRGB_text": "禁用箭头RGB效果",
+    "charting_playback_text": "播放速度",
+
+
+
+
+
+
+    "prompt_warning": "警告：任何未保存的进度将会丢失。",
+    "prompt_overwrite": "覆盖：\"{0}\"？",
+    "prompt_delete_notes": "删除整首歌中的所有音符？",
+    "prompt_delete_events": "删除整首歌中的所有事件？",
+    "prompt_autosave_settings": "自动保存设置",
+    "prompt_go_to": "跳转到时间/段落：",
+    "prompt_theme": "编辑器主题"
 }

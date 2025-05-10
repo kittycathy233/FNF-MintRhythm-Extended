@@ -28,5 +28,45 @@
     "rm_perfect_judge_desc": "Remove the 'Perfect!' rating display.\nAlso affects extended rating textures.",
     "timebar_style_desc": "Modify the visual style of the timebar in gameplay.",
     "score_best_desc": "PERSONAL BEST:",
-    "game_font": "vcr.ttf"
+    "game_font": "vcr.ttf",
+    "checkbox_font_size": 8,
+    "charting_font_size": 10,
+    "charting_tab_size": 8,
+    "button_text_size": 7,
+
+    
+    "charting_file_text": "File",
+    "charting_edit_text": "Edit",
+    "charting_view_text": "View",
+    "charting_charting_text": "Charting",
+    "charting_data_text": "Data",
+    "charting_events_text": "Events",
+    "charting_notes_text": "Notes",
+    "charting_section_text": "Section",
+    "charting_song_text": "Song",
+    "charting_infotab_text": "Information",
+    "uitab_font": "pixel.otf",
+    "charting_forhelptext": "Press ${(controls.mobileC) ? 'F' : 'F1'} For Help",
+    "charting_charting_tip": "Any options here won't actually affect gameplay!",
+    "charting_mute_text": "Mute",
+    "charting_playersound_hit_text": "Hitsound (Player):",
+    "charting_mousescrsnap_text": "Mouse Scroll Snap",
+    "charting_ignwarning_text":"Ignore Progress Warnings",
+    "charting_musthitsec_text": "Must Hit Section.",
+    "charting_gfsec_text": "GF Section.",
+    "charting_altanim_text": "Alt Anim",
+    "charting_changebpm_text": "Change BPM",
+    "charting_allvoc_text": "Allow Vocals",
+    "charting_disRGB_text": "Disable Note RGB",
+    "charting_playback_text": "Playback Rate",
+
+
+
+    "prompt_warning": "Warning: Any unsaved progress will be lost.",
+    "prompt_overwrite": "Overwrite: \"{0}\"?",
+    "prompt_delete_notes": "Delete all Notes in the song?",
+    "prompt_delete_events": "Delete all Events in the song?",
+    "prompt_autosave_settings": "Autosave Settings",
+    "prompt_go_to": "Go to Time/Section:",
+    "prompt_theme": "Editor Theme"
 }

@@ -222,6 +222,9 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var waveformEnabled:Bool = false;
 	var waveformTarget:WaveformTarget = INST;
 
+	// 定义全局字体变量
+	public static var defaultFont:String = Paths.font(Language.get('uitab_font'));
+
 	override function create()
 	{
 		if(Difficulty.list.length < 1) Difficulty.resetList();
@@ -380,16 +383,16 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		selectionBox.visible = false;
 		add(selectionBox);
 
-		infoBox = new PsychUIBox(infoBoxPosition.x #if mobile - 900 #end, infoBoxPosition.y #if mobile - 250 #end, 220, 220, ['播放信息']);
+		infoBox = new PsychUIBox(infoBoxPosition.x #if mobile - 900 #end, infoBoxPosition.y #if mobile - 250 #end, 220, 220, [Language.get('charting_infotab_text')]);
 		infoBox.scrollFactor.set();
 		infoBox.cameras = [camUI];
 		infoText = new FlxText(15, 15, 230, '', 16);
 		infoText.scrollFactor.set();
-		infoBox.getTab('播放信息').menu.add(infoText); //Information
+		infoBox.getTab(Language.get('charting_infotab_text')).menu.add(infoText);
 		add(infoBox);
 
-		mainBox = new PsychUIBox(mainBoxPosition.x, mainBoxPosition.y, 350, 300, ['制谱', '数据', '事件', '音符', '小节', '曲目信息']);
-		mainBox.selectedName = '曲目信息';
+		mainBox = new PsychUIBox(mainBoxPosition.x, mainBoxPosition.y, 350, 300, [Language.get('charting_charting_text'), Language.get('charting_data_text'), Language.get('charting_events_text'), Language.get('charting_notes_text'), Language.get('charting_section_text'), Language.get('charting_song_text')]);
+		mainBox.selectedName = Language.get('charting_song_text');
 		mainBox.scrollFactor.set();
 		mainBox.cameras = [camUI];
 		add(mainBox);
@@ -408,7 +411,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		if(chartEditorSave.data.infoBoxPosition != null && chartEditorSave.data.infoBoxPosition.length > 1)
 			infoBox.setPosition(chartEditorSave.data.infoBoxPosition[0], chartEditorSave.data.infoBoxPosition[1]);
 
-		upperBox = new PsychUIBox(40, 40, 330, 300, ['文件', '编辑', '视图']);
+		upperBox = new PsychUIBox(40, 40, 330, 300, [Language.get('charting_file_text'), Language.get('charting_edit_text'), Language.get('charting_view_text')]);
 		upperBox.scrollFactor.set();
 		upperBox.isMinimized = true;
 		upperBox.minimizeOnFocusLost = true;
@@ -479,7 +482,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		stageDropDown.list = loadFileList('stages/', 'data/stageList.txt');
 		onChartLoaded();
 
-		var tipText:FlxText = new FlxText(FlxG.width - 210, FlxG.height - 30, 200, '按下 ${(controls.mobileC) ? 'F' : 'F1'} 键以查看帮助', 20);
+		var tipText:FlxText = new FlxText(FlxG.width - 210, FlxG.height - 30, 200, Std.string(Language.get('charting_forhelptext')), 20);
 		tipText.cameras = [camUI];
 		tipText.setFormat(Paths.font("unifont-16.0.02.otf"), 18, FlxColor.WHITE, RIGHT);
 		tipText.borderColor = FlxColor.BLACK;
@@ -1715,7 +1718,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 				if ((mustHitSection && icon.ID == 1) || (!mustHitSection && icon.ID == 2)) {
 					icon.scale.set(0.4, 0.4); // Slightly increase the size for the bounce effect
 					//FlxTween.tween(icon.scale, {x: 0.3, y: 0.3}, 0.17, {ease: FlxEase.linear}); // Smoothly return to original size
-					iconbopTween = FlxTween.tween(icon.scale, {x: 0.3, y: 0.3}, 0.12, {
+					iconbopTween = FlxTween.tween(icon.scale, {x: 0.3, y: 0.3}, 0.15, {
 						onComplete: function(twn:FlxTween) {
 							iconbopTween = null;
 						}});
@@ -2655,23 +2658,24 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var opponentMuteCheckBox:PsychUICheckBox;
 	function addChartingTab()
 	{
-		var tab_group = mainBox.getTab('制谱').menu;
+		var tab_group = mainBox.getTab(Language.get('charting_charting_text')).menu;
 		var objX = 10;
 		var objY = 10;
 
-		var txt = new FlxText(objX, objY, 280, "Any options here won't actually affect gameplay!");
+		var txt = new FlxText(objX, objY, 280, Language.get('charting_charting_tip'), Std.parseInt(Language.get('charting_font_size')));
+		txt.font = Language.get('game_font');
 		txt.alignment = CENTER;
 		tab_group.add(txt);
 
 		objY += 25;
 		playbackSlider = new PsychUISlider(50, objY, function(v:Float) setPitch(playbackRate = v), 1, 0.1, 5.0, 200);
-		playbackSlider.label = 'Playback Rate';
+		playbackSlider.label = Language.get('charting_playback_text');
 		
 		objY += 60;
-		mouseSnapCheckBox = new PsychUICheckBox(objX, objY, 'Mouse Scroll Snap', 100, function() chartEditorSave.data.mouseScrollSnap = mouseSnapCheckBox.checked);
+		mouseSnapCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_mousescrsnap_text'), 100, function() chartEditorSave.data.mouseScrollSnap = mouseSnapCheckBox.checked);
 		mouseSnapCheckBox.checked = chartEditorSave.data.mouseScrollSnap;
 
-		ignoreProgressCheckBox = new PsychUICheckBox(objX + 150, objY, 'Ignore Progress Warnings', 100, function() chartEditorSave.data.ignoreProgressWarns = ignoreProgressCheckBox.checked);
+		ignoreProgressCheckBox = new PsychUICheckBox(objX + 150, objY, Language.get('charting_ignwarning_text'), 100, function() chartEditorSave.data.ignoreProgressWarns = ignoreProgressCheckBox.checked);
 		ignoreProgressCheckBox.checked = chartEditorSave.data.ignoreProgressWarns;
 
 		objY += 50;
@@ -2688,24 +2692,24 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		opponentVolumeStepper.onValueChange = updateAudioVolume;
 
 		objY += 25;
-		instMuteCheckBox = new PsychUICheckBox(objX, objY, 'Mute', 60, updateAudioVolume);
-		playerMuteCheckBox = new PsychUICheckBox(objX + 100, objY, 'Mute', 60, updateAudioVolume);
-		opponentMuteCheckBox = new PsychUICheckBox(objX + 200, objY, 'Mute', 60, updateAudioVolume);
+		instMuteCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_mute_text'), 60, updateAudioVolume);
+		playerMuteCheckBox = new PsychUICheckBox(objX + 100, objY, Language.get('charting_mute_text'), 60, updateAudioVolume);
+		opponentMuteCheckBox = new PsychUICheckBox(objX + 200, objY, Language.get('charting_mute_text'), 60, updateAudioVolume);
 
 		tab_group.add(playbackSlider);
 		tab_group.add(mouseSnapCheckBox);
 		tab_group.add(ignoreProgressCheckBox);
 
-		tab_group.add(new FlxText(hitsoundPlayerStepper.x, hitsoundPlayerStepper.y - 15, 100, 'Hitsound (Player):'));
-		tab_group.add(new FlxText(hitsoundOpponentStepper.x, hitsoundOpponentStepper.y - 15, 100, 'Hitsound (Opp.):'));
-		tab_group.add(new FlxText(metronomeStepper.x, metronomeStepper.y - 15, 100, 'Metronome:'));
+		tab_group.add(new FlxText(hitsoundPlayerStepper.x, hitsoundPlayerStepper.y - 15, 100, 'Hitsound (P1ayer):').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(hitsoundOpponentStepper.x, hitsoundOpponentStepper.y - 15, 100, 'Hitsound (Opp.):').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(metronomeStepper.x, metronomeStepper.y - 15, 100, 'Metronome:').setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(hitsoundPlayerStepper);
 		tab_group.add(hitsoundOpponentStepper);
 		tab_group.add(metronomeStepper);
 		
-		tab_group.add(new FlxText(instVolumeStepper.x, instVolumeStepper.y - 15, 100, 'Inst. Volume:'));
-		tab_group.add(new FlxText(playerVolumeStepper.x, playerVolumeStepper.y - 15, 100, 'Main Vocals:'));
-		tab_group.add(new FlxText(opponentVolumeStepper.x, opponentVolumeStepper.y - 15, 100, 'Opp. Vocals:'));
+		tab_group.add(new FlxText(instVolumeStepper.x, instVolumeStepper.y - 15, 100, 'Inst. Volume:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(playerVolumeStepper.x, playerVolumeStepper.y - 15, 100, 'Main Vocals:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(opponentVolumeStepper.x, opponentVolumeStepper.y - 15, 100, 'Opp. Vocals:').setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(instVolumeStepper);
 		tab_group.add(instMuteCheckBox);
 		tab_group.add(playerVolumeStepper);
@@ -2723,7 +2727,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var noteSplashesInputText:PsychUIInputText;
 	function addDataTab()
 	{
-		var tab_group = mainBox.getTab('数据').menu;
+		var tab_group = mainBox.getTab(Language.get('charting_data_text')).menu;
 		var objX = 10;
 		var objY = 25;
 		gameOverCharDropDown = new PsychUIDropDownMenu(objX, objY, [''], function(id:Int, character:String)
@@ -2756,7 +2760,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		}
 
 		objY += 35;
-		noRGBCheckBox = new PsychUICheckBox(objX, objY, 'Disable Note RGB', 100, updateNotesRGB);
+		noRGBCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_disRGB_text'), 100, updateNotesRGB);
 		
 		objY += 40;
 		noteTextureInputText = new PsychUIInputText(objX, objY, 120, '');
@@ -2828,7 +2832,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var curEventSelected:Int = 0;
 	function addEventsTab()
 	{
-		var tab_group = mainBox.getTab('事件').menu;
+		var tab_group = mainBox.getTab(Language.get('charting_events_text')).menu;
 		var objX = 10;
 		var objY = 25;
 
@@ -2958,11 +2962,11 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		objY += 40;
 		eventDescriptionText = new FlxText(objX, objY, 280, defaultEvents[0][1]);
 
-		tab_group.add(new FlxText(eventDropDown.x, eventDropDown.y - 15, 80, 'Event:'));
-		tab_group.add(new FlxText(value1InputText.x, value1InputText.y - 15, 80, 'Value 1:'));
-		tab_group.add(new FlxText(value2InputText.x, value2InputText.y - 15, 80, 'Value 2:'));
-		tab_group.add(new FlxText(value3InputText.x, value3InputText.y - 15, 80, 'Value 3:'));
-		tab_group.add(new FlxText(value4InputText.x, value4InputText.y - 15, 80, 'Value 4:'));
+		tab_group.add(new FlxText(eventDropDown.x, eventDropDown.y - 15, 80, 'Event:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(value1InputText.x, value1InputText.y - 15, 80, 'Value 1:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(value2InputText.x, value2InputText.y - 15, 80, 'Value 2:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(value3InputText.x, value3InputText.y - 15, 80, 'Value 3:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(value4InputText.x, value4InputText.y - 15, 80, 'Value 4:').setFormat(Paths.font(Language.get('uitab_font'))));
 
 		tab_group.add(removeButton);
 		tab_group.add(addButton);
@@ -2986,7 +2990,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var noteTypes:Array<String>;
 	function addNoteTab()
 	{
-		var tab_group = mainBox.getTab('音符').menu;
+		var tab_group = mainBox.getTab(Language.get('charting_notes_text')).menu;
 		var objX = 10;
 		var objY = 25;
 
@@ -3061,9 +3065,9 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 			softReloadNotes();
 		}, 150);
 		
-		tab_group.add(new FlxText(susLengthStepper.x, susLengthStepper.y - 15, 80, 'Sustain length:'));
-		tab_group.add(new FlxText(strumTimeStepper.x, strumTimeStepper.y - 15, 100, 'Note Hit time (ms):'));
-		tab_group.add(new FlxText(noteTypeDropDown.x, noteTypeDropDown.y - 15, 80, 'Note Type:'));
+		tab_group.add(new FlxText(susLengthStepper.x, susLengthStepper.y - 15, 80, 'Sustain length:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(strumTimeStepper.x, strumTimeStepper.y - 15, 100, 'Note Hit time (ms):').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(noteTypeDropDown.x, noteTypeDropDown.y - 15, 80, 'Note Type:').setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(susLengthStepper);
 		tab_group.add(strumTimeStepper);
 		tab_group.add(noteTypeDropDown);
@@ -3082,7 +3086,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		var affectNotes:PsychUICheckBox = null;
 		var affectEvents:PsychUICheckBox = null;
 		var copyLastSecStepper:PsychUINumericStepper = null;
-		var tab_group = mainBox.getTab('小节').menu;
+		var tab_group = mainBox.getTab(Language.get('charting_section_text')).menu;
 		var objX = 10;
 		var objY = 10;
 		function copyNotesOnSection(?secOff:Int = 0, ?showMessage:Bool = true) //Used on "Copy Section" and "Copy Last Section" buttons
@@ -3149,26 +3153,26 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 			}
 		}
 
-		mustHitCheckBox = new PsychUICheckBox(objX, objY, 'Must Hit Sec.', 70, function()
+		mustHitCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_musthitsec_text'), 70, function()
 		{
 			var sec = getCurChartSection();
 			if(sec != null) sec.mustHitSection = mustHitCheckBox.checked;
 			updateHeads(true);
 		});
-		gfSectionCheckBox = new PsychUICheckBox(objX + 100, objY, 'GF Section', 70, function()
+		gfSectionCheckBox = new PsychUICheckBox(objX + 100, objY, Language.get('charting_gfsec_text'), 70, function()
 		{
 			var sec = getCurChartSection();
 			if(sec != null) sec.gfSection = gfSectionCheckBox.checked;
 			updateHeads(true);
 		});
-		altAnimSectionCheckBox = new PsychUICheckBox(objX + 200, objY, 'Alt Anim', 70, function()
+		altAnimSectionCheckBox = new PsychUICheckBox(objX + 200, objY, Language.get('charting_altanim_text'), 70, function()
 		{
 			var sec = getCurChartSection();
 			if(sec != null) sec.altAnim = altAnimSectionCheckBox.checked;
 		});
 
 		objY += 40;
-		changeBpmCheckBox = new PsychUICheckBox(objX, objY, 'Change BPM', 80, function()
+		changeBpmCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_changebpm_text'), 80, function()
 		{
 			var sec = getCurChartSection();
 			if(sec != null)
@@ -3233,9 +3237,9 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		clearButton.normalStyle.textColor = FlxColor.WHITE;
 
 		objY += 25;
-		affectNotes = new PsychUICheckBox(objX, objY, 'Notes', 60);
+		affectNotes = new PsychUICheckBox(objX, objY, Language.get('charting_notes_text'), 60);
 		affectNotes.checked = true;
-		affectEvents = new PsychUICheckBox(objX + 100, objY, 'Events', 60);
+		affectEvents = new PsychUICheckBox(objX + 100, objY, Language.get('charting_events_text'), 60);
 
 		objY += 32;
 		var copyLastSecButton:PsychUIButton = new PsychUIButton(objX, objY, 'Copy Last Section', function()
@@ -3324,7 +3328,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		tab_group.add(gfSectionCheckBox);
 		tab_group.add(altAnimSectionCheckBox);
 
-		tab_group.add(new FlxText(beatsPerSecStepper.x, beatsPerSecStepper.y - 15, 100, 'Beats per Section:'));
+		tab_group.add(new FlxText(beatsPerSecStepper.x, beatsPerSecStepper.y - 15, 100, 'Beats per Section:').setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(changeBpmCheckBox);
 		tab_group.add(changeBpmStepper);
 		tab_group.add(beatsPerSecStepper);
@@ -3495,14 +3499,14 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	
 	function addSongTab()
 	{
-		var tab_group = mainBox.getTab('曲目信息').menu;
+		var tab_group = mainBox.getTab(Language.get('charting_song_text')).menu;
 		var objX = 10;
 		var objY = 25;
 
 		songNameInputText = new PsychUIInputText(objX, objY, 100, 'None', 8);
 		songNameInputText.onChange = function(old:String, cur:String) PlayState.SONG.song = cur;
 
-		allowVocalsCheckBox = new PsychUICheckBox(objX, objY + 20, 'Allow Vocals', 80, function()
+		allowVocalsCheckBox = new PsychUICheckBox(objX, objY + 20, Language.get('charting_allvoc_text'), 80, function()
 		{
 			PlayState.SONG.needsVoices = allowVocalsCheckBox.checked;
 			loadMusic();
@@ -3563,7 +3567,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 			updateWaveform();
 		};
 
-		tab_group.add(new FlxText(songNameInputText.x, songNameInputText.y - 15, 80, 'Song Name:'));
+		tab_group.add(new FlxText(songNameInputText.x, songNameInputText.y - 15, 80, 'Song Name:').setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(songNameInputText);
 		tab_group.add(allowVocalsCheckBox);
 		tab_group.add(reloadAudioButton);
@@ -3606,18 +3610,18 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 			trace('selected $character');
 		});
 		
-		tab_group.add(new FlxText(bpmStepper.x, bpmStepper.y - 15, 50, 'BPM:'));
-		tab_group.add(new FlxText(scrollSpeedStepper.x, scrollSpeedStepper.y - 15, 80, 'Scroll Speed:'));
-		tab_group.add(new FlxText(audioOffsetStepper.x, audioOffsetStepper.y - 15, 100, 'Audio Offset (ms):'));
+		tab_group.add(new FlxText(bpmStepper.x, bpmStepper.y - 15, 50, 'BPM:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(scrollSpeedStepper.x, scrollSpeedStepper.y - 15, 80, 'Scroll Speed:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(audioOffsetStepper.x, audioOffsetStepper.y - 15, 100, 'Audio Offset (ms):').setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(bpmStepper);
 		tab_group.add(scrollSpeedStepper);
 		tab_group.add(audioOffsetStepper);
 
 		//dropdowns
-		tab_group.add(new FlxText(stageDropDown.x, stageDropDown.y - 15, 80, 'Stage:'));
-		tab_group.add(new FlxText(playerDropDown.x, playerDropDown.y - 15, 80, 'Player:'));
-		tab_group.add(new FlxText(opponentDropDown.x, opponentDropDown.y - 15, 80, 'Opponent:'));
-		tab_group.add(new FlxText(girlfriendDropDown.x, girlfriendDropDown.y - 15, 80, 'Girlfriend:'));
+		tab_group.add(new FlxText(stageDropDown.x, stageDropDown.y - 15, 80, 'Stage:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(playerDropDown.x, playerDropDown.y - 15, 80, 'Player:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(opponentDropDown.x, opponentDropDown.y - 15, 80, 'Opponent:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(girlfriendDropDown.x, girlfriendDropDown.y - 15, 80, 'Girlfriend:').setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(stageDropDown);
 		tab_group.add(girlfriendDropDown);
 		tab_group.add(opponentDropDown);
@@ -3626,7 +3630,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 	function addFileTab()
 	{
-		var tab = upperBox.getTab('文件');
+		var tab = upperBox.getTab(Language.get("charting_file_text"));
 		var tab_group = tab.menu;
 		var btnX = tab.x - upperBox.x;
 		var btnY = 1;
@@ -4364,7 +4368,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var lockedEvents:Bool = false;
 	function addEditTab()
 	{
-		var tab = upperBox.getTab('编辑');
+		var tab = upperBox.getTab(Language.get("charting_edit_text"));
 		var tab_group = tab.menu;
 		var btnX = tab.x - upperBox.x;
 		var btnY = 1;
@@ -4525,7 +4529,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var vortexEditorButton:PsychUIButton;
 	function addViewTab()
 	{
-		var tab = upperBox.getTab('视图');
+		var tab = upperBox.getTab(Language.get("charting_view_text"));
 		var tab_group = tab.menu;
 		var btnX = tab.x - upperBox.x;
 		var btnY = 1;

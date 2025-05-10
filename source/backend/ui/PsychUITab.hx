@@ -18,7 +18,7 @@ class PsychUITab extends FlxSprite
 
 		@:bypassAccessor this.name = name;
 		text = new FlxText(0, 0, 100, name);
-		text.setFormat(Paths.font("unifont-16.0.02.otf"), 12, FlxColor.BLACK, CENTER);
+		text.setFormat(Paths.font(Language.get('uitab_font')), Std.parseInt(Language.get('charting_tab_size')), FlxColor.BLACK, CENTER);
 	}
 
 	override function draw()

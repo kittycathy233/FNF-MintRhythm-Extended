@@ -39,6 +39,8 @@ class PsychUIButton extends FlxSpriteGroup
 		bg.alpha = 0.6;
 
 		text = new FlxText(0, 0, 1, '');
+		text.size = Std.parseInt(Language.get('button_text_size'));
+		text.font = Language.get('uitab_font');
 		text.alignment = CENTER;
 		add(text);
 		resize(wid, hei);

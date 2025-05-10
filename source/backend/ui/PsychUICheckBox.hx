@@ -20,7 +20,8 @@ class PsychUICheckBox extends FlxSpriteGroup
 		boxGraphic();
 		add(box);
 
-		text = new FlxText(box.width + 4, 0, textWid, label);
+		text = new FlxText(box.width + 6, 0, textWid, label, Std.parseInt(Language.get('checkbox_font_size')));
+		text.font = Language.get('uitab_font');
 		text.y += box.height/2 - text.height/2;
 		add(text);
 
