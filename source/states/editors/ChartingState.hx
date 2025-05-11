@@ -482,7 +482,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		stageDropDown.list = loadFileList('stages/', 'data/stageList.txt');
 		onChartLoaded();
 
-		var tipText:FlxText = new FlxText(FlxG.width - 210, FlxG.height - 30, 200, Std.string(Language.get('charting_forhelptext')), 20);
+		var tipText:FlxText = new FlxText(FlxG.width - 210, FlxG.height - 30, 200, (controls.mobileC ? Language.get('charting_forhelptextm') : Language.get('charting_forhelptextpc')), 20);
 		tipText.cameras = [camUI];
 		tipText.setFormat(Paths.font("unifont-16.0.02.otf"), 18, FlxColor.WHITE, RIGHT);
 		tipText.borderColor = FlxColor.BLACK;
@@ -501,11 +501,11 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		add(tipBg);
 		
 		fullTipText = new FlxText(0, 0, FlxG.width - 200);
-		fullTipText.setFormat(Paths.font('vcr.ttf'), 24, FlxColor.WHITE, CENTER);
+		fullTipText.setFormat(Paths.font("unifont-16.0.02.otf"), 24, FlxColor.WHITE, CENTER);
 		fullTipText.cameras = [camUI];
 		fullTipText.scrollFactor.set();
 		fullTipText.visible = fullTipText.active = false;
-		fullTipText.text = (controls.mobileC) ? [
+		/*fullTipText.text = (controls.mobileC) ? [
 			"Up/Down - Move Conductor's Time",
 			"Left/Right - Change Sections",
 			"Up/Down (On The Right) - Decrease/Increase Note Sustain Length",
@@ -551,7 +551,10 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 			"Ctrl + V - Paste Copied Notes",
 			"Ctrl + A - Select all in current Section",
 			"Ctrl + S - Quicksave",
-		].join('\n');
+		].join('\n');*/
+		fullTipText.text = (controls.mobileC) 
+    		? Language.get("charting_mobile_tips").split('\n').join('\n') 
+    		: Language.get("charting_desktop_tips").split('\n').join('\n');
 		fullTipText.screenCenter();
 		add(fullTipText);
 		addTouchPad('LEFT_FULL', 'CHART_EDITOR');
@@ -4571,12 +4574,12 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		btnY++;
 		btnY += 20;
-		vortexEditorButton = new PsychUIButton(btnX, btnY, vortexEnabled ? '  Vortex Editor ON' : '  Vortex Editor OFF', function()
+		vortexEditorButton = new PsychUIButton(btnX, btnY, vortexEnabled ? Language.get('charting_vortexeditoron_tab3') : Language.get('charting_vortexeditoroff_tab3'), function()
 		{
 			vortexEnabled = !vortexEnabled;
 			chartEditorSave.data.vortex = vortexEnabled;
 			vortexIndicator.visible = strumLineNotes.visible = strumLineNotes.active = vortexEnabled;
-			vortexEditorButton.text.text = vortexEnabled ? '  Vortex Editor ON' : '  Vortex Editor OFF';
+			vortexEditorButton.text.text = vortexEnabled ? Language.get('charting_vortexeditoron_tab3') : Language.get('charting_vortexeditoroff_tab3');
 
 			for (note in strumLineNotes)
 			{
@@ -4590,7 +4593,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		
 		btnY++;
 		btnY += 20;
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Waveform...', function()
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_waveform_tab3'), function()
 		{
 			ClientPrefs.toggleVolumeKeys(false);
 			openSubState(new BasePrompt(320, 200, 'Waveform Settings',
@@ -4649,7 +4652,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		tab_group.add(btn);
 
 		btnY += 20;
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Go to...', function()
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_go2time_tab3'), function()
 		{
 			upperBox.isMinimized = true;
 			upperBox.bg.visible = false;
@@ -4729,7 +4732,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		btnY++;
 		btnY += 20;
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Theme...', function()
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_theme_tab3'), function()
 		{
 			if(!fileDialog.completed) return;
 			upperBox.isMinimized = true;
@@ -4874,7 +4877,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		tab_group.add(btn);
 
 		btnY += 20;
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Reset UI Boxes', function()
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_resetuibox_tab3'), function()
 		{
 			mainBox.setPosition(mainBoxPosition.x, mainBoxPosition.y);
 			infoBox.setPosition(infoBoxPosition.x, infoBoxPosition.y);
@@ -4984,13 +4987,13 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 	function updateGridVisibility()
 	{
-		showLastGridButton.text.text = showPreviousSection	? '  Hide Last Section' :  '  Show Last Section';
-		showNextGridButton.text.text = showNextSection		? '  Hide Next Section' :  '  Show Next Section';
+		showLastGridButton.text.text = showPreviousSection	? Language.get('charting_hidelastsec_tab3') :  Language.get('charting_showlastsec_tab3');
+		showNextGridButton.text.text = showNextSection		? Language.get('charting_hidenextsec_tab3') :  Language.get('charting_shownextsec_tab3');
 
 		prevGridBg.visible = (curSec > 0 && showPreviousSection);
 		nextGridBg.visible = (curSec < PlayState.SONG.notes.length - 1 && showNextSection);
 		
-		noteTypeLabelsButton.text.text = showNoteTypeLabels ? '  Hide Note Labels' : '  Show Note Labels';
+		noteTypeLabelsButton.text.text = showNoteTypeLabels ? Language.get('charting_hidenlab_tab3') : Language.get('charting_shownlab_tab3');
 		for (num => text in MetaNote.noteTypeTexts)
 			text.visible = showNoteTypeLabels;
 		softReloadNotes();
