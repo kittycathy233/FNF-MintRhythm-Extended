@@ -8,6 +8,7 @@ import openfl.text.TextFormat;
 import openfl.system.System as OpenFlSystem;
 import lime.system.System as LimeSystem;
 import states.MainMenuState;
+import debug.GameVersion;
 
 /**
 	The FPS class provides an easy-to-use monitor to display
@@ -76,6 +77,7 @@ class FPSCounter extends TextField
 		'FPS: $currentFPS' + 
 		'\nMemory: ${flixel.util.FlxStringUtil.formatBytes(memoryMegas)}' +
 		(ClientPrefs.data.exgameversion ? '\nMintRhythm Engine v${MainMenuState.mrEngineVersion}\nPsych Engine v${MainMenuState.psychEngineVersion}' : '') +
+		'\nCommit: ${GameVersion.getGitCommitHash()} (${GameVersion.getGitCommitCount()} commits)' + // 添加提交哈希和提交次数
 		os;
 
 		textColor = 0xFFFFFFFF;
