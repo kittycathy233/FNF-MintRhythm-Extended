@@ -2700,16 +2700,16 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		tab_group.add(mouseSnapCheckBox);
 		tab_group.add(ignoreProgressCheckBox);
 
-		tab_group.add(new FlxText(hitsoundPlayerStepper.x, hitsoundPlayerStepper.y - 15, 100, 'Hitsound (P1ayer):').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(hitsoundOpponentStepper.x, hitsoundOpponentStepper.y - 15, 100, 'Hitsound (Opp.):').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(metronomeStepper.x, metronomeStepper.y - 15, 100, 'Metronome:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(hitsoundPlayerStepper.x, hitsoundPlayerStepper.y - 15, 100, Language.get('charting_playersoundhit_text')).setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(hitsoundOpponentStepper.x, hitsoundOpponentStepper.y - 15, 100, Language.get('charting_opposoundhit_text')).setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(metronomeStepper.x, metronomeStepper.y - 15, 100, Language.get('charting_metronome_text')).setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(hitsoundPlayerStepper);
 		tab_group.add(hitsoundOpponentStepper);
 		tab_group.add(metronomeStepper);
 		
-		tab_group.add(new FlxText(instVolumeStepper.x, instVolumeStepper.y - 15, 100, 'Inst. Volume:').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(playerVolumeStepper.x, playerVolumeStepper.y - 15, 100, 'Main Vocals:').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(opponentVolumeStepper.x, opponentVolumeStepper.y - 15, 100, 'Opp. Vocals:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(instVolumeStepper.x, instVolumeStepper.y - 15, 100, Language.get('charting_instvol_text')).setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(playerVolumeStepper.x, playerVolumeStepper.y - 15, 100, Language.get('charting_playervol_text')).setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(opponentVolumeStepper.x, opponentVolumeStepper.y - 15, 100, Language.get('charting_oppovol_text')).setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(instVolumeStepper);
 		tab_group.add(instMuteCheckBox);
 		tab_group.add(playerVolumeStepper);
@@ -2962,7 +2962,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		objY += 40;
 		eventDescriptionText = new FlxText(objX, objY, 280, defaultEvents[0][1]);
 
-		tab_group.add(new FlxText(eventDropDown.x, eventDropDown.y - 15, 80, 'Event:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(eventDropDown.x, eventDropDown.y - 15, 80, Language.get('charting_event_drop')).setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(new FlxText(value1InputText.x, value1InputText.y - 15, 80, 'Value 1:').setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(new FlxText(value2InputText.x, value2InputText.y - 15, 80, 'Value 2:').setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(new FlxText(value3InputText.x, value3InputText.y - 15, 80, 'Value 3:').setFormat(Paths.font(Language.get('uitab_font'))));
@@ -3065,9 +3065,9 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 			softReloadNotes();
 		}, 150);
 		
-		tab_group.add(new FlxText(susLengthStepper.x, susLengthStepper.y - 15, 80, 'Sustain length:').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(strumTimeStepper.x, strumTimeStepper.y - 15, 100, 'Note Hit time (ms):').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(noteTypeDropDown.x, noteTypeDropDown.y - 15, 80, 'Note Type:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(susLengthStepper.x, susLengthStepper.y - 15, 80, Language.get('charting_sustainlength_text')).setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(strumTimeStepper.x, strumTimeStepper.y - 15, 100, Language.get('charting_notetime_text')).setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(noteTypeDropDown.x, noteTypeDropDown.y - 15, 80, Language.get('charting_notetype_text')).setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(susLengthStepper);
 		tab_group.add(strumTimeStepper);
 		tab_group.add(noteTypeDropDown);
@@ -3213,12 +3213,12 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		};
 
 		objY += 40;
-		var copyButton:PsychUIButton = new PsychUIButton(objX, objY, 'Copy Section', copyNotesOnSection.bind());
-		var pasteButton:PsychUIButton = new PsychUIButton(objX + 100, objY, 'Paste Section', function()
+		var copyButton:PsychUIButton = new PsychUIButton(objX, objY, Language.get('charting_copysec_button'), copyNotesOnSection.bind());
+		var pasteButton:PsychUIButton = new PsychUIButton(objX + 100, objY, Language.get('charting_pastesec_button'), function()
 		{
 			pasteCopiedNotesToSection(affectNotes.checked, affectEvents.checked);
 		});
-		var clearButton:PsychUIButton = new PsychUIButton(objX + 200, objY, 'Clear', function()
+		var clearButton:PsychUIButton = new PsychUIButton(objX + 200, objY, Language.get('charting_clearsec_button'), function()
 		{
 			for (note in curRenderedNotes)
 			{
@@ -3242,7 +3242,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		affectEvents = new PsychUICheckBox(objX + 100, objY, Language.get('charting_events_text'), 60);
 
 		objY += 32;
-		var copyLastSecButton:PsychUIButton = new PsychUIButton(objX, objY, 'Copy Last Section', function()
+		var copyLastSecButton:PsychUIButton = new PsychUIButton(objX, objY, Language.get('charting_copylastsec_button'), function()
 		{
 			var lastCopiedNotes = copiedNotes;
 			var lastCopiedEvents = copiedEvents;
@@ -3255,7 +3255,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		copyLastSecStepper = new PsychUINumericStepper(objX + 110, objY + 2, 1, 1, -999, 999, 0);
 		
 		objY += 40;
-		var swapSectionButton:PsychUIButton = new PsychUIButton(objX, objY, 'Swap Section', function()
+		var swapSectionButton:PsychUIButton = new PsychUIButton(objX, objY, Language.get('charting_swapsec_button'), function()
 		{
 			var maxData:Int = GRID_COLUMNS_PER_PLAYER * GRID_PLAYERS;
 			for (note in curRenderedNotes)
@@ -3270,7 +3270,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 			}
 			softReloadNotes(true);
 		});
-		var duetSectionButton:PsychUIButton = new PsychUIButton(objX + 100, objY, 'Duet Section', function()
+		var duetSectionButton:PsychUIButton = new PsychUIButton(objX + 100, objY, Language.get('charting_duetsec_button'), function()
 		{
 			var side:Int = -1;
 			for (note in curRenderedNotes.members)
@@ -3310,7 +3310,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 			
 			addUndoAction(ADD_NOTE, {notes: pushedNotes});
 		});
-		var mirrorNotesButton:PsychUIButton = new PsychUIButton(objX + 200, objY, 'Mirror Notes', function()
+		var mirrorNotesButton:PsychUIButton = new PsychUIButton(objX + 200, objY, Language.get('charting_mirrornote_button'), function()
 		{
 			var maxData:Int = GRID_COLUMNS_PER_PLAYER * GRID_PLAYERS;
 			for (note in curRenderedNotes)
@@ -3328,7 +3328,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		tab_group.add(gfSectionCheckBox);
 		tab_group.add(altAnimSectionCheckBox);
 
-		tab_group.add(new FlxText(beatsPerSecStepper.x, beatsPerSecStepper.y - 15, 100, 'Beats per Section:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(beatsPerSecStepper.x, beatsPerSecStepper.y - 15, 100, Language.get('charting_beatspersec_text')).setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(changeBpmCheckBox);
 		tab_group.add(changeBpmStepper);
 		tab_group.add(beatsPerSecStepper);
@@ -3511,10 +3511,10 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 			PlayState.SONG.needsVoices = allowVocalsCheckBox.checked;
 			loadMusic();
 		});
-		var reloadAudioButton:PsychUIButton = new PsychUIButton(objX + 120, objY, 'Reload Audio', function() loadMusic(true), 80);
+		var reloadAudioButton:PsychUIButton = new PsychUIButton(objX + 120, objY, Language.get('charting_reaudio_button'), function() loadMusic(true), 80);
 
 		#if (mac || mobile)
-		var reloadJsonButton:PsychUIButton = new PsychUIButton(objX + 205, objY, 'Reload JSON', function()
+		var reloadJsonButton:PsychUIButton = new PsychUIButton(objX + 205, objY, Language.get('charting_rejsonm_button'), function()
 		{
 			var cur = Paths.formatToSongPath(songNameInputText.text);
 			var curdiff = Highscore.formatSong(cur, PlayState.storyDifficulty);
@@ -3637,7 +3637,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		var btnWid = Std.int(tab.width);
 
 		#if !mobile
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  New', function()
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_new_tab1'), function()
 		{
 			var func:Void->Void = function()
 			{
@@ -3654,7 +3654,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		btnY++;
 		btnY += 20;
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Open Chart...', function()
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_opchart_tab1'), function()
 		{
 			if(!fileDialog.completed) return;
 			upperBox.isMinimized = true;
@@ -3696,7 +3696,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		btnY += 20;
 		#end
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Open Autosave...', function()
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_opautosave_tab1'), function()
 		{
 			if(!fileDialog.completed) return;
 			upperBox.isMinimized = true;
@@ -3789,7 +3789,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		if(SHOW_EVENT_COLUMN)
 		{
 			btnY += 20;
-			var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Open Events...', function()
+			var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_opevent_tab1'), function()
 			{
 				if(!fileDialog.completed) return;
 				upperBox.isMinimized = true;
@@ -3880,7 +3880,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		btnY++;
 		btnY += 20;
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Save', function()
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_save1_tab1'), function()
 		{
 			if(!fileDialog.completed) return;
 			upperBox.isMinimized = true;
@@ -3893,7 +3893,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		#if !mobile
 		btnY += 20;
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Save as...', function()
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_save2_tab1'), function()
 		{
 			if(!fileDialog.completed) return;
 			upperBox.isMinimized = true;
@@ -3908,7 +3908,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		if(SHOW_EVENT_COLUMN)
 		{
 			btnY += 20;
-			var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Save Events...', function()
+			var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_save3_tab1'), function()
 			{
 				if(!fileDialog.completed) return;
 				upperBox.isMinimized = true;
@@ -3928,7 +3928,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		btnY++;
 		btnY += 20;
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Reload Chart', function()
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_reloadchart_tab1'), function()
 		{
 			var func:Void->Void = function()
 			{
@@ -3965,7 +3965,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		#if !mobile
 		btnY++;
 		btnY += 20;
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Save (V-Slice)...', function()
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_save4V_tab1'), function()
 		{
 			if(!fileDialog.completed) return;
 			upperBox.isMinimized = true;
@@ -4050,7 +4050,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		tab_group.add(btn);
 
 		btnY += 20;
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Psych to V-Slice...', function()
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_saveP2V_tab1'), function()
 		{
 			if(!fileDialog.completed) return;
 			upperBox.isMinimized = true;
@@ -4214,7 +4214,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		tab_group.add(btn);
 
 		btnY += 20;
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  V-Slice to Psych...', function()
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_saveV2P_tab1'), function()
 		{
 			if(!fileDialog.completed) return;
 			upperBox.isMinimized = true;
@@ -4296,7 +4296,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		tab_group.add(btn);
 		
 		btnY += 20;
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Update (Legacy)...', function()
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_upPold_tab1'), function()
 		{
 			if(!fileDialog.completed) return;
 			upperBox.isMinimized = true;
@@ -4343,18 +4343,18 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		btnY++;
 		btnY += 20;
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Preview (${(controls.mobileC) ? 'C' : 'F12'})', openEditorPlayState, btnWid);
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '${Language.get('charting_preview_tab1')} (${(controls.mobileC) ? 'C' : 'F12'})', openEditorPlayState, btnWid);
 		btn.text.alignment = LEFT;
 		tab_group.add(btn);
 		
 		btnY += 20;
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Playtest (${(controls.mobileC) ? 'A' : 'ENTER'})', goToPlayState, btnWid);
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '${Language.get('charting_playtest_tab1')} (${(controls.mobileC) ? 'A' : 'ENTER'})', goToPlayState, btnWid);
 		btn.text.alignment = LEFT;
 		tab_group.add(btn);
 
 		btnY++;
 		btnY += 20;
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Exit', function()
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_exit_tab1'), function()
 		{
 			PlayState.chartingMode = false;
 			MusicBeatState.switchState(new states.editors.MasterEditorMenu());
@@ -4374,18 +4374,18 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		var btnY = 1;
 		var btnWid = Std.int(tab.width);
 
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Undo', undo, btnWid);
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_undo_tab2'), undo, btnWid);
 		btn.text.alignment = LEFT;
 		tab_group.add(btn);
 
 		btnY += 20;
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Redo', redo, btnWid);
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_redo_tab2'), redo, btnWid);
 		btn.text.alignment = LEFT;
 		tab_group.add(btn);
 
 		btnY++;
 		btnY += 20;
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Select All', function()
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_selectall_tab2'), function()
 		{
 			var sel = selectedNotes;
 			selectedNotes = curRenderedNotes.members.copy();
@@ -4400,12 +4400,12 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		{
 			btnY++;
 			btnY += 20;
-			var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Lock Events', btnWid);
+			var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_lockeve_tab2'), btnWid);
 			btn.onClick = function()
 			{
 				lockedEvents = !lockedEvents;
-				if(lockedEvents) btn.text.text = '  Unlock Events';
-				else btn.text.text = '  Lock Events';
+				if(lockedEvents) btn.text.text = Language.get('charting_unlockeve_tab2');
+				else btn.text.text = Language.get('charting_lockeve_tab2');
 				eventLockOverlay.visible = lockedEvents;
 	
 				if(selectedNotes.length >= 1)
@@ -4425,7 +4425,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		
 		btnY++;
 		btnY += 20;
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Autosave Settings...', btnWid);
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_autosaveopt_tab2'), btnWid);
 		btn.onClick = function()
 		{
 			upperBox.isMinimized = true;
@@ -4482,7 +4482,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		btnY++;
 		btnY += 20;
-		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Clear All Notes', function()
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_clearalln_tab2'), function()
 		{
 			var func:Void->Void = function()
 			{
@@ -4503,7 +4503,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		if(SHOW_EVENT_COLUMN)
 		{
 			btnY += 20;
-			var btn:PsychUIButton = new PsychUIButton(btnX, btnY, '  Clear All Events', function()
+			var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_clearalle_tab2'), function()
 			{
 				var func:Void->Void = function()
 				{
