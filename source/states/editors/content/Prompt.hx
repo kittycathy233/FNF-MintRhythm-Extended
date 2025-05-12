@@ -22,8 +22,8 @@ class Prompt extends BasePrompt
 {
 	var yesFunction:Void->Void;
 	var noFunction:Void->Void;
-	var _yesTxt:String = 'OK';
-	var _noTxt:String = 'Cancel';
+	var _yesTxt:String = Language.get('ok_text');
+	var _noTxt:String = Language.get('cancel_text');
 	public function new(title:String, yesFunction:Void->Void, ?noFunction:Void->Void, ?_yesTxt:String, ?_noTxt:String)
 	{
 		if(_yesTxt != null) this._yesTxt = _yesTxt;
@@ -95,6 +95,7 @@ class BasePrompt extends MusicBeatSubstate
 		add(bg);
 		
 		titleText = new FlxText(0, bg.y + 30, 400, _title, 16);
+		titleText.font = Language.get('uitab_font');
 		titleText.screenCenter(X);
 		titleText.alignment = CENTER;
 		titleText.cameras = cameras;

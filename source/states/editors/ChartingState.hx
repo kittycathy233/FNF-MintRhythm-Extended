@@ -2666,7 +2666,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		var objY = 10;
 
 		var txt = new FlxText(objX, objY, 280, Language.get('charting_charting_tip'), Std.parseInt(Language.get('charting_font_size')));
-		txt.font = Language.get('game_font');
+		txt.font = Language.get('uitab_font');
 		txt.alignment = CENTER;
 		tab_group.add(txt);
 
@@ -3544,7 +3544,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 				showOutput('Opened chart "${diff ? curdiff : cur}" successfully!');
 			}
 					
-			if(!ignoreProgressCheckBox.checked) openSubState(new Prompt('Warning: Any unsaved progress\nwill be lost.', func));
+			if(!ignoreProgressCheckBox.checked) openSubState(new Prompt(Language.get('prompt_unsaved'), func));
 			else func();
 		}, 80);
 		#end
@@ -3570,7 +3570,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 			updateWaveform();
 		};
 
-		tab_group.add(new FlxText(songNameInputText.x, songNameInputText.y - 15, 80, 'Song Name:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(songNameInputText.x, songNameInputText.y - 15, 80, Language.get('charting_songname')).setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(songNameInputText);
 		tab_group.add(allowVocalsCheckBox);
 		tab_group.add(reloadAudioButton);
@@ -3614,8 +3614,8 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		});
 		
 		tab_group.add(new FlxText(bpmStepper.x, bpmStepper.y - 15, 50, 'BPM:').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(scrollSpeedStepper.x, scrollSpeedStepper.y - 15, 80, 'Scroll Speed:').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(audioOffsetStepper.x, audioOffsetStepper.y - 15, 100, 'Audio Offset (ms):').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(scrollSpeedStepper.x, scrollSpeedStepper.y - 15, 80, Language.get('charting_scrollspeed')).setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(audioOffsetStepper.x, audioOffsetStepper.y - 15, 100, Language.get('charting_audiooffset')).setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(bpmStepper);
 		tab_group.add(scrollSpeedStepper);
 		tab_group.add(audioOffsetStepper);
@@ -3649,7 +3649,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 				prepareReload();
 			}
 
-			if(!ignoreProgressCheckBox.checked) openSubState(new Prompt('Are you sure you want to start over?', func));
+			if(!ignoreProgressCheckBox.checked) openSubState(new Prompt(Language.get('prompt_startover'), func));
 			else func();
 		}, btnWid);
 		btn.text.alignment = LEFT;
@@ -3684,7 +3684,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 						showOutput('Opened chart "${Song.chartPath}" successfully!');
 					}
 					
-					if(!ignoreProgressCheckBox.checked) openSubState(new Prompt('Warning: Any unsaved progress\nwill be lost.', func));
+					if(!ignoreProgressCheckBox.checked) openSubState(new Prompt(Language.get('prompt_unsaved'), func));
 					else func();
 				}
 				catch(e:Exception)
@@ -3769,7 +3769,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 									showOutput('Opened autosave "$autosaveName" successfully!');
 								}
 								
-								if(!ignoreProgressCheckBox.checked) openSubState(new Prompt('Warning: Any unsaved progress\nwill be lost.', func));
+								if(!ignoreProgressCheckBox.checked) openSubState(new Prompt(Language.get('prompt_unsaved'), func));
 								else func();
 							}
 							catch(e:Exception)
@@ -3960,7 +3960,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 				else showOutput('You must save/load a Chart first to Reload it!', true);
 			}
 
-			if(!ignoreProgressCheckBox.checked) openSubState(new Prompt('Warning: Any unsaved progress will be lost', func));
+			if(!ignoreProgressCheckBox.checked) openSubState(new Prompt(Language.get('prompt_unsaved'), func));
 			else func();
 		}, btnWid);
 		btn.text.alignment = LEFT;
@@ -4433,7 +4433,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		{
 			upperBox.isMinimized = true;
 			upperBox.bg.visible = false;
-			openSubState(new BasePrompt(400, 160, 'Autosave Settings',
+			openSubState(new BasePrompt(400, 160, Language.get('prompt_autosave_tab'),
 				function(state:BasePrompt)
 				{
 					var btn:PsychUIButton = new PsychUIButton(state.bg.x + state.bg.width - 40, state.bg.y, 'X', state.close, 40);
@@ -4451,7 +4451,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 					};
 					timeStepper.cameras = state.cameras;
 
-					checkbox = new PsychUICheckBox(timeStepper.x + 80, timeStepper.y, 'Enabled', 60, function() {
+					checkbox = new PsychUICheckBox(timeStepper.x + 80, timeStepper.y, Language.get('enabled_text'), 60, function() {
 						autoSaveTime = 0;
 						autoSaveCap = chartEditorSave.data.autoSave = checkbox.checked ? Std.int(timeStepper.value) : 0;
 					});
@@ -4466,9 +4466,11 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 					};
 					maxFileStepper.cameras = state.cameras;
 
-					var txt1:FlxText = new FlxText(timeStepper.x, timeStepper.y - 15, 100, 'Time (in minutes):');
+					var txt1:FlxText = new FlxText(timeStepper.x, timeStepper.y - 15, 100, Language.get('autosave_time'));
+					txt1.font = Language.get('uitab_font');
 					txt1.cameras = state.cameras;
-					var txt2:FlxText = new FlxText(maxFileStepper.x, maxFileStepper.y - 15, 100, 'File Limit:');
+					var txt2:FlxText = new FlxText(maxFileStepper.x, maxFileStepper.y - 15, 100, Language.get('autosave_filelimit'));
+					txt2.font = Language.get('uitab_font');
 					txt2.cameras = state.cameras;
 
 					state.add(txt1);
@@ -4495,7 +4497,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 				loadSection();
 			}
 
-			if(!ignoreProgressCheckBox.checked) openSubState(new Prompt('Delete all Notes in the song?', func));
+			if(!ignoreProgressCheckBox.checked) openSubState(new Prompt(Language.get('prompt_deleteallnote'), func));
 			else func();
 		}, btnWid);
 		btn.normalStyle.bgColor = FlxColor.RED;
@@ -4516,7 +4518,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 					loadSection();
 				}
 	
-				if(!ignoreProgressCheckBox.checked) openSubState(new Prompt('Delete all Events in the song?', func));
+				if(!ignoreProgressCheckBox.checked) openSubState(new Prompt(Language.get('prompt_deleteallevent'), func));
 				else func();
 			}, btnWid);
 			btn.normalStyle.bgColor = FlxColor.RED;
@@ -4596,7 +4598,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_waveform_tab3'), function()
 		{
 			ClientPrefs.toggleVolumeKeys(false);
-			openSubState(new BasePrompt(320, 200, 'Waveform Settings',
+			openSubState(new BasePrompt(320, 200, Language.get('prompt_waveform_tab'),
 				function(state:BasePrompt) {
 					upperBox.isMinimized = true;
 					upperBox.bg.visible = false;
@@ -4605,7 +4607,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 					btn.cameras = state.cameras;
 					state.add(btn);
 
-					var check:PsychUICheckBox = new PsychUICheckBox(state.bg.x + 40, state.bg.y + 80, 'Enabled', 60);
+					var check:PsychUICheckBox = new PsychUICheckBox(state.bg.x + 40, state.bg.y + 80, Language.get('enabled_text'), 60);
 					check.onClick = function()
 					{
 						chartEditorSave.data.waveformEnabled = waveformEnabled = check.checked;
@@ -4631,7 +4633,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 					input.forceCase = UPPER_CASE;
 
 					var options:Array<WaveformTarget> = [INST, PLAYER, OPPONENT];
-					var radioGrp:PsychUIRadioGroup = new PsychUIRadioGroup(check.x + 120, check.y, ['Instrumental', 'Main Vocals', 'Opponent Vocals']);
+					var radioGrp:PsychUIRadioGroup = new PsychUIRadioGroup(check.x + 120, check.y, [Language.get('waveform_inst'), Language.get('waveform_mainvoice'), Language.get('waveform_dadvoice')]);
 					radioGrp.cameras = state.cameras;
 					radioGrp.onClick = function()
 					{
@@ -4641,7 +4643,8 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 					radioGrp.checked = options.indexOf(waveformTarget);
 					state.add(radioGrp);
 
-					var txt1:FlxText = new FlxText(input.x, input.y - 15, 80, 'Color (Hex):');
+					var txt1:FlxText = new FlxText(input.x, input.y - 15, 80, Language.get('waveform_color'));
+					txt1.font = Language.get('uitab_font');
 					txt1.cameras = state.cameras;
 					state.add(txt1);
 					state.add(input);
@@ -4656,7 +4659,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		{
 			upperBox.isMinimized = true;
 			upperBox.bg.visible = false;
-			openSubState(new BasePrompt(420, 200, 'Go to Time/Section:',
+			openSubState(new BasePrompt(420, 200, Language.get('prompt_go2time_tab'),
 				function(state:BasePrompt)
 				{
 					var curTime:Float = Conductor.songPosition;
@@ -4667,8 +4670,10 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 					var sectionStepper:PsychUINumericStepper = new PsychUINumericStepper(timeStepper.x + 160, timeStepper.y, 1, currentSec, 0, PlayState.SONG.notes.length - 1, 0);
 					sectionStepper.cameras = state.cameras;
 
-					var txt1:FlxText = new FlxText(timeStepper.x, timeStepper.y - 15, 100, 'Time (in seconds):');
-					var txt2:FlxText = new FlxText(sectionStepper.x, sectionStepper.y - 15, 100, 'Section:');
+					var txt1:FlxText = new FlxText(timeStepper.x, timeStepper.y - 15, 100, Language.get('go2time_time'));
+					txt1.font = Language.get('uitab_font');
+					var txt2:FlxText = new FlxText(sectionStepper.x, sectionStepper.y - 15, 100, Language.get('go2time_section'));
+					txt2.font = Language.get('uitab_font');
 					txt1.cameras = state.cameras;
 					txt2.cameras = state.cameras;
 					state.add(txt1);
@@ -4738,7 +4743,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 			upperBox.isMinimized = true;
 			upperBox.bg.visible = false;
 
-			openSubState(new BasePrompt(500, 260, 'Chart Editor Theme',
+			openSubState(new BasePrompt(500, 260, Language.get('prompt_theme_tab'),
 				function(state:BasePrompt)
 				{
 					var btn:PsychUIButton = new PsychUIButton(state.bg.x + state.bg.width - 40, state.bg.y, 'X', state.close, 40);
@@ -4746,32 +4751,32 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 					state.add(btn);
 
 					var btnY = 320;
-					var btn:PsychUIButton = new PsychUIButton(0, btnY, 'Light', changeTheme.bind(LIGHT));
+					var btn:PsychUIButton = new PsychUIButton(0, btnY, Language.get('theme_light'), changeTheme.bind(LIGHT));
 					btn.screenCenter(X);
 					btn.x -= 180;
 					btn.cameras = state.cameras;
 					state.add(btn);
 			
-					var btn:PsychUIButton = new PsychUIButton(0, btnY, 'Dark', changeTheme.bind(DARK));
+					var btn:PsychUIButton = new PsychUIButton(0, btnY, Language.get('theme_dark'), changeTheme.bind(DARK));
 					btn.screenCenter(X);
 					btn.x -= 60;
 					btn.cameras = state.cameras;
 					state.add(btn);
 					
-					var btn:PsychUIButton = new PsychUIButton(0, btnY, 'Default', changeTheme.bind(DEFAULT));
+					var btn:PsychUIButton = new PsychUIButton(0, btnY, Language.get('theme_default'), changeTheme.bind(DEFAULT));
 					btn.screenCenter(X);
 					btn.cameras = state.cameras;
 					btn.x += 60;
 					state.add(btn);
 			
-					var btn:PsychUIButton = new PsychUIButton(0, btnY, 'V-Slice', changeTheme.bind(VSLICE));
+					var btn:PsychUIButton = new PsychUIButton(0, btnY, Language.get('theme_vslice'), changeTheme.bind(VSLICE));
 					btn.screenCenter(X);
 					btn.x += 180;
 					btn.cameras = state.cameras;
 					state.add(btn);
 
 					btnY += 60;
-					var btn:PsychUIButton = new PsychUIButton(0, btnY, 'Custom', changeTheme.bind(CUSTOM));
+					var btn:PsychUIButton = new PsychUIButton(0, btnY, Language.get('theme_custom'), changeTheme.bind(CUSTOM));
 					btn.screenCenter(X);
 					btn.x -= 180;
 					btn.cameras = state.cameras;
@@ -4794,7 +4799,8 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 						changeTheme(CUSTOM);
 					}
 
-					var txt:FlxText = new FlxText(input.x, input.y - 15, 120, 'BG Color:');
+					var txt:FlxText = new FlxText(input.x, input.y - 15, 120, Language.get('theme_bgcolor'));
+					txt.font = Language.get('uitab_font');
 					txt.cameras = state.cameras;
 					state.add(txt);
 					state.add(input);
@@ -4816,7 +4822,8 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 						changeTheme(CUSTOM);
 					}
 
-					var txt:FlxText = new FlxText(input.x, input.y - 15, 120, 'Grid Colors:');
+					var txt:FlxText = new FlxText(input.x, input.y - 15, 120, Language.get('theme_gridcolor'));
+					txt.font = Language.get('uitab_font');
 					txt.cameras = state.cameras;
 					state.add(txt);
 					state.add(input);
@@ -4852,7 +4859,8 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 						changeTheme(CUSTOM);
 					}
 
-					var txt:FlxText = new FlxText(input.x, input.y - 15, 120, 'Next Grid Colors:');
+					var txt:FlxText = new FlxText(input.x, input.y - 15, 120, Language.get('theme_ngridcolor'));
+					txt.font = Language.get('uitab_font');
 					txt.cameras = state.cameras;
 					state.add(txt);
 					state.add(input);
