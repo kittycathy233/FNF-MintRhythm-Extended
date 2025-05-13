@@ -124,6 +124,26 @@ class PlayState extends MusicBeatState
 		['Sick!', 1], //From 90% to 99%
 		['Perfect!!', 1] //The value on this one isn't used actually, since Perfect is always "1"
 	];
+	public var ratingStuffKE:Array<Dynamic> = 
+    [
+		["D", 0.6], // accuracy < 60
+		["C", 0.7], // accuracy >= 60
+		["B", 0.80], // accuracy >= 70
+		["A", 0.85], // accuracy >= 80
+		["A.", 0.9], // accuracy >= 85
+		["A:", 0.93], // accuracy >= 90
+		["AA", 0.965], // accuracy >= 93
+		["AA.", 0.99], // accuracy >= 96.50
+		["AA:", 0.997], // accuracy >= 99
+		["AAA", 0.998], // accuracy >= 99.70
+		["AAA.", 0.999], // accuracy >= 99.80
+		["AAA:", 0.99955], // accuracy >= 99.90
+		["AAAA", 0.99970], // accuracy >= 99.955
+		["AAAA.", 0.99980], // accuracy >= 99.970
+		["AAAA:", 0.999935], // accuracy >= 99.980
+		["AAAAA", 1], // accuracy >= 99.9935
+		["AAAAA", 1], // accuracy >= 99.9935    
+		];
 
 	//event variables
 	private var isCameraOnForcedPos:Bool = false;
@@ -619,21 +639,32 @@ class PlayState extends MusicBeatState
 		iconP2.alpha = ClientPrefs.data.healthBarAlpha;
 		uiGroup.add(iconP2);
 
+		if(ClientPrefs.data.scoretxtstyle == 'Kade') 
+		{
+		scoreTxt = new FlxText(0, healthBar.y + 50, FlxG.width, "", 20);
+		scoreTxt.screenCenter(X);
+		scoreTxt.scrollFactor.set();
+		scoreTxt.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		}
+		else 
+		{
 		scoreTxt = new FlxText(0, healthBar.y + 40, FlxG.width, "", 20);
 		scoreTxt.setFormat(Paths.font("vcr.ttf"), 20, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		scoreTxt.scrollFactor.set();
 		scoreTxt.borderSize = 1.25;
 		scoreTxt.visible = !ClientPrefs.data.hideHud;
+		}
 		uiGroup.add(scoreTxt);
 
-		botplayTxt = new FlxText(400, healthBar.y - 90, FlxG.width - 800, LanguageBasic.getPhrase("Botplay").toUpperCase(), 32);
-		botplayTxt.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		botplayTxt = new FlxText(400, ClientPrefs.data.botplayStyle == 'Kade' ? healthBar.y - 120 : healthBar.y - 90, FlxG.width - 800, ClientPrefs.data.botplayStyle == 'Kade' ? "BOTPLAY" : 'AUTOPLAY', 32);
+		//botplayTxt = new FlxText(400, healthBar.y - 90, FlxG.width - 800, LanguageBasic.getPhrase("Botplay").toUpperCase(), 32);
+		botplayTxt.setFormat(Paths.font("vcr.ttf"), ClientPrefs.data.botplayStyle == 'Kade' ? 37 : 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		botplayTxt.scrollFactor.set();
-		botplayTxt.borderSize = 1.25;
+		botplayTxt.borderSize = ClientPrefs.data.botplayStyle == 'Kade' ? 2 : 1.25;
 		botplayTxt.visible = cpuControlled;
 		uiGroup.add(botplayTxt);
 		if(ClientPrefs.data.downScroll)
-			botplayTxt.y = healthBar.y + 70;
+			botplayTxt.y = ClientPrefs.data.botplayStyle == 'Kade' ? healthBar.y + 120 : healthBar.y + 70;
 
 		watermarkText = new FlxText(20, FlxG.height - 20, 0, 
 			SONG.song + "-" + Difficulty.getString().toUpperCase() + ' | MintRhythm Engine v${MainMenuState.mrEngineVersion}', 
@@ -641,6 +672,7 @@ class PlayState extends MusicBeatState
 		watermarkText.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		watermarkText.scrollFactor.set();
 		watermarkText.borderSize = 1.2;
+		watermarkText.y = !ClientPrefs.data.downScroll ? 20 : FlxG.height - 20;
 		watermarkText.alpha = 0.8;
 		watermarkText.visible = !ClientPrefs.data.hideHud;
 		uiGroup.add(watermarkText);
@@ -1244,6 +1276,7 @@ class PlayState extends MusicBeatState
 	public dynamic function updateScoreText()
 	{
 		var str:String = LanguageBasic.getPhrase('rating_$ratingName', ratingName);
+		var percent:Float = CoolUtil.floorDecimal(100, 2);
 		if(totalPlayed != 0)
 		{
 			var percent:Float = CoolUtil.floorDecimal(ratingPercent * 100, 2);
@@ -1251,7 +1284,26 @@ class PlayState extends MusicBeatState
 		}
 
 		var tempScore:String;
-		if(!instakillOnMiss) tempScore = LanguageBasic.getPhrase('score_text', 'Score: {1} | Misses: {2} | Rating: {3}', [songScore, songMisses, str]);
+		if(!instakillOnMiss) {
+			if (ClientPrefs.data.scoretxtstyle == 'MintRhythm')
+			{
+				tempScore = 'NPS: ${nps} (${maxNPS}) | Score: ${songScore}'
+				+ (!instakillOnMiss ? ' | Miss: ${songMisses}' : "")
+				+ ' | Acc: ${percent}% | ${ratingFC}'
+				+ (cpuControlled ? ' | AUTOPLAY' : "");
+			}
+			else if (ClientPrefs.data.scoretxtstyle == 'Kade')
+			{
+				//这里懒得改了
+				tempScore = 'NPS: ${nps} (Max: ${maxNPS}) | Score: ${songScore}'
+				+ (!instakillOnMiss ? ' | Combo Breaks: ${songMisses}' : "")
+				+ ' | Accuracy: ${percent}% | (${ratingFC}) ${ratingNameKE}'
+				+ (cpuControlled ? ' | BOTPLAY' : "");
+			}
+			else
+				tempScore = LanguageBasic.getPhrase('score_text', 'Score: {1} | Misses: {2} | Rating: {3}', [songScore, songMisses, str]);
+
+		}
 		else tempScore = LanguageBasic.getPhrase('score_text_instakill', 'Score: {1} | Rating: {2}', [songScore, str]);
 		scoreTxt.text = tempScore;
 	}
@@ -1264,7 +1316,10 @@ class PlayState extends MusicBeatState
 		var shits:Int = ratingsData[3].hits;
         var perfects:Int = !ClientPrefs.data.rmperfect ? ratingsData[4].hits : 0;    
 
-		ratingFC = "";
+		//ratingFC = "";
+		ratingFC = /*ClientPrefs.data.scoretxtstyle == 'Psych' ? "?" : */"?";
+		if(ClientPrefs.data.scoretxtstyle == 'MintRhythm') ratingFC = "IDK";
+		if(ClientPrefs.data.scoretxtstyle == 'Kade') ratingFC = "PFC";
 		if(songMisses == 0)
 		{
 			if (bads > 0 || shits > 0) ratingFC = 'FC';
@@ -1642,47 +1697,55 @@ class PlayState extends MusicBeatState
 
 	public var skipArrowStartTween:Bool = false; //for lua
 	private function generateStaticArrows(player:Int):Void
-	{
-		var strumLineX:Float = ClientPrefs.data.middleScroll ? STRUM_X_MIDDLESCROLL : STRUM_X;
-		var strumLineY:Float = ClientPrefs.data.downScroll ? (FlxG.height - 150) : 50;
-		for (i in 0...4)
-		{
-			// FlxG.log.add(i);
-			var targetAlpha:Float = 1;
-			if (player < 1)
-			{
-				if(!ClientPrefs.data.opponentStrums) targetAlpha = 0;
-				else if(ClientPrefs.data.middleScroll) targetAlpha = 0.35;
-			}
+{
+    var strumLineX:Float = ClientPrefs.data.middleScroll ? STRUM_X_MIDDLESCROLL : STRUM_X;
+    var strumLineY:Float = ClientPrefs.data.downScroll ? (FlxG.height - 150) : 50;
+    
+    // 应用传统音符位置偏移
+    var legacyOffset:Float = ClientPrefs.data.legacynotepos ? 50 : 0;
+    
+    for (i in 0...4)
+    {
+        // FlxG.log.add(i);
+        var targetAlpha:Float = 1;
+        if (player < 1)
+        {
+            if(!ClientPrefs.data.opponentStrums) targetAlpha = 0;
+            else if(ClientPrefs.data.middleScroll) targetAlpha = 0.35;
+        }
 
-			var babyArrow:StrumNote = new StrumNote(strumLineX, strumLineY, i, player);
-			babyArrow.downScroll = ClientPrefs.data.downScroll;
-			if (!isStoryMode && !skipArrowStartTween)
-			{
-				//babyArrow.y -= 10;
-				babyArrow.alpha = 0;
-				FlxTween.tween(babyArrow, {/*y: babyArrow.y + 10,*/ alpha: targetAlpha}, 1, {ease: FlxEase.circOut, startDelay: 0.5 + (0.2 * i)});
-			}
-			else babyArrow.alpha = targetAlpha;
+        var babyArrow:StrumNote = new StrumNote(strumLineX, strumLineY, i, player);
+        babyArrow.downScroll = ClientPrefs.data.downScroll;
 
-			if (player == 1)
-				playerStrums.add(babyArrow);
-			else
-			{
-				if(ClientPrefs.data.middleScroll)
-				{
-					babyArrow.x += 310;
-					if(i > 1) { //Up and Right
-						babyArrow.x += FlxG.width / 2 + 25;
-					}
-				}
-				opponentStrums.add(babyArrow);
-			}
+        // 应用传统音符位置偏移
+        babyArrow.x -= legacyOffset;
 
-			strumLineNotes.add(babyArrow);
-			babyArrow.playerPosition();
-		}
-	}
+        if (!isStoryMode && !skipArrowStartTween)
+        {
+            //babyArrow.y -= 10;
+            babyArrow.alpha = 0;
+            FlxTween.tween(babyArrow, {/*y: babyArrow.y + 10,*/ alpha: targetAlpha}, 1, {ease: FlxEase.circOut, startDelay: 0.5 + (0.2 * i)});
+        }
+        else babyArrow.alpha = targetAlpha;
+
+        if (player == 1)
+            playerStrums.add(babyArrow);
+        else
+        {
+            if(ClientPrefs.data.middleScroll)
+            {
+                babyArrow.x += 310;
+                if(i > 1) { //Up and Right
+                    babyArrow.x += FlxG.width / 2 + 25;
+                }
+            }
+            opponentStrums.add(babyArrow);
+        }
+
+        strumLineNotes.add(babyArrow);
+        babyArrow.playerPosition();
+    }
+}
 
 	override function openSubState(SubState:FlxSubState)
 	{
@@ -1923,6 +1986,29 @@ class PlayState extends MusicBeatState
 			}
 		}
 
+		{
+			var balls = notesHitArray.length - 1;
+			while (balls >= 0)
+			{
+				var cock:Date = notesHitArray[balls];
+				if (cock != null && cock.getTime() + 1000 < Date.now().getTime())
+					notesHitArray.remove(cock);
+				else
+					balls = 0;
+				balls--;
+			}
+			nps = notesHitArray.length;
+			if (nps > maxNPS)
+				maxNPS = nps;
+			if (npsCheck != nps) {
+			    npsCheck = nps;			    
+			    updateScoreText();				  
+			}
+			setOnLuas('nps', nps);
+			setOnLuas('maxFPS', maxNPS);	
+
+		}
+
 		if (generatedMusic)
 		{
 			if(!inCutscene)
@@ -2003,56 +2089,80 @@ class PlayState extends MusicBeatState
 
 	// Health icon updaters
 	public dynamic function updateIconsScale(elapsed:Float)
-	{
-		// MintRhythm专属缩放逻辑
-		if(ClientPrefs.data.iconbopstyle == "MintRhythm") {
-			var healthPercent:Float = healthBar.percent;
-			var targetScale:Float = 1.0;
-			
-			// 根据血量动态调整缩放强度
-			var scaleIntensity:Float = 1 - Math.abs(healthPercent - 50) / 50;
-			targetScale += 0.1 * scaleIntensity;
-			
-			// 平滑缩放过渡
-			iconP1.scale.x = FlxMath.lerp(iconP1.scale.x, targetScale, elapsed * 12);
-			iconP1.scale.y = FlxMath.lerp(iconP1.scale.y, targetScale, elapsed * 12);
-			iconP2.scale.x = FlxMath.lerp(iconP2.scale.x, targetScale, elapsed * 12);
-			iconP2.scale.y = FlxMath.lerp(iconP2.scale.y, targetScale, elapsed * 12);
-		} else {
-			// 原有其他样式的缩放逻辑
-			var mult:Float = FlxMath.lerp(1, iconP1.scale.x, Math.exp(-elapsed * 9 * playbackRate));
-			iconP1.scale.set(mult, mult);
-			var mult:Float = FlxMath.lerp(1, iconP2.scale.x, Math.exp(-elapsed * 9 * playbackRate));
-			iconP2.scale.set(mult, mult);
-		}
-		
-		iconP1.updateHitbox();
-		iconP2.updateHitbox();
-	}
+{
+    // MintRhythm 专属缩放逻辑
+    if (ClientPrefs.data.iconbopstyle == "MintRhythm") {
+        var healthPercent:Float = healthBar.percent;
+        var targetScale:Float = 1.0;
+        
+        // 根据血量动态调整缩放强度
+        var scaleIntensity:Float = 1 - Math.abs(healthPercent - 50) / 50;
+        targetScale += 0.1 * scaleIntensity;
+        
+        // 平滑缩放过渡
+        iconP1.scale.x = FlxMath.lerp(iconP1.scale.x, targetScale, elapsed * 12);
+        iconP1.scale.y = FlxMath.lerp(iconP1.scale.y, targetScale, elapsed * 12);
+        iconP2.scale.x = FlxMath.lerp(iconP2.scale.x, targetScale, elapsed * 12);
+        iconP2.scale.y = FlxMath.lerp(iconP2.scale.y, targetScale, elapsed * 12);
+    } else {
+        // 旧版本多风格整合逻辑
+        var speedMultiplier:Float = switch (ClientPrefs.data.iconbopstyle) {
+            case "Kade":  	20;
+            case "Leather": 5;
+            case "SB":      20;
+            case "VSlice":  16;
+            default:       	9;
+        }
+
+        // 根据风格选择插值方式
+        if (["Kade", "VSlice"].contains(ClientPrefs.data.iconbopstyle)) {
+            // 线性缩放：使用 lerp 直接过渡到 1
+            var rate:Float = elapsed * speedMultiplier * playbackRate;
+            iconP1.scale.x = FlxMath.lerp(iconP1.scale.x, 1, rate);
+            iconP1.scale.y = FlxMath.lerp(iconP1.scale.y, 1, rate);
+            iconP2.scale.x = FlxMath.lerp(iconP2.scale.x, 1, rate);
+            iconP2.scale.y = FlxMath.lerp(iconP2.scale.y, 1, rate);
+        } else {
+            // 指数衰减：其他风格保持原版逻辑
+            var mult:Float = FlxMath.lerp(1, iconP1.scale.x, Math.exp(-elapsed * speedMultiplier * playbackRate));
+            iconP1.scale.set(mult, mult);
+            mult = FlxMath.lerp(1, iconP2.scale.x, Math.exp(-elapsed * speedMultiplier * playbackRate));
+            iconP2.scale.set(mult, mult);
+        }
+    }
+    
+    // 统一更新碰撞框
+    iconP1.updateHitbox();
+    iconP2.updateHitbox();
+}
 
 	public dynamic function updateIconsPosition()
 	{
 		var iconOffset:Int = 26;
-		
+
 		// MintRhythm专属动效
 		if(ClientPrefs.data.iconbopstyle == "MintRhythm") {
-			var targetX1 = healthBar.barCenter + (150 * iconP1.scale.x - 150)/2 - iconOffset;
-			var targetX2 = healthBar.barCenter - (150 * iconP2.scale.x)/2 - iconOffset*2;
-			
-			// 平滑位置过渡
-			iconP1.x += (targetX1 - iconP1.x) * 0.1;
-			iconP2.x += (targetX2 - iconP2.x) * 0.1;
-			
+			iconP1.x = healthBar.barCenter + (150 * iconP1.scale.x - 150)/2 - iconOffset;
+			iconP2.x = healthBar.barCenter - (150 * iconP2.scale.x)/2 - iconOffset*2;
+
 			// 垂直浮动效果
 			var wave = Math.sin(Conductor.songPosition / 400) * 1.5;
 			iconP1.y = iconP1InitialY + wave;
 			iconP2.y = iconP2InitialY - wave;
 		} else {
-			// 原有其他样式的逻辑
+
 			iconP1.x = healthBar.barCenter + (150 * iconP1.scale.x - 150)/2 - iconOffset;
 			iconP2.x = healthBar.barCenter - (150 * iconP2.scale.x)/2 - iconOffset*2;
-			iconP1.y = iconP1InitialY;
-			iconP2.y = iconP2InitialY;
+			/*iconP1.y = iconP1InitialY;
+			iconP2.y = iconP2InitialY;*/
+			if (ClientPrefs.data.iconbopstyle == "Kade") {
+        			iconP1.y = iconP1InitialY + (iconP1.scale.y - 1) * 75;
+        			iconP2.y = iconP2InitialY + (iconP2.scale.y - 1) * 75;
+    			}
+				if (ClientPrefs.data.iconbopstyle == "Leather") {
+        			iconP1.y = iconP1InitialY + (iconP1.scale.y - 1) * 60;
+        			iconP2.y = iconP2InitialY + (iconP2.scale.y - 1) * 60;
+    			}
 		}
 	}
 
@@ -3423,7 +3533,8 @@ class PlayState extends MusicBeatState
 			if (!note.isSustainNote)
 			{
 				combo++;
-				if(combo > 9999) combo = 9999;
+				//if(combo > 9999) combo = 9999;
+				notesHitArray.unshift(Date.now());
 				popUpScore(note);
 			}
 			var gainHealth:Bool = true; // prevent health gain, *if* sustains are treated as a singular note
@@ -3573,8 +3684,8 @@ class PlayState extends MusicBeatState
 					iconP2.scale.set(1.1, 1.1);
 				}
 				else if (ClientPrefs.data.iconbopstyle == "VSlice") {
-					iconP1.scale.set(1.4, 1.4);
-					iconP2.scale.set(1.4, 1.4);
+					iconP1.scale.set(1.25, 1.25);
+					iconP2.scale.set(1.25, 1.25);
 					}
 				else {
 				iconP1.scale.set(1.2, 1.2);
@@ -3900,6 +4011,7 @@ class PlayState extends MusicBeatState
 	}
 
 	public var ratingName:String = '?';
+	public var ratingNameKE:String = 'AAAAA';
 	public var ratingPercent:Float;
 	public var ratingFC:String;
 	public function RecalculateRating(badHit:Bool = false, scoreBop:Bool = true) {
@@ -3925,6 +4037,14 @@ class PlayState extends MusicBeatState
 						if(ratingPercent < ratingStuff[i][1])
 						{
 							ratingName = ratingStuff[i][0];
+							break;
+						}
+				ratingNameKE = ratingStuffKE[ratingStuffKE.length-1][0]; //Uses last string
+					if(ratingPercent < 1)
+						for (i in 0...ratingStuffKE.length-1)
+						if(ratingPercent < ratingStuffKE[i][1])
+						{
+							ratingNameKE = ratingStuffKE[i][0];
 							break;
 						}
 			}

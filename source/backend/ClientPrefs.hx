@@ -125,6 +125,7 @@ import states.TitleState;
 	public var showcaseStyle:String = "Psych";
 	public var fpstxtStyle:String = "Psych";
 	public var timebarStyle:String = "Psych";
+	public var legacynotepos:Bool = false;
 	
 }
 

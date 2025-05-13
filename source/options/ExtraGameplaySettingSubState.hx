@@ -141,6 +141,12 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		['default', 'Kade']);
 		addOption(option);
 
+		var option:Option = new Option('Legacy Note Position',
+		Language.get("legacy_notepos_desc"),
+		'legacynotepos',
+		BOOL);
+		addOption(option);
+
 		var option = new Option("Engine Language",
 		Language.get("change_language_desc"),
         'language',
