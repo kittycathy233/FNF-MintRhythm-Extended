@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 env:
-  PROJECT_NAME: mrEngine
+  PROJECT_NAME: MintRhythmEngine
   REPO_PATH: kittycathy233/FNF-MintRhythm-Engine
   HAXE_VERSION: 4.3.7
 
