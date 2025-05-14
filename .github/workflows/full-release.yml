@@ -1,0 +1,122 @@
+name: Full Release
+
+on:
+  workflow_dispatch:
+
+env:
+  PROJECT_NAME: mrEngine
+  REPO_PATH: kittycathy233/FNF-MintRhythm-Engine
+  HAXE_VERSION: 4.3.7
+
+jobs:
+  get-commit-hash:
+    runs-on: ubuntu-latest
+    outputs:
+      commit_hash: ${{ steps.get_commit_hash.outputs.COMMIT_HASH }}
+    steps:
+      - name: Check Repository
+        run: |
+          echo "GITHUB_REPOSITORY: $GITHUB_REPOSITORY"
+          echo "REPO_PATH: ${{ env.REPO_PATH }}"
+          if [[ "$GITHUB_REPOSITORY" != "${{ env.REPO_PATH }}" ]]; then
+            echo "Doesn't seem to be correct, returning SIGABRT..."
+            exit 6
+          else
+            echo "Seems to be correct..."
+          fi
+
+      - name: Get latest commit hash
+        id: get_commit_hash
+        run: |
+          commit_hash=${GITHUB_SHA::7}
+          echo "Latest commit hash is $commit_hash"
+          echo "::set-output name=COMMIT_HASH::$commit_hash"
+
+  build:
+    name: Build All Platforms
+    needs: get-commit-hash
+    strategy:
+      matrix:
+        include:
+          - name: Windows
+            os: windows-2022
+            buildArgs: windows
+            setupCommand: .\"setup/windows.bat"
+            artifactName: windowsBuild-x86_64
+            artifactPath: export\release\windows\bin\*
+          - name: Linux
+            os: ubuntu-22.04
+            buildArgs: linux
+            setupCommand: sh ./setup/unix.sh
+            artifactName: linuxBuild-x86_64
+            artifactPath: export/release/linux/bin/*
+          - name: macOS x86_64
+            os: macos-15
+            setupCommand: sh ./setup/unix.sh
+            buildArgs: "mac -64 -D HXCPP_M64"
+            artifactName: macOSBuild-x86_64
+            artifactPath: export/release/macos/bin/*
+          - name: macOS ARM64
+            os: macos-15
+            setupCommand: sh ./setup/unix.sh
+            buildArgs: "mac -arm64 -D HXCPP_ARM64"
+            artifactName: macOSBuild-arm64
+            artifactPath: export/release/macos/bin/*
+          - name: Android
+            os: macos-15
+            buildArgs: "android -final -D officialBuild"
+            setupCommand: sh ./setup/unix.sh
+            artifactName: androidBuild
+            artifactPath: "export/release/android/bin/app/build/outputs/apk/release/*.apk"
+          - name: iOS
+            os: macos-15
+            buildArgs: "ios -final -nosign -D officialBuild"
+            setupCommand: sh ./setup/unix.sh
+            artifactName: iOSBuild
+            artifactPath: "export/release/ios/build/Release-iphoneos/*.ipa"
+    uses: ./.github/workflows/build.yml
+    with:
+        name: ${{ matrix.name }}
+        os: ${{ matrix.os }}
+        setupCommand: ${{ matrix.setupCommand }}
+        buildArgs: ${{ matrix.buildArgs }}
+        artifactName: ${{ matrix.artifactName }}
+        artifactPath: ${{ matrix.artifactPath }}
+
+  release:
+    name: Publish Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@main
+        with:
+          path: /home/runner
+
+      - name: Fix iOS Build
+        if: matrix.name == 'iOS'
+        run: |
+          brew install ldid
+          cd /home/runner/export/release/ios/build/Release-iphoneos/${{ env.PROJECT_NAME }}.app
+          ldid -S../../../${{ env.PROJECT_NAME }}/${{ env.PROJECT_NAME }}.entitlements ${{ env.PROJECT_NAME }}
+          cd ..
+          mkdir Payload
+          mv ${{ env.PROJECT_NAME }}.app Payload
+          zip -r /home/runner/${{ env.PROJECT_NAME }}-iOS.zip Payload
+
+      - name: Rename Android Build
+        if: matrix.name == 'Android'
+        run: mv /home/runner/${{ env.PROJECT_NAME }}-release.apk /home/runner/${{ env.PROJECT_NAME }}-Android.apk
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Release ${{ needs.get-commit-hash.outputs.commit_hash }}"
+          tag_name: "release-${{ needs.get-commit-hash.outputs.commit_hash }}"
+          prerelease: false
+          files: |
+            /home/runner/*.apk
+            /home/runner/*.zip
+            /home/runner/*.exe
+            /home/runner/*.tar.gz
