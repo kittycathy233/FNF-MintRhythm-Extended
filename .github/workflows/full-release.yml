@@ -28,10 +28,13 @@ jobs:
       - name: Get latest commit hash
         id: get_commit_hash
         run: |
-          commit_hash="${GITHUB_SHA::7}"
+          if [ -n "$GITHUB_SHA" ]; then
+            commit_hash="${GITHUB_SHA::7}"
+          else
+            commit_hash=$(git rev-parse --short HEAD)
+          fi
           echo "commit_hash=$commit_hash" >> $GITHUB_OUTPUT
           echo "Latest commit hash: $commit_hash"
-          # 简单校验
           if [[ -z "$commit_hash" || ! "$commit_hash" =~ ^[a-f0-9]{7}$ ]]; then
             echo "Invalid commit_hash: $commit_hash"
             exit 1
@@ -45,36 +48,36 @@ jobs:
         include:
           - name: Windows
             os: windows-2022
-            buildArgs: windows
+            buildArgs: "windows -final -D officialBuild"
             setupCommand: .\setup\windows.bat
             artifactName: windowsBuild-x86_64
             artifactPath: export\release\windows\bin\*
           - name: Linux
             os: ubuntu-22.04
-            buildArgs: linux
+            buildArgs: "linux -final -D officialBuild"
             setupCommand: sh ./setup/unix.sh
             artifactName: linuxBuild-x86_64
             artifactPath: export/release/linux/bin/*
           - name: macOS x86_64
-            os: macos-15
+            os: macos-13
             setupCommand: sh ./setup/unix.sh
-            buildArgs: "mac -64 -D HXCPP_M64"
+            buildArgs: "mac -64 -D HXCPP_M64 -final -D officialBuild"
             artifactName: macOSBuild-x86_64
             artifactPath: export/release/macos/bin/*
           - name: macOS ARM64
-            os: macos-15
+            os: macos-13
             setupCommand: sh ./setup/unix.sh
-            buildArgs: "mac -arm64 -D HXCPP_ARM64"
+            buildArgs: "mac -arm64 -D HXCPP_ARM64 -final -D officialBuild"
             artifactName: macOSBuild-arm64
             artifactPath: export/release/macos/bin/*
           - name: Android
-            os: macos-15
+            os: macos-13
             buildArgs: "android -final -D officialBuild"
             setupCommand: sh ./setup/unix.sh
             artifactName: androidBuild
             artifactPath: "export/release/android/bin/app/build/outputs/apk/release/*.apk"
           - name: iOS
-            os: macos-15
+            os: macos-13
             buildArgs: "ios -final -nosign -D officialBuild"
             setupCommand: sh ./setup/unix.sh
             artifactName: iOSBuild
@@ -98,8 +101,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: /home/runner/artifacts
-
-      # iOS & Android 特殊处理，如有需要可添加
 
       - name: Collect all release files
         run: |
