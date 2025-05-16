@@ -126,6 +126,7 @@ import states.TitleState;
 	public var fpstxtStyle:String = "Psych";
 	public var timebarStyle:String = "Psych";
 	public var legacynotepos:Bool = false;
+	public var ratingsPos:String = "camHUD";
 	
 }
 

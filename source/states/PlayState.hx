@@ -667,7 +667,7 @@ class PlayState extends MusicBeatState
 			botplayTxt.y = ClientPrefs.data.botplayStyle == 'Kade' ? healthBar.y + 120 : healthBar.y + 70;
 
 		watermarkText = new FlxText(20, FlxG.height - 20, 0, 
-			SONG.song + "-" + Difficulty.getString().toUpperCase() + ' | MintRhythm Engine v${MainMenuState.mrEngineVersion}', 
+			SONG.song + "-" + Difficulty.getString().toUpperCase() + ' | PE: MintRhythm Extended v${MainMenuState.mrExtendVersion}', 
 				14);
 		watermarkText.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		watermarkText.scrollFactor.set();
@@ -1276,10 +1276,10 @@ class PlayState extends MusicBeatState
 	public dynamic function updateScoreText()
 	{
 		var str:String = LanguageBasic.getPhrase('rating_$ratingName', ratingName);
-		var percent:Float = CoolUtil.floorDecimal(100, 2);
+		var percent:Float = 0; // 提前声明并初始化
 		if(totalPlayed != 0)
 		{
-			var percent:Float = CoolUtil.floorDecimal(ratingPercent * 100, 2);
+			percent = CoolUtil.floorDecimal(ratingPercent * 100, 2);
 			str += ' (${percent}%) - ' + LanguageBasic.getPhrase(ratingFC);
 		}
 
@@ -3008,13 +3008,13 @@ class PlayState extends MusicBeatState
 			if (!PlayState.isPixelStage)
 			{
 				rating.setGraphicSize(Std.int(rating.width * 0.7));
-				theEXrating.setGraphicSize(Std.int(rating.width * 0.7));
+				theEXrating.setGraphicSize(Std.int(theEXrating.width * 0.7));
 				comboSpr.setGraphicSize(Std.int(comboSpr.width * 0.7));
 			}
 			else
 			{
 				rating.setGraphicSize(Std.int(rating.width * 0.7));
-				theEXrating.setGraphicSize(Std.int(rating.width * daPixelZoom * 0.85));
+				theEXrating.setGraphicSize(Std.int(theEXrating.width * daPixelZoom * 0.85));
 				comboSpr.setGraphicSize(Std.int(comboSpr.width * daPixelZoom * 0.85));
 			}
 

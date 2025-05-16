@@ -147,6 +147,13 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		BOOL);
 		addOption(option);
 
+		var option:Option = new Option('Ratings Position',
+		Language.get("ratings_pos_desc"),
+		'ratingsPos',
+		STRING,
+		['camHUD', 'camGame']);
+		addOption(option);
+
 		var option = new Option("Engine Language",
 		Language.get("change_language_desc"),
         'language',

@@ -15,7 +15,7 @@ enum MainMenuColumn {
 class MainMenuState extends MusicBeatState
 {
 	public static var psychEngineVersion:String = '1.0.4'; // This is also used for Discord RPC
-	public static var mrEngineVersion:String = '0.0.1 Beta1'; // This is also used for Discord RPC
+	public static var mrExtendVersion:String = '0.3.1 ALPHA'; // This is also used for Discord RPC (?我说我不想改这个你信吗)
 	public static var curSelected:Int = 0;
 	public static var curColumn:MainMenuColumn = CENTER;
 	var allowMouse:Bool = true; //Turn this off to block mouse movement in menus
@@ -95,7 +95,7 @@ class MainMenuState extends MusicBeatState
 			rightItem.x -= rightItem.width;
 		}
 
-		var mrVer:FlxText = new FlxText(12, FlxG.height - 66, 0, '${ClientPrefs.data.language == 'zh_cn' ? "薄荷韵律 (MintRhythm Engine)" : 'MintRhythm Engine'} v' + mrEngineVersion, 12);
+		var mrVer:FlxText = new FlxText(12, FlxG.height - 66, 0, '${ClientPrefs.data.language == 'zh_cn' ? "薄荷韵律 (M.R. Extended)" : 'MintRhythm Extended'} v' + mrExtendVersion, 12);
 		mrVer.scrollFactor.set();
 		mrVer.setFormat(Paths.font(ClientPrefs.data.language == 'zh_cn' ? 'ResourceHanRoundedCN-Bold.ttf' : "vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(mrVer);
