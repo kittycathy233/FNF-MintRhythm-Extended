@@ -71,7 +71,7 @@ jobs:
             artifactName: macOSBuild-arm64
             artifactPath: export/release/macos/bin/*
           - name: Android
-            os: macos-13
+            os: macos-14
             buildArgs: "android -final -D officialBuild"
             setupCommand: sh ./setup/unix.sh
             artifactName: androidBuild
