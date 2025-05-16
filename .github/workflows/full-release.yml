@@ -12,7 +12,7 @@ jobs:
   get-commit-hash:
     runs-on: ubuntu-latest
     outputs:
-      commit_hash: ${{ steps.get_commit_hash.outputs.COMMIT_HASH }}
+      commit_hash: ${{ steps.get_commit_hash.outputs.commit_hash }}
     steps:
       - name: Check Repository
         run: |
@@ -28,9 +28,14 @@ jobs:
       - name: Get latest commit hash
         id: get_commit_hash
         run: |
-          commit_hash=${GITHUB_SHA::7}
-          echo "Latest commit hash is $commit_hash"
-          echo "::set-output name=COMMIT_HASH::$commit_hash"
+          commit_hash="${GITHUB_SHA::7}"
+          echo "commit_hash=$commit_hash" >> $GITHUB_OUTPUT
+          echo "Latest commit hash: $commit_hash"
+          # 简单校验
+          if [[ -z "$commit_hash" || ! "$commit_hash" =~ ^[a-f0-9]{7}$ ]]; then
+            echo "Invalid commit_hash: $commit_hash"
+            exit 1
+          fi
 
   build:
     name: Build All Platforms
@@ -41,7 +46,7 @@ jobs:
           - name: Windows
             os: windows-2022
             buildArgs: windows
-            setupCommand: .\"setup/windows.bat"
+            setupCommand: .\setup\windows.bat
             artifactName: windowsBuild-x86_64
             artifactPath: export\release\windows\bin\*
           - name: Linux
@@ -76,12 +81,12 @@ jobs:
             artifactPath: "export/release/ios/build/Release-iphoneos/*.ipa"
     uses: ./.github/workflows/build.yml
     with:
-        name: ${{ matrix.name }}
-        os: ${{ matrix.os }}
-        setupCommand: ${{ matrix.setupCommand }}
-        buildArgs: ${{ matrix.buildArgs }}
-        artifactName: ${{ matrix.artifactName }}
-        artifactPath: ${{ matrix.artifactPath }}
+      name: ${{ matrix.name }}
+      os: ${{ matrix.os }}
+      setupCommand: ${{ matrix.setupCommand }}
+      buildArgs: ${{ matrix.buildArgs }}
+      artifactName: ${{ matrix.artifactName }}
+      artifactPath: ${{ matrix.artifactPath }}
 
   release:
     name: Publish Release
@@ -90,24 +95,16 @@ jobs:
     permissions: write-all
     steps:
       - name: Download Artifacts
-        uses: actions/download-artifact@main
+        uses: actions/download-artifact@v4
         with:
-          path: /home/runner
+          path: /home/runner/artifacts
 
-      - name: Fix iOS Build
-        if: matrix.name == 'iOS'
+      # iOS & Android 特殊处理，如有需要可添加
+
+      - name: Collect all release files
         run: |
-          brew install ldid
-          cd /home/runner/export/release/ios/build/Release-iphoneos/${{ env.PROJECT_NAME }}.app
-          ldid -S../../../${{ env.PROJECT_NAME }}/${{ env.PROJECT_NAME }}.entitlements ${{ env.PROJECT_NAME }}
-          cd ..
-          mkdir Payload
-          mv ${{ env.PROJECT_NAME }}.app Payload
-          zip -r /home/runner/${{ env.PROJECT_NAME }}-iOS.zip Payload
-
-      - name: Rename Android Build
-        if: matrix.name == 'Android'
-        run: mv /home/runner/${{ env.PROJECT_NAME }}-release.apk /home/runner/${{ env.PROJECT_NAME }}-Android.apk
+          mkdir -p /home/runner/release
+          find /home/runner/artifacts -type f \( -name "*.apk" -o -name "*.zip" -o -name "*.exe" -o -name "*.tar.gz" \) -exec cp {} /home/runner/release/ \;
 
       - name: Publish Release
         uses: softprops/action-gh-release@v2
@@ -115,8 +112,4 @@ jobs:
           name: "Release ${{ needs.get-commit-hash.outputs.commit_hash }}"
           tag_name: "release-${{ needs.get-commit-hash.outputs.commit_hash }}"
           prerelease: false
-          files: |
-            /home/runner/*.apk
-            /home/runner/*.zip
-            /home/runner/*.exe
-            /home/runner/*.tar.gz
+          files: /home/runner/release/*
