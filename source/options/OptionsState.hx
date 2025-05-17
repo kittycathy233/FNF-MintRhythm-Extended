@@ -16,6 +16,18 @@ class OptionsState extends MusicBeatState
 		//#if TRANSLATIONS_ALLOWED , 'Language' #end
 		#if mobile ,'Mobile Options' #end
 	];
+	
+	var optionDescriptions:Array<String> = [
+		'Customize note colors and appearance',
+		'Change keyboard and controller bindings',
+		'Calibrate input timing and combo positioning',
+		'Adjust resolution, framerate and quality settings',
+		'Modify visual effects and HUD elements',
+		'Tweak gameplay mechanics and difficulty',
+		'Additional gameplay customization options'
+		#if mobile ,'Configure mobile-specific settings' #end
+	];
+	
 	private var grpOptions:FlxTypedGroup<FlxText>;
 	private static var curSelected:Int = 0;
 	public static var menuBG:FlxSprite;
@@ -23,10 +35,11 @@ class OptionsState extends MusicBeatState
 
 	var selectorLeft:FlxText;
 	var selectorRight:FlxText;
+	var descriptionText:FlxText;
 
 	private var optionTargetYs:Array<Float> = [];
 	private var optionCurYs:Array<Float> = [];
-	private var itemSpacing:Int = 92;
+	private var itemSpacing:Int = 72; // 减小垂直间距
 	private var startY:Float = 0;
 
 	private var selectorLeftTargetX:Float = 0;
@@ -89,7 +102,7 @@ class OptionsState extends MusicBeatState
 		grpOptions = new FlxTypedGroup<FlxText>();
 		add(grpOptions);
 
-		itemSpacing = 92;
+		itemSpacing = 72; // 更新垂直间距
 		var totalHeight = itemSpacing * options.length;
 		startY = (FlxG.height - totalHeight) / 2 + itemSpacing / 2;
 
@@ -124,6 +137,14 @@ class OptionsState extends MusicBeatState
 		selectorRight.antialiasing = ClientPrefs.data.antialiasing;
 		add(selectorRight);
 
+		// 添加描述文本
+		descriptionText = new FlxText(300, FlxG.height - 300, FlxG.width - 400, optionDescriptions[curSelected], 24);
+		descriptionText.setFormat(Paths.font("ResourceHanRoundedCN-Bold.ttf"), 24, FlxColor.WHITE, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		descriptionText.borderSize = 1;
+		descriptionText.antialiasing = ClientPrefs.data.antialiasing;
+		descriptionText.scrollFactor.set();
+		add(descriptionText);
+
 		// 初始化选择器目标位置
 		changeSelection();
 
@@ -157,11 +178,11 @@ class OptionsState extends MusicBeatState
 	override function update(elapsed:Float) {
 		super.update(elapsed);
 
-		// 平滑滚动动画
+		// 平滑滚动动画，减轻滚动程度
 		for (i in 0...grpOptions.length)
 		{
 			var targetY = optionTargetYs[i];
-			optionCurYs[i] = FlxMath.lerp(targetY, optionCurYs[i], Math.exp(-elapsed * 12));
+			optionCurYs[i] = FlxMath.lerp(targetY, optionCurYs[i], Math.exp(-elapsed * 6)); // 减轻滚动速度
 			grpOptions.members[i].y = optionCurYs[i];
 		}
 
@@ -181,13 +202,23 @@ class OptionsState extends MusicBeatState
 			}
 		}
 
-		// < 和 > 选择器平滑动画
-		selectorLeft.x = FlxMath.lerp(selectorLeftTargetX, selectorLeft.x, Math.exp(-elapsed * 16));
-		selectorLeft.y = FlxMath.lerp(selectorLeftTargetY, selectorLeft.y, Math.exp(-elapsed * 16));
-		selectorRight.x = FlxMath.lerp(selectorRightTargetX, selectorRight.x, Math.exp(-elapsed * 16));
-		selectorRight.y = FlxMath.lerp(selectorRightTargetY, selectorRight.y, Math.exp(-elapsed * 16));
+		// 更新选择器位置，使其跟随当前选中选项
+		var selectedOption = grpOptions.members[curSelected];
+		if (selectedOption != null)
+		{
+			selectorLeftTargetX = selectedOption.x - 63;
+			selectorLeftTargetY = selectedOption.y;
+			selectorRightTargetX = selectedOption.x + selectedOption.width + 15;
+			selectorRightTargetY = selectedOption.y;
+		}
 
-		if(!exiting) {
+		// < 和 > 选择器平滑动画
+		selectorLeft.x = FlxMath.lerp(selectorLeftTargetX, selectorLeft.x, Math.exp(-elapsed * 12));
+		selectorLeft.y = FlxMath.lerp(selectorLeftTargetY, selectorLeft.y, Math.exp(-elapsed * 12));
+		selectorRight.x = FlxMath.lerp(selectorRightTargetX, selectorRight.x, Math.exp(-elapsed * 12));
+		selectorRight.y = FlxMath.lerp(selectorRightTargetY, selectorRight.y, Math.exp(-elapsed * 12));
+
+		if (!exiting) {
 			if (controls.UI_UP_P)
 				changeSelection(-1);
 			if (controls.UI_DOWN_P)
@@ -203,7 +234,7 @@ class OptionsState extends MusicBeatState
 			{
 				exiting = true;
 				FlxG.sound.play(Paths.sound('cancelMenu'));
-				if(onPlayState)
+				if (onPlayState)
 				{
 					StageData.loadDirectory(PlayState.SONG);
 					LoadingState.loadAndSwitchState(new PlayState());
@@ -214,25 +245,33 @@ class OptionsState extends MusicBeatState
 			else if (controls.ACCEPT) openSelectedSubstate(options[curSelected]);
 		}
 	}
-	
+
 	function changeSelection(change:Int = 0)
 	{
 		curSelected = FlxMath.wrap(curSelected + change, 0, options.length - 1);
 
+		// 计算视觉聚焦的目标位置
+		var focusY = FlxG.height / 3 + (FlxG.height / 3) * (curSelected / (options.length - 1));
+
 		for (num => item in grpOptions.members)
 		{
 			item.alpha = 0.6;
-			optionTargetYs[num] = startY + (num - curSelected) * itemSpacing;
+
+			// 根据当前选中项动态调整每个选项的目标位置
+			var offset = (num - curSelected) * itemSpacing;
+			optionTargetYs[num] = focusY + offset;
+
 			if (num == curSelected)
 			{
 				item.alpha = 1;
-				// 选择器目标位置
-				selectorLeftTargetX = item.x - 63;
-				selectorLeftTargetY = optionTargetYs[num];
-				selectorRightTargetX = item.x + item.width + 15;
-				selectorRightTargetY = optionTargetYs[num];
 			}
 		}
+		
+		// 更新描述文本动效
+		descriptionText.text = optionDescriptions[curSelected];
+		descriptionText.y -= 50; // 上移一段距离
+		FlxTween.tween(descriptionText, { y: FlxG.height - 200 }, 0.2, { ease: FlxEase.quadOut }); // 回到原位置
+
 		FlxG.sound.play(Paths.sound('scrollMenu'));
 	}
 
