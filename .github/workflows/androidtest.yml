@@ -6,7 +6,7 @@ permissions:
 
 env:
   PROJECT_NAME: MintRhythmEngine
-  REPO_PATH: kittycathy233/FNF-MintRhythm-Engine
+  REPO_PATH: kittycathy233/FNF-MintRhythm-Extended
 
 jobs:
   get-commit-hash:
