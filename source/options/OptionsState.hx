@@ -16,10 +16,23 @@ class OptionsState extends MusicBeatState
 		//#if TRANSLATIONS_ALLOWED , 'Language' #end
 		#if mobile ,'Mobile Options' #end
 	];
-	private var grpOptions:FlxTypedGroup<Alphabet>;
+	private var grpOptions:FlxTypedGroup<FlxText>;
 	private static var curSelected:Int = 0;
 	public static var menuBG:FlxSprite;
 	public static var onPlayState:Bool = false;
+
+	var selectorLeft:FlxText;
+	var selectorRight:FlxText;
+
+	private var optionTargetYs:Array<Float> = [];
+	private var optionCurYs:Array<Float> = [];
+	private var itemSpacing:Int = 92;
+	private var startY:Float = 0;
+
+	private var selectorLeftTargetX:Float = 0;
+	private var selectorLeftTargetY:Float = 0;
+	private var selectorRightTargetX:Float = 0;
+	private var selectorRightTargetY:Float = 0;
 
 	function openSelectedSubstate(label:String) {
 		if (label != "Adjust Delay and Combo"){
@@ -40,7 +53,7 @@ class OptionsState extends MusicBeatState
 				openSubState(new options.GameplaySettingsSubState());
 			case 'Extra Options':
 				openSubState(new options.ExtraGameplaySettingSubState());
-						case 'Adjust Delay and Combo':
+			case 'Adjust Delay and Combo':
 				MusicBeatState.switchState(new options.NoteOffsetState());
 			case 'Mobile Options':
 				openSubState(new mobile.options.MobileOptionsSubState());
@@ -48,9 +61,6 @@ class OptionsState extends MusicBeatState
 				openSubState(new options.LanguageSubState());
 		}
 	}
-
-	var selectorLeft:Alphabet;
-	var selectorRight:Alphabet;
 
 	override function create()
 	{
@@ -76,23 +86,53 @@ class OptionsState extends MusicBeatState
 			add(tipText);
 		}
 
-		grpOptions = new FlxTypedGroup<Alphabet>();
+		grpOptions = new FlxTypedGroup<FlxText>();
 		add(grpOptions);
+
+		itemSpacing = 92;
+		var totalHeight = itemSpacing * options.length;
+		startY = (FlxG.height - totalHeight) / 2 + itemSpacing / 2;
+
+		optionTargetYs = [];
+		optionCurYs = [];
+
+		var leftMargin = 120; // 左对齐的x坐标
 
 		for (num => option in options)
 		{
-			var optionText:Alphabet = new Alphabet(0, 0, LanguageBasic.getPhrase('options_$option', option), true);
-			optionText.screenCenter();
-			optionText.y += (92 * (num - (options.length / 2))) + 45;
+			var optionText:FlxText = new FlxText(leftMargin, 0, 0, LanguageBasic.getPhrase('options_$option', option), 48);
+			optionText.setFormat(Paths.font("ResourceHanRoundedCN-Bold.ttf"), 48, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			optionText.borderSize = 2;
+			optionText.antialiasing = ClientPrefs.data.antialiasing;
+			optionText.x = leftMargin;
+			optionText.y = startY + num * itemSpacing;
 			grpOptions.add(optionText);
+
+			optionTargetYs.push(optionText.y);
+			optionCurYs.push(optionText.y);
 		}
 
-		selectorLeft = new Alphabet(0, 0, '>', true);
+		selectorLeft = new FlxText(0, 0, 0, ">", 48);
+		selectorLeft.setFormat(Paths.font("ResourceHanRoundedCN-Bold.ttf"), 48, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		selectorLeft.borderSize = 2;
+		selectorLeft.antialiasing = ClientPrefs.data.antialiasing;
 		add(selectorLeft);
-		selectorRight = new Alphabet(0, 0, '<', true);
+
+		selectorRight = new FlxText(0, 0, 0, "<", 48);
+		selectorRight.setFormat(Paths.font("ResourceHanRoundedCN-Bold.ttf"), 48, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		selectorRight.borderSize = 2;
+		selectorRight.antialiasing = ClientPrefs.data.antialiasing;
 		add(selectorRight);
 
+		// 初始化选择器目标位置
 		changeSelection();
+
+		// 直接设置选择器初始位置
+		selectorLeft.x = selectorLeftTargetX;
+		selectorLeft.y = selectorLeftTargetY;
+		selectorRight.x = selectorRightTargetX;
+		selectorRight.y = selectorRightTargetY;
+
 		ClientPrefs.saveSettings();
 
 		addTouchPad('UP_DOWN', 'A_B_C');
@@ -116,6 +156,36 @@ class OptionsState extends MusicBeatState
 	var exiting = false;
 	override function update(elapsed:Float) {
 		super.update(elapsed);
+
+		// 平滑滚动动画
+		for (i in 0...grpOptions.length)
+		{
+			var targetY = optionTargetYs[i];
+			optionCurYs[i] = FlxMath.lerp(targetY, optionCurYs[i], Math.exp(-elapsed * 12));
+			grpOptions.members[i].y = optionCurYs[i];
+		}
+
+		// 选中项动效
+		for (i in 0...grpOptions.length)
+		{
+			var item = grpOptions.members[i];
+			if (i == curSelected)
+			{
+				item.scale.x = FlxMath.lerp(1.08, item.scale.x, Math.exp(-elapsed * 16));
+				item.scale.y = FlxMath.lerp(1.08, item.scale.y, Math.exp(-elapsed * 16));
+			}
+			else
+			{
+				item.scale.x = FlxMath.lerp(1.0, item.scale.x, Math.exp(-elapsed * 16));
+				item.scale.y = FlxMath.lerp(1.0, item.scale.y, Math.exp(-elapsed * 16));
+			}
+		}
+
+		// < 和 > 选择器平滑动画
+		selectorLeft.x = FlxMath.lerp(selectorLeftTargetX, selectorLeft.x, Math.exp(-elapsed * 16));
+		selectorLeft.y = FlxMath.lerp(selectorLeftTargetY, selectorLeft.y, Math.exp(-elapsed * 16));
+		selectorRight.x = FlxMath.lerp(selectorRightTargetX, selectorRight.x, Math.exp(-elapsed * 16));
+		selectorRight.y = FlxMath.lerp(selectorRightTargetY, selectorRight.y, Math.exp(-elapsed * 16));
 
 		if(!exiting) {
 			if (controls.UI_UP_P)
@@ -151,15 +221,16 @@ class OptionsState extends MusicBeatState
 
 		for (num => item in grpOptions.members)
 		{
-			item.targetY = num - curSelected;
 			item.alpha = 0.6;
-			if (item.targetY == 0)
+			optionTargetYs[num] = startY + (num - curSelected) * itemSpacing;
+			if (num == curSelected)
 			{
 				item.alpha = 1;
-				selectorLeft.x = item.x - 63;
-				selectorLeft.y = item.y;
-				selectorRight.x = item.x + item.width + 15;
-				selectorRight.y = item.y;
+				// 选择器目标位置
+				selectorLeftTargetX = item.x - 63;
+				selectorLeftTargetY = optionTargetYs[num];
+				selectorRightTargetX = item.x + item.width + 15;
+				selectorRightTargetY = optionTargetYs[num];
 			}
 		}
 		FlxG.sound.play(Paths.sound('scrollMenu'));
