@@ -201,7 +201,22 @@
 
     "charting_songname": "曲名:",
     "charting_scrollspeed": "谱面流速:",
-    "charting_audiooffset": "音频延迟 (ms为单位):"
+    "charting_audiooffset": "音频延迟 (ms为单位):",
 
-
+    "graphics_menu_title": "图形设置",
+    "graphics_menu_rpc": "图形设置菜单",
+    "low_quality_name": "低质量",
+    "low_quality_desc": "如果启用，将禁用一些背景细节，减少加载时间并提高性能。",
+    "antialiasing_name": "抗锯齿",
+    "antialiasing_desc": "如果禁用，将关闭抗锯齿功能，提高性能但画面更锐利。",
+    "shaders_name": "着色器",
+    "shaders_desc": "如果禁用，将关闭着色器效果。某些视觉效果可能会受影响。",
+    "gpu_caching_name": "GPU 缓存",
+    "gpu_caching_desc": "启用后允许 GPU 缓存纹理，减少内存使用。不建议低性能显卡使用。",
+    "framerate_name": "帧率",
+    "framerate_desc": "设置游戏的帧率上限。",
+    "fps_rework_name": "FPS 重构",
+    "fps_rework_desc": "启用后，当 FPS 低于上限时，游戏不会变得“慢”和“平滑”。",
+    "fps_warning_1": "警告: FPS范围建议在60-240之间\n因为Psych Engine就是这样设计的",
+    "fps_warning_2": "警告: FPS上限极其不推荐超过480FPS!"
 }

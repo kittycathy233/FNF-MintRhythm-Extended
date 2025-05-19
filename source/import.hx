@@ -90,6 +90,7 @@ import flixel.group.FlxSpriteGroup;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.addons.transition.FlxTransitionableState;
 import shaders.flixel.system.FlxShader;
+import flxgif.FlxGifSprite;
 
 using StringTools;
 #end

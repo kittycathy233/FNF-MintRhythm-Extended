@@ -4,7 +4,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 {
 	public function new()
 	{
-		title = 'Extra Options\nWTF, silly Chinese Option\n\nNot Done';
+		title = 'Extra Options\n\nNot Done';
 		rpcTitle = 'Extra Gameplay Settings Menu'; //for Discord Rich Presence
 
 		// BOOL 类型设置

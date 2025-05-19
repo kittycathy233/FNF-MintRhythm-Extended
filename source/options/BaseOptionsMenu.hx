@@ -10,6 +10,9 @@ import objects.AttachedText;
 import options.Option;
 import backend.InputFormatter;
 
+import flixel.addons.display.FlxBackdrop;
+import flixel.addons.display.FlxGridOverlay;
+
 class BaseOptionsMenu extends MusicBeatSubstate
 {
 	private var curOption:Option = null;
@@ -27,6 +30,8 @@ class BaseOptionsMenu extends MusicBeatSubstate
 	public var rpcTitle:String;
 
 	public var bg:FlxSprite;
+	public var bg1:FlxSprite;
+	public var bg2:FlxSprite;
 	public function new()
 	{
 		controls.isInSubstate = true;
@@ -39,12 +44,29 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		#if DISCORD_ALLOWED
 		DiscordClient.changePresence(rpcTitle, null);
 		#end
-		
-		bg = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
-		bg.color = 0xFFea71fd;
-		bg.screenCenter();
-		bg.antialiasing = ClientPrefs.data.antialiasing;
-		add(bg);
+
+		bg1 = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.WHITE);
+		bg1.screenCenter();
+		bg1.antialiasing = ClientPrefs.data.antialiasing;
+		bg1.alpha = 0;
+		add(bg1);
+		FlxTween.tween(bg1, {alpha: 0.5}, 0.5, {ease: FlxEase.quadOut});
+
+		/*bg = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
+		bg.color = 0xFFea71fd;*/
+		bg2 = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
+		bg2.screenCenter();
+		bg2.antialiasing = ClientPrefs.data.antialiasing;
+		bg2.alpha = 0;
+		add(bg2);
+		FlxTween.tween(bg2, {alpha: 0.6}, 0.5, {ease: FlxEase.quadOut});
+
+		// 添加背景方块移动效果
+		var grid:FlxBackdrop = new FlxBackdrop(FlxGridOverlay.createGrid(80, 80, 160, 160, true, 0x3300BFFF, 0x0));
+		grid.velocity.set(-40, -40); // 设置为反方向移动
+		grid.alpha = 0;
+		FlxTween.tween(grid, {alpha: 0.9}, 0.5, {ease: FlxEase.quadOut});
+		add(grid);
 
 		// avoids lagspikes while scrolling through menus!
 		grpOptions = new FlxTypedGroup<Alphabet>();

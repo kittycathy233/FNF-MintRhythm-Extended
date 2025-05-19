@@ -199,6 +199,22 @@
 
     "charting_songname": "Song Name:",
     "charting_scrollspeed": "Scroll Speed:",
-    "charting_audiooffset": "Audio Offset (ms):"
+    "charting_audiooffset": "Audio Offset (ms):",
 
+    "graphics_menu_title": "Graphics Settings",
+	"graphics_menu_rpc": "Graphics Settings Menu",
+	"low_quality_name": "Low Quality",
+	"low_quality_desc": "If enabled, disables some background details, decreases loading times, and improves performance.",
+	"antialiasing_name": "Anti-Aliasing",
+	"antialiasing_desc": "If unchecked, disables anti-aliasing, increasing performance at the cost of sharper visuals.",
+	"shaders_name": "Shaders",
+	"shaders_desc": "If unchecked, disables shaders. Some visual effects may be affected.",
+	"gpu_caching_name": "GPU Caching",
+	"gpu_caching_desc": "If enabled, allows the GPU to cache textures, reducing RAM usage. Not recommended for low-end GPUs.",
+	"framerate_name": "Framerate",
+	"framerate_desc": "Set the maximum framerate for the game.",
+	"fps_rework_name": "FPS Rework",
+	"fps_rework_desc": "If enabled, prevents the game from becoming 'slow' and 'smooth' when FPS is below the cap.",
+    "fps_warning_1": "Warning: Recommended FPS range is 60-240\nBecause Psych Engine is designed this way",
+    "fps_warning_2": "WARNING: FRAMERATE NOT RECOMMENDED OVER 480 FPS!!!"
 }
