@@ -76,7 +76,7 @@ class FPSCounter extends TextField
 		text = 
 		'FPS: $currentFPS' + 
 		'\nMemory: ${flixel.util.FlxStringUtil.formatBytes(memoryMegas)}' +
-		(ClientPrefs.data.exgameversion ? '\nMintRhythm Extends v${MainMenuState.mrExtendVersion}\nPsych Engine v${MainMenuState.psychEngineVersion} \nCommit: ${GameVersion.getGitCommitCount()} (${GameVersion.getGitCommitHash()})' : '') +
+		(ClientPrefs.data.exgameversion ? '\nPsych Engine v${MainMenuState.psychEngineVersion} \nMintRhythm Extended v${MainMenuState.mrExtendVersion}\nCommit: ${GameVersion.getGitCommitCount()} (${GameVersion.getGitCommitHash()})' : '') +
 		os;
 
 		textColor = 0xFFFFFFFF;
