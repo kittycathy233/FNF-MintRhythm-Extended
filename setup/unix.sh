@@ -19,6 +19,7 @@ haxelib git flxanimate https://github.com/Dot-Stuff/flxanimate 768740a56b26aa0c0
 haxelib git linc_luajit https://github.com/kittycathy233/linc_luajit --quiet
 haxelib install hxdiscord_rpc --quiet --skip-dependencies
 haxelib install hxvlc 2.0.1 --quiet --skip-dependencies
+haxelib install flxgif 1.0.3 --quiet --skip-dependencies
 haxelib git funkin.vis https://github.com/FunkinCrew/funkVis 22b1ce089dd924f15cdc4632397ef3504d464e90 --quiet --skip-dependencies
 haxelib git grig.audio https://gitlab.com/haxe-grig/grig.audio.git cbf91e2180fd2e374924fe74844086aab7891666 --quiet
 echo Finished!
