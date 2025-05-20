@@ -209,6 +209,10 @@ class Main extends Sprite
 			if (FlxG.game != null)
 			resetSpriteCache(FlxG.game);
 		});
+
+		#if (desktop && !mobile)
+		setCustomCursor();
+		#end
 	}
 
 	static function resetSpriteCache(sprite:Sprite):Void {
@@ -221,5 +225,9 @@ class Main extends Sprite
 	function toggleFullScreen(event:KeyboardEvent) {
 		if (Controls.instance.justReleased('fullscreen'))
 			FlxG.fullscreen = !FlxG.fullscreen;
+	}
+
+	function setCustomCursor():Void {
+		FlxG.mouse.load('assets/shared/images/cursor.png');
 	}
 }

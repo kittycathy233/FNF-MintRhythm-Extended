@@ -38,11 +38,11 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		if(noteSkins.length > 0)
 		{
 			if(!noteSkins.contains(ClientPrefs.data.noteSkin))
-				ClientPrefs.data.noteSkin = ClientPrefs.defaultData.noteSkin; //Reset to default if saved noteskin couldnt be found
+				ClientPrefs.data.noteSkin = ClientPrefs.defaultData.noteSkin;
 
-			noteSkins.insert(0, ClientPrefs.defaultData.noteSkin); //Default skin always comes first
-			var option:Option = new Option('Note Skins:',
-				"Select your prefered Note skin.",
+			noteSkins.insert(0, ClientPrefs.defaultData.noteSkin);
+			var option:Option = new Option("Note Skins:",
+				Language.get("noteskin_desc"),
 				'noteSkin',
 				STRING,
 				noteSkins);
@@ -55,11 +55,11 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		if(noteSplashes.length > 0)
 		{
 			if(!noteSplashes.contains(ClientPrefs.data.splashSkin))
-				ClientPrefs.data.splashSkin = ClientPrefs.defaultData.splashSkin; //Reset to default if saved splashskin couldnt be found
+				ClientPrefs.data.splashSkin = ClientPrefs.defaultData.splashSkin;
 
-			noteSplashes.insert(0, ClientPrefs.defaultData.splashSkin); //Default skin always comes first
-			var option:Option = new Option('Note Splashes:',
-				"Select your prefered Note Splash variation.",
+			noteSplashes.insert(0, ClientPrefs.defaultData.splashSkin);
+			var option:Option = new Option("Note Splashes:",
+				Language.get("notesplash_desc"),
 				'splashSkin',
 				STRING,
 				noteSplashes);
@@ -67,8 +67,8 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 			option.onChange = onChangeSplashSkin;
 		}
 
-		var option:Option = new Option('Note Splash Opacity',
-			'How much transparent should the Note Splashes be.',
+		var option:Option = new Option("Note Splash Opacity",
+			Language.get("notesplashopacity_desc"),
 			'splashAlpha',
 			PERCENT);
 		option.scrollSpeed = 1.6;
@@ -79,39 +79,39 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 		option.onChange = playNoteSplashes;
 
-		var option:Option = new Option('Hide HUD',
-			'If checked, hides most HUD elements.',
+		var option:Option = new Option("Hide HUD",
+			Language.get("hidehud_desc"),
 			'hideHud',
 			BOOL);
 		addOption(option);
 		
-		var option:Option = new Option('Time Bar:',
-			"What should the Time Bar display?",
+		var option:Option = new Option("Time Bar:",
+			Language.get("timebar_desc"),
 			'timeBarType',
 			STRING,
-			['Time Left', 'Time Elapsed', 'Song Name', 'Disabled']);
+			[Language.get("timebar_left"), Language.get("timebar_elapsed"), Language.get("timebar_song"), Language.get("timebar_disabled")]);
 		addOption(option);
 
-		var option:Option = new Option('Flashing Lights',
-			"Uncheck this if you're sensitive to flashing lights!",
+		var option:Option = new Option("Flashing Lights",
+			Language.get("flashinglights_desc"),
 			'flashing',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option('Camera Zooms',
-			"If unchecked, the camera won't zoom in on a beat hit.",
+		var option:Option = new Option("Camera Zooms",
+			Language.get("camerazooms_desc"),
 			'camZooms',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option('Score Text Grow on Hit',
-			"If unchecked, disables the Score text growing\neverytime you hit a note.",
+		var option:Option = new Option("Score Text Grow on Hit",
+			Language.get("scoretextgrow_desc"),
 			'scoreZoom',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option('Health Bar Opacity',
-			'How much transparent should the health bar and icons be.',
+		var option:Option = new Option("Health Bar Opacity",
+			Language.get("healthbaropacity_desc"),
 			'healthBarAlpha',
 			PERCENT);
 		option.scrollSpeed = 1.6;
@@ -121,24 +121,24 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		option.decimals = 1;
 		addOption(option);
 		
-		var option:Option = new Option('FPS Counter',
-			'If unchecked, hides FPS Counter.',
+		var option:Option = new Option("FPS Counter",
+			Language.get("showfps_desc"),
 			'showFPS',
 			BOOL);
 		addOption(option);
 		option.onChange = onChangeFPSCounter;
 
 		#if native
-		var option:Option = new Option('VSync',
-			'If checked, Enables VSync fixing any screen tearing at the cost of capping the FPS to screen refresh rate.\n(Must restart the game to have an effect)',
+		var option:Option = new Option("VSync",
+			Language.get("vsync_desc"),
 			'vsync',
 			BOOL);
 		option.onChange = onChangeVSync;
 		addOption(option);
 		#end
 		
-		var option:Option = new Option('Pause Music:',
-			"What song do you prefer for the Pause Screen?",
+		var option:Option = new Option("Pause Music:",
+			Language.get("pausemusic_desc"),
 			'pauseMusic',
 			STRING,
 			['None', 'Tea Time', 'Breakfast', 'Breakfast (Pico)']);
@@ -146,25 +146,31 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		option.onChange = onChangePauseMusic;
 		
 		#if CHECK_FOR_UPDATES
-		var option:Option = new Option('Check for Updates',
-			'On Release builds, turn this on to check for updates when you start the game.',
+		var option:Option = new Option("Check for Updates",
+			Language.get("checkforupdates_desc"),
 			'checkForUpdates',
 			BOOL);
 		addOption(option);
 		#end
 
 		#if DISCORD_ALLOWED
-		var option:Option = new Option('Discord Rich Presence',
-			"Uncheck this to prevent accidental leaks, it will hide the Application from your \"Playing\" box on Discord",
+		var option:Option = new Option("Discord Rich Presence",
+			Language.get("discordrpc_desc"),
 			'discordRPC',
 			BOOL);
 		addOption(option);
 		#end
 
-		var option:Option = new Option('Combo Stacking',
-			"If unchecked, Ratings and Combo won't stack, saving on System Memory and making them easier to read",
+		var option:Option = new Option("Combo Stacking",
+			Language.get("combostacking_desc"),
 			'comboStacking',
 			BOOL);
+		option.onChange = function() {
+			if (!ClientPrefs.data.comboStacking) {
+				if (ClientPrefs.data.exratbounce) ClientPrefs.data.exratbounce = false;
+				if (ClientPrefs.data.ratbounce) ClientPrefs.data.ratbounce = false;
+			}
+		};
 		addOption(option);
 
 		super();

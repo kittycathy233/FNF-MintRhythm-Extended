@@ -1,7 +1,16 @@
 package options;
 
+import flixel.text.FlxText;
+import flixel.FlxG;
+import flixel.FlxSprite;
+import flixel.util.FlxTimer;
+
 class ExtraGameplaySettingSubState extends BaseOptionsMenu
 {
+	var errorText:FlxText = null;
+	var errorBg:FlxSprite = null;
+	var errorTimer:FlxTimer = null;
+
 	public function new()
 	{
 		title = 'Extra Options\n\nNot Done';
@@ -14,12 +23,13 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		/*Psych Engine v1.0.4已经有这个了，故隐藏此项
 		option = new Option('Focus Game',
 			Language.get("focus_game_desc"),
 			'autoPause',
 			BOOL);
 		addOption(option);
-
+		*/
 		option = new Option('Show Extra-Rating',
 			Language.get("show_exrating_desc"),
 			'exratingDisplay',
@@ -30,12 +40,24 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			Language.get("rating_bounce_desc"),
 			'ratbounce',
 			BOOL);
+		option.onChange = function() {
+			if (ClientPrefs.data.ratbounce && !ClientPrefs.data.comboStacking) {
+				ClientPrefs.data.ratbounce = false;
+				showError(Language.get("ratbounce_combo_error"));
+			}
+		};
 		addOption(option);
 
 		option = new Option('Extra-Rating Bounce',
 			Language.get("exrating_bounce_desc"),
 			'exratbounce',
 			BOOL);
+		option.onChange = function() {
+			if (ClientPrefs.data.exratbounce && !ClientPrefs.data.comboStacking) {
+				ClientPrefs.data.exratbounce = false;
+				showError(Language.get("exratbounce_combo_error"));
+			}
+		};
 		addOption(option);
 
 		option = new Option('Remove Perfect! Note Judgement',
@@ -172,9 +194,44 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		super();
 	}
 
+	function showError(msg:String)
+	{
+		if (errorText == null) {
+			errorText = new FlxText(0, 0, 400, "", 24);
+			errorText.setFormat(Language.get("game_font"), 24, 0xFFFFFFFF, "center");
+			errorText.scrollFactor.set();
+			errorText.borderStyle = FlxTextBorderStyle.OUTLINE;
+			errorText.borderColor = 0xFF000000;
+			errorText.alpha = 1;
+			errorText.cameras = [FlxG.cameras.list[FlxG.cameras.list.length-1]];
+			errorBg = new FlxSprite().makeGraphic(420, 40, 0xFFFF4444);
+			errorBg.alpha = 0.85;
+			errorBg.scrollFactor.set();
+			errorBg.cameras = errorText.cameras;
+			add(errorBg);
+			add(errorText);
+		}
+		errorText.text = Language.get("error_title") + ": " + msg;
+		errorText.x = FlxG.width - errorText.width - 30;
+		errorText.y = 30;
+		errorBg.x = errorText.x - 10;
+		errorBg.y = errorText.y - 5;
+		errorBg.visible = errorText.visible = true;
+		if (errorTimer != null) errorTimer.cancel();
+		errorTimer = new FlxTimer().start(1.5, function(_) {
+			if (errorText != null) errorText.visible = false;
+			if (errorBg != null) errorBg.visible = false;
+		});
+	}
+
 	function onChangeHitsoundVolume()
 		FlxG.sound.play(Paths.sound('hitsound'), ClientPrefs.data.hitsoundVolume);
 
 	function onChangeAutoPause()
 		FlxG.autoPause = ClientPrefs.data.autoPause;
+
+	override function update(elapsed:Float)
+	{
+		super.update(elapsed);
+	}
 }

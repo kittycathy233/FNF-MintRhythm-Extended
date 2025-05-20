@@ -8,64 +8,76 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		rpcTitle = 'Gameplay Settings Menu'; //for Discord Rich Presence
 
 		//I'd suggest using "Downscroll" as an example for making your own option since it is the simplest here
-		var option:Option = new Option('Downscroll', //Name
-			'If checked, notes go Down instead of Up, simple enough.', //Description
-			'downScroll', //Save data variable name
-			BOOL); //Variable type
+		var option:Option = new Option(
+			"Downscroll",
+			Language.get("downscroll_desc"),
+			'downScroll',
+			BOOL);
 		addOption(option);
 
-		var option:Option = new Option('Middlescroll',
-			'If checked, your notes get centered.',
+		var option:Option = new Option(
+			"Middlescroll",
+			Language.get("middlescroll_desc"),
 			'middleScroll',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option('Opponent Notes',
-			'If unchecked, opponent notes get hidden.',
+		var option:Option = new Option(
+			"Opponent Notes",
+			Language.get("opponentnotes_desc"),
 			'opponentStrums',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option('Ghost Tapping',
-			"If checked, you won't get misses from pressing keys\nwhile there are no notes able to be hit.",
+		var option:Option = new Option(
+			"Ghost Tapping",
+			Language.get("ghosttapping_desc"),
 			'ghostTapping',
 			BOOL);
 		addOption(option);
 		
-		var option:Option = new Option('Auto Pause',
-			"If checked, the game automatically pauses if the screen isn't on focus.",
+		var option:Option = new Option(
+			"Auto Pause",
+			Language.get("autopause_desc"),
 			'autoPause',
 			BOOL);
 		addOption(option);
 		option.onChange = onChangeAutoPause;
 
-		var option:Option = new Option('Pop Up Score',
-			"If unchecked, hitting notes won't make \"sick\", \"good\".. and combo popups\n(Useful for low end " + Main.platform + ").",
+		var option:Option = new Option(
+			"Pop Up Score",
+			Language.get("popupscore_desc"),
 			'popUpRating',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option('Disable Reset Button',
-			"If checked, pressing Reset won't do anything.",
+		var option:Option = new Option(
+			"Disable Reset Button",
+			Language.get("disablereset_desc"),
 			'noReset',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option('Game Over Vibration',
-			"If checked, your device will vibrate at game over.",
+		#if mobile
+		var option:Option = new Option(
+			"Game Over Vibration",
+			Language.get("gameovervibration_desc"),
 			'gameOverVibration',
 			BOOL);
 		addOption(option);
 		option.onChange = onChangeVibration;
+		#end
 
-		var option:Option = new Option('Sustains as One Note',
-			"If checked, Hold Notes can't be pressed if you miss,\nand count as a single Hit/Miss.\nUncheck this if you prefer the old Input System.",
+		var option:Option = new Option(
+			"Sustains as One Note",
+			Language.get("sustainsasone_desc"),
 			'guitarHeroSustains',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option('Hitsound Volume',
-			'Funny notes does \"Tick!\" when you hit them.',
+		var option:Option = new Option(
+			"Hitsound Volume",
+			Language.get("hitsoundvolume_desc"),
 			'hitsoundVolume',
 			PERCENT);
 		addOption(option);
@@ -76,8 +88,9 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.decimals = 1;
 		option.onChange = onChangeHitsoundVolume;
 
-		var option:Option = new Option('Rating Offset',
-			'Changes how late/early you have to hit for a "Sick!"\nHigher values mean you have to hit later.',
+		var option:Option = new Option(
+			"Rating Offset",
+			Language.get("ratingoffset_desc"),
 			'ratingOffset',
 			INT);
 		option.displayFormat = '%vms';
@@ -86,8 +99,9 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.maxValue = 30;
 		addOption(option);
 
-		var option:Option = new Option('Sick! Hit Window',
-			'Changes the amount of time you have\nfor hitting a "Sick!" in milliseconds.',
+		var option:Option = new Option(
+			"Sick! Hit Window",
+			Language.get("sickwindow_desc"),
 			'sickWindow',
 			FLOAT);
 		option.displayFormat = '%vms';
@@ -97,8 +111,9 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.changeValue = 0.1;
 		addOption(option);
 
-		var option:Option = new Option('Good Hit Window',
-			'Changes the amount of time you have\nfor hitting a "Good" in milliseconds.',
+		var option:Option = new Option(
+			"Good Hit Window",
+			Language.get("goodwindow_desc"),
 			'goodWindow',
 			FLOAT);
 		option.displayFormat = '%vms';
@@ -108,8 +123,9 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.changeValue = 0.1;
 		addOption(option);
 
-		var option:Option = new Option('Bad Hit Window',
-			'Changes the amount of time you have\nfor hitting a "Bad" in milliseconds.',
+		var option:Option = new Option(
+			"Bad Hit Window",
+			Language.get("badwindow_desc"),
 			'badWindow',
 			FLOAT);
 		option.displayFormat = '%vms';
@@ -119,8 +135,9 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.changeValue = 0.1;
 		addOption(option);
 
-		var option:Option = new Option('Safe Frames',
-			'Changes how many frames you have for\nhitting a note earlier or late.',
+		var option:Option = new Option(
+			"Safe Frames",
+			Language.get("safeframes_desc"),
 			'safeFrames',
 			FLOAT);
 		option.scrollSpeed = 5;
