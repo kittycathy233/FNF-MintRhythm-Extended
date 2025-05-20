@@ -5,6 +5,13 @@ import flixel.effects.FlxFlicker;
 import lime.app.Application;
 import states.editors.MasterEditorMenu;
 import options.OptionsState;
+import openfl.desktop.ClipboardFormats;
+import openfl.filesystem.File;
+import haxe.zip.Reader;
+import haxe.io.BytesInput;
+import sys.io.File as SysFile;
+import sys.FileSystem;
+import states.ModsImport;
 
 enum MainMenuColumn {
 	LEFT;
@@ -15,7 +22,7 @@ enum MainMenuColumn {
 class MainMenuState extends MusicBeatState
 {
 	public static var psychEngineVersion:String = '1.0.4'; // This is also used for Discord RPC
-	public static var mrExtendVersion:String = '0.3.1 ALPHA'; // This is also used for Discord RPC (?我说我不想改这个你信吗)
+	public static var mrExtendVersion:String = '0.2.1'; // This is also used for Discord RPC (?我说我不想改这个你信吗)
 	public static var curSelected:Int = 0;
 	public static var curColumn:MainMenuColumn = CENTER;
 	var allowMouse:Bool = true; //Turn this off to block mouse movement in menus
@@ -39,6 +46,7 @@ class MainMenuState extends MusicBeatState
 	var camFollow:FlxObject;
 
 	static var showOutdatedWarning:Bool = true;
+	var dropFileHandler:Dynamic = null;
 	override function create()
 	{
 		super.create();
@@ -121,7 +129,7 @@ class MainMenuState extends MusicBeatState
 		#end
 
 		#if CHECK_FOR_UPDATES
-		if (showOutdatedWarning && ClientPrefs.data.checkForUpdates && substates.OutdatedSubState.updateVersion != psychEngineVersion) {
+		if (showOutdatedWarning && ClientPrefs.data.checkForUpdates && substates.OutdatedSubState.updateVersion != mrExtendVersion) {
 			persistentUpdate = false;
 			showOutdatedWarning = false;
 			openSubState(new substates.OutdatedSubState());
@@ -131,6 +139,16 @@ class MainMenuState extends MusicBeatState
 		FlxG.camera.follow(camFollow, null, 0.15);
 
 		addTouchPad('NONE', 'E');
+
+		#if desktop
+		// 仅在主菜单启用拖拽
+		dropFileHandler = function(path:String) {
+			if (path.toLowerCase().endsWith('.zip')) {
+				handleZipImport(path);
+			}
+		};
+		Application.current.window.onDropFile.add(dropFileHandler);
+		#end
 	}
 
 	function createMenuItem(name:String, x:Float, y:Float):FlxSprite
@@ -381,5 +399,38 @@ class MainMenuState extends MusicBeatState
 		selectedItem.animation.play('selected');
 		selectedItem.centerOffsets();
 		camFollow.y = selectedItem.getGraphicMidpoint().y;
+	}
+
+	function handleZipImport(zipPath:String):Void {
+		try {
+			var bytes = SysFile.getBytes(zipPath);
+			var reader = new Reader(new BytesInput(bytes));
+			var entries = reader.read();
+			// 直接检测所有目录
+			var hasWeeks = false, hasData = false, hasSongs = false;
+			for (entry in entries) {
+				var path = entry.fileName;
+				if (path.indexOf('weeks/') >= 0) hasWeeks = true;
+				if (path.indexOf('data/') >= 0) hasData = true;
+				if (path.indexOf('songs/') >= 0) hasSongs = true;
+			}
+			if (hasWeeks && hasData && hasSongs) {
+				MusicBeatState.switchState(new ModsImport(zipPath, null));
+			}
+		} catch(e) {
+			trace('Zip解析失败: $e');
+		}
+	}
+
+	override function destroy()
+	{
+		#if desktop
+		// 离开主菜单时移除拖拽监听
+		if (dropFileHandler != null) {
+			Application.current.window.onDropFile.remove(dropFileHandler);
+			dropFileHandler = null;
+		}
+		#end
+		super.destroy();
 	}
 }
