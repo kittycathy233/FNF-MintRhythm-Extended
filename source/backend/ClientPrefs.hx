@@ -107,7 +107,7 @@ import states.TitleState;
 	public var iconbopstyle:String = 'MintRhythm';
 	public var healthbarstyle:String = 'Psych';
 	public var ratingsAlpha:Float = 1;
-	public var customFadeStyle:String = 'Vanilla';
+	public var customFadeStyle:String = 'MintRhythm';
 	public var showRunningOS:Bool = true;
 	//NFE的特性
 	//public var CustomFadeSound:Bool = true;

@@ -5,27 +5,27 @@ import backend.StageData;
 
 class OptionsState extends MusicBeatState
 {
-	var options:Array<String> = [
-		'Note Colors',
-		'Controls',
-		'Adjust Delay and Combo',
-		'Graphics',
-		'Visuals',
-		'Gameplay',
-		'Extra Options'
-		//#if TRANSLATIONS_ALLOWED , 'Language' #end
-		#if mobile ,'Mobile Options' #end
+	public var options:Array<String> = [
+		Language.get("note_colors"),
+		Language.get("controls"),
+		Language.get("adjust_delay_combo"),
+		Language.get("graphics"),
+		Language.get("visuals"),
+		Language.get("gameplay"),
+		Language.get("extra_options")
+		//#if TRANSLATIONS_ALLOWED , Language.get("language") #end
+		#if mobile , Language.get("mobile_options") #end
 	];
 	
-	var optionDescriptions:Array<String> = [
-		'Customize note colors and appearance',
-		'Change keyboard and controller bindings',
-		'Calibrate input timing and combo positioning',
-		'Adjust resolution, framerate and quality settings',
-		'Modify visual effects and HUD elements',
-		'Tweak gameplay mechanics and difficulty',
-		'Additional gameplay customization options'
-		#if mobile ,'Configure mobile-specific settings' #end
+	public var optionDescriptions:Array<String> = [
+		Language.get("note_colors_desc"),
+		Language.get("controls_desc"),
+		Language.get("adjust_delay_combo_desc"),
+		Language.get("graphics_desc"),
+		Language.get("visuals_desc"),
+		Language.get("gameplay_desc"),
+		Language.get("extra_options_desc")
+		#if mobile , Language.get("mobile_options_desc") #end
 	];
 	
 	private var grpOptions:FlxTypedGroup<FlxText>;
@@ -47,31 +47,34 @@ class OptionsState extends MusicBeatState
 	private var selectorRightTargetX:Float = 0;
 	private var selectorRightTargetY:Float = 0;
 
+	private var allowInput:Bool = true; // 新增：控制输入的标志
+	private var descriptionTween:FlxTween;
+
 	function openSelectedSubstate(label:String) {
-		if (label != "Adjust Delay and Combo"){
+		if (label != Language.get("adjust_delay_combo") && label != Language.get("extra_options")) {
 			removeTouchPad();
 			persistentUpdate = false;
+		} else if (label == Language.get("extra_options")) {
+			persistentUpdate = true;
+			allowInput = false; // 进入ExtraGameplaySettingSubState时禁用输入
 		}
-		switch(label)
-		{
-			case 'Note Colors':
-				openSubState(new options.NotesColorSubState());
-			case 'Controls':
-				openSubState(new options.ControlsSubState());
-			case 'Graphics':
-				openSubState(new options.GraphicsSettingsSubState());
-			case 'Visuals':
-				openSubState(new options.VisualsSettingsSubState());
-			case 'Gameplay':
-				openSubState(new options.GameplaySettingsSubState());
-			case 'Extra Options':
+
+		var substateMap:Map<String, () -> Void> = [
+			Language.get("note_colors") => () -> openSubState(new options.NotesColorSubState()),
+			Language.get("controls") => () -> openSubState(new options.ControlsSubState()),
+			Language.get("graphics") => () -> openSubState(new options.GraphicsSettingsSubState()),
+			Language.get("visuals") => () -> openSubState(new options.VisualsSettingsSubState()),
+			Language.get("gameplay") => () -> openSubState(new options.GameplaySettingsSubState()),
+			Language.get("extra_options") => () -> {
+				persistentUpdate = true; // 保持父状态更新
 				openSubState(new options.ExtraGameplaySettingSubState());
-			case 'Adjust Delay and Combo':
-				MusicBeatState.switchState(new options.NoteOffsetState());
-			case 'Mobile Options':
-				openSubState(new mobile.options.MobileOptionsSubState());
-			case 'Language':
-				openSubState(new options.LanguageSubState());
+			},
+			Language.get("adjust_delay_combo") => () -> MusicBeatState.switchState(new options.NoteOffsetState()),
+			Language.get("mobile_options") => () -> openSubState(new mobile.options.MobileOptionsSubState())
+		];
+
+		if (substateMap.exists(label)) {
+			substateMap.get(label)();
 		}
 	}
 
@@ -92,7 +95,7 @@ class OptionsState extends MusicBeatState
 		if (controls.mobileC)
 		{
 			var tipText:FlxText = new FlxText(150, FlxG.height - 24, 0, 'Press ' + (FlxG.onMobile ? 'C' : 'CTRL or C') + ' to Go Mobile Controls Menu', 16);
-			tipText.setFormat("VCR OSD Mono", 17, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			tipText.setFormat(Paths.font("ResourceHanRoundedCN-Bold.ttf"), 17, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			tipText.borderSize = 1.25;
 			tipText.scrollFactor.set();
 			tipText.antialiasing = ClientPrefs.data.antialiasing;
@@ -172,11 +175,42 @@ class OptionsState extends MusicBeatState
 		removeTouchPad();
 		addTouchPad('UP_DOWN', 'A_B_C');
 		persistentUpdate = true;
+		allowInput = true; // 退出子状态时重新启用输入
 	}
 
 	var exiting = false;
 	override function update(elapsed:Float) {
 		super.update(elapsed);
+
+		// 仅在允许输入时处理按键
+		if (allowInput) {
+			if (!exiting) {
+				if (controls.UI_UP_P)
+					changeSelection(-1);
+				if (controls.UI_DOWN_P)
+					changeSelection(1);
+				
+				if (touchPad.buttonC.justPressed || FlxG.keys.justPressed.CONTROL && controls.mobileC)
+				{
+					persistentUpdate = false;
+					openSubState(new mobile.substates.MobileControlSelectSubState());
+				}
+
+				if (controls.BACK)
+				{
+					exiting = true;
+					FlxG.sound.play(Paths.sound('cancelMenu'));
+					if (onPlayState)
+					{
+						StageData.loadDirectory(PlayState.SONG);
+						LoadingState.loadAndSwitchState(new PlayState());
+						FlxG.sound.music.volume = 0;
+					}
+					else MusicBeatState.switchState(new MainMenuState());
+				}
+				else if (controls.ACCEPT) openSelectedSubstate(options[curSelected]);
+			}
+		}
 
 		// 平滑滚动动画，减轻滚动程度
 		for (i in 0...grpOptions.length)
@@ -217,33 +251,6 @@ class OptionsState extends MusicBeatState
 		selectorLeft.y = FlxMath.lerp(selectorLeftTargetY, selectorLeft.y, Math.exp(-elapsed * 12));
 		selectorRight.x = FlxMath.lerp(selectorRightTargetX, selectorRight.x, Math.exp(-elapsed * 12));
 		selectorRight.y = FlxMath.lerp(selectorRightTargetY, selectorRight.y, Math.exp(-elapsed * 12));
-
-		if (!exiting) {
-			if (controls.UI_UP_P)
-				changeSelection(-1);
-			if (controls.UI_DOWN_P)
-				changeSelection(1);
-			
-			if (touchPad.buttonC.justPressed || FlxG.keys.justPressed.CONTROL && controls.mobileC)
-			{
-				persistentUpdate = false;
-				openSubState(new mobile.substates.MobileControlSelectSubState());
-			}
-
-			if (controls.BACK)
-			{
-				exiting = true;
-				FlxG.sound.play(Paths.sound('cancelMenu'));
-				if (onPlayState)
-				{
-					StageData.loadDirectory(PlayState.SONG);
-					LoadingState.loadAndSwitchState(new PlayState());
-					FlxG.sound.music.volume = 0;
-				}
-				else MusicBeatState.switchState(new MainMenuState());
-			}
-			else if (controls.ACCEPT) openSelectedSubstate(options[curSelected]);
-		}
 	}
 
 	function changeSelection(change:Int = 0)
@@ -269,14 +276,62 @@ class OptionsState extends MusicBeatState
 		
 		// 更新描述文本动效
 		descriptionText.text = optionDescriptions[curSelected];
-		descriptionText.y -= 50; // 上移一段距离
-		FlxTween.tween(descriptionText, { y: FlxG.height - 200 }, 0.2, { ease: FlxEase.quadOut }); // 回到原位置
+		
+		// 取消之前的tween
+		if (descriptionTween != null) {
+			descriptionTween.cancel();
+			//descriptionTween.destroy();
+		}
+		
+		// 重置位置并创建新的tween
+		descriptionText.y = FlxG.height - 250;
+		descriptionTween = FlxTween.tween(descriptionText, 
+			{y: FlxG.height - 200}, 
+			0.3, 
+			{
+				ease: FlxEase.quadOut,
+				onComplete: function(twn:FlxTween) {
+					if (descriptionTween == twn)
+						descriptionTween = null;
+				}
+			}
+		);
 
 		FlxG.sound.play(Paths.sound('scrollMenu'));
 	}
 
+	public function refreshTexts()
+	{
+		// 更新选项文本
+		for (i in 0...options.length)
+		{
+			var optionText = grpOptions.members[i];
+			optionText.text = LanguageBasic.getPhrase('options_${options[i]}', options[i]);
+		}
+
+		// 更新描述文本
+		if(curSelected >= 0 && curSelected < optionDescriptions.length) {
+			descriptionText.text = optionDescriptions[curSelected];
+		}
+
+		// 重新计算选择器位置
+		var selectedOption = grpOptions.members[curSelected];
+		if (selectedOption != null)
+		{
+			selectorLeftTargetX = selectedOption.x - 63;
+			selectorLeftTargetY = selectedOption.y;
+			selectorRightTargetX = selectedOption.x + selectedOption.width + 15;
+			selectorRightTargetY = selectedOption.y;
+		}
+	}
+
 	override function destroy()
 	{
+		if (descriptionTween != null)
+		{
+			descriptionTween.cancel();
+			descriptionTween.destroy();
+		}
 		ClientPrefs.loadPrefs();
 		super.destroy();
 	}

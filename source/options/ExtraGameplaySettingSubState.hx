@@ -185,9 +185,37 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			STRING,
 			["en_us", "zh_cn", "zh_tw"]);
 		option.onChange = function() {
-			ClientPrefs.saveSettings(); // 保存设置
-			Language.load();            // 立即重载语言
-			refreshAllTexts();          // 自定义方法刷新界面文本
+			ClientPrefs.saveSettings();
+			Language.load();
+			refreshAllTexts();
+			
+			// 由于父状态在运行,直接获取并刷新
+			var parentState = cast(FlxG.state, OptionsState);
+			if(parentState != null) {
+				parentState.options = [
+					Language.get("note_colors"),
+					Language.get("controls"),
+					Language.get("adjust_delay_combo"),
+					Language.get("graphics"),
+					Language.get("visuals"), 
+					Language.get("gameplay"),
+					Language.get("extra_options")
+					#if mobile , Language.get("mobile_options") #end
+				];
+				
+				parentState.optionDescriptions = [
+					Language.get("note_colors_desc"),
+					Language.get("controls_desc"),
+					Language.get("adjust_delay_combo_desc"),
+					Language.get("graphics_desc"),
+					Language.get("visuals_desc"),
+					Language.get("gameplay_desc"),
+					Language.get("extra_options_desc")
+					#if mobile , Language.get("mobile_options_desc") #end
+				];
+				
+				parentState.refreshTexts();
+			}
 		};
 		addOption(option);
 

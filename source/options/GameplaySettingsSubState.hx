@@ -100,6 +100,19 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		addOption(option);
 
 		var option:Option = new Option(
+			"Perfect!! Hit Window",
+			Language.get("perfectwindow_desc"),
+			'perfectWindow',
+			FLOAT);
+		option.displayFormat = '%vms';
+		option.scrollSpeed = 15;
+		option.minValue = 5;
+		option.maxValue = 45.0;
+		option.changeValue = 0.1;
+		option.onChange = function() adjustHitWindow('perfectWindow', ClientPrefs.data.perfectWindow);
+		addOption(option);
+
+		var option:Option = new Option(
 			"Sick! Hit Window",
 			Language.get("sickwindow_desc"),
 			'sickWindow',
@@ -109,6 +122,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.minValue = 15.0;
 		option.maxValue = 45.0;
 		option.changeValue = 0.1;
+		option.onChange = function() adjustHitWindow('sickWindow', ClientPrefs.data.sickWindow);
 		addOption(option);
 
 		var option:Option = new Option(
@@ -121,6 +135,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.minValue = 15.0;
 		option.maxValue = 90.0;
 		option.changeValue = 0.1;
+		option.onChange = function() adjustHitWindow('goodWindow', ClientPrefs.data.goodWindow);
 		addOption(option);
 
 		var option:Option = new Option(
@@ -133,6 +148,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.minValue = 15.0;
 		option.maxValue = 135.0;
 		option.changeValue = 0.1;
+		option.onChange = function() adjustHitWindow('badWindow', ClientPrefs.data.badWindow);
 		addOption(option);
 
 		var option:Option = new Option(
@@ -159,5 +175,36 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 	{
 		if(ClientPrefs.data.gameOverVibration)
 			lime.ui.Haptic.vibrate(0, 500);
+	}
+
+	// 添加联动逻辑
+	function adjustHitWindow(optionKey:String, newValue:Float) {
+		switch(optionKey) {
+			case 'perfectWindow':
+				ClientPrefs.data.perfectWindow = newValue;
+				if (newValue >= ClientPrefs.data.sickWindow) {
+					ClientPrefs.data.sickWindow = newValue;
+				}
+			case 'sickWindow':
+				ClientPrefs.data.sickWindow = newValue;
+				if (newValue <= ClientPrefs.data.perfectWindow) {
+					ClientPrefs.data.perfectWindow = newValue;
+				} else if (newValue >= ClientPrefs.data.goodWindow) {
+					ClientPrefs.data.goodWindow = newValue;
+				}
+			case 'goodWindow':
+				ClientPrefs.data.goodWindow = newValue;
+				if (newValue <= ClientPrefs.data.sickWindow) {
+					ClientPrefs.data.sickWindow = newValue;
+				} else if (newValue >= ClientPrefs.data.badWindow) {
+					ClientPrefs.data.badWindow = newValue;
+				}
+			case 'badWindow':
+				ClientPrefs.data.badWindow = newValue;
+				if (newValue <= ClientPrefs.data.goodWindow) {
+					ClientPrefs.data.goodWindow = newValue;
+				}
+			default:
+		}
 	}
 }

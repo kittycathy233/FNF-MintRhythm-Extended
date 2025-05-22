@@ -121,22 +121,50 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		}
 	}
 
-	override function changeSelection(change:Int = 0)
+	override function destroy()
 	{
 		if (arisTween != null)
+		{
 			arisTween.cancel();
+			arisTween.destroy();
+			arisTween = null;
+		}
+		
+		if (aris != null)
+		{
+			aris.destroy();
+			aris = null;
+		}
+		
+		super.destroy();
+	}
+
+	override function changeSelection(change:Int = 0)
+	{
+		// 安全清理之前的tween
+		if (arisTween != null)
+		{
+			arisTween.cancel();
+			arisTween.destroy();
+			arisTween = null;
+		}
 
 		super.changeSelection(change);
 
-		arisTween = FlxTween.tween(aris, {
-			x: ((arisDance == curSelected) || (antialiasingOption == curSelected)) ? 900 : 1500,
-			angle: (arisDance == curSelected) ? aris.angle : (Math.round(aris.angle / 360) * 360)
-		}, 0.4, {
-			ease: FlxEase.quadOut,
-			onComplete: function(twn:FlxTween) {
-				arisTween = null;
-			}
-		});
+		// 确保aris存在再创建tween
+		if (aris != null && aris.exists)
+		{
+			arisTween = FlxTween.tween(aris, {
+				x: ((arisDance == curSelected) || (antialiasingOption == curSelected)) ? 900 : 1500,
+				angle: (arisDance == curSelected) ? aris.angle : (Math.round(aris.angle / 360) * 360)
+			}, 0.4, {
+				ease: FlxEase.quadOut,
+				onComplete: function(twn:FlxTween) {
+					if (arisTween == twn)
+						arisTween = null;
+				}
+			});
+		}
 	}
 
 	override function update(elapsed:Float)
