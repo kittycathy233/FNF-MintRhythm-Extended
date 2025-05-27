@@ -47,6 +47,7 @@ class MainMenuState extends MusicBeatState
 
 	static var showOutdatedWarning:Bool = true;
 	var dropFileHandler:Dynamic = null;
+	private var tipText:FlxText;
 	override function create()
 	{
 		super.create();
@@ -115,6 +116,36 @@ class MainMenuState extends MusicBeatState
 		fnfVer.scrollFactor.set();
 		fnfVer.setFormat(Paths.font(ClientPrefs.data.language == 'zh_cn' ? 'ResourceHanRoundedCN-Bold.ttf' : "vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(fnfVer);
+		
+		// 添加 tips 显示
+		var tipsContent = CoolUtil.tipsShow();
+		if(tipsContent != null && tipsContent.length > 0) {
+			// 先按物理换行拆分
+			var tipsArray = tipsContent.split('\n');
+			// 获取随机行并替换其中的 "\n" 为实际换行符
+			var randomTip = StringTools.replace(
+				tipsArray[FlxG.random.int(0, tipsArray.length - 1)].trim(),
+				"\\n",
+				"\n"
+			);
+			
+			tipText = new FlxText(30, 30, FlxG.width - 60, randomTip);
+			tipText.scrollFactor.set();
+			tipText.setFormat(
+				Paths.font(Language.get('game_font')), 
+				22, 
+				FlxColor.WHITE, 
+				RIGHT, 
+				FlxTextBorderStyle.OUTLINE, 
+				FlxColor.BLACK
+			);
+			// 增加行间距
+			//tipText.lineSpacing = 3;
+			// 自动调整文本框高度
+			tipText.height = tipText.textField.textHeight + 8;
+			add(tipText);
+		}
+
 		changeItem();
 
 		#if ACHIEVEMENTS_ALLOWED

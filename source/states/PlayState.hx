@@ -667,7 +667,7 @@ class PlayState extends MusicBeatState
 			botplayTxt.y = ClientPrefs.data.botplayStyle == 'Kade' ? healthBar.y + 120 : healthBar.y + 70;
 
 		watermarkText = new FlxText(20, FlxG.height - 20, 0, 
-			SONG.song + "-" + Difficulty.getString().toUpperCase() + ' | PE: MintRhythm Extended v${MainMenuState.mrExtendVersion}', 
+			SONG.song + "-" + Difficulty.getString().toUpperCase() + ' | PE: MRE v${MainMenuState.mrExtendVersion}', 
 				14);
 		watermarkText.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		watermarkText.scrollFactor.set();
@@ -2111,12 +2111,13 @@ class PlayState extends MusicBeatState
             case "Codename":	20;
             case "Leather": 	7;
             case "SB":      	20;
-            case "VSlice":  	16;
+            case "VSlice(New)": 14;
+            case "VSlice(Old)": 36;
             default:       		9;
         }
 
         // 根据风格选择插值方式
-        if (["Kade", "VSlice", "Leather", "Codename"].contains(ClientPrefs.data.iconbopstyle)) {
+        if (["Kade", "VSlice(New)", "VSlice(Old)", "Leather", "Codename"].contains(ClientPrefs.data.iconbopstyle)) {
             // 线性缩放：使用 lerp 直接过渡到 1
             var rate:Float = elapsed * speedMultiplier * playbackRate;
             iconP1.scale.x = FlxMath.lerp(iconP1.scale.x, 1, rate);
@@ -2156,15 +2157,15 @@ class PlayState extends MusicBeatState
 			iconP2.x = healthBar.barCenter - (150 * iconP2.scale.x)/2 - iconOffset*2;
 			/*iconP1.y = iconP1InitialY;
 			iconP2.y = iconP2InitialY;*/
-			if (ClientPrefs.data.iconbopstyle == "Kade") {
-        		iconP1.y = iconP1InitialY + (iconP1.scale.y - 1) * 75;
-        		iconP2.y = iconP2InitialY + (iconP2.scale.y - 1) * 75;
+			if (ClientPrefs.data.iconbopstyle == "Kade" || ClientPrefs.data.iconbopstyle == "VSlice(Old)") {
+        		iconP1.y = iconP1InitialY + (iconP1.scale.y - 1) * 80;
+        		iconP2.y = iconP2InitialY + (iconP2.scale.y - 1) * 80;
     		}
-			if (ClientPrefs.data.iconbopstyle == "Leather") {
+			else if (ClientPrefs.data.iconbopstyle == "Leather") {
         		iconP1.y = iconP1InitialY + (iconP1.scale.y - 1) * 60;
         		iconP2.y = iconP2InitialY + (iconP2.scale.y - 1) * 60;
     		}
-			if (ClientPrefs.data.iconbopstyle == "Codename") {
+			else if (ClientPrefs.data.iconbopstyle == "Codename") {
         		if(ClientPrefs.data.downScroll){
 				iconP1.y = iconP1InitialY - (iconP1.scale.y - 1) * 70;
         		iconP2.y = iconP2InitialY - (iconP2.scale.y - 1) * 70;
@@ -3685,7 +3686,7 @@ class PlayState extends MusicBeatState
 				iconP1.scale.set(1.4, 1.4);
 				iconP2.scale.set(1.4, 1.4);
 				}
-				else if (ClientPrefs.data.iconbopstyle == "Leather" || ClientPrefs.data.iconbopstyle == "VSlice" || ClientPrefs.data.iconbopstyle == "Codename") {
+				else if (ClientPrefs.data.iconbopstyle == "Leather" || ClientPrefs.data.iconbopstyle == "VSlice(New)" || ClientPrefs.data.iconbopstyle == "Codename" || ClientPrefs.data.iconbopstyle == "VSlice(Old)") {
 					iconP1.scale.set(1.25, 1.25);
 					iconP2.scale.set(1.25, 1.25);
 				}

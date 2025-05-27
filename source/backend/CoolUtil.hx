@@ -8,6 +8,8 @@ import lime.utils.Assets as LimeAssets;
 #end
 class CoolUtil
 {
+	private static var cachedTips:String = null;
+	
 	public static function checkForUpdates(url:String = null):String {
 		if (url == null || url.length == 0)
 			url = "https://raw.gitmirror.com/kittycathy233/FNF-MintRhythm-Extended/main/gitVersion.txt";
@@ -34,6 +36,33 @@ class CoolUtil
 		}
 		return version;
 	}
+
+	public static function tipsShow(url:String = null, forceReload:Bool = false):String {
+		if (!forceReload && cachedTips != null)
+			return cachedTips;
+			
+		if (url == null || url.length == 0)
+			url = "https://raw.gitmirror.com/kittycathy233/FNF-MintRhythm-Things/main/engine/menu/tips/zh_cn.txt";
+		
+		var tipContent:String = "";
+		trace('searching for tips...');
+		var http = new haxe.Http(url);
+		http.onData = function (data:String)
+		{
+			tipContent = data.trim();
+			cachedTips = tipContent; // 缓存结果
+			http.onData = null;
+			http.onError = null;
+			http = null;
+		}
+		http.onError = function (error) {
+			trace('error: $error');
+		}
+		http.request();
+		
+		return tipContent;
+	}
+
 	inline public static function quantize(f:Float, snap:Float){
 		// changed so this actually works lol
 		var m:Float = Math.fround(f * snap);

@@ -111,6 +111,14 @@ class TitleState extends MusicBeatState
 		else
 			startIntro();
 		#end
+
+		#if MODS_ALLOWED
+		Mods.pushGlobalMods();
+		#end
+		Mods.loadTopMod();
+
+		// 预加载tips内容
+		CoolUtil.tipsShow();
 	}
 
 	var logoBl:FlxSprite;
