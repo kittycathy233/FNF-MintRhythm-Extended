@@ -206,5 +206,6 @@
     "gameplay_desc": "調整遊戲機制和難度",
     "extra_options_desc": "額外的遊戲自訂選項",
     "mobile_options_desc": "配置移動端特定設置",
-    "perfectwindow_desc": "調整「Perfect!!」評價的時間容許範圍（毫秒）。"
+    "perfectwindow_desc": "調整「Perfect!!」評價的時間容許範圍（毫秒）。",
+    "camhud_zoom_desc": "調整HUD介面元素的縮放大小。"
 }

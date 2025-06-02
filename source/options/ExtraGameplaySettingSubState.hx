@@ -178,6 +178,45 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			['camHUD', 'camGame']);
 		addOption(option);
 
+		option = new Option('Cam HUD Zoom',
+			Language.get("camhud_zoom_desc"),
+			'hudSize',
+			FLOAT);
+		option.displayFormat = '%v X';
+		option.scrollSpeed = 1;
+		option.minValue = 0.5;
+		option.maxValue = 1.2;
+		option.changeValue = 0.005;
+		option.decimals = 3; //小数点后三位
+		addOption(option);
+
+		option = new Option('FPS Position',
+			Language.get("fps_position_desc"),
+			'fpsPosition',
+			STRING,
+			['TOP_LEFT', 'TOP_RIGHT', 'BOTTOM_LEFT', 'BOTTOM_RIGHT']);
+		option.onChange = function() {
+			if(Main.fpsVar != null) {
+				Main.fpsVar.positionFPS(10, 3);
+			}
+		};
+		addOption(option);
+
+		option = new Option('FPS Spacing',
+			Language.get("fps_spacing_desc"),
+			'fpsSpacing',
+			INT);
+		option.scrollSpeed = 1;
+		option.minValue = 5;
+		option.maxValue = 50;
+		option.changeValue = 5;
+		option.onChange = function() {
+			if(Main.fpsVar != null) {
+				Main.fpsVar.positionFPS(10, 3);
+			}
+		};
+		addOption(option);
+
 		// 语言设置放在最后
 		option = new Option("Engine Language",
 			Language.get("change_language_desc"),

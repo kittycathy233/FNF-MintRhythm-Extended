@@ -207,7 +207,22 @@ class NoteOffsetState extends MusicBeatState
 		Conductor.bpm = 128.0;
 		FlxG.sound.playMusic(Paths.music('offsetSong'), 1, true);
 
+		// 根据设置调整图层
+		updateRatingsPosition();
+
 		super.create();
+	}
+
+	public function updateRatingsPosition()
+	{
+		var targetCamera:Array<FlxCamera> = ClientPrefs.data.ratingsPos == "camGame" ? [camGame] : [camHUD];
+
+		// 更新 rating 和 theEXrating 的图层
+		if (rating != null) rating.cameras = targetCamera;
+		if (theEXrating != null) theEXrating.cameras = targetCamera;
+
+		// 更新 comboNums 的图层
+		comboNums.cameras = targetCamera;
 	}
 
 	var holdTime:Float = 0;

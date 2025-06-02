@@ -127,7 +127,10 @@ import states.TitleState;
 	public var timebarStyle:String = "Psych";
 	public var legacynotepos:Bool = false;
 	public var ratingsPos:String = "camHUD";
-	
+
+	public var fpsPosition:String = "TOP_LEFT"; // "TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT"
+	public var fpsSpacing:Int = 10;
+	public var hudSize:Float = 1.0;
 }
 
 class ClientPrefs {

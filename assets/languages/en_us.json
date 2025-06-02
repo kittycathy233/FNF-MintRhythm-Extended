@@ -308,5 +308,8 @@
 	"gameplay_desc": "Tweak gameplay mechanics and difficulty",
 	"extra_options_desc": "Additional gameplay customization options",
 	"mobile_options_desc": "Configure mobile-specific settings",
-    "perfectwindow_desc": "Adjust the timing window (in milliseconds) for achieving a 'Perfect!!' rating."
+    "perfectwindow_desc": "Adjust the timing window (in milliseconds) for achieving a 'Perfect!!' rating.",
+    "fps_position_desc": "Set the position of the FPS counter on screen",
+    "fps_spacing_desc": "Adjust the spacing between FPS counter and screen edges",
+    "camhud_zoom_desc": "Adjust the zoom level of HUD elements."
 }

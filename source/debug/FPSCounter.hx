@@ -73,15 +73,23 @@ class FPSCounter extends TextField
 
 	public dynamic function updateText():Void // so people can override it in hscript
 	{
-		text = 
-		'FPS: $currentFPS' + 
-		'\nMemory: ${flixel.util.FlxStringUtil.formatBytes(memoryMegas)}' +
-		(ClientPrefs.data.exgameversion ? '\nPsych Engine v${MainMenuState.psychEngineVersion} \nMintRhythm Extended v${MainMenuState.mrExtendVersion}\nCommit: ${GameVersion.getGitCommitCount()} (${GameVersion.getGitCommitHash()})' : '') +
-		os;
+		var fpsText = 'FPS: $currentFPS\nMemory: ${flixel.util.FlxStringUtil.formatBytes(memoryMegas)}';
+        var infoText = '';
+        
+        if(ClientPrefs.data.exgameversion) {
+            infoText = '\nPsych Engine v${MainMenuState.psychEngineVersion}'
+                    + '\nMintRhythm Extended v${MainMenuState.mrExtendVersion}'
+                    + '\nCommit: ${GameVersion.getGitCommitCount()} (${GameVersion.getGitCommitHash()})';
+        }
+        
+        if(ClientPrefs.data.showRunningOS) infoText += os;
 
-		textColor = 0xFFFFFFFF;
-		if (currentFPS < FlxG.stage.window.frameRate * 0.5)
-			textColor = 0xFFFF0000;
+        var isBottom = ClientPrefs.data.fpsPosition.indexOf("BOTTOM") != -1;
+        text = isBottom ? infoText + "\n" + fpsText : fpsText + infoText;
+
+        textColor = 0xFFFFFFFF;
+        if (currentFPS < FlxG.stage.window.frameRate * 0.5)
+            textColor = 0xFFFF0000;
 	}
 
 	var deltaTimeout:Float = 0.0;
@@ -137,10 +145,29 @@ class FPSCounter extends TextField
 	inline function get_memoryMegas():Float
 		return cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE);
 
-	public inline function positionFPS(X:Float, Y:Float, ?scale:Float = 1){
+	public inline function positionFPS(X:Float, Y:Float, ?scale:Float = 1)
+	{
 		scaleX = scaleY = #if android (scale > 1 ? scale : 1) #else (scale < 1 ? scale : 1) #end;
-		x = FlxG.game.x + X;
-		y = FlxG.game.y + Y;
+		
+        var spacing = ClientPrefs.data.fpsSpacing;
+        var isRight = ClientPrefs.data.fpsPosition.indexOf("RIGHT") != -1;
+        var isBottom = ClientPrefs.data.fpsPosition.indexOf("BOTTOM") != -1;
+        
+        // Set text alignment
+        autoSize = isRight ? RIGHT : LEFT;
+        
+        // Position the counter
+        if(isRight) {
+            x = FlxG.game.x + FlxG.width - width - spacing;
+        } else {
+            x = FlxG.game.x + spacing;
+        }
+        
+        if(isBottom) {
+            y = FlxG.game.y + FlxG.height - height - spacing;
+        } else {
+            y = FlxG.game.y + spacing;
+        }
 	}
 
 	#if cpp

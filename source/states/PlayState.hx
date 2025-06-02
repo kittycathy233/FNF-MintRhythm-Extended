@@ -385,6 +385,9 @@ class PlayState extends MusicBeatState
 		camOther.bgColor.alpha = 0;
 		camArchived.bgColor.alpha = 0;
 		luaTpadCam.bgColor.alpha = 0;
+		if(ClientPrefs.data.hudSize != 1.0) {
+    		camHUD.zoom = ClientPrefs.data.hudSize;
+		}
 
 		FlxG.cameras.add(camHUD, false);
 		FlxG.cameras.add(camOther, false);
@@ -679,8 +682,9 @@ class PlayState extends MusicBeatState
 
 		uiGroup.cameras = [camHUD];
 		noteGroup.cameras = [camHUD];
-		comboGroup.cameras = [camHUD];
-
+		//comboGroup.cameras = [camHUD];
+		comboGroup.cameras = [ClientPrefs.data.ratingsPos == 'camHUD' ? camHUD : camGame];
+		msTimeTxt.cameras = [ClientPrefs.data.ratingsPos == 'camHUD' ? camHUD : camGame];
 		startingSong = true;
 
 		#if LUA_ALLOWED
@@ -1951,7 +1955,9 @@ class PlayState extends MusicBeatState
 		if (camZooming)
 		{
 			FlxG.camera.zoom = FlxMath.lerp(defaultCamZoom, FlxG.camera.zoom, Math.exp(-elapsed * 3.125 * camZoomingDecay * playbackRate));
-			camHUD.zoom = FlxMath.lerp(1, camHUD.zoom, Math.exp(-elapsed * 3.125 * camZoomingDecay * playbackRate));
+    		var targetZoom:Float = 1;
+    		if(ClientPrefs.data.hudSize != 1.0) targetZoom = ClientPrefs.data.hudSize;
+    		camHUD.zoom = FlxMath.lerp(targetZoom, camHUD.zoom, Math.exp(-elapsed * 3.125 * camZoomingDecay * playbackRate));
 		}
 
 		FlxG.watch.addQuick("secShit", curSection);

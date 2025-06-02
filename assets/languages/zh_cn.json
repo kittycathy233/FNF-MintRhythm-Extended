@@ -316,5 +316,8 @@
 	"visuals_desc": "修改视觉效果和HUD元素",
 	"gameplay_desc": "调整游戏机制和难度",
 	"extra_options_desc": "额外的游戏自定义选项",
-	"mobile_options_desc": "配置移动端特定设置"
+	"mobile_options_desc": "配置移动端特定设置",
+    "fps_position_desc": "设置FPS计数器在屏幕上的显示位置",
+    "fps_spacing_desc": "调整FPS计数器与屏幕边缘的间距",
+    "camhud_zoom_desc": "调整HUD界面元素的缩放大小。"
 }
