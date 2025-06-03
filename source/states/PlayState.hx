@@ -102,6 +102,10 @@ class PlayState extends MusicBeatState
 	var chartingInfo:FlxText;
 	var fpsVarInitialX:Float = 10;
 	
+	//可以被lua调用的杂项
+    public var targetZoom:Float = ClientPrefs.data.hudSize;
+
+
 	// 在类变量区添加
 	var displayedHealth:Float = 1; // 用于显示的血量
 	var healthLerp:Float = 1; // 用于平滑过渡的血量
@@ -1955,8 +1959,7 @@ class PlayState extends MusicBeatState
 		if (camZooming)
 		{
 			FlxG.camera.zoom = FlxMath.lerp(defaultCamZoom, FlxG.camera.zoom, Math.exp(-elapsed * 3.125 * camZoomingDecay * playbackRate));
-    		var targetZoom:Float = 1;
-    		if(ClientPrefs.data.hudSize != 1.0) targetZoom = ClientPrefs.data.hudSize;
+    		/*if(ClientPrefs.data.hudSize != 1.0) 	targetZoom = ClientPrefs.data.hudSize;*/
     		camHUD.zoom = FlxMath.lerp(targetZoom, camHUD.zoom, Math.exp(-elapsed * 3.125 * camZoomingDecay * playbackRate));
 		}
 
@@ -3713,58 +3716,47 @@ class PlayState extends MusicBeatState
 			} else { 
 				iconP1.angle = -8; iconP2.angle = -8;
 			}
-		} else 	if (ClientPrefs.data.iconbopstyle == "SB") {
+		} 	
+		else if (ClientPrefs.data.iconbopstyle == "SB") {
 			if (dancingLeft){
 				iconP1.angle = -15; iconP2.angle = 15; // maybe i should do it with tweens, but i'm lazy // i'll make it in -1.0.0, i promise
 			} else { 
 				iconP1.angle = 15; iconP2.angle = -15;
 			}
-		} else if (ClientPrefs.data.iconbopstyle == "MintRhythm") 
+		}	
+		else if (ClientPrefs.data.iconbopstyle == "MintRhythm") {
+    		var healthPercent:Float = healthBar.percent;
+    		if (healthPercent < 20) 
+    		{
+        		if (curBeat % 2 == 0) 
+        		{
+            		iconP2.angle = icondancingLeft ? -17 : 17;
+            		FlxTween.tween(iconP2, {angle: 0}, 0.3, {ease: FlxEase.circOut});
+            		icondancingLeft = !icondancingLeft;
+        		}
+    		} 
+    		else if (healthPercent > 80) 
+    		{
+        		if (curBeat % 2 == 0) 
+        		{
+            		iconP1.angle = icondancingLeft ? -17 : 17;
+            		FlxTween.tween(iconP1, {angle: 0}, 0.3, {ease: FlxEase.circOut});
+            		icondancingLeft = !icondancingLeft;
+        		}
+    		}
+		}
+		else 
 		{
-			var healthPercent:Float = healthBar.percent;
-			
-			if (healthPercent < 20) 
+			// 默认：双方每 4 拍同步旋转
+			if (curBeat % 4 == 0) 
 			{
-				// iconP1 每 4 拍旋转，iconP2 每 2 拍旋转
-				if (curBeat % 4 == 0) 
-				{
-					iconP1.angle = 30;
-					FlxTween.tween(iconP1, {angle: 0}, 0.3, {ease: FlxEase.circOut});
-				}
-				if (curBeat % 2 == 0) 
-				{
-					iconP2.angle = icondancingLeft ? -17 : 17;
-					FlxTween.tween(iconP2, {angle: 0}, 0.3, {ease: FlxEase.circOut});
-					icondancingLeft = !icondancingLeft;
-				}
-			} 
-			else if (healthPercent > 80) 
-			{
-				// iconP2 每 4 拍旋转，iconP1 每 2 拍旋转
-				if (curBeat % 4 == 0) 
-				{
-					iconP2.angle = -30;
-					FlxTween.tween(iconP2, {angle: 0}, 0.3, {ease: FlxEase.circOut});
-				}
-				if (curBeat % 2 == 0) 
-				{
-					iconP1.angle = icondancingLeft ? -17 : 17;
-					FlxTween.tween(iconP1, {angle: 0}, 0.3, {ease: FlxEase.circOut});
-					icondancingLeft = !icondancingLeft;
-				}
-			} 
-			else 
-			{
-				// 默认：双方每 4 拍同步旋转
-				if (curBeat % 4 == 0) 
-				{
-					iconP1.angle = -25;
-					iconP2.angle = 25;
-					FlxTween.tween(iconP1, {angle: 0}, 0.3, {ease: FlxEase.circOut});
-					FlxTween.tween(iconP2, {angle: 0}, 0.3, {ease: FlxEase.circOut});
-				}
+				iconP1.angle = -25;
+				iconP2.angle = 25;
+				FlxTween.tween(iconP1, {angle: 0}, 0.3, {ease: FlxEase.circOut});
+				FlxTween.tween(iconP2, {angle: 0}, 0.3, {ease: FlxEase.circOut});
 			}
 		}
+		
 
 		iconP1.updateHitbox();
 		iconP2.updateHitbox();
@@ -3796,34 +3788,57 @@ class PlayState extends MusicBeatState
 	}
 
 	override function sectionHit()
-	{
-		if (SONG.notes[curSection] != null)
-		{
-			if (generatedMusic && !endingSong && !isCameraOnForcedPos)
-				moveCameraSection();
+{
+    if (SONG.notes[curSection] != null)
+    {
+        if (generatedMusic && !endingSong && !isCameraOnForcedPos)
+            moveCameraSection();
 
-			if (camZooming && FlxG.camera.zoom < 1.35 && ClientPrefs.data.camZooms)
-			{
-				FlxG.camera.zoom += 0.015 * camZoomingMult;
-				camHUD.zoom += 0.03 * camZoomingMult;
-			}
+        if (camZooming /*&& FlxG.camera.zoom < 1.35 */&& ClientPrefs.data.camZooms)
+        {
+            FlxG.camera.zoom += 0.015 * camZoomingMult;
+            camHUD.zoom += 0.03 * camZoomingMult;
+        }
 
-			if (SONG.notes[curSection].changeBPM)
-			{
-				Conductor.bpm = SONG.notes[curSection].bpm;
-				setOnScripts('curBpm', Conductor.bpm);
-				setOnScripts('crochet', Conductor.crochet);
-				setOnScripts('stepCrochet', Conductor.stepCrochet);
-			}
-			setOnScripts('mustHitSection', SONG.notes[curSection].mustHitSection);
-			setOnScripts('altAnim', SONG.notes[curSection].altAnim);
-			setOnScripts('gfSection', SONG.notes[curSection].gfSection);
-		}
-		super.sectionHit();
+        // 在这里添加MintRhythm的icon 4拍旋转逻辑
+        if(ClientPrefs.data.iconbopstyle == "MintRhythm")
+        {
+            var healthPercent:Float = healthBar.percent;
+            if(healthPercent < 20)
+            {
+                iconP1.angle = 30;
+                FlxTween.tween(iconP1, {angle: 0}, 0.3, {ease: FlxEase.circOut});
+            }
+            else if(healthPercent > 80)
+            {
+                iconP2.angle = -30;  
+                FlxTween.tween(iconP2, {angle: 0}, 0.3, {ease: FlxEase.circOut});
+            }
+            else
+            {
+                iconP1.angle = -25;
+                iconP2.angle = 25;
+                FlxTween.tween(iconP1, {angle: 0}, 0.3, {ease: FlxEase.circOut});
+                FlxTween.tween(iconP2, {angle: 0}, 0.3, {ease: FlxEase.circOut}); 
+            }
+        }
 
-		setOnScripts('curSection', curSection);
-		callOnScripts('onSectionHit');
-	}
+        if (SONG.notes[curSection].changeBPM)
+        {
+            Conductor.bpm = SONG.notes[curSection].bpm;
+            setOnScripts('curBpm', Conductor.bpm);
+            setOnScripts('crochet', Conductor.crochet);
+            setOnScripts('stepCrochet', Conductor.stepCrochet);
+        }
+        setOnScripts('mustHitSection', SONG.notes[curSection].mustHitSection);
+        setOnScripts('altAnim', SONG.notes[curSection].altAnim);
+        setOnScripts('gfSection', SONG.notes[curSection].gfSection);
+    }
+    super.sectionHit();
+
+    setOnScripts('curSection', curSection);
+    callOnScripts('onSectionHit');
+}
 
 	#if LUA_ALLOWED
 	public function startLuasNamed(luaFile:String)
