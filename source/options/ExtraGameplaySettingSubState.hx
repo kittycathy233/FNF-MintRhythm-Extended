@@ -258,6 +258,14 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		};
 		addOption(option);
 
+		#if !mobile
+		option = new Option('Mods Import',
+			'If checked, you can drag and drop mod ZIP files to import mods.',
+			'enableModsImport',
+			BOOL);
+		addOption(option);
+		#end
+
 		super();
 	}
 

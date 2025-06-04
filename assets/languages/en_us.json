@@ -311,5 +311,7 @@
     "perfectwindow_desc": "Adjust the timing window (in milliseconds) for achieving a 'Perfect!!' rating.",
     "fps_position_desc": "Set the position of the FPS counter on screen",
     "fps_spacing_desc": "Adjust the spacing between FPS counter and screen edges",
-    "camhud_zoom_desc": "Adjust the zoom level of HUD elements."
+    "camhud_zoom_desc": "Adjust the zoom level of HUD elements.",
+    "legacy_notepos_desc": "Use the old note position system.",
+    "ratings_pos_desc": "Set the position of the ratings on screen."
 }

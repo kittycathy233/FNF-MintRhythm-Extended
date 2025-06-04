@@ -131,6 +131,7 @@ import states.TitleState;
 	public var fpsPosition:String = "TOP_LEFT"; // "TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT"
 	public var fpsSpacing:Int = 10;
 	public var hudSize:Float = 1.0;
+	public var enableModsImport:Bool = false; // Enable Mods Import in the main menu
 }
 
 class ClientPrefs {

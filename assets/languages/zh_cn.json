@@ -319,5 +319,7 @@
 	"mobile_options_desc": "配置移动端特定设置",
     "fps_position_desc": "设置FPS计数器在屏幕上的显示位置",
     "fps_spacing_desc": "调整FPS计数器与屏幕边缘的间距",
-    "camhud_zoom_desc": "调整HUD界面元素的缩放大小。"
+    "camhud_zoom_desc": "调整HUD界面元素的缩放大小。",
+    "legacy_notepos_desc": "使用旧的音符位置系统。",
+    "ratings_pos_desc": "设置评分在屏幕上的位置。"
 }

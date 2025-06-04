@@ -207,5 +207,7 @@
     "extra_options_desc": "額外的遊戲自訂選項",
     "mobile_options_desc": "配置移動端特定設置",
     "perfectwindow_desc": "調整「Perfect!!」評價的時間容許範圍（毫秒）。",
-    "camhud_zoom_desc": "調整HUD介面元素的縮放大小。"
+    "camhud_zoom_desc": "調整HUD介面元素的縮放大小。",
+    "legacy_notepos_desc": "使用舊的音符位置系統。",
+    "ratings_pos_desc": "設定評分在螢幕上的位置。"
 }

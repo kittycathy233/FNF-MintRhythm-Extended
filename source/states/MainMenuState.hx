@@ -172,13 +172,17 @@ class MainMenuState extends MusicBeatState
 		addTouchPad('NONE', 'E');
 
 		#if desktop
-		// 仅在主菜单启用拖拽
-		dropFileHandler = function(path:String) {
-			if (path.toLowerCase().endsWith('.zip')) {
-				handleZipImport(path);
-			}
-		};
-		Application.current.window.onDropFile.add(dropFileHandler);
+		// 仅在PC平台且启用了导入功能时添加拖放监听
+		if (ClientPrefs.data.enableModsImport) {
+			dropFileHandler = function(path:String) {
+				if (path.toLowerCase().endsWith('.zip')) {
+					// 获取文件名
+					var fileName = path.substring(path.lastIndexOf('/') + 1);
+					handleZipImport(path, fileName);
+				}
+			};
+			Application.current.window.onDropFile.add(dropFileHandler);
+		}
 		#end
 	}
 
@@ -432,25 +436,10 @@ class MainMenuState extends MusicBeatState
 		camFollow.y = selectedItem.getGraphicMidpoint().y;
 	}
 
-	function handleZipImport(zipPath:String):Void {
-		try {
-			var bytes = SysFile.getBytes(zipPath);
-			var reader = new Reader(new BytesInput(bytes));
-			var entries = reader.read();
-			// 直接检测所有目录
-			var hasWeeks = false, hasData = false, hasSongs = false;
-			for (entry in entries) {
-				var path = entry.fileName;
-				if (path.indexOf('weeks/') >= 0) hasWeeks = true;
-				if (path.indexOf('data/') >= 0) hasData = true;
-				if (path.indexOf('songs/') >= 0) hasSongs = true;
-			}
-			if (hasWeeks && hasData && hasSongs) {
-				MusicBeatState.switchState(new ModsImport(zipPath, null));
-			}
-		} catch(e) {
-			trace('Zip解析失败: $e');
-		}
+	function handleZipImport(zipPath:String, zipName:String):Void {
+		// 获取文件名，不包含路径
+		var fileName = zipName.substring(zipName.lastIndexOf('/') + 1);
+		MusicBeatState.switchState(new ModsImport(zipPath, fileName));
 	}
 
 	override function destroy()
