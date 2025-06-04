@@ -622,7 +622,7 @@ class PlayState extends MusicBeatState
 		reloadHealthBarColors();
 		uiGroup.add(healthBar);
 
-		msTimeTxt = new FlxText(0, 0, 200, "", 32);
+		msTimeTxt = new FlxText(0, 0, 250, "", 32);
 		msTimeTxt.setFormat(Paths.font('vcr.ttf'), 23, 0xFF87CEEB, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		msTimeTxt.scrollFactor.set();
 		msTimeTxt.alpha = 0;
@@ -2933,8 +2933,8 @@ class PlayState extends MusicBeatState
 		if (!ClientPrefs.data.rmmsTimeTxt) {
 			msTimeTxt.alpha = ClientPrefs.data.ratingsAlpha;
 			msTimeTxt.scale.set(1.35, 1.2);
-			if(cpuControlled) msTimeTxt.text = Std.string(Math.round(noteDiff)) + "ms(BOT)";
-			else msTimeTxt.text = Std.string(Math.round(noteDiff)) + "ms";
+			if(cpuControlled) msTimeTxt.text = Std.string(CoolUtil.floorDecimal(noteDiff, 2)) + "ms(BOT)";
+			else msTimeTxt.text = Std.string(CoolUtil.floorDecimal(noteDiff, 2)) + "ms";
 
 			if (msTimeTxtTween1 != null){
 				msTimeTxtTween1.cancel(); msTimeTxtTween1.destroy(); // top 10 awesome code
@@ -3743,17 +3743,17 @@ class PlayState extends MusicBeatState
             		FlxTween.tween(iconP1, {angle: 0}, 0.3, {ease: FlxEase.circOut});
             		icondancingLeft = !icondancingLeft;
         		}
+        		}
     		}
-		}
-		else 
-		{
+			else
+			{			
 			// 默认：双方每 4 拍同步旋转
-			if (curBeat % 4 == 0) 
-			{
-				iconP1.angle = -25;
-				iconP2.angle = 25;
-				FlxTween.tween(iconP1, {angle: 0}, 0.3, {ease: FlxEase.circOut});
-				FlxTween.tween(iconP2, {angle: 0}, 0.3, {ease: FlxEase.circOut});
+				if (curBeat % 4 == 0) 
+				{
+					iconP1.angle = -25;
+					iconP2.angle = 25;
+					FlxTween.tween(iconP1, {angle: 0}, 0.3, {ease: FlxEase.circOut});
+					FlxTween.tween(iconP2, {angle: 0}, 0.3, {ease: FlxEase.circOut});	
 			}
 		}
 		
