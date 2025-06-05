@@ -469,16 +469,21 @@ class Note extends FlxSprite
 		animation.addByPrefix(name, prefix, framerate, doLoop);
 	}
 
-	override function update(elapsed:Float)
+	override function update(elapsed:Float) 
 	{
 		super.update(elapsed);
 
 		if (mustPress)
 		{
-			canBeHit = (strumTime > Conductor.songPosition - (Conductor.safeZoneOffset * lateHitMult) &&
-						strumTime < Conductor.songPosition + (Conductor.safeZoneOffset * earlyHitMult));
+			// 使用更精确的浮点数计算
+			var earlyWindow:Float = Conductor.safeZoneOffset * earlyHitMult;
+			var lateWindow:Float = Conductor.safeZoneOffset * lateHitMult;
+			
+			// 增加小数位的精度
+			var timeUntilHit:Float = (strumTime - Conductor.songPosition);
+			canBeHit = (timeUntilHit > -lateWindow && timeUntilHit < earlyWindow);
 
-			if (strumTime < Conductor.songPosition - Conductor.safeZoneOffset && !wasGoodHit)
+			if (strumTime < Conductor.songPosition - lateWindow && !wasGoodHit)
 				tooLate = true;
 		}
 		else

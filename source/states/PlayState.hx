@@ -2916,7 +2916,8 @@ class PlayState extends MusicBeatState
 
 	private function popUpScore(note:Note = null):Void
 	{
-		var noteDiff:Float = Math.abs(note.strumTime - Conductor.songPosition + ClientPrefs.data.ratingOffset);
+		// 移除Math.abs()来允许显示负值
+		var noteDiff:Float = note.strumTime - Conductor.songPosition + ClientPrefs.data.ratingOffset;
 		vocals.volume = 1;
 
 		if (!ClientPrefs.data.comboStacking && comboGroup.members.length > 0)
@@ -2932,7 +2933,8 @@ class PlayState extends MusicBeatState
 
 		if (!ClientPrefs.data.rmmsTimeTxt) {
 			msTimeTxt.alpha = ClientPrefs.data.ratingsAlpha;
-			msTimeTxt.scale.set(1.35, 1.2);
+			msTimeTxt.scale.set(1.35, 0.85);
+			// 调整显示格式，保留两位小数
 			if(cpuControlled) msTimeTxt.text = Std.string(CoolUtil.floorDecimal(noteDiff, 2)) + "ms(BOT)";
 			else msTimeTxt.text = Std.string(CoolUtil.floorDecimal(noteDiff, 2)) + "ms";
 

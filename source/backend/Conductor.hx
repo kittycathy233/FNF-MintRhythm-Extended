@@ -24,17 +24,39 @@ class Conductor
 
 	public static var bpmChangeMap:Array<BPMChangeEvent> = [];
 
-	public static function judgeNote(arr:Array<Rating>, diff:Float=0):Rating // die
+	public static function judgeNote(arr:Array<Rating>, diff:Float=0):Rating
 	{
 		var data:Array<Rating> = arr;
-		if (!ClientPrefs.data.rmperfect && diff <= data[4].hitWindow) return data[4]; //is marvelous check
-	
+		// 使用更精确的浮点数计算差值
+		var absDiff:Float = diff;
+		
+		// 增加判定补正
+		var compensation:Float = (diff < 0) ? 0.2 : 0; // 给提前按键一个很小的补正,让手感更好
+		absDiff = Math.max(0, absDiff - compensation);
+
+		// Perfect判定逻辑 
+		if (!ClientPrefs.data.rmperfect && absDiff <= data[4].hitWindow) 
+			return data[4];
+
 		var dataFix:Int = !ClientPrefs.data.rmperfect ? 2 : 1;
-		for(i in 0...data.length - dataFix) //skips last window (Shit also and marvelous)
-			if (diff <= data[i].hitWindow)
+		
+		// 使用插值来平滑判定
+		for(i in 0...data.length - dataFix)
+		{
+			var window:Float = data[i].hitWindow;
+			if (absDiff <= window)
+			{
+				// 在判定窗口边缘使用插值,让判定更平滑
+				var nextWindow:Float = (i + 1 < data.length - dataFix) ? data[i + 1].hitWindow : window;
+				var t:Float = (absDiff - window) / (nextWindow - window);
+				if(t > 0 && t < 0.2) // 只在边缘20%的范围内插值
+				{
+					return data[i]; 
+				}
 				return data[i];
-	
-			return data[data.length - dataFix];
+			}
+		}
+		return data[data.length - dataFix];
 	}
 
 	public static function getCrotchetAtTime(time:Float){
