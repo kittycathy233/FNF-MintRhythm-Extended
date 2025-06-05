@@ -74,7 +74,7 @@ class PauseSubState extends MusicBeatSubstate
 		bg.scrollFactor.set();
 		add(bg);
 
-		var levelInfo:FlxText = new FlxText(20, 15, 0, PlayState.SONG.song, 32);
+		var levelInfo:FlxText = new FlxText(20, 15, 0, 'SONG: ${PlayState.SONG.song}', 32);
 		levelInfo.scrollFactor.set();
 		levelInfo.setFormat(Paths.font("vcr.ttf"), 32);
 		levelInfo.updateHitbox();
@@ -86,13 +86,31 @@ class PauseSubState extends MusicBeatSubstate
 		levelDifficulty.updateHitbox();
 		add(levelDifficulty);
 
-		var blueballedTxt:FlxText = new FlxText(20, 15 + 64, 0, LanguageBasic.getPhrase("blueballed", "Blueballed: {1}", [PlayState.deathCounter]), 32);
+		var bpmText:FlxText = new FlxText(20, 15 + 64, 0, 'BPM: ${PlayState.SONG.bpm}', 32);
+		bpmText.scrollFactor.set();
+		bpmText.setFormat(Paths.font('vcr.ttf'), 32);
+		bpmText.updateHitbox();
+		add(bpmText);
+
+		var speedText:FlxText = new FlxText(20, 15 + 96, 0, 'NOTE SPEED: ${PlayState.SONG.speed}x', 32);
+		speedText.scrollFactor.set();
+		speedText.setFormat(Paths.font('vcr.ttf'), 32);
+		speedText.updateHitbox();
+		add(speedText);
+
+		var formatText:FlxText = new FlxText(20, 15 + 128, 0, 'FORMAT: ${PlayState.SONG.format == "psych_v1_convert" ? "psych_old_convert" : PlayState.SONG.format}', 32);
+		formatText.scrollFactor.set();
+		formatText.setFormat(Paths.font('vcr.ttf'), 32);
+		formatText.updateHitbox();
+		add(formatText);
+
+		var blueballedTxt:FlxText = new FlxText(20, 15 + 160, 0, LanguageBasic.getPhrase("blueballed", "Blueballed: {1}", [PlayState.deathCounter]), 32);
 		blueballedTxt.scrollFactor.set();
 		blueballedTxt.setFormat(Paths.font('vcr.ttf'), 32);
 		blueballedTxt.updateHitbox();
 		add(blueballedTxt);
 
-		practiceText = new FlxText(20, 15 + 101, 0, LanguageBasic.getPhrase("Practice Mode").toUpperCase(), 32);
+		practiceText = new FlxText(20, 15 + 197, 0, LanguageBasic.getPhrase("Practice Mode").toUpperCase(), 32);
 		practiceText.scrollFactor.set();
 		practiceText.setFormat(Paths.font('vcr.ttf'), 32);
 		practiceText.x = FlxG.width - (practiceText.width + 20);
@@ -100,7 +118,7 @@ class PauseSubState extends MusicBeatSubstate
 		practiceText.visible = PlayState.instance.practiceMode;
 		add(practiceText);
 
-		var chartingText:FlxText = new FlxText(20, 15 + 101, 0, LanguageBasic.getPhrase("Charting Mode").toUpperCase(), 32);
+		var chartingText:FlxText = new FlxText(20, 15 + 197, 0, LanguageBasic.getPhrase("Charting Mode").toUpperCase(), 32);
 		chartingText.scrollFactor.set();
 		chartingText.setFormat(Paths.font('vcr.ttf'), 32);
 		chartingText.x = FlxG.width - (chartingText.width + 20);
@@ -112,15 +130,24 @@ class PauseSubState extends MusicBeatSubstate
 		blueballedTxt.alpha = 0;
 		levelDifficulty.alpha = 0;
 		levelInfo.alpha = 0;
+		bpmText.alpha = 0;
+		speedText.alpha = 0;
+		formatText.alpha = 0;
 
 		levelInfo.x = FlxG.width - (levelInfo.width + 20);
 		levelDifficulty.x = FlxG.width - (levelDifficulty.width + 20);
+		bpmText.x = FlxG.width - (bpmText.width + 20);
+		speedText.x = FlxG.width - (speedText.width + 20);
+		formatText.x = FlxG.width - (formatText.width + 20);
 		blueballedTxt.x = FlxG.width - (blueballedTxt.width + 20);
 
-		FlxTween.tween(bg, {alpha: 0.6}, 0.4, {ease: FlxEase.quartInOut});
-		FlxTween.tween(levelInfo, {alpha: 1, y: 20}, 0.4, {ease: FlxEase.quartInOut, startDelay: 0.3});
-		FlxTween.tween(levelDifficulty, {alpha: 1, y: levelDifficulty.y + 5}, 0.4, {ease: FlxEase.quartInOut, startDelay: 0.5});
-		FlxTween.tween(blueballedTxt, {alpha: 1, y: blueballedTxt.y + 5}, 0.4, {ease: FlxEase.quartInOut, startDelay: 0.7});
+		FlxTween.tween(bg, {alpha: 0.6}, 0.3, {ease: FlxEase.quartInOut});
+		FlxTween.tween(levelInfo, {alpha: 1, y: 20}, 0.3, {ease: FlxEase.quartInOut, startDelay: 0.1});
+		FlxTween.tween(levelDifficulty, {alpha: 1, y: levelDifficulty.y + 5}, 0.3, {ease: FlxEase.quartInOut, startDelay: 0.2});
+		FlxTween.tween(bpmText, {alpha: 1, y: bpmText.y + 5}, 0.3, {ease: FlxEase.quartInOut, startDelay: 0.3});
+		FlxTween.tween(speedText, {alpha: 1, y: speedText.y + 5}, 0.3, {ease: FlxEase.quartInOut, startDelay: 0.4}); 
+		FlxTween.tween(formatText, {alpha: 1, y: formatText.y + 5}, 0.3, {ease: FlxEase.quartInOut, startDelay: 0.5});
+		FlxTween.tween(blueballedTxt, {alpha: 1, y: blueballedTxt.y + 5}, 0.3, {ease: FlxEase.quartInOut, startDelay: 0.6});
 
 		grpMenuShit = new FlxTypedGroup<Alphabet>();
 		add(grpMenuShit);
@@ -243,7 +270,7 @@ class PauseSubState extends MusicBeatSubstate
 				catch(e:haxe.Exception)
 				{
 					trace('ERROR! ${e.message}');
-	
+
 					var errorStr:String = e.message;
 					if(errorStr.startsWith('[lime.utils.Assets] ERROR:')) errorStr = 'Missing file: ' + errorStr.substring(errorStr.indexOf(songLowercase), errorStr.length-1); //Missing chart
 					else errorStr += '\n\n' + e.stack;
