@@ -2,7 +2,7 @@
 <project>
 	<!-- _________________________ Application Settings _________________________ -->
 
-	<app title="Friday Night Funkin': Psych Engine: MintRhythm Extended" file="MintRhythmExtended" packageName="com.kittycathy.mrengine" package="com.kittycathy.mrengine" main="Main" version="1.2.1.20250604" company="ShadowMario" />
+	<app title="Psych Engine: MintRhythm Extended" file="MintRhythmExtended" packageName="com.kittycathy.mrextended" package="com.kittycathy.mrextended" main="Main" version="1.2.2 beta" company="ShadowMario" />
 
 	<!--Switch Export with Unique ApplicationID and Icon-->
 	<set name="APP_ID" value="0x0100f6c013bbc000" />
