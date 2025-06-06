@@ -3157,7 +3157,8 @@ class PlayState extends MusicBeatState
 		if(ret == LuaUtils.Function_Stop) return;
 
 		// more accurate hit time for the ratings?
-		var lastTime:Float = Conductor.songPosition;
+		//判定修改（？）
+		//var lastTime:Float = Conductor.songPosition;
 		if(Conductor.songPosition >= 0) Conductor.songPosition = FlxG.sound.music.time + Conductor.offset;
 
 		// obtain notes that the player can hit
@@ -3199,7 +3200,8 @@ class PlayState extends MusicBeatState
 		if(!keysPressed.contains(key)) keysPressed.push(key);
 
 		//more accurate hit time for the ratings? part 2 (Now that the calculations are done, go back to the time it was before for not causing a note stutter)
-		Conductor.songPosition = lastTime;
+		//判定修改（？）
+		//Conductor.songPosition = lastTime;
 
 		var spr:StrumNote = playerStrums.members[key];
 		if(strumsBlocked[key] != true && spr != null && spr.animation.curAnim.name != 'confirm')
