@@ -1708,10 +1708,6 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		}
 		ignoreClickForThisFrame = false;
 
-		// 修复 curBeat 和 curStep 的计算
-		var curBeat:Int = Math.floor(Conductor.songPosition / Conductor.crochet);
-		var curStep:Int = Math.floor(Conductor.songPosition / (Conductor.crochet / 4));
-
 		// Add icon bounce effect on every beat
 		if (curBeat != lastBeatHit) {
 			var mustHitSection:Bool = (PlayState.SONG.notes[curSec] != null && PlayState.SONG.notes[curSec].mustHitSection);
@@ -4131,9 +4127,9 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 												{
 													if(event == null) continue;
 													pack.chart.events.push(event);
-													@:privateAccess pack.chart.events.sort(VSlice.sortByTime);
 												}
 											}
+										@:privateAccess pack.chart.events.sort(VSlice.sortByTime);
 										}
 									}
 
