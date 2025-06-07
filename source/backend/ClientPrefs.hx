@@ -132,6 +132,7 @@ import states.TitleState;
 	public var fpsSpacing:Int = 10;
 	public var hudSize:Float = 1.0;
 	public var enableModsImport:Bool = false; // Enable Mods Import in the main menu
+	public var eventDebug:Bool = true;
 }
 
 class ClientPrefs {
@@ -162,6 +163,7 @@ class ClientPrefs {
 		
 		'debug_1'		=> [SEVEN],
 		'debug_2'		=> [EIGHT],
+		'debug_3'		=> [NINE],
 		
 		'fullscreen'	=> [F11]
 	];

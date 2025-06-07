@@ -105,6 +105,11 @@ class PlayState extends MusicBeatState
 	var chartingInfo:FlxText;
 	var fpsVarInitialX:Float = 10;
 	
+
+	var eventDebugGroup:FlxTypedGroup<FlxText>; // 存储事件文本的组
+	var eventTexts:Array<FlxText> = []; // 活动事件文本数组
+	var maxEventTexts:Int = 8; // 最大显示事件数量
+
 	//可以被lua调用的杂项
     public var targetZoom:Float = ClientPrefs.data.hudSize;
 
@@ -555,6 +560,10 @@ class PlayState extends MusicBeatState
 			}
 		#end
 			
+		eventDebugGroup = new FlxTypedGroup<FlxText>();
+		eventDebugGroup.cameras = [camArchived];
+		add(eventDebugGroup);
+
 		var camPos:FlxPoint = FlxPoint.get(girlfriendCameraOffset[0], girlfriendCameraOffset[1]);
 		if(gf != null)
 		{
@@ -865,6 +874,50 @@ class PlayState extends MusicBeatState
 		Sys.println(text);
 	}
 	#end
+
+function showEventDebug(eventName:String, values:Array<String>, strumTime:Float):Void {
+    if (!chartingMode) return;
+
+    var text:String = 'TriggerEvent: $eventName\nTime: ${Math.round(strumTime)}ms | Step: ${curStep}';
+    if (values.length > 0) text += '\nValues: ${values.join(", ")}';
+
+    var debugText:FlxText = new FlxText(20, 0, FlxG.width - 40, text, 16);
+    debugText.setFormat(Paths.font("unifont-16.0.02.otf"), 16, FlxColor.CYAN, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+    debugText.borderSize = 3;
+    debugText.scrollFactor.set();
+    debugText.cameras = [camArchived];
+
+    // 添加到组和数组
+    eventDebugGroup.add(debugText);
+    eventTexts.push(debugText);
+
+    // 更新所有文本位置，使其显示在上部
+    for (i in 0...eventTexts.length) {
+        eventTexts[i].y = 90 + (i * 55);
+    }
+
+    FlxTween.tween(debugText, { alpha: 0 },	(60 / Conductor.bpm) * 4 , {
+        ease: FlxEase.circIn,
+        onComplete: function(tween:FlxTween) {
+            // 动画完成后移除文本
+            eventDebugGroup.remove(debugText, true);
+            eventTexts.remove(debugText);
+            debugText.destroy();
+
+            // 重新调整剩余文本的位置
+            for (i in 0...eventTexts.length) {
+                eventTexts[i].y = 90 + (i * 55);
+            }
+        }
+    });
+
+    // 清理旧文本
+    if (eventTexts.length > maxEventTexts) {
+        var oldText = eventTexts.shift();
+        eventDebugGroup.remove(oldText, true);
+        oldText.destroy();
+    }
+}
 
 	public function reloadHealthBarColors() {
 		healthBar.setColors(FlxColor.fromRGB(dad.healthColorArray[0], dad.healthColorArray[1], dad.healthColorArray[2]),
@@ -1925,6 +1978,8 @@ class PlayState extends MusicBeatState
 				openChartEditor();
 			else if (controls.justPressed('debug_2'))
 				openCharacterEditor();
+			else if (controls.justPressed('debug_3'))
+				eventDebugGroup.visible = !eventDebugGroup.visible;
 		}
 
 		if (healthBar.bounds.max != null && health > healthBar.bounds.max)
@@ -2395,7 +2450,9 @@ class PlayState extends MusicBeatState
 		if(Math.isNaN(flValue2)) flValue2 = null;
 		if(Math.isNaN(flValue3)) flValue3 = null;
 		if(Math.isNaN(flValue4)) flValue4 = null;
-
+		if (chartingMode && ClientPrefs.data.eventDebug) {
+    	showEventDebug(eventName, [value1, value2, value3, value4], strumTime);
+		}
 		switch(eventName) {
 			case 'Hey!':
 				var value:Int = 2;
@@ -3738,14 +3795,14 @@ class PlayState extends MusicBeatState
 	
 		if (ClientPrefs.data.iconbopstyle == "OS") {
 			if (dancingLeft){
-				iconP1.angle = 8; iconP2.angle = 8; // maybe i should do it with tweens, but i'm lazy // i'll make it in -1.0.0, i promise
+				iconP1.angle = 8; iconP2.angle = 8; // maybe i should do it with tweens, but i'm lazy // i'll make it in -1.0.0, i promise //这是OS引擎的作者写的，然而OS已经停更了（悲）
 			} else { 
 				iconP1.angle = -8; iconP2.angle = -8;
 			}
 		} 	
 		else if (ClientPrefs.data.iconbopstyle == "SB") {
 			if (dancingLeft){
-				iconP1.angle = -15; iconP2.angle = 15; // maybe i should do it with tweens, but i'm lazy // i'll make it in -1.0.0, i promise
+				iconP1.angle = -15; iconP2.angle = 15;
 			} else { 
 				iconP1.angle = 15; iconP2.angle = -15;
 			}
@@ -3769,18 +3826,17 @@ class PlayState extends MusicBeatState
             		FlxTween.tween(iconP1, {angle: 0}, 0.3, {ease: FlxEase.circOut});
             		icondancingLeft = !icondancingLeft;
         		}
-        		}
-    		}
+        	}
 			else
-			{			
-			// 默认：双方每 4 拍同步旋转
+			{
 				if (curBeat % 4 == 0) 
 				{
 					iconP1.angle = -25;
 					iconP2.angle = 25;
 					FlxTween.tween(iconP1, {angle: 0}, 0.3, {ease: FlxEase.circOut});
 					FlxTween.tween(iconP2, {angle: 0}, 0.3, {ease: FlxEase.circOut});	
-			}
+				}
+    		}
 		}
 		
 

@@ -102,6 +102,12 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		option = new Option('Show Event Information',
+			Language.get("events_debug_desc"),
+			'eventDebug',
+			BOOL);
+		addOption(option);
+
 		// PERCENT 类型设置
 		option = new Option('Ratings Opacity',
 			Language.get("rating_opac_desc"),
