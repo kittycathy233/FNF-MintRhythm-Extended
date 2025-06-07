@@ -86,19 +86,19 @@ class PauseSubState extends MusicBeatSubstate
 		levelDifficulty.updateHitbox();
 		add(levelDifficulty);
 
-		var bpmText:FlxText = new FlxText(20, 15 + 64, 0, 'BPM: ${PlayState.SONG.bpm}', 32);
+		var bpmText:FlxText = new FlxText(20, 15 + 64, 0, 'BPM: ${Conductor.bpm}', 32);
 		bpmText.scrollFactor.set();
 		bpmText.setFormat(Paths.font('vcr.ttf'), 32);
 		bpmText.updateHitbox();
 		add(bpmText);
 
-		var speedText:FlxText = new FlxText(20, 15 + 96, 0, 'NOTE SPEED: ${PlayState.SONG.speed}x', 32);
+		var speedText:FlxText = new FlxText(20, 15 + 96, 0, 'NOTE SPEED: ${PlayState.instance.songSpeed}x ${PlayState.SONG.speed != PlayState.instance.songSpeed ? '(${PlayState.SONG.speed}x)' : ''}', 32);
 		speedText.scrollFactor.set();
 		speedText.setFormat(Paths.font('vcr.ttf'), 32);
 		speedText.updateHitbox();
 		add(speedText);
 
-		var formatText:FlxText = new FlxText(20, 15 + 128, 0, 'FORMAT: ${PlayState.SONG.format == "psych_v1_convert" ? "psych_old_convert" : PlayState.SONG.format}', 32);
+		var formatText:FlxText = new FlxText(20, 15 + 128, 0, 'CHART FORMAT: ${PlayState.SONG.format}', 32);
 		formatText.scrollFactor.set();
 		formatText.setFormat(Paths.font('vcr.ttf'), 32);
 		formatText.updateHitbox();

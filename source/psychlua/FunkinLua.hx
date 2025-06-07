@@ -217,6 +217,14 @@ class FunkinLua {
 
 			return runningScripts;
 		});
+		Lua_helper.add_callback(lua, "initAnalyzer", function(barCount:Int, maxDelta:Float = 0.01, peakHold:Int = 30) {
+			PlayState.instance.initAnalyzer(barCount, maxDelta, peakHold);
+			return true;
+		});
+
+		Lua_helper.add_callback(lua, "getAudioLevels", function(barCount:Int, maxDelta:Float = 0.01, peakHold:Int = 30) {
+			return PlayState.instance.getAudioLevels();
+		});
 
 		addLocalCallback("setOnScripts", function(varName:String, arg:Dynamic, ?ignoreSelf:Bool = false, ?exclusions:Array<String> = null) {
 			if(exclusions == null) exclusions = [];
