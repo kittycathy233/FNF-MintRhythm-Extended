@@ -2,6 +2,7 @@ package backend;
 
 import openfl.utils.Assets;
 import lime.utils.Assets as LimeAssets;
+import backend.ExtraKeysHandler.EKNoteColor;
 
 #if cpp
 @:cppFileCode('#include <thread>')
@@ -232,6 +233,83 @@ class CoolUtil
 				text.borderStyle = NONE;
 		}
 	}
+public static function getArrowRGB(path:String = 'arrowRGB.json', defaultArrowRGB:Array<EKNoteColor>):ArrowRGBSavedData {
+		var result:ArrowRGBSavedData;
+		var content:String = '';
+		#if sys
+		if(FileSystem.exists(path)) content = File.getContent(path);
+		else {
+			// create a default ArrowRGBSavedData
+			var colorsToUse = [];
+			for (color in defaultArrowRGB) {
+				colorsToUse.push(color);
+			}
+
+			var defaultSaveARGB:ArrowRGBSavedData = new ArrowRGBSavedData(colorsToUse);
+
+			// write it
+			var writer = new json2object.JsonWriter<ArrowRGBSavedData>();
+			content = writer.write(defaultSaveARGB, '    ');
+			File.saveContent(path, content);
+
+			trace(path + ' (Color save) didn\'t exist. Written.');
+		}
+		#else
+		if(Assets.exists(path)) content = Assets.getText(path);
+		#end
+
+		var parser = new json2object.JsonParser<ArrowRGBSavedData>();
+		parser.fromJson(content);
+		result = parser.value;
+
+		// automatically (?) sets colors of notes that have no colors
+		for (i in 0...ExtraKeysHandler.instance.data.maxKeys+1) {
+			// colors dont exist
+			
+			// cannot take the previous approach since 
+			// this is indexed and not per mania
+			if (result.colors[i] == null) {
+				result.colors[i] = defaultArrowRGB[i];
+			}
+		}
+
+		return result;
+	}
+
+	public static function getKeybinds(path:String = 'ekkeybinds.json', defaultKeybinds:Array<Array<Array<Int>>>):EKKeybindSavedData {
+		var result:EKKeybindSavedData;
+		var content:String = '';
+		#if sys
+		if(FileSystem.exists(path)) {
+			content = File.getContent(path);
+			//trace('Keybind file $path $content');
+		} 
+		else {
+			var defaultKeybindSave:EKKeybindSavedData = new EKKeybindSavedData(defaultKeybinds);
+			// write it
+			var writer = new json2object.JsonWriter<EKKeybindSavedData>();
+			content = writer.write(defaultKeybindSave, '  ');
+			File.saveContent(path, content);
+			trace(path + ' (Keybind save) didn\'t exist. Written.');
+		}
+		#else
+		if(Assets.exists(path)) content = Assets.getText(path);
+		#end
+
+		var parser = new json2object.JsonParser<EKKeybindSavedData>();
+		parser.fromJson(content);
+		result = parser.value;
+
+		// automatically (?) sets keybinds of #keys that have no keybinds
+		for (i in 0...ExtraKeysHandler.instance.data.maxKeys+1) {
+			// keybinds dont exist, keybinds are not enough
+			if (result.keybinds[i] == null || result.keybinds[i].length != (i + 1)) {
+				result.keybinds[i] = defaultKeybinds[i];
+			}
+		}
+
+		return result;
+	}
 
 	public static function showPopUp(message:String, title:String):Void
 	{
@@ -251,4 +329,20 @@ class CoolUtil
     {
         return 1;
     }
+}
+
+class ArrowRGBSavedData {
+	public var colors:Array<EKNoteColor>;
+
+	public function new(colors){
+		this.colors = colors;
+	}
+}
+
+class EKKeybindSavedData {
+	public var keybinds:Array<Array<Array<Int>>>;
+
+	public function new(keybinds){
+		this.keybinds = keybinds;
+	}
 }

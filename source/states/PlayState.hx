@@ -1,4 +1,7 @@
 package states;
+import objects.StrumNote.KeybindShowcase;
+import backend.ExtraKeysHandler;
+import objects.StrumNote.StrumBoundaries;
 
 import sys.thread.Thread;
 import backend.Highscore;
@@ -383,12 +386,10 @@ class PlayState extends MusicBeatState
 		PauseSubState.songName = null; //Reset to default
 		playbackRate = ClientPrefs.getGameplaySetting('songspeed');
 
-		keysArray = [
-			'note_left',
-			'note_down',
-			'note_up',
-			'note_right'
-		];
+		keysArray = [];
+		for (i in 0...SONG.mania + 1){
+			keysArray.push(SONG.mania + '_key_$i');
+		}
 
 		if(FlxG.sound.music != null)
 			FlxG.sound.music.stop();
@@ -778,6 +779,7 @@ class PlayState extends MusicBeatState
 			Paths.music(Paths.formatToSongPath(ClientPrefs.data.pauseMusic));
 
 		resetRPC();
+		setOnScripts('mania', SONG.mania);
 
 		stagesFunc(function(stage:BaseStage) stage.createPost());
 		callOnScripts('onCreatePost');

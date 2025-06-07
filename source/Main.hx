@@ -24,6 +24,7 @@ import lime.graphics.Image;
 import states.CopyState;
 #end
 import backend.Highscore;
+import backend.ExtraKeysHandler;
 
 // NATIVE API STUFF, YOU CAN IGNORE THIS AND SCROLL //
 #if (linux && !debug)
@@ -38,7 +39,7 @@ class Main extends Sprite
 		width: 1280, // WINDOW width
 		height: 720, // WINDOW height
 		initialState: TitleState, // initial game state
-		framerate: 90, // default framerate
+		framerate: 80, // default framerate
 		skipSplash: true, // if the default flixel splash screen should be skipped
 		startFullscreen: false // if the game should start at fullscreen mode
 	};
@@ -145,6 +146,8 @@ class Main extends Sprite
 
 		#if LUA_ALLOWED Lua.set_callbacks_function(cpp.Callable.fromStaticFunction(psychlua.CallbackHandler.call)); #end
 		Controls.instance = new Controls();
+
+		ExtraKeysHandler.instance = new ExtraKeysHandler();//原ek的crash逻辑我还没抄
 		ClientPrefs.loadDefaultKeys();
 		#if ACHIEVEMENTS_ALLOWED Achievements.load(); #end
 		#if mobile

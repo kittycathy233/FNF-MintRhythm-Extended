@@ -20,6 +20,7 @@ typedef SwagSong =
 	var gfVersion:String;
 	var stage:String;
 	var format:String;
+	@:optional var mania:Int;
 
 	@:optional var gameOverChar:String;
 	@:optional var gameOverSound:String;
@@ -94,6 +95,12 @@ class Song
 					else i++;
 				}
 			}
+		}
+		
+		// fix mania being null (for non ek charts)
+		if (songJson.mania == null)
+		{
+			songJson.mania = 3;
 		}
 
 		var sectionsData:Array<SwagSection> = songJson.notes;
