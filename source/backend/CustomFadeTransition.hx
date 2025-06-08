@@ -27,14 +27,21 @@ class CustomFadeTransition extends FlxSubState {
     var transBG: FlxSprite;
     static var mintRhythmImages:Array<String> = [];
     static var lastRandomIndex:Int = -1;
+    static var baGlowImages:Array<String> = [];
+    static var currentImageIndex:Int = 0;
 
-	var baLoadingPics:FlxSprite;
+    var baLoadingPics:FlxSprite;
+    var baGlowPics:FlxSprite;
     var baLoadingPicTween: FlxTween;
     var loadLeftTween: FlxTween;
     var loadRightTween: FlxTween;
     var loadAlphaTween: FlxTween;
     var EventTextTween: FlxTween;
     var loadTextTween: FlxTween;
+    var imageTimer:Float = 0;
+    var frameDuration:Float = 0.02; // Time between frames in seconds
+    var totalFrames:Int = 39; // Total number of frames (0-39)
+    
     public function new(duration: Float, isTransIn: Bool) {
         this.duration = duration;
         this.isTransIn = isTransIn;
@@ -50,7 +57,49 @@ class CustomFadeTransition extends FlxSubState {
         // 原版
         var width: Int = Std.int(FlxG.width / Math.max(camera.zoom, 0.001));
         var height: Int = Std.int(FlxG.height / Math.max(camera.zoom, 0.001));
-        if (ClientPrefs.data.customFadeStyle == 'NovaFlare Move') {
+        
+        
+        if (baGlowImages.length == 0) {
+            var imagePath = Paths.getPath('images/menuExtend/CustomFadeTransition/BA_Schale/Light/Glow', IMAGE);
+            if (FileSystem.exists(imagePath)) {
+                for (i in 0...totalFrames) {
+                    var fileName = i;
+                    baGlowImages.push('menuExtend/CustomFadeTransition/BA_Schale/Light/Glow/' + fileName);
+                }
+            }
+            // Fallback if no images found
+            if (baGlowImages.length == 0) {
+                baGlowImages.push('menuExtend/CustomFadeTransition/BA_Schale/Light/Glow/35');
+            }
+        }
+
+        if (ClientPrefs.data.customFadeStyle == 'BA_Schale_Glow') {
+
+            // Create glow image sprite
+            baGlowPics = new FlxSprite(0, 0);
+            baGlowPics.scrollFactor.set();
+            baGlowPics.antialiasing = ClientPrefs.data.antialiasing;
+            baGlowPics.screenCenter();
+            
+            // Scale to fit 1280x720 while maintaining aspect ratio
+            var scale = Math.max(FlxG.width / 1920, FlxG.height / 1080);
+            baGlowPics.scale.set(scale, scale);
+            baGlowPics.updateHitbox();
+            baGlowPics.screenCenter();
+            add(baGlowPics);
+
+            // Set initial frame
+            currentImageIndex = isTransIn ? 33 : 0;
+            updateGlowImage();
+
+            // Play sound
+            if (!isTransIn) {
+                FlxG.sound.play(Paths.sound('BA/UI_Loading'));
+            } else {
+                FlxG.sound.play(Paths.sound('BA/UI_Login'));            
+            }
+            
+        } else if (ClientPrefs.data.customFadeStyle == 'NovaFlare Move') {
             loadRight = new FlxSprite(isTransIn ? 0 : 1280, 0).loadGraphic(Paths.image('menuExtend/CustomFadeTransition/NF/loadingR'));
             loadRight.scrollFactor.set();
             loadRight.antialiasing = ClientPrefs.data.antialiasing;        
@@ -309,8 +358,47 @@ class CustomFadeTransition extends FlxSubState {
 
         super.create();
     }
+
+    function updateGlowImage() {
+        if (baGlowPics != null && baGlowImages.length > 0) {
+            var frameIndex = Std.int(Math.min(currentImageIndex, baGlowImages.length - 1));
+            baGlowPics.loadGraphic(Paths.image(baGlowImages[frameIndex]));
+            baGlowPics.updateHitbox();
+            baGlowPics.screenCenter();
+        }
+    }
+
     override function update(elapsed: Float) {
-        if (ClientPrefs.data.customFadeStyle == 'Vanilla') {
+        if (ClientPrefs.data.customFadeStyle == 'BA_Schale_Glow') {
+            imageTimer += elapsed;
+            
+            // Update frame if enough time has passed
+            if (imageTimer >= frameDuration) {
+                imageTimer = 0;
+                
+                if (!isTransIn) {
+                    // Transition in: show frames 0-33
+                    if (currentImageIndex < 33) {
+                        currentImageIndex++;
+                        updateGlowImage();
+                    } else {
+                        // Transition complete
+                        if (finishCallback != null) {
+                            finishCallback();
+                        }
+                    }
+                } else {
+                    // Transition out: show frames 33-39
+                    if (currentImageIndex < totalFrames) {
+                        currentImageIndex++;
+                        updateGlowImage();
+                    } else {
+                        // Transition complete
+                        close();
+                    }
+                }
+            }
+        } else if (ClientPrefs.data.customFadeStyle == 'Vanilla') {
             super.update(elapsed);
             final height: Float = FlxG.height * Math.max(camera.zoom, 0.001);
             final targetPos: Float = transGradient.height + 50 * Math.max(camera.zoom, 0.001);

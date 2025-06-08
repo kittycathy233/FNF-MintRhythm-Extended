@@ -146,7 +146,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			Language.get("loading_style_desc"),
 			'customFadeStyle',
 			STRING,
-			['Vanilla', 'NovaFlare Move', 'NovaFlare Alpha', 'MintRhythm']);
+			['Vanilla', 'NovaFlare Move', 'NovaFlare Alpha', 'MintRhythm', 'BA_Schale_Glow']);
 		addOption(option);
 
 		option = new Option('TimeBar Style',
