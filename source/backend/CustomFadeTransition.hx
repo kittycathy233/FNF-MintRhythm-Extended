@@ -74,15 +74,19 @@ class CustomFadeTransition extends FlxSubState {
         }
 
         if (ClientPrefs.data.customFadeStyle == 'BA_Schale_Glow') {
-
-            // Create glow image sprite
             baGlowPics = new FlxSprite(0, 0);
             baGlowPics.scrollFactor.set();
             baGlowPics.antialiasing = ClientPrefs.data.antialiasing;
-            baGlowPics.screenCenter();
-            
-            // Scale to fit 1280x720 while maintaining aspect ratio
-            var scale = Math.max(FlxG.width / 1920, FlxG.height / 1080);
+            baGlowPics.loadGraphic(Paths.image(baGlowImages[0])); // Load the image here to get its dimensions
+
+            var imageWidth:Float = baGlowPics.width;
+            var imageHeight:Float = baGlowPics.height;
+
+            var scaleX:Float = FlxG.width / imageWidth;
+            var scaleY:Float = FlxG.height / imageHeight;
+
+            var scale:Float = Math.max(scaleX, scaleY); // Use the larger scale to cover the whole screen
+
             baGlowPics.scale.set(scale, scale);
             baGlowPics.updateHitbox();
             baGlowPics.screenCenter();
@@ -98,7 +102,6 @@ class CustomFadeTransition extends FlxSubState {
             } else {
                 FlxG.sound.play(Paths.sound('BA/UI_Login'));            
             }
-            
         } else if (ClientPrefs.data.customFadeStyle == 'NovaFlare Move') {
             loadRight = new FlxSprite(isTransIn ? 0 : 1280, 0).loadGraphic(Paths.image('menuExtend/CustomFadeTransition/NF/loadingR'));
             loadRight.scrollFactor.set();
