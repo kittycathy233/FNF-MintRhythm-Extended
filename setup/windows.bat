@@ -3,10 +3,10 @@ color 0a
 cd ..
 echo Installing dependencies...
 echo This might take a few moments depending on your internet speed.
-haxelib git hxcpp https://github.com/kittycathy233/hxcpp --quiet
+haxelib install hxcpp 4.3.2 --quiet
 haxelib git lime https://github.com/kittycathy233/lime --quiet
 haxelib install openfl 9.4.1 --quiet
-haxelib git flixel https://github.com/kittycathy233/flixel --quiet
+haxelib install flixel 6.1.0 --quiet
 haxelib install flixel-addons 3.3.2 --quiet
 haxelib install flixel-tools 1.5.1 --quiet
 haxelib install hscript-iris 1.1.3 --quiet

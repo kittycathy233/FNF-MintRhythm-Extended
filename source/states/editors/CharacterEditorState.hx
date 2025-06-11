@@ -2,7 +2,8 @@ package states.editors;
 
 import flixel.graphics.FlxGraphic;
 
-import flixel.system.debug.interaction.tools.Pointer.GraphicCursorCross;
+import flixel.system.debug.interaction.tools.Pointer;
+import flixel.addons.display.shapes.FlxShapeBox;
 import flixel.util.FlxDestroyUtil;
 
 import openfl.net.FileReference;
@@ -25,7 +26,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 	var ghost:FlxSprite;
 	var animateGhost:FlxAnimate;
 	var animateGhostImage:String;
-	var cameraFollowPointer:FlxSprite;
+	var cameraFollowPointer:FlxShapeBox;
 	var isAnimateSprite:Bool = false;
 
 	var silhouettes:FlxSpriteGroup;
@@ -114,8 +115,9 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 
 		addCharacter();
 
-		cameraFollowPointer = new FlxSprite().loadGraphic(FlxGraphic.fromClass(GraphicCursorCross));
-		cameraFollowPointer.setGraphicSize(40, 40);
+		//cameraFollowPointer = new FlxSprite().loadGraphic(FlxGraphic.fromClass(GraphicCursorCross));
+		cameraFollowPointer = new FlxShapeBox(0, 0, 20, 20, {thickness: 5, color: FlxColor.WHITE}, FlxColor.TRANSPARENT);
+		//cameraFollowPointer.setGraphicSize(40, 40);
 		cameraFollowPointer.updateHitbox();
 
 		healthBar = new Bar(30, FlxG.height - 75);
@@ -1150,12 +1152,12 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 		if(!character.isPlayer)
 		{
 			offX = character.getMidpoint().x + 150 + character.cameraPosition[0];
-			offY = character.getMidpoint().y - 100 + character.cameraPosition[1];
+			offY = character.getMidpoint().y - 120 + character.cameraPosition[1];
 		}
 		else
 		{
-			offX = character.getMidpoint().x - 100 - character.cameraPosition[0];
-			offY = character.getMidpoint().y - 100 + character.cameraPosition[1];
+			offX = character.getMidpoint().x - 120 - character.cameraPosition[0];
+			offY = character.getMidpoint().y - 105 + character.cameraPosition[1];
 		}
 		cameraFollowPointer.setPosition(offX, offY);
 

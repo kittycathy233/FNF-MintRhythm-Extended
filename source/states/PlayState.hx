@@ -95,6 +95,7 @@ class PlayState extends MusicBeatState
 	var icondancingLeft:Bool = false;
 	var ratingexspr:String = '';
 	var exratingexspr:String = '-extra';
+	var numexspr:String = '';
 	var ratingAlpha:Float = ClientPrefs.data.ratingsAlpha;
 	var iconP1InitialY:Float;
 	var iconP2InitialY:Float;
@@ -2379,7 +2380,7 @@ function showEventDebug(eventName:String, values:Array<String>, strumTime:Float)
 				persistentDraw = false;
 				FlxTimer.globalManager.clear();
 				FlxTween.globalManager.clear();
-				FlxG.camera.setFilters([]);
+				FlxG.camera.filters = [];
 
 				if(GameOverSubstate.deathDelay > 0)
 				{
@@ -2971,6 +2972,7 @@ function showEventDebug(eventName:String, values:Array<String>, strumTime:Float)
 	public var showCombo:Bool = false;
 	public var showComboNum:Bool = true;
 	public var showRating:Bool = true;
+	public var showEXRating:Bool = ClientPrefs.data.exratingDisplay;
 
 	// Stores Ratings and Combo Sprites in a group
 	public var comboGroup:FlxSpriteGroup;
@@ -2986,11 +2988,11 @@ function showEventDebug(eventName:String, values:Array<String>, strumTime:Float)
 			uiFolder = uiPrefix + "UI/";
 
 		for (rating in ratingsData)
-			Paths.image(uiFolder + rating.image + ratingexspr + uiPostfix);
+			Paths.image(uiFolder + rating.image + uiPostfix + ratingexspr);
 		for (theEXrating in ratingsData)
-			Paths.image(uiFolder + theEXrating.image + exratingexspr + uiPostfix);
+			Paths.image(uiFolder + theEXrating.image + uiPostfix + exratingexspr);
 		for (i in 0...10)
-			Paths.image(uiFolder + 'num' + i + uiPostfix);
+			Paths.image(uiFolder + 'num' + i + uiPostfix + numexspr);
 	}
 
 	private function popUpScore(note:Note = null):Void
@@ -3011,8 +3013,8 @@ function showEventDebug(eventName:String, values:Array<String>, strumTime:Float)
 		}
 
 		if (!ClientPrefs.data.rmmsTimeTxt) {
-			msTimeTxt.alpha = ClientPrefs.data.ratingsAlpha;
-			msTimeTxt.scale.set(1.35, 0.85);
+			msTimeTxt.alpha = ratingAlpha;
+			msTimeTxt.scale.set(1.33, 0.8);
 			// 调整显示格式，保留两位小数
 			if(cpuControlled) msTimeTxt.text = Std.string(CoolUtil.floorDecimal(noteDiff, 2)) + "ms(BOT)";
 			else msTimeTxt.text = Std.string(CoolUtil.floorDecimal(noteDiff, 2)) + "ms";
@@ -3020,14 +3022,14 @@ function showEventDebug(eventName:String, values:Array<String>, strumTime:Float)
 			if (msTimeTxtTween1 != null){
 				msTimeTxtTween1.cancel(); msTimeTxtTween1.destroy(); // top 10 awesome code
 			}
-			msTimeTxtTween1 = FlxTween.tween(msTimeTxt, {alpha: 0}, 0.2, {
-				onComplete: function(tw:FlxTween) {msTimeTxtTween1 = null;}, startDelay: 0.3
+			msTimeTxtTween1 = FlxTween.tween(msTimeTxt, {alpha: 0}, (60 / Conductor.bpm) * 1.5, {
+				onComplete: function(tw:FlxTween) {msTimeTxtTween1 = null;}, startDelay: (60 / Conductor.bpm) * 0.7
 			});
 
 			if (msTimeTxtTween2 != null){
 				msTimeTxtTween2.cancel(); msTimeTxtTween2.destroy(); // top 10 awesome code
 			}
-			msTimeTxtTween2 = FlxTween.tween(msTimeTxt.scale, {x: 1, y: 1}, 0.4, {
+			msTimeTxtTween2 = FlxTween.tween(msTimeTxt.scale, {x: 1, y: 1}, (60 / Conductor.bpm), {
 				ease: FlxEase.circOut,
 			});
 		}
@@ -3089,10 +3091,12 @@ function showEventDebug(eventName:String, values:Array<String>, strumTime:Float)
 			theEXrating.acceleration.y = 550 * playbackRate * playbackRate;
 			theEXrating.velocity.y -= FlxG.random.int(140, 175) * playbackRate;
 			theEXrating.velocity.x -= FlxG.random.int(0, 10) * playbackRate;
-			theEXrating.visible = (!ClientPrefs.data.hideHud && showRating);
+			theEXrating.visible = (!ClientPrefs.data.hideHud && showEXRating);
 			theEXrating.x += ClientPrefs.data.comboOffset[4] - 220;
 			theEXrating.y += -ClientPrefs.data.comboOffset[5] + 150;
 			theEXrating.antialiasing = antialias;
+			theEXrating.angle = 0;
+
 	
 			var comboSpr:FlxSprite = new FlxSprite().loadGraphic(Paths.image(uiFolder + 'combo' + uiPostfix));
 			comboSpr.screenCenter();
@@ -3136,13 +3140,17 @@ function showEventDebug(eventName:String, values:Array<String>, strumTime:Float)
 				FlxTween.tween(rating.scale, {x: 0.7, y: 0.7}, 0.3, {ease: FlxEase.circOut});
 			}
 			
-			if(ClientPrefs.data.exratbounce == true)
-			{
-				theEXrating.scale.set(0.85, 0.85);
-				theEXrating.angle = (Math.random() * 10 + 4) * (Math.random() > .3 ? 1 : -1);
-				FlxTween.tween(theEXrating, {angle: 0}, .6, {ease: FlxEase.quartOut});
-				FlxTween.tween(theEXrating.scale, {x: 0.7, y: 0.7}, 0.5, {ease: FlxEase.circOut});
-			}
+			if(ClientPrefs.data.exratbounce == true && ClientPrefs.data.exratingDisplay)
+            {
+                theEXrating.scale.set(0.85, 0.85);
+                var targetAngle:Float = (Math.random() * 10) * (Math.random() > .5 ? 1 : -1);
+                    FlxTween.tween(theEXrating, {angle: targetAngle}, 0.025, {ease: FlxEase.quartOut,
+                        onComplete: function(tween:FlxTween) {
+                            FlxTween.tween(theEXrating, {angle: 0}, 0.3, {ease: FlxEase.circOut});
+                        }
+                    });
+                    FlxTween.tween(theEXrating.scale, {x: 0.7, y: 0.7}, 0.4, {ease: FlxEase.circOut});
+            }
 	
 			comboSpr.updateHitbox();
 			rating.updateHitbox();
@@ -3731,7 +3739,7 @@ function showEventDebug(eventName:String, values:Array<String>, strumTime:Float)
 		FlxG.stage.removeEventListener(KeyboardEvent.KEY_DOWN, onKeyPress);
 		FlxG.stage.removeEventListener(KeyboardEvent.KEY_UP, onKeyRelease);
 
-		FlxG.camera.setFilters([]);
+		FlxG.camera.filters = [];
 
 		#if FLX_PITCH FlxG.sound.music.pitch = 1; #end
 		FlxG.animationTimeScale = 1;
@@ -3806,7 +3814,7 @@ function showEventDebug(eventName:String, values:Array<String>, strumTime:Float)
 			} else { 
 				iconP1.angle = 15; iconP2.angle = -15;
 			}
-		}	
+		}
 		else if (ClientPrefs.data.iconbopstyle == "MintRhythm") {
     		var healthPercent:Float = healthBar.percent;
     		if (healthPercent < 20) 
@@ -3817,7 +3825,7 @@ function showEventDebug(eventName:String, values:Array<String>, strumTime:Float)
             		FlxTween.tween(iconP2, {angle: 0}, 0.3, {ease: FlxEase.circOut});
             		icondancingLeft = !icondancingLeft;
         		}
-    		} 
+    		}
     		else if (healthPercent > 80) 
     		{
         		if (curBeat % 2 == 0) 
@@ -3827,16 +3835,6 @@ function showEventDebug(eventName:String, values:Array<String>, strumTime:Float)
             		icondancingLeft = !icondancingLeft;
         		}
         	}
-			else
-			{
-				if (curBeat % 4 == 0) 
-				{
-					iconP1.angle = -25;
-					iconP2.angle = 25;
-					FlxTween.tween(iconP1, {angle: 0}, 0.3, {ease: FlxEase.circOut});
-					FlxTween.tween(iconP2, {angle: 0}, 0.3, {ease: FlxEase.circOut});	
-				}
-    		}
 		}
 		
 
