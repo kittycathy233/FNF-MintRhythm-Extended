@@ -160,7 +160,7 @@ class PhillyBlazin extends BaseStage
 		rainShader = new RainShader();
 		rainShader.scale = FlxG.height / 200;
 		rainShader.intensity = 0.5;
-		FlxG.camera.filters = [new ShaderFilter(rainShader)];
+		FlxG.camera.setFilters([new ShaderFilter(rainShader)]);
 	}
 
 	function precache()
