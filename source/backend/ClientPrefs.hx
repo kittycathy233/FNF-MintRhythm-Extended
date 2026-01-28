@@ -150,8 +150,6 @@ import states.TitleState;
 	public var ratCounter:Bool = true; // 评分计数器
 	public var waterMarkPlay:Bool = true; // 水印
 	public var enableGameLog:Bool = false; // 启用游戏内日志显示（按F3切换）
-	public var mouseTrailSize:Float = 1.0; // 鼠标拖尾效果大小比例（1.0 = 100%）
-	public var mouseTrailEnabled:Bool = true; // 是否启用鼠标拖尾效果（PC和手机都有效）
 
 }
 
@@ -286,14 +284,6 @@ class ClientPrefs {
 
 		if(Main.gameLogVar != null)
 			Main.gameLogVar.setEnabled(data.enableGameLog);
-
-		// 应用鼠标拖尾大小设置（仅在移动端）
-		#if mobile
-		Main.setMouseTrailSize(data.mouseTrailSize);
-
-		// 应用鼠标拖尾启用状态
-		Main.setMouseTrailVisible(data.mouseTrailEnabled);
-		#end
 
 		#if (!html5 && !switch)
 		FlxG.autoPause = ClientPrefs.data.autoPause;
