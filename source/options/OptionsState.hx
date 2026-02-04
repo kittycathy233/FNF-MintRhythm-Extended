@@ -16,6 +16,7 @@ class OptionsState extends MusicBeatState
 		Language.get("graphics"),
 		Language.get("visuals"),
 		Language.get("gameplay"),
+		Language.get("window_manager"),
 		Language.get("extra_options")
 		//#if TRANSLATIONS_ALLOWED , Language.get("language") #end
 		#if mobile , Language.get("mobile_options") #end
@@ -28,6 +29,7 @@ class OptionsState extends MusicBeatState
 		Language.get("graphics_desc"),
 		Language.get("visuals_desc"),
 		Language.get("gameplay_desc"),
+		Language.get("window_manager_desc"),
 		Language.get("extra_options_desc")
 		#if mobile , Language.get("mobile_options_desc") #end
 	];
@@ -75,6 +77,10 @@ class OptionsState extends MusicBeatState
 			Language.get("graphics") => () -> openSubState(new options.GraphicsSettingsSubState()),
 			Language.get("visuals") => () -> openSubState(new options.VisualsSettingsSubState()),
 			Language.get("gameplay") => () -> openSubState(new options.GameplaySettingsSubState()),
+			Language.get("window_manager") => () -> {
+				persistentUpdate = true;
+				MusicBeatState.switchState(new states.WindowManagerState());
+			},
 			Language.get("extra_options") => () -> {
 				persistentUpdate = true;
 				openSubState(new options.ExtraGameplaySettingSubState());

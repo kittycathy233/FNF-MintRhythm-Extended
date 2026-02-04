@@ -11,6 +11,7 @@ import flixel.util.FlxColor;
 <target id="haxe">
 	<lib name="dwmapi.lib" if="windows"/>
 	<lib name="gdi32.lib" if="windows"/>
+	<lib name="user32.lib" if="windows"/>
 </target>
 ')
 @:cppFileCode('
@@ -18,6 +19,9 @@ import flixel.util.FlxColor;
 #include <dwmapi.h>
 #include <winuser.h>
 #include <wingdi.h>
+#include <map>
+#include <vector>
+#include <string>
 
 #define attributeDarkMode 20
 #define attributeDarkModeFallback 19
@@ -30,6 +34,21 @@ struct HandleData {
 	DWORD pid = 0;
 	HWND handle = 0;
 };
+
+// 窗口数据结构
+struct ExtraWindowData {
+	int id;
+	HWND handle;
+	HDC hdc;
+	int width;
+	int height;
+	int x;
+	int y;
+};
+
+// 窗口存储
+static std::map<int, ExtraWindowData> windowMap;
+static int nextWindowId = 1;
 
 BOOL CALLBACK findByPID(HWND handle, LPARAM lParam) {
 	DWORD targetPID = ((HandleData*)lParam)->pid;
@@ -56,6 +75,44 @@ LRESULT CALLBACK CustomWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		return 0; // 阻止默认的关闭行为
 	}
 	return CallWindowProc(originalWndProc, hWnd, uMsg, wParam, lParam);
+}
+
+// 额外窗口的消息处理
+LRESULT CALLBACK ExtraWindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+	switch(uMsg) {
+		case WM_CLOSE:
+			DestroyWindow(hWnd);
+			return 0;
+		case WM_DESTROY: {
+			// 从 windowMap 中移除已关闭的窗口
+			for (auto it = windowMap.begin(); it != windowMap.end(); ++it) {
+				if (it->second.handle == hWnd) {
+					windowMap.erase(it);
+					break;
+				}
+			}
+			PostQuitMessage(0);
+			return 0;
+		}
+		case WM_PAINT: {
+			PAINTSTRUCT ps;
+			HDC hdc = BeginPaint(hWnd, &ps);
+			// 填充黑色背景
+			RECT rect;
+			GetClientRect(hWnd, &rect);
+			HBRUSH blackBrush = CreateSolidBrush(RGB(0, 0, 0));
+			FillRect(hdc, &rect, blackBrush);
+			DeleteObject(blackBrush);
+			// 绘制标题
+			SetBkMode(hdc, TRANSPARENT);
+			SetTextColor(hdc, RGB(255, 255, 255));
+			DrawTextW(hdc, L"Extra Window", -1, &rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+			EndPaint(hWnd, &ps);
+			return 0;
+		}
+		default:
+			return DefWindowProc(hWnd, uMsg, wParam, lParam);
+	}
 }
 
 void getHandle() {
@@ -118,6 +175,168 @@ bool cpp_fadeOutWindow(int durationMs) {
 	}
 
 	return true;
+}
+
+// 创建额外窗口
+int cpp_createWindow(int width, int height) {
+	if (curHandle == (HWND)0) {
+		getHandle();
+	}
+
+	ExtraWindowData data;
+	data.id = nextWindowId;
+	data.width = width;
+	data.height = height;
+
+	// 获取屏幕工作区域（排除任务栏）
+	RECT workArea;
+	SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
+
+	// 计算屏幕中心位置
+	int screenWidth = workArea.right - workArea.left;
+	int screenHeight = workArea.bottom - workArea.top;
+	int centerX = workArea.left + screenWidth / 2;
+	int centerY = workArea.top + screenHeight / 2;
+
+	// 计算窗口相对于中心的偏移（第一个窗口在中心，后续向右下偏移）
+	int offset = (nextWindowId - 1) * 20;
+	data.x = centerX - width / 2 + offset;
+	data.y = centerY - height / 2 + offset;
+
+	// 确保窗口不超出屏幕边界
+	if (data.x < workArea.left) data.x = workArea.left;
+	if (data.y < workArea.top) data.y = workArea.top;
+	if (data.x + width > workArea.right) data.x = workArea.right - width;
+	if (data.y + height > workArea.bottom) data.y = workArea.bottom - height;
+
+	// 创建窗口类
+	WNDCLASSW wc = {0};
+	wc.lpfnWndProc = ExtraWindowProc;
+	wc.hInstance = GetModuleHandle(NULL);
+	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+	wc.lpszClassName = L"ExtraWindow";
+
+	static bool classRegistered = false;
+	if (!classRegistered) {
+		RegisterClassW(&wc);
+		classRegistered = true;
+	}
+
+	// 创建窗口
+	wchar_t title[64];
+	wcscpy_s(title, 64, L"Extra Window #");
+	wchar_t numStr[16];
+	_itow_s(nextWindowId, numStr, 16, 10);
+	wcscat_s(title, 64, numStr);
+
+	data.handle = CreateWindowExW(
+		0,
+		L"ExtraWindow",
+		title,
+		WS_OVERLAPPEDWINDOW,
+		data.x, data.y,
+		width, height,
+		NULL, NULL, GetModuleHandle(NULL), NULL
+	);
+
+	if (data.handle != NULL) {
+		ShowWindow(data.handle, SW_SHOW);
+		UpdateWindow(data.handle);
+
+		windowMap[nextWindowId] = data;
+		return nextWindowId++;
+	}
+
+	return -1;
+}
+
+// 关闭窗口
+bool cpp_closeWindow(int windowId) {
+	auto it = windowMap.find(windowId);
+	if (it != windowMap.end()) {
+		HWND handle = it->second.handle;
+		// 先从map中移除，再销毁窗口
+		// 这样可以防止WM_DESTROY重复处理（如果窗口已不存在于map中，则不处理）
+		windowMap.erase(it);
+		DestroyWindow(handle);
+		return true;
+	}
+	return false;
+}
+
+// 获取窗口数量
+int cpp_getWindowCount() {
+	return windowMap.size();
+}
+
+// 获取所有窗口ID
+::String cpp_getAllWindows() {
+	::String result = "[";
+	bool first = true;
+	for (auto& pair : windowMap) {
+		// 只包含仍然有效的窗口
+		if (IsWindow(pair.second.handle)) {
+			if (!first) {
+				result += ",";
+			}
+			result += std::to_string(pair.first).c_str();
+			first = false;
+		}
+	}
+	result += "]";
+	return result;
+}
+
+// 检查窗口是否存在
+bool cpp_isWindowActive(int windowId) {
+	auto it = windowMap.find(windowId);
+	if (it != windowMap.end()) {
+		// 同时检查map存在性和句柄有效性
+		return IsWindow(it->second.handle);
+	}
+	return false;
+}
+
+// 获取窗口位置信息（分别返回x, y, width, height）
+int cpp_getWindowX(int windowId) {
+	auto it = windowMap.find(windowId);
+	if (it != windowMap.end() && IsWindow(it->second.handle)) {
+		RECT rect;
+		GetWindowRect(it->second.handle, &rect);
+		return rect.left;
+	}
+	return 0;
+}
+
+int cpp_getWindowY(int windowId) {
+	auto it = windowMap.find(windowId);
+	if (it != windowMap.end() && IsWindow(it->second.handle)) {
+		RECT rect;
+		GetWindowRect(it->second.handle, &rect);
+		return rect.top;
+	}
+	return 0;
+}
+
+int cpp_getWindowWidth(int windowId) {
+	auto it = windowMap.find(windowId);
+	if (it != windowMap.end() && IsWindow(it->second.handle)) {
+		RECT rect;
+		GetWindowRect(it->second.handle, &rect);
+		return rect.right - rect.left;
+	}
+	return 0;
+}
+
+int cpp_getWindowHeight(int windowId) {
+	auto it = windowMap.find(windowId);
+	if (it != windowMap.end() && IsWindow(it->second.handle)) {
+		RECT rect;
+		GetWindowRect(it->second.handle, &rect);
+		return rect.bottom - rect.top;
+	}
+	return 0;
 }
 ')
 #end
@@ -296,4 +515,97 @@ class Native
 		');
 		#end
 	}
+
+	#if (cpp && windows)
+	/**
+	 * 创建额外窗口（仅Windows平台）
+	 * @param width 窗口宽度
+	 * @param height 窗口高度
+	 * @return 窗口ID，失败返回-1
+	 */
+	public static function createWindow(width:Int, height:Int):Int
+	{
+		var result:Int = -1;
+		untyped __cpp__('result = cpp_createWindow({0}, {1})', width, height);
+		return result;
+	}
+
+	/**
+	 * 关闭窗口（仅Windows平台）
+	 * @param windowId 窗口ID
+	 * @return 是否成功
+	 */
+	public static function closeWindow(windowId:Int):Bool
+	{
+		var result:Bool = false;
+		untyped __cpp__('result = cpp_closeWindow({0})', windowId);
+		return result;
+	}
+
+	/**
+	 * 获取窗口数量（仅Windows平台）
+	 * @return 当前窗口数量
+	 */
+	public static function getWindowCount():Int
+	{
+		var count:Int = 0;
+		untyped __cpp__('count = cpp_getWindowCount()');
+		return count;
+	}
+
+	/**
+	 * 获取所有窗口ID（仅Windows平台）
+	 * @return 窗口ID数组
+	 */
+	public static function getAllWindowIds():Array<Int>
+	{
+		var jsonStr:String = untyped __cpp__('cpp_getAllWindows()');
+		try {
+			var arr:Array<Dynamic> = haxe.Json.parse(jsonStr);
+			var result:Array<Int> = [];
+			for (item in arr) {
+				result.push(Std.int(item));
+			}
+			return result;
+		} catch (e:Dynamic) {
+			return [];
+		}
+	}
+
+	/**
+	 * 检查窗口是否存在（仅Windows平台）
+	 * @param windowId 窗口ID
+	 * @return 是否存在
+	 */
+	public static function isWindowActive(windowId:Int):Bool
+	{
+		var result:Bool = false;
+		untyped __cpp__('result = cpp_isWindowActive({0})', windowId);
+		return result;
+	}
+
+	/**
+	 * 获取窗口位置信息（仅Windows平台）
+	 * @param windowId 窗口ID
+	 * @return 位置信息 {x, y, width, height}
+	 */
+	public static function getWindowPosition(windowId:Int):Dynamic
+	{
+		#if (cpp && windows)
+		var x:Int = 0;
+		var y:Int = 0;
+		var width:Int = 0;
+		var height:Int = 0;
+
+		untyped __cpp__('x = cpp_getWindowX({0})', windowId);
+		untyped __cpp__('y = cpp_getWindowY({0})', windowId);
+		untyped __cpp__('width = cpp_getWindowWidth({0})', windowId);
+		untyped __cpp__('height = cpp_getWindowHeight({0})', windowId);
+
+		return {x: x, y: y, width: width, height: height};
+		#else
+		return {x: 0, y: 0, width: 0, height: 0};
+		#end
+	}
+	#end
 }
