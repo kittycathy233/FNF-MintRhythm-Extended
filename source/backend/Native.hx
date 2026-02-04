@@ -180,7 +180,7 @@ bool cpp_fadeOutWindow(int durationMs) {
 }
 
 // 创建额外窗口
-int cpp_createWindow(int width, int height) {
+int cpp_createWindowEx(int width, int height, bool noTitleBar, bool transparent) {
 	if (curHandle == (HWND)0) {
 		getHandle();
 	}
@@ -190,26 +190,37 @@ int cpp_createWindow(int width, int height) {
 	data.width = width;
 	data.height = height;
 
-	// 获取屏幕工作区域（排除任务栏）
-	RECT workArea;
-	SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
+	// 如果是全屏模式，使用屏幕尺寸
+	if (noTitleBar && transparent) {
+		// 获取整个屏幕尺寸（包括任务栏）
+		int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+		int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+		data.width = screenWidth;
+		data.height = screenHeight;
+		data.x = 0;
+		data.y = 0;
+	} else {
+		// 获取屏幕工作区域（排除任务栏）
+		RECT workArea;
+		SystemParametersInfo(SPI_GETWORKAREA, 0, &workArea, 0);
 
-	// 计算屏幕中心位置
-	int screenWidth = workArea.right - workArea.left;
-	int screenHeight = workArea.bottom - workArea.top;
-	int centerX = workArea.left + screenWidth / 2;
-	int centerY = workArea.top + screenHeight / 2;
+		// 计算屏幕中心位置
+		int screenWidth = workArea.right - workArea.left;
+		int screenHeight = workArea.bottom - workArea.top;
+		int centerX = workArea.left + screenWidth / 2;
+		int centerY = workArea.top + screenHeight / 2;
 
-	// 计算窗口相对于中心的偏移（第一个窗口在中心，后续向右下偏移）
-	int offset = (nextWindowId - 1) * 20;
-	data.x = centerX - width / 2 + offset;
-	data.y = centerY - height / 2 + offset;
+		// 计算窗口相对于中心的偏移（第一个窗口在中心，后续向右下偏移）
+		int offset = (nextWindowId - 1) * 20;
+		data.x = centerX - width / 2 + offset;
+		data.y = centerY - height / 2 + offset;
 
-	// 确保窗口不超出屏幕边界
-	if (data.x < workArea.left) data.x = workArea.left;
-	if (data.y < workArea.top) data.y = workArea.top;
-	if (data.x + width > workArea.right) data.x = workArea.right - width;
-	if (data.y + height > workArea.bottom) data.y = workArea.bottom - height;
+		// 确保窗口不超出屏幕边界
+		if (data.x < workArea.left) data.x = workArea.left;
+		if (data.y < workArea.top) data.y = workArea.top;
+		if (data.x + width > workArea.right) data.x = workArea.right - width;
+		if (data.y + height > workArea.bottom) data.y = workArea.bottom - height;
+	}
 
 	// 创建窗口类
 	WNDCLASSW wc = {0};
@@ -232,17 +243,36 @@ int cpp_createWindow(int width, int height) {
 	_itow_s(nextWindowId, numStr, 16, 10);
 	wcscat_s(title, 64, numStr);
 
+	// 根据参数决定窗口样式
+	DWORD dwStyle = WS_OVERLAPPEDWINDOW;
+	DWORD dwExStyle = 0;
+
+	if (noTitleBar) {
+		dwStyle = WS_POPUP;  // 无标题栏
+		dwExStyle = WS_EX_TOPMOST;  // 始终在最上层
+	}
+
+	if (transparent) {
+		dwExStyle |= WS_EX_LAYERED;  // 支持透明
+	}
+
 	data.handle = CreateWindowExW(
-		0,
+		dwExStyle,
 		L"ExtraWindow",
 		title,
-		WS_OVERLAPPEDWINDOW,
+		dwStyle,
 		data.x, data.y,
-		width, height,
+		data.width, data.height,
 		NULL, NULL, GetModuleHandle(NULL), NULL
 	);
 
 	if (data.handle != NULL) {
+		// 如果是透明模式，设置透明度
+		if (transparent) {
+			// 设置窗口颜色透明（黑色为透明）
+			SetLayeredWindowAttributes(data.handle, RGB(0, 0, 0), 255, LWA_COLORKEY);
+		}
+
 		ShowWindow(data.handle, SW_SHOW);
 		UpdateWindow(data.handle);
 
@@ -251,6 +281,11 @@ int cpp_createWindow(int width, int height) {
 	}
 
 	return -1;
+}
+
+// 创建额外窗口（简化版本，用于向后兼容）
+int cpp_createWindow(int width, int height) {
+	return cpp_createWindowEx(width, height, false, false);
 }
 
 // 关闭窗口
@@ -582,6 +617,21 @@ class Native
 	{
 		var result:Int = -1;
 		untyped __cpp__('result = cpp_createWindow({0}, {1})', width, height);
+		return result;
+	}
+
+	/**
+	 * 创建额外窗口（扩展版本，仅Windows平台）
+	 * @param width 窗口宽度（全屏模式时忽略）
+	 * @param height 窗口高度（全屏模式时忽略）
+	 * @param noTitleBar 是否无标题栏
+	 * @param transparent 是否透明背景
+	 * @return 窗口ID，失败返回-1
+	 */
+	public static function createWindowEx(width:Int, height:Int, noTitleBar:Bool, transparent:Bool):Int
+	{
+		var result:Int = -1;
+		untyped __cpp__('result = cpp_createWindowEx({0}, {1}, {2}, {3})', width, height, noTitleBar, transparent);
 		return result;
 	}
 

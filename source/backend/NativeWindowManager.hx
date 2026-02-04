@@ -35,6 +35,19 @@ class NativeWindowManager
 	}
 
 	/**
+	 * 创建无标题栏透明窗口（默认全屏显示）
+	 * @return 窗口ID，失败返回-1
+	 */
+	public static function createTransparentWindow():Int
+	{
+		#if (cpp && windows)
+		return Native.createWindowEx(0, 0, true, true);
+		#else
+		return -1;
+		#end
+	}
+
+	/**
 	 * 关闭指定窗口
 	 * @param windowId 窗口ID
 	 * @return 是否成功关闭

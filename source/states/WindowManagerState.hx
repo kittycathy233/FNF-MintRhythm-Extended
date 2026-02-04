@@ -28,12 +28,16 @@ class WindowManagerState extends MusicBeatState
 	private var bg:FlxSprite;
 	private var windowListText:FlxText;
 	private var addWindowBtn:FlxButton;
+	private var addTransparentBtn:FlxButton;
 	private var closeAllBtn:FlxButton;
 	private var refreshBtn:FlxButton;
 	private var backBtn:FlxButton;
 	private var titleText:FlxText;
 	private var windowButtons:Map<Int, FlxButton> = new Map();
 	private var menuBG:FlxSprite;
+
+	// 透明窗口ID集合
+	private var transparentWindows:Map<Int, Bool> = new Map();
 
 	// 配置
 	private static inline var DEFAULT_WINDOW_WIDTH:Int = 800;
@@ -95,15 +99,23 @@ class WindowManagerState extends MusicBeatState
 		add(windowListText);
 
 		// 添加窗口按钮
-		addWindowBtn = new FlxButton(100, FlxG.height - 180, "+ Add Window", onAddWindow);
+		addWindowBtn = new FlxButton(100, FlxG.height - 240, "+ Add Window", onAddWindow);
 		addWindowBtn.label.setFormat(gameFont, 20, FlxColor.WHITE, CENTER);
 		addWindowBtn.scale.set(1.2, 1.2);
 		addWindowBtn.updateHitbox();
 		addWindowBtn.scrollFactor.set();
 		add(addWindowBtn);
 
+		// 添加透明窗口按钮
+		addTransparentBtn = new FlxButton(300, FlxG.height - 240, "+ Add Transparent Window", onAddTransparentWindow);
+		addTransparentBtn.label.setFormat(gameFont, 20, FlxColor.WHITE, CENTER);
+		addTransparentBtn.scale.set(1.2, 1.2);
+		addTransparentBtn.updateHitbox();
+		addTransparentBtn.scrollFactor.set();
+		add(addTransparentBtn);
+
 		// 关闭所有窗口按钮
-		closeAllBtn = new FlxButton(300, FlxG.height - 180, "Close All Windows", onCloseAllWindows);
+		closeAllBtn = new FlxButton(500, FlxG.height - 240, "Close All Windows", onCloseAllWindows);
 		closeAllBtn.label.setFormat(gameFont, 20, FlxColor.WHITE, CENTER);
 		closeAllBtn.scale.set(1.2, 1.2);
 		closeAllBtn.updateHitbox();
@@ -128,7 +140,7 @@ class WindowManagerState extends MusicBeatState
 		add(backBtn);
 
 		// 按钮提示文本
-		var hintText = new FlxText(0, FlxG.height - 50, FlxG.width, "Tip: Click button to create window, press ESC to return", 16);
+		var hintText = new FlxText(0, FlxG.height - 50, FlxG.width, "Tip: Transparent windows are fullscreen with no titlebar, press ESC to return", 16);
 		hintText.setFormat(gameFont, 16, FlxColor.YELLOW, CENTER);
 		hintText.scrollFactor.set();
 		add(hintText);
@@ -159,7 +171,9 @@ class WindowManagerState extends MusicBeatState
 			{
 				var id = windowIds[i];
 				var pos = NativeWindowManager.getWindowPosition(id);
-				text += '  ${i + 1}. Window #${id} (${pos.width}x${pos.height})\n';
+				var isTransparent = transparentWindows.exists(id);
+				var windowType = isTransparent ? "[Transparent] " : "";
+				text += '  ${i + 1}. ${windowType}Window #${id} (${pos.width}x${pos.height})\n';
 
 				// 为每个窗口创建关闭按钮
 				var closeWindowBtn = new FlxButton(FlxG.width - 220, yPos + i * 40, "Close", function() {
@@ -200,10 +214,30 @@ class WindowManagerState extends MusicBeatState
 		#end
 	}
 
+	private function onAddTransparentWindow()
+	{
+		#if (cpp && windows)
+		var windowId = NativeWindowManager.createTransparentWindow();
+		if (windowId > 0)
+		{
+			transparentWindows.set(windowId, true);
+			FlxG.sound.play(Paths.sound('confirmMenu'));
+			updateWindowList();
+		}
+		else
+		{
+			FlxG.sound.play(Paths.sound('cancelMenu'));
+		}
+		#else
+		FlxG.sound.play(Paths.sound('cancelMenu'));
+		#end
+	}
+
 	private function onCloseWindow(windowId:Int)
 	{
 		if (NativeWindowManager.closeWindow(windowId))
 		{
+			transparentWindows.remove(windowId);
 			FlxG.sound.play(Paths.sound('cancelMenu'));
 			updateWindowList();
 		}
@@ -214,6 +248,7 @@ class WindowManagerState extends MusicBeatState
 		var count = NativeWindowManager.closeAllWindows();
 		if (count > 0)
 		{
+			transparentWindows.clear();
 			FlxG.sound.play(Paths.sound('cancelMenu'));
 			// 立即刷新列表
 			updateWindowList();
@@ -254,6 +289,9 @@ class WindowManagerState extends MusicBeatState
 			}
 		}
 		windowButtons.clear();
+
+		// 清理透明窗口记录
+		transparentWindows.clear();
 
 		super.destroy();
 	}
