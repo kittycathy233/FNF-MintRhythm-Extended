@@ -12,6 +12,8 @@ import flixel.util.FlxColor;
 	<lib name="dwmapi.lib" if="windows"/>
 	<lib name="gdi32.lib" if="windows"/>
 	<lib name="user32.lib" if="windows"/>
+	<lib name="shell32.lib" if="windows"/>
+	<lib name="advapi32.lib" if="windows"/>
 </target>
 ')
 @:cppFileCode('
@@ -338,6 +340,59 @@ int cpp_getWindowHeight(int windowId) {
 	}
 	return 0;
 }
+
+// 检查当前进程是否以管理员身份运行
+bool cpp_isAdmin() {
+	BOOL isAdmin = FALSE;
+	SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+	PSID adminGroup = NULL;
+
+	// 获取管理员组的 SID
+	if (!AllocateAndInitializeSid(&NtAuthority, 2,
+		SECURITY_BUILTIN_DOMAIN_RID,
+		DOMAIN_ALIAS_RID_ADMINS,
+		0, 0, 0, 0, 0, 0, &adminGroup)) {
+		return FALSE;
+	}
+
+	// 检查当前令牌是否包含管理员组
+	if (!CheckTokenMembership(NULL, adminGroup, &isAdmin)) {
+		isAdmin = FALSE;
+	}
+
+	FreeSid(adminGroup);
+	return isAdmin != FALSE;
+}
+
+// 请求管理员权限（通过重启程序）
+// 返回值：true 表示用户同意了 UAC 提示（程序即将重启），false 表示用户拒绝了
+bool cpp_requestAdminPrivilege() {
+	wchar_t szPath[MAX_PATH];
+	if (GetModuleFileNameW(NULL, szPath, MAX_PATH)) {
+		// 使用 ShellExecuteW 以管理员权限重启程序
+		SHELLEXECUTEINFOW sei = {0};
+		sei.cbSize = sizeof(SHELLEXECUTEINFOW);
+		sei.lpVerb = L"runas";
+		sei.lpFile = szPath;
+		sei.hwnd = NULL;
+		sei.nShow = SW_NORMAL;
+
+		// 执行命令并检查返回值
+		BOOL result = ShellExecuteExW(&sei);
+
+		// 如果 ShellExecuteExW 成功，说明用户点击了 UAC 的"是"，新进程已启动
+		// 如果失败（返回 FALSE），说明用户点击了"否"或出现错误
+		if (result) {
+			// 退出当前进程
+			ExitProcess(0);
+			return true; // 不会执行到这里
+		} else {
+			// UAC 被拒绝或出错，不退出当前进程
+			return false;
+		}
+	}
+	return false;
+}
 ')
 #end
 class Native
@@ -605,6 +660,37 @@ class Native
 		return {x: x, y: y, width: width, height: height};
 		#else
 		return {x: 0, y: 0, width: 0, height: 0};
+		#end
+	}
+
+	/**
+	 * 检查当前进程是否以管理员身份运行（仅Windows平台）
+	 * @return 是否具有管理员权限
+	 */
+	public static function isAdmin():Bool
+	{
+		#if (cpp && windows)
+		var result:Bool = false;
+		untyped __cpp__('result = cpp_isAdmin()');
+		return result;
+		#else
+		return false;
+		#end
+	}
+
+	/**
+	 * 请求管理员权限（仅Windows平台）
+	 * 使用 ShellExecuteW 以管理员权限重启程序
+	 * @return true 表示用户同意了 UAC 提示（程序即将重启），false 表示用户拒绝了或出错
+	 */
+	public static function requestAdminPrivilege():Bool
+	{
+		#if (cpp && windows)
+		var result:Bool = false;
+		untyped __cpp__('result = cpp_requestAdminPrivilege()');
+		return result;
+		#else
+		return false;
 		#end
 	}
 	#end

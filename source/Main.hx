@@ -57,6 +57,10 @@ class Main extends Sprite
 
 	public static final platform:String = #if mobile "Phones" #else "PCs" #end;
 
+	#if (cpp && windows && !mobile)
+	private static var isAdminCached:Bool = false;
+	#end
+
 	// Background volume control variables
 	private var backgroundVolumeTween:FlxTween;
 	private var originalVolume:Float = 1.0;
@@ -207,15 +211,20 @@ class Main extends Sprite
 
 		Language.load();
 
-		// Sets the window to dark mode. (returns true if it was successful)
-		#if !mobile
-		WindowColorMode.setDarkMode();
-		#end
+	// Sets the window to dark mode. (returns true if it was successful)
+	#if !mobile
+	WindowColorMode.setDarkMode();
+	#end
 
-		#if (linux || mac) // fix the app icon not showing up on the Linux Panel / Mac Dock
-		var icon = Image.fromFile("icon.png");
-		Lib.current.stage.window.setIcon(icon);
-		#end
+	#if (linux || mac) // fix the app icon not showing up on the Linux Panel / Mac Dock
+	var icon = Image.fromFile("icon.png");
+	Lib.current.stage.window.setIcon(icon);
+	#end
+
+	#if (cpp && windows && !mobile)
+	// 检测管理员权限并更新窗口标题
+	checkAndUpdateAdminTitle();
+	#end
 
 		#if html5
 		FlxG.autoPause = false;
@@ -432,6 +441,41 @@ class Main extends Sprite
 			}
 		});
 	}
+
+	#if (cpp && windows && !mobile)
+	/**
+	 * 检测管理员权限并更新窗口标题
+	 */
+	private static function checkAndUpdateAdminTitle():Void
+	{
+		// 检测是否具有管理员权限
+		isAdminCached = backend.Native.isAdmin();
+
+		// 更新窗口标题
+		updateWindowTitle();
+	}
+
+	/**
+	 * 根据管理员权限更新窗口标题
+	 */
+	private static function updateWindowTitle():Void
+	{
+		if (Lib.current.stage != null && Lib.current.stage.window != null)
+		{
+			var baseTitle:String = Application.current.meta.get('title');
+			if (baseTitle == null) baseTitle = "Kathy Engine";
+
+			if (isAdminCached)
+			{
+				Lib.current.stage.window.title = '$baseTitle (Administrator)';
+			}
+			else
+			{
+				Lib.current.stage.window.title = baseTitle;
+			}
+		}
+	}
+	#end
 
 	static function resetSpriteCache(sprite:Sprite):Void
 	{

@@ -150,6 +150,7 @@ import states.TitleState;
 	public var ratCounter:Bool = true; // 评分计数器
 	public var waterMarkPlay:Bool = true; // 水印
 	public var enableGameLog:Bool = false; // 启用游戏内日志显示（按F3切换）
+	public var requestAdminPrivilege:Bool = false; // 是否请求管理员权限（Windows专用）
 
 }
 

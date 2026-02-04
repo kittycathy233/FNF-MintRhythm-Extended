@@ -27,6 +27,8 @@
     "rating_opac_desc": "Adjust the opacity of rating textures (100% = original opacity).",
     "rm_perfect_judge_desc": "Remove the 'Perfect!' rating display.\nAlso affects extended rating textures.",
     "timebar_style_desc": "Modify the visual style of the timebar in gameplay.",
+    "request_admin_desc": "Restart game with administrator privileges\nEnabling will prompt for UAC confirmation. After confirmation, the program will restart with elevated privileges\nThe window title bar will display \"(Administrator)\" badge",
+    "request_admin_button": "Get Admin Rights",
     "score_best_desc": "PERSONAL BEST:",
 
     "game_font": "vcr.ttf",

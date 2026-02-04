@@ -27,6 +27,8 @@
     "rating_opac_desc": "調整評級圖示的不透明度（100%為原始值）",
     "rm_perfect_judge_desc": "移除「Perfect!」評級顯示\n同步影響額外評級圖示",
     "timebar_style_desc": "修改遊戲時間條的視覺樣式",
+    "request_admin_desc": "以管理員權限重啟遊戲\n啟用後將彈出 UAC 提示，確認後程式將以管理員權限重新啟動\n視窗標題列將顯示\"(Administrator)\"標識",
+    "request_admin_button": "獲取管理員權限",
     "uitab_font": "SourceHanSansCN-Bold.otf",
     "charting_infobar": "ResourceHanRoundedCN-Bold.ttf",
     "game_font": "ResourceHanRoundedCN-Bold.ttf",

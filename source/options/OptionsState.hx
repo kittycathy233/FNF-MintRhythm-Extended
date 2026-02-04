@@ -6,6 +6,7 @@ import flixel.FlxG;
 import flixel.math.FlxMath;
 import flixel.tweens.FlxTween;
 import flixel.input.mouse.FlxMouse;
+import flixel.ui.FlxButton;
 
 class OptionsState extends MusicBeatState
 {
@@ -42,6 +43,7 @@ class OptionsState extends MusicBeatState
 	var selectorLeft:FlxText;
 	var selectorRight:FlxText;
 	var descriptionText:FlxText;
+	var adminButton:FlxButton;
 
 	private var _inSubState:Bool = false;
 
@@ -60,6 +62,20 @@ class OptionsState extends MusicBeatState
 
 	private var lastClickTime:Float = 0;
 	private var lastClickIndex:Int = -1;
+
+	#if (cpp && windows && !mobile)
+	private function onAdminButtonClick():Void {
+		// 请求管理员权限
+		var success = backend.Native.requestAdminPrivilege();
+
+		// 如果返回 false，说明用户拒绝了 UAC 提示
+		// 此时游戏不会退出，继续运行
+		if (!success) {
+			// 可选：显示提示信息
+			FlxG.log.add("UAC prompt was declined by user");
+		}
+	}
+	#end
 
 	function openSelectedSubstate(label:String) {
 		_inSubState = true; // 标记进入子状态，阻止主界面UI操作
@@ -157,6 +173,19 @@ class OptionsState extends MusicBeatState
 		descriptionText.antialiasing = ClientPrefs.data.antialiasing;
 		descriptionText.scrollFactor.set();
 		add(descriptionText);
+
+		// 添加管理员权限按钮（仅在 Windows 平台且没有管理员权限时显示）
+		#if (cpp && windows && !mobile)
+		if (!backend.Native.isAdmin()) {
+			adminButton = new FlxButton(FlxG.width - 220, 20, Language.get("request_admin_button"), onAdminButtonClick);
+			adminButton.setGraphicSize(200, 40);
+			adminButton.updateHitbox();
+			adminButton.label.setFormat(Paths.font("ResourceHanRoundedCN-Bold.ttf"), 16, FlxColor.WHITE, CENTER);
+			adminButton.label.fieldWidth = 200;
+			adminButton.label.alignment = CENTER;
+			add(adminButton);
+		}
+		#end
 
 		// 初始化选择器目标位置
 		changeSelection();
