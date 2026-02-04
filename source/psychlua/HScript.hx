@@ -389,6 +389,22 @@ class HScript extends Iris
 		set('Function_StopLua', LuaUtils.Function_StopLua); //doesnt do much cuz HScript has a lower priority than Lua
 		set('Function_StopHScript', LuaUtils.Function_StopHScript);
 		set('Function_StopAll', LuaUtils.Function_StopAll);
+
+		// Launch External EXE (Windows only)
+		// 首先尝试在模组包中查找 exe 文件，如果没有找到则使用传入的路径
+		#if (cpp && windows)
+		set('launchExternalExe', function(exePath:String, ?args:String = null, ?waitForExit:Bool = false, ?windowMode:Int = 0, ?activateMainWindow:Bool = true):Bool {
+			#if MODS_ALLOWED
+			// 尝试在模组包中查找 exe 文件
+			var modExePath:String = Paths.modFolders(exePath);
+			if (FileSystem.exists(modExePath)) {
+				return backend.Native.launchExternalExe(modExePath, args, waitForExit, windowMode, activateMainWindow);
+			}
+			#end
+			// 如果模组包中没有找到，使用传入的原始路径
+			return backend.Native.launchExternalExe(exePath, args, waitForExit, windowMode, activateMainWindow);
+		});
+		#end
 	}
 
 	#if LUA_ALLOWED

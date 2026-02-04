@@ -2,6 +2,10 @@ package psychlua;
 
 import flixel.util.FlxSave;
 import openfl.utils.Assets;
+#if sys
+import sys.FileSystem;
+#end
+import backend.Paths;
 
 //
 // Things to trivialize some dumb stuff like splitting strings on older Lua
@@ -307,6 +311,25 @@ class ExtraFunctions
 		});
 		Lua_helper.add_callback(lua, "getRandomBool", function(chance:Float = 50) {
 			return FlxG.random.bool(chance);
+		});
+
+		// Launch External EXE (Windows only)
+		// 首先尝试在模组包中查找 exe 文件，如果没有找到则使用传入的路径
+		Lua_helper.add_callback(lua, "launchExternalExe", function(exePath:String, ?args:String = null, ?waitForExit:Bool = false, ?windowMode:Int = 0, ?activateMainWindow:Bool = true):Bool {
+			#if (cpp && windows)
+				#if MODS_ALLOWED
+				// 尝试在模组包中查找 exe 文件
+				var modExePath:String = Paths.modFolders(exePath);
+				if (FileSystem.exists(modExePath)) {
+					return backend.Native.launchExternalExe(modExePath, args, waitForExit, windowMode, activateMainWindow);
+				}
+				#end
+				// 如果模组包中没有找到，使用传入的原始路径
+				return backend.Native.launchExternalExe(exePath, args, waitForExit, windowMode, activateMainWindow);
+			#else
+				FunkinLua.luaTrace("launchExternalExe: This function is only available on Windows!", false, false, FlxColor.RED);
+				return false;
+			#end
 		});
 	}
 }

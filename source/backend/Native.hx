@@ -428,6 +428,77 @@ bool cpp_requestAdminPrivilege() {
 	}
 	return false;
 }
+
+// 启动外部 EXE 文件
+bool cpp_launchExternalExe(const char* exePath, const char* args, bool waitForExit, int windowMode, bool activateMainWindow) {
+	// windowMode: 0=正常显示, 1=最小化, 2=最大化, 3=隐藏
+	// activateMainWindow: 是否在启动后激活主游戏窗口
+
+	SHELLEXECUTEINFOW sei = {0};
+	sei.cbSize = sizeof(SHELLEXECUTEINFOW);
+
+	// 将参数转换为宽字符
+	wchar_t wPath[MAX_PATH];
+	MultiByteToWideChar(CP_UTF8, 0, exePath, -1, wPath, MAX_PATH);
+
+	wchar_t* wArgs = nullptr;
+	if (args != nullptr && strlen(args) > 0) {
+		int argsLen = MultiByteToWideChar(CP_UTF8, 0, args, -1, nullptr, 0);
+		wArgs = new wchar_t[argsLen];
+		MultiByteToWideChar(CP_UTF8, 0, args, -1, wArgs, argsLen);
+	}
+
+	// 设置窗口显示模式
+	switch (windowMode) {
+		case 1: sei.nShow = SW_MINIMIZE; break;
+		case 2: sei.nShow = SW_MAXIMIZE; break;
+		case 3: sei.nShow = SW_HIDE; break;
+		default: sei.nShow = SW_NORMAL; break;
+	}
+
+	sei.fMask = SEE_MASK_NOCLOSEPROCESS;
+	sei.lpVerb = L"open";
+	sei.lpFile = wPath;
+	sei.lpParameters = wArgs;
+	sei.nShow = sei.nShow;
+	sei.hwnd = NULL;
+
+	BOOL result = ShellExecuteExW(&sei);
+
+	if (wArgs != nullptr) delete[] wArgs;
+
+	// 如果成功启动且需要激活主窗口
+	if (result && activateMainWindow && curHandle != NULL) {
+		// 稍微延迟一下，确保外部程序已经启动
+		Sleep(100);
+
+		// 激活主游戏窗口
+		SetForegroundWindow(curHandle);
+
+		// 确保窗口显示在前面
+		BringWindowToTop(curHandle);
+
+		// 附加到前台线程
+		DWORD foregroundThread = GetWindowThreadProcessId(GetForegroundWindow(), NULL);
+		DWORD currentThread = GetCurrentThreadId();
+		AttachThreadInput(foregroundThread, currentThread, TRUE);
+		SetForegroundWindow(curHandle);
+		AttachThreadInput(foregroundThread, currentThread, FALSE);
+
+		// 恢复窗口状态（如果最小化了）
+		if (IsIconic(curHandle)) {
+			ShowWindow(curHandle, SW_RESTORE);
+		}
+	}
+
+	if (result && waitForExit && sei.hProcess != NULL) {
+		WaitForSingleObject(sei.hProcess, INFINITE);
+		CloseHandle(sei.hProcess);
+		return true;
+	}
+
+	return result != FALSE;
+}
 ')
 #end
 class Native
@@ -738,6 +809,27 @@ class Native
 		#if (cpp && windows)
 		var result:Bool = false;
 		untyped __cpp__('result = cpp_requestAdminPrivilege()');
+		return result;
+		#else
+		return false;
+		#end
+	}
+
+	/**
+	 * 启动外部 EXE 文件（仅Windows平台）
+	 * @param exePath EXE 文件路径
+	 * @param args 命令行参数（可选）
+	 * @param waitForExit 是否等待程序退出后再继续执行
+	 * @param windowMode 窗口显示模式（0=正常, 1=最小化, 2=最大化, 3=隐藏）
+	 * @param activateMainWindow 是否在启动后激活主游戏窗口（默认 true）
+	 * @return 是否成功启动
+	 */
+	public static function launchExternalExe(exePath:String, ?args:String = null, ?waitForExit:Bool = false, ?windowMode:Int = 0, ?activateMainWindow:Bool = true):Bool
+	{
+		#if (cpp && windows)
+		var result:Bool = false;
+		if (args == null) args = "";
+		untyped __cpp__('result = cpp_launchExternalExe({0}, {1}, {2}, {3}, {4})', exePath, args, waitForExit, windowMode, activateMainWindow);
 		return result;
 		#else
 		return false;

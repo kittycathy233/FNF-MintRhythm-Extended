@@ -2,6 +2,7 @@ package backend;
 
 #if (cpp && windows)
 import backend.Native;
+#end
 
 /**
  * 窗口数据类型定义
@@ -16,6 +17,7 @@ typedef WindowData = {
 /**
  * NativeWindowManager - 原生窗口管理器
  * 管理所有额外窗口的生命周期，与底层Native API交互
+ * 在非Windows平台上，所有函数都返回默认值/空值
  */
 class NativeWindowManager
 {
@@ -178,4 +180,3 @@ typedef WindowPosition = {
 	var width:Int;
 	var height:Int;
 }
-#end
