@@ -2057,9 +2057,15 @@ if(_shouldReset) Conductor.songPosition = 0;
 									if(!holdingAlt)
 										resetSelectedNotes();
 		
-									selectedNotes.push(noteAdded);
-									addUndoAction(ADD_NOTE, {notes: [noteAdded]});
-								}
+								selectedNotes.push(noteAdded);
+								addUndoAction(ADD_NOTE, {notes: [noteAdded]});
+
+								// 播放角色对应箭头动画
+								var targetChar:Character = (noteData >= 4) ? dad : boyfriend;
+								var direction:Int = noteData % 4;
+								if(targetChar != null && targetChar.visible)
+									playCharacterSing(targetChar, direction);
+							}
 								else if(!lockedEvents)
 								{
 									trace('Added event at time: $strumTime');
@@ -2297,6 +2303,12 @@ if(_shouldReset) Conductor.songPosition = 0;
 	
 								selectedNotes.push(noteAdded);
 								addUndoAction(ADD_NOTE, {notes: [noteAdded]});
+
+								// 播放角色对应箭头动画
+								var targetChar:Character = (noteData >= 4) ? dad : boyfriend;
+								var direction:Int = noteData % 4;
+								if(targetChar != null && targetChar.visible)
+									playCharacterSing(targetChar, direction);
 							}
 							else if(!lockedEvents)
 							{
@@ -2502,7 +2514,7 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 					if(note.mustPress && hitsoundPlayerStepper.value > 0)
 					{
 						var sound:FlxSound = hitSoundPool[hitSoundPoolIndex];
-						sound.loadEmbedded(Paths.sound('hitsoundP'));
+						sound.loadEmbedded(Paths.sound('CLAP'));
 						sound.volume = hitsoundPlayerStepper.value;
 						sound.pan = -1; // 玩家音符：纯左声道
 						sound.play();
@@ -2511,7 +2523,7 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 					else if(!note.mustPress && hitsoundOpponentStepper.value > 0)
 					{
 						var sound:FlxSound = hitSoundPool[hitSoundPoolIndex];
-						sound.loadEmbedded(Paths.sound('hitsound'));
+						sound.loadEmbedded(Paths.sound('SNAP'));
 						sound.volume = hitsoundOpponentStepper.value;
 						sound.pan = 1; // 对手音符：纯右声道
 						sound.play();
