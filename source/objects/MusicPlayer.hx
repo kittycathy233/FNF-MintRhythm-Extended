@@ -254,6 +254,7 @@ class MusicPlayer extends FlxGroup
 
 	public function switchPlayMusic()
 	{
+		FreeplayState.isFreeplayPlayingMusic = playingMusic;
 		FlxG.autoPause = (!playingMusic && ClientPrefs.data.autoPause);
 		active = visible = playingMusic;
 
@@ -274,7 +275,7 @@ class MusicPlayer extends FlxGroup
 			final escape:String = (instance.controls.mobileC) ? "B" : "ESCAPE";
 			final reset:String = (instance.controls.mobileC) ? "C" : "R";
 
-			instance.bottomText.text = LanguageBasic.getPhrase('musicplayer_tip', '{1}: Pause \n{2}: Exit \n{3}: Reset the Song',
+			instance.bottomText.text = LanguageBasic.getPhrase('musicplayer_tip', '{1}: Pause | {2}: Exit | {3}: Reset the Song',
 				[space, escape, reset]);
 			positionSong();
 

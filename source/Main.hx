@@ -10,6 +10,7 @@ import openfl.display.StageScaleMode;
 import openfl.display.StageQuality;
 import lime.app.Application;
 import states.TitleState;
+import states.FreeplayState;
 #if HSCRIPT_ALLOWED
 import crowplexus.iris.Iris;
 import psychlua.HScript.HScriptInfos;
@@ -394,7 +395,7 @@ class Main extends Sprite
 	// 应用进入后台时调用
 	private function onAppDeactivate(e:Event):Void
 	{
-		if (isInBackground || !ClientPrefs.data.backgroundVolume)
+		if (isInBackground || !ClientPrefs.data.backgroundVolume || FreeplayState.isFreeplayPlayingMusic)
 			return;
 		isInBackground = true;
 

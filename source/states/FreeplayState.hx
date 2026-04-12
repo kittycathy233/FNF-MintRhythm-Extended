@@ -1,4 +1,4 @@
-﻿package states;
+package states;
 
 import backend.WeekData;
 import backend.Highscore;
@@ -22,6 +22,8 @@ import backend.Mods;
 
 class FreeplayState extends MusicBeatState
 {
+	public static var isFreeplayPlayingMusic:Bool = false;
+	
 	var songs:Array<SongMetadata> = [];
 
 	var selector:FlxText;
@@ -42,6 +44,7 @@ class FreeplayState extends MusicBeatState
 	var intendedRating:Float = 0;
 
 	private var grpSongs:FlxTypedGroup<Alphabet>;
+	private var grpIcons:FlxTypedGroup<HealthIcon>;
 	private var curPlaying:Bool = false;
 
 	private var iconArray:Array<HealthIcon> = null;
@@ -138,6 +141,9 @@ class FreeplayState extends MusicBeatState
 
 		grpSongs = new FlxTypedGroup<Alphabet>();
 		add(grpSongs);
+		
+		grpIcons = new FlxTypedGroup<HealthIcon>();
+		add(grpIcons);
 
 		// 初始化图标数组和加载状态数组
 		iconArray = new Array<HealthIcon>();
@@ -165,6 +171,14 @@ class FreeplayState extends MusicBeatState
 		}
 		WeekData.setDirectoryFromWeek();
 
+		if (curSelected >= songs.length)
+			curSelected = 0;
+		bg.color = songs[curSelected].color;
+		intendedColor = bg.color;
+		lerpSelected = curSelected;
+
+		curDifficulty = Math.round(Math.max(0, Difficulty.defaultList.indexOf(lastDifficultyName)));
+
 		scoreText = new FlxText(FlxG.width * 0.7, 5, 0, "", 32);
 		scoreText.setFormat(Paths.font(Language.get('game_font')), 32, FlxColor.WHITE, RIGHT);
 
@@ -175,32 +189,17 @@ class FreeplayState extends MusicBeatState
 		scoreBG = new FlxSprite(scoreText.x - 6, 0).makeGraphic(1, Std.int(height), 0xFF000000);
 		scoreBG.alpha = 0.6;
 
-		add(scoreBG);
-		add(diffText);
-		add(scoreText);
-
 		missingTextBG = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
 		missingTextBG.alpha = 0.6;
 		missingTextBG.visible = false;
-		add(missingTextBG);
 
 		missingText = new FlxText(50, 0, FlxG.width - 100, '', 24);
 		missingText.setFormat(Paths.font("vcr.ttf"), 24, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		missingText.scrollFactor.set();
 		missingText.visible = false;
-		add(missingText);
-
-		if (curSelected >= songs.length)
-			curSelected = 0;
-		bg.color = songs[curSelected].color;
-		intendedColor = bg.color;
-		lerpSelected = curSelected;
-
-		curDifficulty = Math.round(Math.max(0, Difficulty.defaultList.indexOf(lastDifficultyName)));
 
 		bottomBG = new FlxSprite(0, FlxG.height - 26).makeGraphic(FlxG.width, 26, 0xFF000000);
 		bottomBG.alpha = 0.6;
-		add(bottomBG);
 
 		final space:String = (controls.mobileC) ? "X" : "SPACE";
 		final control:String = (controls.mobileC) ? "C" : "CTRL";
@@ -214,22 +213,30 @@ class FreeplayState extends MusicBeatState
 		bottomText = new FlxText(bottomBG.x, bottomBG.y + 4, FlxG.width, leText, size);
 		bottomText.setFormat(Paths.font("vcr.ttf"), size, FlxColor.WHITE, CENTER);
 		bottomText.scrollFactor.set();
-		add(bottomText);
 
 		player = new MusicPlayer(this);
-		add(player);
 
 		// 创建BPM变化提示背景（先创建，渲染在底层）
 		bpmTextBG = new FlxSprite(0, 0); // 初始位置为0,0
 		bpmTextBG.alpha = 0;
 		bpmTextBG.scrollFactor.set(); // 固定位置
-		add(bpmTextBG);
 
 		// 创建BPM变化提示文本（后创建，渲染在顶层）
 		bpmText = new FlxText(0, 20, 0, "", 32);
 		bpmText.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, RIGHT);
 		bpmText.alpha = 0;
 		bpmText.scrollFactor.set(); // 固定位置
+
+		// 现在添加所有UI元素到正确的层级（在歌曲和图标之上）
+		add(scoreBG);
+		add(diffText);
+		add(scoreText);
+		add(missingTextBG);
+		add(missingText);
+		add(bottomBG);
+		add(bottomText);
+		add(player);
+		add(bpmTextBG);
 		add(bpmText);
 
 		changeSelection();
@@ -285,7 +292,7 @@ class FreeplayState extends MusicBeatState
 		// 更新Conductor.songPosition以触发beatHit
 		if (player.playingMusic && FlxG.sound.music != null)
 		{
-			Conductor.songPosition = FlxG.sound.music.time;
+			Conductor.songPosition = FlxG.sound.music.time + ClientPrefs.data.noteOffset;
 
 			// 检测BPM变化并显示提示 - 使用getBPMFromSeconds获取当前时间点的实际BPM
 			// 限制BPM检测频率，避免每帧都检测
@@ -503,6 +510,7 @@ class FreeplayState extends MusicBeatState
 				bpmTextBG.y = bpmText.y - 5;
 
 				bpmDisplayTime = 0;
+				lastBeatHit = -1; // 重置beat检测
 
 				if (PlayState.SONG.needsVoices)
 				{
@@ -1140,7 +1148,7 @@ class FreeplayState extends MusicBeatState
 				iconArray[i].sprTracker = item;
 				iconArray[i].visible = false;
 				iconArray[i].active = false;
-				add(iconArray[i]);
+				grpIcons.add(iconArray[i]);
 				iconLoadStatus[i] = true;
 			}
 			
@@ -1177,7 +1185,7 @@ class FreeplayState extends MusicBeatState
 	override function beatHit():Void
 	{
 		// trace('beatHit called, curBeat: ' + curBeat + ', lastBeatHit: ' + lastBeatHit + ', playingMusic: ' + player.playingMusic);
-		if (lastBeatHit >= curBeat || !player.playingMusic)
+		if (lastBeatHit >= curBeat || !player.playingMusic || !FlxG.sound.music.playing)
 		{
 			// trace('beatHit blocked: lastBeatHit >= curBeat = ' + (lastBeatHit >= curBeat) + ', !playingMusic = ' + (!player.playingMusic));
 			return;
@@ -1200,7 +1208,7 @@ class FreeplayState extends MusicBeatState
 		// 背景每section缩放一次（每section触发一次）
 		// 不再调用super.sectionHit()，避免父类中的额外缩放
 		// 只有当缩放接近完成时才重新触发，避免在lerp动画中重复设置
-		if (bg != null && player.playingMusic && bg.scale.x <= 1.01)
+		if (bg != null && player.playingMusic && FlxG.sound.music.playing && bg.scale.x <= 1.01)
 		{
 			bg.scale.set(1.05, 1.05);
 			bgBeatElapsed = 0;
@@ -1214,6 +1222,9 @@ class FreeplayState extends MusicBeatState
 		bgScaleLerp = 0;
 		bgBeatElapsed = 0;
 		bgBeatDuration = 0;
+		
+		// 重置Freeplay播放标志
+		isFreeplayPlayingMusic = false;
 
 		super.destroy();
 
