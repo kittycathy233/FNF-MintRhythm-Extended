@@ -3067,15 +3067,46 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		{
 			try
 			{
-				var playerVocals:Sound = Paths.voices(PlayState.SONG.song, (characterData.vocalsP1 == null || characterData.vocalsP1.length < 1) ? 'Player' : characterData.vocalsP1, PlayState.SONG.specialVocal);
-				vocals.loadEmbedded(playerVocals != null ? playerVocals : Paths.voices(PlayState.SONG.song, null, PlayState.SONG.specialVocal));
+				// 加载玩家vocal
+				var playerVocalName:String = characterData.vocalsP1;
+				trace('Loading player vocal: name=$playerVocalName, specialVocal=${PlayState.SONG.specialVocal}');
+				var playerVocals:Sound = Paths.voices(PlayState.SONG.song, playerVocalName, PlayState.SONG.specialVocal, false);
+				trace('Player vocal result: ${playerVocals != null ? "found" : "not found"}');
+				
+				// 如果指定的vocal不存在，尝试使用Player
+				if (playerVocals == null) {
+					trace('Trying Player fallback...');
+					playerVocals = Paths.voices(PlayState.SONG.song, 'Player', PlayState.SONG.specialVocal, false);
+					trace('Player fallback result: ${playerVocals != null ? "found" : "not found"}');
+				}
+				
+				// 如果Player也不存在，使用默认voices
+				if (playerVocals != null) {
+					vocals.loadEmbedded(playerVocals);
+				} else {
+					trace('Using default voices...');
+					vocals.loadEmbedded(Paths.voices(PlayState.SONG.song, null, PlayState.SONG.specialVocal));
+				}
 				vocals.volume = 0;
 				vocals.play();
 				vocals.pause();
 				vocals.time = time;
 				
-				var oppVocals:Sound = Paths.voices(PlayState.SONG.song, (characterData.vocalsP2 == null || characterData.vocalsP2.length < 1) ? 'Opponent' : characterData.vocalsP2, PlayState.SONG.specialVocal);
-				if(oppVocals != null && oppVocals.length > 0)
+				// 加载对手vocal
+				var oppVocalName:String = characterData.vocalsP2;
+				trace('Loading opponent vocal: name=$oppVocalName, specialVocal=${PlayState.SONG.specialVocal}');
+				var oppVocals:Sound = Paths.voices(PlayState.SONG.song, oppVocalName, PlayState.SONG.specialVocal, false);
+				trace('Opponent vocal result: ${oppVocals != null ? "found" : "not found"}');
+				
+				// 如果指定的vocal不存在，尝试使用Opponent
+				if (oppVocals == null) {
+					trace('Trying Opponent fallback...');
+					oppVocals = Paths.voices(PlayState.SONG.song, 'Opponent', PlayState.SONG.specialVocal, false);
+					trace('Opponent fallback result: ${oppVocals != null ? "found" : "not found"}');
+				}
+				
+				// 如果找到vocal文件，加载它
+				if(oppVocals != null)
 				{
 					opponentVocals.loadEmbedded(oppVocals);
 					opponentVocals.volume = 0;
@@ -3697,9 +3728,14 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		for (i in 1...GRID_PLAYERS+1)
 		{
 			//trace('adding iconP$i');
-			var data:CharacterFile = loadCharacterFile(Reflect.field(PlayState.SONG, 'player$i'));
+			var charName:String = Reflect.field(PlayState.SONG, 'player$i');
+			trace('updateJsonData - player$i: charName=$charName');
+			var data:CharacterFile = loadCharacterFile(charName);
+			trace('updateJsonData - player$i: data=${data != null ? "loaded" : "null"}, vocals_file=${data != null ? data.vocals_file : "N/A"}');
 			Reflect.setField(characterData, 'iconP$i', data != null && data.healthicon != null ? data.healthicon : 'face');
-			Reflect.setField(characterData, 'vocalsP$i', data != null && data.vocals_file != null ? data.vocals_file : '');
+			var vocalName:String = data != null && data.vocals_file != null && data.vocals_file.length > 0 ? data.vocals_file : charName;
+			trace('updateJsonData - player$i: vocalName=$vocalName');
+			Reflect.setField(characterData, 'vocalsP$i', vocalName);
 		}
 	}
 	

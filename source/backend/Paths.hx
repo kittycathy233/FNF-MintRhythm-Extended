@@ -258,9 +258,9 @@ inline static public function inst(song:String, ?specialInst:String = null, ?mod
 	inline static public function voices(song:String, postfix:String = null, ?specialVocal:String = null, ?modsAllowed:Bool = true):Sound
 	{
 		var songKey:String = '${formatToSongPath(song)}/Voices';
-		if(specialVocal != null && specialVocal.length > 0) songKey += '-' + specialVocal;
 		if(postfix != null) songKey += '-' + postfix;
-		//trace('songKey test: $songKey');
+		if(specialVocal != null && specialVocal.length > 0) songKey += '-' + specialVocal;
+		trace('voices() - songKey: $songKey, postfix: $postfix, specialVocal: $specialVocal');
 		return returnSound(songKey, 'songs', modsAllowed, false);
 	}
 
