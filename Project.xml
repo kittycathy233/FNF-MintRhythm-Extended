@@ -128,7 +128,8 @@
 	<haxelib name="hxvlc" if="VIDEOS_ALLOWED"/>
 	<haxelib name="hxdiscord_rpc" if="DISCORD_ALLOWED"/>
 	<haxelib name="flxanimate"/>
-	<haxelib name="spine-haxe"/>
+	<!--haxelib name="spine-haxe"/-->
+	<!--haxelib name="extension-androidtools" if="android"-->
 	<haxelib name="flxgif" version="1.0.3"/>
 	<haxelib name="flxsvg" version="1.1.0"/>
 	<haxelib name="sl-windows-api" version="1.1.0"  if="desktop"/>
@@ -201,6 +202,11 @@
 	<!-- Category Type for Apple Systems -->
 	<config:ios category_type="public.app-category.music-games" />
 	<config:mac category_type="public.app-category.music-games" />
+
+	<!-- Android Theme Configuration -->
+	<config:android>
+		<app android:theme="@android:style/Theme.NoTitleBar.Fullscreen" />
+	</config:android>
 
 	<!-- Allow Access to Engine Files in iOS -->
 	<haxedef name="SHARE_MOBILE_FILES" if="ios" />
