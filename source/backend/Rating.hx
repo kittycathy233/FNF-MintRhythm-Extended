@@ -50,7 +50,7 @@ class Rating
 
 		if (!ClientPrefs.data.rmPerfect){
     		var rating:Rating = new Rating('perfect');
-    		rating.ratingMod = 1.015;
+    		rating.ratingMod = 1;
     		rating.score = 500;
     		rating.noteSplash = true;
 		    ratingsData.push(rating);
