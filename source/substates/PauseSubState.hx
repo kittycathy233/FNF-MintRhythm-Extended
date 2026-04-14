@@ -114,7 +114,7 @@ class PauseSubState extends MusicBeatSubstate
 		add(formatText);
 
 		//var blueballedTxt:FlxText = new FlxText(20, 15 + 160, 0, LanguageBasic.getPhrase("blueballed", "Blueballed: {1}", [PlayState.deathCounter]), 32);
-		var blueballedTxt:FlxText = new FlxText(20, 15 + 160, 0, 'RETRIED: ${PlayState.deathCounter}', 32);
+		var blueballedTxt:FlxText = new FlxText(20, 15 + 160, 0, 'BLUEBALLLED: ${PlayState.deathCounter}', 32);
 		blueballedTxt.scrollFactor.set();
 		blueballedTxt.setFormat(Paths.font('vcr.ttf'), 32);
 		if (PlayState.SONG.specialInst != null && PlayState.SONG.specialInst.trim().length > 0) blueballedTxt.y += 32;

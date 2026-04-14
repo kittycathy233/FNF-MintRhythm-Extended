@@ -232,7 +232,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			Language.get("timebar_style_desc"),
 			'timebarStyle',
 			STRING,
-			['default', 'Kade (Legacy)', 'Leather']);
+			['Psych', 'Kade (Legacy)', 'Leather']);
 		addOption(option);
 
 		option = new Option('BotPlayTxt Style',
