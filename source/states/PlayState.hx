@@ -1782,13 +1782,33 @@ isReplaying = false;
 		try
 		{
 			if (songData.needsVoices)
-			{
-				var playerVocals = Paths.voices(songData.song, (boyfriend.vocalsFile == null || boyfriend.vocalsFile.length < 1) ? 'Player' : boyfriend.vocalsFile, songData.specialVocal);
-				vocals.loadEmbedded(playerVocals != null ? playerVocals : Paths.voices(songData.song, null, songData.specialVocal));
-				
-				var oppVocals = Paths.voices(songData.song, (dad.vocalsFile == null || dad.vocalsFile.length < 1) ? 'Opponent' : dad.vocalsFile, songData.specialVocal);
-				if(oppVocals != null && oppVocals.length > 0) opponentVocals.loadEmbedded(oppVocals);
-			}
+				{
+					// 使用character名称作为vocal postfix，而不是固定的'Player'和'Opponent'
+					var playerVocalPostfix = (boyfriend.vocalsFile == null || boyfriend.vocalsFile.length < 1) ? boyfriend.curCharacter : boyfriend.vocalsFile;
+					var playerVocals = Paths.voices(songData.song, playerVocalPostfix, songData.specialVocal);
+					
+					// 如果指定的vocal不存在，尝试使用默认值
+					if (playerVocals == null) {
+						playerVocals = Paths.voices(songData.song, 'Player', songData.specialVocal);
+					}
+					
+					// 如果仍然不存在，使用无postfix的版本
+					if (playerVocals != null) {
+						vocals.loadEmbedded(playerVocals);
+					} else {
+						vocals.loadEmbedded(Paths.voices(songData.song, null, songData.specialVocal));
+					}
+					
+					var oppVocalPostfix = (dad.vocalsFile == null || dad.vocalsFile.length < 1) ? dad.curCharacter : dad.vocalsFile;
+					var oppVocals = Paths.voices(songData.song, oppVocalPostfix, songData.specialVocal);
+					
+					// 如果指定的vocal不存在，尝试使用默认值
+					if (oppVocals == null) {
+						oppVocals = Paths.voices(songData.song, 'Opponent', songData.specialVocal);
+					}
+					
+					if(oppVocals != null && oppVocals.length > 0) opponentVocals.loadEmbedded(oppVocals);
+				}
 		}
 		catch (e:Dynamic) {}
 

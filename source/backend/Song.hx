@@ -129,6 +129,13 @@ class Song
 	{
 		if(folder == null) folder = jsonInput;
 		PlayState.SONG = getChart(jsonInput, folder);
+		
+		if(PlayState.SONG == null)
+		{
+			trace('Failed to load chart: $jsonInput');
+			return null;
+		}
+		
 		loadedSongName = folder;
 		chartPath = _lastPath;
 		#if windows
@@ -149,12 +156,20 @@ class Song
 		var formattedSong:String = Paths.formatToSongPath(jsonInput);
 		_lastPath = Paths.json('$formattedFolder/$formattedSong');
 
-		#if MODS_ALLOWED
-		if(FileSystem.exists(_lastPath))
-			rawData = File.getContent(_lastPath);
-		else
-		#end
-			rawData = Assets.getText(_lastPath);
+		try
+		{
+			#if MODS_ALLOWED
+			if(FileSystem.exists(_lastPath))
+				rawData = File.getContent(_lastPath);
+			else
+			#end
+				rawData = Assets.getText(_lastPath);
+		}
+		catch(e:Dynamic)
+		{
+			trace('Error loading chart file: $e');
+			return null;
+		}
 
 		return rawData != null ? parseJSON(rawData, jsonInput) : null;
 	}

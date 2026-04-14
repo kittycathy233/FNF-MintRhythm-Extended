@@ -32,7 +32,7 @@ typedef VSliceEvent =
 }
 
 // Metadata
-typedef VSliceMetadata = 
+typedef VSliceMetadata =
 {
 	var songName:String;
 	var artist:String;
@@ -43,6 +43,7 @@ typedef VSliceMetadata =
 	var timeChanges:Array<VSliceTimeChange>;
 	var generatedBy:String;
 	var version:String;
+	@:optional var instrumental:String;
 }
 
 typedef VSlicePlayData =
@@ -58,6 +59,7 @@ typedef VSliceCharacters =
 	var player:String;
 	var girlfriend:String;
 	var opponent:String;
+	@:optional var instrumental:String;
 }
 
 typedef VSliceTimeChange =
@@ -246,25 +248,71 @@ class VSlice
 					sectionData[noteSec].sectionNotes.push(psychNote);
 			}
 
-			var swagSong:SwagSong = {
-				song: metadata.songName,
-				notes: sectionData,
-				events: [],
-				bpm: songBpm,
-				needsVoices: true, //There's no value on V-Slice to identify if there are vocals as it checks automatically
-				speed: scrollSpeed,
-				offset: 0,
-			
-				player1: metadata.playData.characters.player,
-				player2: metadata.playData.characters.opponent,
-				gfVersion: metadata.playData.characters.girlfriend,
-				stage: stage,
-				format: 'psych_v1_convert'
+			// 先获取instrumental值
+			var instrumental:String = '';
+			trace('Checking instrumental field...');
+			if(Reflect.hasField(metadata, 'instrumental') && metadata.instrumental != null && metadata.instrumental.length > 0)
+			{
+				trace('Found instrumental in metadata: ' + metadata.instrumental);
+				instrumental = metadata.instrumental;
+			}
+			else if(metadata.playData != null && metadata.playData.characters != null && metadata.playData.characters.instrumental != null && metadata.playData.characters.instrumental.length > 0)
+			{
+				trace('Found instrumental in playData.characters: ' + metadata.playData.characters.instrumental);
+				instrumental = metadata.playData.characters.instrumental;
+			}
+			else
+			{
+				trace('No instrumental field found');
+				if(metadata.playData != null)
+				{
+					trace('Has characters field: ' + (metadata.playData.characters != null));
+					if(metadata.playData.characters != null)
+					{
+						trace('Has instrumental field: ' + (metadata.playData.characters.instrumental != null));
+						if(metadata.playData.characters.instrumental != null)
+						{
+							trace('Instrumental value: ' + metadata.playData.characters.instrumental);
+							trace('Instrumental length: ' + metadata.playData.characters.instrumental.length);
+						}
+					}
+				}
 			}
 
-			Reflect.setField(swagSong, 'artist', metadata.artist);
-			Reflect.setField(swagSong, 'charter', metadata.charter);
-			Reflect.setField(swagSong, 'generatedBy', 'Psych Engine v${MainMenuState.psychEngineVersion} - Chart Editor V-Slice Importer');
+			// 创建swagSong
+				var swagSong:SwagSong = {
+					song: metadata.songName,
+					notes: sectionData,
+					events: [],
+					bpm: songBpm,
+					needsVoices: true, //There's no value on V-Slice to identify if there are vocals as it checks automatically
+					speed: scrollSpeed,
+					offset: 0,
+					
+					player1: metadata.playData.characters.player,
+					player2: metadata.playData.characters.opponent,
+					gfVersion: metadata.playData.characters.girlfriend,
+					stage: stage,
+					format: 'psych_v1_convert'
+				};
+
+				Reflect.setField(swagSong, 'artist', metadata.artist);
+				Reflect.setField(swagSong, 'charter', metadata.charter);
+				Reflect.setField(swagSong, 'generatedBy', 'Psych Engine v${MainMenuState.psychEngineVersion} - Chart Editor V-Slice Importer');
+
+				// 使用Reflect.setField设置specialInst和specialVocal字段
+				if(instrumental.length > 0)
+				{
+					trace('Set specialInst and specialVocal to: ' + instrumental);
+					Reflect.setField(swagSong, 'specialInst', instrumental);
+					Reflect.setField(swagSong, 'specialVocal', instrumental);
+					trace('specialInst value: ' + Reflect.field(swagSong, 'specialInst'));
+					trace('specialVocal value: ' + Reflect.field(swagSong, 'specialVocal'));
+				}
+				else
+				{
+					trace('Instrumental is empty, not setting specialInst and specialVocal');
+				}
 			songDifficulties.set(diff, swagSong);
 		}
 		var pack:PsychPackage = {difficulties: songDifficulties, events: null};
@@ -383,7 +431,11 @@ class VSlice
 		else if(Reflect.hasField(songData, 'composer')) composer = Reflect.field(songData, 'composer');
 		
 		var charter:String = 'Unknown';
-		if(Reflect.hasField(songData, 'charter')) composer = Reflect.field(songData, 'charter');
+		if(Reflect.hasField(songData, 'charter')) charter = Reflect.field(songData, 'charter');
+
+		var instrumental:String = '';
+		if(Reflect.hasField(songData, 'specialInst')) instrumental = Reflect.field(songData, 'specialInst');
+		else if(Reflect.hasField(songData, 'specialVocal')) instrumental = Reflect.field(songData, 'specialVocal');
 
 		// Has to add all difficulties or it might crash on V-Slice's Freeplay
 		var diffs:Array<String> = null;
@@ -452,7 +504,8 @@ class VSlice
 			timeFormat: 'ms',
 			timeChanges: timeChanges,
 			generatedBy: generatedBy,
-			version: metadataVersion //idk what "version" does on V-Slice, but it seems to break without it
+			version: metadataVersion, //idk what "version" does on V-Slice, but it seems to break without it
+			instrumental: instrumental
 		};
 		return {chart: chart, metadata: metadata};
 	}
