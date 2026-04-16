@@ -519,7 +519,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 		eventLockOverlay.alpha = 0.6;
 		eventLockOverlay.visible = false;
 		eventLockOverlay.scrollFactor.x = 0;
-		eventLockOverlay.scale.x = GRID_SIZE;
+		eventLockOverlay.scale.x = GRID_SIZE * EVENT_TRACK_COUNT;
 		eventLockOverlay.updateHitbox();
 		add(eventLockOverlay);
 
@@ -1902,7 +1902,17 @@ if(_shouldReset) Conductor.songPosition = 0;
 					{
 						spacingOffset += TRACK_SPACING; // 玩家轨道前的间距
 					}
-					dummyArrow.x = gridLayout.startX + finalUIColumn * GRID_SIZE + spacingOffset;
+					
+					// 如果是Event轨道，根据用户实际点击的具体Event轨道位置调整dummyArrow
+					if (trackInfo.trackType == 'event')
+					{
+						var eventTrackOffset:Int = Math.floor(diffX / GRID_SIZE);
+						dummyArrow.x = gridLayout.eventX + eventTrackOffset * GRID_SIZE;
+					}
+					else
+					{
+						dummyArrow.x = gridLayout.startX + finalUIColumn * GRID_SIZE + spacingOffset;
+					}
 
 					if(touchPad.buttonY.pressed || touch.y >= trackInfo.grid.y || !trackInfo.prevGrid.visible)
 						dummyArrow.y = trackInfo.grid.y + diffY;
@@ -1988,7 +1998,15 @@ if(_shouldReset) Conductor.songPosition = 0;
 							var closeNotes:Array<MetaNote> = curRenderedNotes.members.filter(function(note:MetaNote)
 							{
 								var chartY:Float = touch.y - note.chartY;
-								return ((note.isEvent && noteData < 0) || (!note.isEvent && note.songData[1] == noteData)) && chartY >= 0 && chartY < GRID_SIZE;
+								if(note.isEvent && noteData < 0)
+								{
+									var eventDiffX:Float = touch.x - trackInfo.trackX;
+									var clickTrackIndex:Int = Std.int(Math.floor(eventDiffX / GRID_SIZE));
+									clickTrackIndex = Std.int(Math.max(0, Math.min(clickTrackIndex, EVENT_TRACK_COUNT - 1)));
+									var eventNote:EventMetaNote = cast note;
+									return eventNote.eventTrackIndex == clickTrackIndex && chartY >= 0 && chartY < GRID_SIZE;
+								}
+								return (!note.isEvent && note.songData[1] == noteData) && chartY >= 0 && chartY < GRID_SIZE;
 							});
 							closeNotes.sort(function(a:MetaNote, b:MetaNote) return Math.abs(a.strumTime - touch.y) < Math.abs(b.strumTime - touch.y) ? 1 : -1);
 
@@ -2070,8 +2088,17 @@ if(_shouldReset) Conductor.songPosition = 0;
 								{
 									trace('Added event at time: $strumTime');
 									var didAdd:Bool = false;
+									
+									// 计算点击在Event轨道的具体索引（0-3）
+									var preferredTrackIndex:Null<Int> = null;
+									if(trackInfo.trackType == 'event')
+									{
+										var eventDiffX:Float = touch.x - trackInfo.trackX;
+										preferredTrackIndex = Std.int(Math.floor(eventDiffX / GRID_SIZE));
+										if(preferredTrackIndex < 0 || preferredTrackIndex >= EVENT_TRACK_COUNT) preferredTrackIndex = null;
+									}
 		
-									var eventAdded:EventMetaNote = createEvent([strumTime, [[eventsList[Std.int(Math.max(eventDropDown.selectedIndex, 0))][0], value1InputText.text, value2InputText.text, value3InputText.text, value4InputText.text]]]);
+									var eventAdded:EventMetaNote = createEvent([strumTime, [[eventsList[Std.int(Math.max(eventDropDown.selectedIndex, 0))][0], value1InputText.text, value2InputText.text, value3InputText.text, value4InputText.text]]], preferredTrackIndex);
 									for (num in sectionFirstEventID...events.length)
 									{
 										var event = events[num];
@@ -2146,7 +2173,17 @@ if(_shouldReset) Conductor.songPosition = 0;
 				{
 					spacingOffset += TRACK_SPACING; // 玩家轨道前的间距
 				}
-				dummyArrow.x = gridLayout.startX + finalUIColumn * GRID_SIZE + spacingOffset;
+				
+				// 如果是Event轨道，根据用户实际点击的具体Event轨道位置调整dummyArrow
+				if (mouseTrackInfo.trackType == 'event')
+				{
+					var eventTrackOffset:Int = Math.floor(diffX / GRID_SIZE);
+					dummyArrow.x = gridLayout.eventX + eventTrackOffset * GRID_SIZE;
+				}
+				else
+				{
+					dummyArrow.x = gridLayout.startX + finalUIColumn * GRID_SIZE + spacingOffset;
+				}
 
 				if(FlxG.keys.pressed.SHIFT || FlxG.mouse.y >= mouseTrackInfo.grid.y || !mouseTrackInfo.prevGrid.visible)
 					dummyArrow.y = mouseTrackInfo.grid.y + diffY;
@@ -2232,7 +2269,15 @@ if(_shouldReset) Conductor.songPosition = 0;
 						var closeNotes:Array<MetaNote> = curRenderedNotes.members.filter(function(note:MetaNote)
 						{
 							var chartY:Float = FlxG.mouse.y - note.chartY;
-							return ((note.isEvent && noteData < 0) || (!note.isEvent && note.songData[1] == noteData)) && chartY >= 0 && chartY < GRID_SIZE;
+							if(note.isEvent && noteData < 0)
+						{
+							var eventDiffX:Float = FlxG.mouse.x - mouseTrackInfo.trackX;
+							var clickTrackIndex:Int = Std.int(Math.floor(eventDiffX / GRID_SIZE));
+							clickTrackIndex = Std.int(Math.max(0, Math.min(clickTrackIndex, EVENT_TRACK_COUNT - 1)));
+							var eventNote:EventMetaNote = cast note;
+							return eventNote.eventTrackIndex == clickTrackIndex && chartY >= 0 && chartY < GRID_SIZE;
+						}
+							return (!note.isEvent && note.songData[1] == noteData) && chartY >= 0 && chartY < GRID_SIZE;
 						});
 						closeNotes.sort(function(a:MetaNote, b:MetaNote) return Math.abs(a.strumTime - FlxG.mouse.y) < Math.abs(b.strumTime - FlxG.mouse.y) ? 1 : -1);
 
@@ -2314,8 +2359,17 @@ if(_shouldReset) Conductor.songPosition = 0;
 							{
 								trace('Added event at time: $strumTime');
 								var didAdd:Bool = false;
+								
+								// 计算点击在Event轨道的具体索引（0-3）
+								var preferredTrackIndex:Null<Int> = null;
+								if(mouseTrackInfo.trackType == 'event')
+								{
+									var eventDiffX:Float = FlxG.mouse.x - mouseTrackInfo.trackX;
+									preferredTrackIndex = Std.int(Math.floor(eventDiffX / GRID_SIZE));
+									if(preferredTrackIndex < 0 || preferredTrackIndex >= EVENT_TRACK_COUNT) preferredTrackIndex = null;
+								}
 	
-								var eventAdded:EventMetaNote = createEvent([strumTime, [[eventsList[Std.int(Math.max(eventDropDown.selectedIndex, 0))][0], value1InputText.text, value2InputText.text, value3InputText.text, value4InputText.text]]]);
+								var eventAdded:EventMetaNote = createEvent([strumTime, [[eventsList[Std.int(Math.max(eventDropDown.selectedIndex, 0))][0], value1InputText.text, value2InputText.text, value3InputText.text, value4InputText.text]]], preferredTrackIndex);
 								for (num in sectionFirstEventID...events.length)
 								{
 									var event = events[num];
@@ -3246,23 +3300,55 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		return swagNote;
 	}
 
-	function createEvent(event:Dynamic)
+	function createEvent(event:Dynamic, ?preferredTrackIndex:Null<Int> = null)
 	{
 		var daStrumTime:Float = event[0];
 
-		// 检查同一时间点已有的events数量，分配到合适的轨道
 		var trackIndex:Int = 0;
-		var eventsAtTime:Int = 0;
-		for (existingEvent in events)
+		if (preferredTrackIndex != null && preferredTrackIndex >= 0 && preferredTrackIndex < EVENT_TRACK_COUNT)
 		{
-			if (Math.abs(existingEvent.strumTime - daStrumTime) < 0.0001)
+			// 如果指定了首选轨道索引，检查该轨道在该时间点是否已有事件
+			var isPreferredTrackAvailable:Bool = true;
+			for (existingEvent in events)
 			{
-				eventsAtTime++;
+				if (Math.abs(existingEvent.strumTime - daStrumTime) < 0.0001 && existingEvent.eventTrackIndex == preferredTrackIndex)
+				{
+					isPreferredTrackAvailable = false;
+					break;
+				}
+			}
+			
+			if (isPreferredTrackAvailable)
+			{
+				trackIndex = preferredTrackIndex;
+			}
+			else
+			{
+				// 首选轨道已被占用，分配到其他可用轨道
+				var eventsAtTime:Int = 0;
+				for (existingEvent in events)
+				{
+					if (Math.abs(existingEvent.strumTime - daStrumTime) < 0.0001)
+					{
+						eventsAtTime++;
+					}
+				}
+				trackIndex = eventsAtTime % EVENT_TRACK_COUNT;
 			}
 		}
-
-		// 分配到可用轨道（0-3），如果超过4个则允许重叠
-		trackIndex = eventsAtTime % EVENT_TRACK_COUNT;
+		else
+		{
+			// 没有指定首选轨道，按原有逻辑分配
+			var eventsAtTime:Int = 0;
+			for (existingEvent in events)
+			{
+				if (Math.abs(existingEvent.strumTime - daStrumTime) < 0.0001)
+				{
+					eventsAtTime++;
+				}
+			}
+			trackIndex = eventsAtTime % EVENT_TRACK_COUNT;
+		}
 
 		var swagEvent:EventMetaNote = new EventMetaNote(daStrumTime, event, trackIndex);
 		swagEvent.scrollFactor.x = 0;
@@ -3483,20 +3569,45 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		playerGridBg.y = cachedSectionRow[curSec] * GRID_SIZE * curZoom;
 		playerGridBg.rows = 4 * PlayState.SONG.notes[curSec].sectionBeats * curZoom;
 
-		// 更新轨道颜色覆盖层的高度，添加额外缓冲消除底部空隙
+		// 更新轨道颜色覆盖层的位置和高度
+		var gridLayout = getGridLayout();
+		var gridY:Float = 0;
+		var extraHeight:Int = 500;
+		
 		if(playerTrackOverlay != null && opponentTrackOverlay != null)
 		{
-			var extraHeight:Int = 500; // 增加500像素缓冲确保覆盖整个网格区域
-			playerTrackOverlay.height = Std.int(opponentGridBg.height) + extraHeight;
+			opponentTrackOverlay.x = gridLayout.opponentX;
+			opponentTrackOverlay.y = gridY;
 			opponentTrackOverlay.height = Std.int(opponentGridBg.height) + extraHeight;
+			
+			playerTrackOverlay.x = gridLayout.playerX;
+			playerTrackOverlay.y = gridY;
+			playerTrackOverlay.height = Std.int(opponentGridBg.height) + extraHeight;
+			
 			if(eventTrackOverlay != null)
 			{
+				eventTrackOverlay.x = gridLayout.eventX;
+				eventTrackOverlay.y = gridY;
 				eventTrackOverlay.height = Std.int(opponentGridBg.height) + extraHeight;
 			}
+		}
+		
+		// 更新轨道分隔线的位置和高度
+		if(SHOW_EVENT_COLUMN && trackSeparators.length >= 2)
+		{
+			trackSeparators[0].x = gridLayout.opponentX + GRID_SIZE * GRID_COLUMNS_PER_PLAYER + TRACK_SPACING / 2 - 2;
+			trackSeparators[0].y = gridY;
+			trackSeparators[0].height = Std.int(opponentGridBg.height) + extraHeight;
+			
+			trackSeparators[1].x = gridLayout.eventX + GRID_SIZE * EVENT_TRACK_COUNT + TRACK_SPACING / 2 - 2;
+			trackSeparators[1].y = gridY;
+			trackSeparators[1].height = Std.int(opponentGridBg.height) + extraHeight;
 		}
 
 		if(!prevOpponentGridBg.visible) eventLockOverlay.y = opponentGridBg.y;
 		eventLockOverlay.scale.y = hei;
+		// 更新事件锁定覆盖层的X位置，确保它始终在Event轨道上
+		eventLockOverlay.x = SHOW_EVENT_COLUMN ? gridLayout.eventX : gridLayout.opponentX;
 		eventLockOverlay.updateHitbox();
 
 		softReloadNotes();
@@ -6345,7 +6456,15 @@ for (i in 0...GRID_PLAYERS)
 			arr.push(note.songData);
 		}
 
-		events.sort(PlayState.sortByTime);
+		// 排序：先按时间，再按轨道索引（最左侧轨道优先）
+		events.sort(function(a:EventMetaNote, b:EventMetaNote):Int {
+			var timeDiff = a.strumTime - b.strumTime;
+			if(Math.abs(timeDiff) > 0.0001) {
+				return timeDiff > 0 ? 1 : -1;
+			}
+			// 同一时间点，按轨道索引排序，最左侧轨道(0)优先
+			return a.eventTrackIndex - b.eventTrackIndex;
+		});
 		PlayState.SONG.events = [];
 		for (event in events)
 			PlayState.SONG.events.push(event.songData);
