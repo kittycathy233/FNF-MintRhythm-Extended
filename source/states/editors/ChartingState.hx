@@ -3124,13 +3124,13 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 				// 加载玩家vocal
 				var playerVocalName:String = characterData.vocalsP1;
 				trace('Loading player vocal: name=$playerVocalName, specialVocal=${PlayState.SONG.specialVocal}');
-				var playerVocals:Sound = Paths.voices(PlayState.SONG.song, playerVocalName, PlayState.SONG.specialVocal, false);
+				var playerVocals:Sound = Paths.voices(PlayState.SONG.song, playerVocalName, PlayState.SONG.specialVocal);
 				trace('Player vocal result: ${playerVocals != null ? "found" : "not found"}');
 				
 				// 如果指定的vocal不存在，尝试使用Player
 				if (playerVocals == null) {
 					trace('Trying Player fallback...');
-					playerVocals = Paths.voices(PlayState.SONG.song, 'Player', PlayState.SONG.specialVocal, false);
+					playerVocals = Paths.voices(PlayState.SONG.song, 'Player', PlayState.SONG.specialVocal);
 					trace('Player fallback result: ${playerVocals != null ? "found" : "not found"}');
 				}
 				
@@ -3149,13 +3149,13 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 				// 加载对手vocal
 				var oppVocalName:String = characterData.vocalsP2;
 				trace('Loading opponent vocal: name=$oppVocalName, specialVocal=${PlayState.SONG.specialVocal}');
-				var oppVocals:Sound = Paths.voices(PlayState.SONG.song, oppVocalName, PlayState.SONG.specialVocal, false);
+				var oppVocals:Sound = Paths.voices(PlayState.SONG.song, oppVocalName, PlayState.SONG.specialVocal);
 				trace('Opponent vocal result: ${oppVocals != null ? "found" : "not found"}');
 				
 				// 如果指定的vocal不存在，尝试使用Opponent
 				if (oppVocals == null) {
 					trace('Trying Opponent fallback...');
-					oppVocals = Paths.voices(PlayState.SONG.song, 'Opponent', PlayState.SONG.specialVocal, false);
+					oppVocals = Paths.voices(PlayState.SONG.song, 'Opponent', PlayState.SONG.specialVocal);
 					trace('Opponent fallback result: ${oppVocals != null ? "found" : "not found"}');
 				}
 				
