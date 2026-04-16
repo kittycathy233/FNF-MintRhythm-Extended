@@ -7024,8 +7024,23 @@ for (i in 0...GRID_PLAYERS)
 		waveformSprite.visible = true;
 		waveformSprite.y = opponentGridBg.y;
 		var gridLayout = getGridLayout();
-		var width:Int = Std.int(gridLayout.totalWidth);
+		var waveformX:Float;
+		var width:Int;
 		var height:Int = Std.int(opponentGridBg.height);
+		
+		switch(waveformTarget)
+		{
+			case INST:
+				waveformX = gridLayout.eventX;
+				width = Std.int(GRID_SIZE * EVENT_TRACK_COUNT);
+			case PLAYER:
+				waveformX = gridLayout.playerX;
+				width = Std.int(GRID_SIZE * GRID_COLUMNS_PER_PLAYER);
+			case OPPONENT:
+				waveformX = gridLayout.opponentX;
+				width = Std.int(GRID_SIZE * GRID_COLUMNS_PER_PLAYER);
+		}
+		waveformSprite.x = waveformX;
 		if(Std.int(waveformSprite.height) != height && waveformSprite.pixels != null)
 		{
 			waveformSprite.pixels.dispose();
@@ -7060,7 +7075,7 @@ for (i in 0...GRID_PLAYERS)
 		}
 
 		// Draws
-		var gSize:Int = Std.int(GRID_SIZE * 8);
+		var gSize:Int = width;
 		var hSize:Int = Std.int(gSize / 2);
 		var size:Float = 1;
 
