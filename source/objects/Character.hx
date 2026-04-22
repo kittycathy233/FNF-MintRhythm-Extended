@@ -10,6 +10,7 @@ import openfl.utils.Assets;
 import haxe.Json;
 
 import backend.Song;
+import backend.ClientPrefs;
 import states.stages.objects.TankmenBG;
 
 typedef CharacterFile = {
@@ -288,9 +289,14 @@ class Character extends FlxSprite
 		}
 
 		if (getAnimationName().startsWith('sing')) holdTimer += elapsed;
-		else holdTimer = 0;
+		else if(isPlayer) holdTimer = 0;
 
-		if (holdTimer >= Conductor.stepCrochet * (0.0011 #if FLX_PITCH / (FlxG.sound.music != null ? FlxG.sound.music.pitch : 1) #end) * singDuration)
+		if (!isPlayer && holdTimer >= Conductor.stepCrochet * (0.0011 #if FLX_PITCH / (FlxG.sound.music != null ? FlxG.sound.music.pitch : 1) #end) * singDuration)
+		{
+			dance();
+			holdTimer = 0;
+		}
+		else if (isPlayer && !ClientPrefs.data.keepSingAnimation && holdTimer >= Conductor.stepCrochet * (0.0011 #if FLX_PITCH / (FlxG.sound.music != null ? FlxG.sound.music.pitch : 1) #end) * singDuration)
 		{
 			dance();
 			holdTimer = 0;

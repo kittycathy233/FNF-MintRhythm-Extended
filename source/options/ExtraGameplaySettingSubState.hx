@@ -82,6 +82,12 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		option = new Option('Keep Sing Animation',
+			'保持sing动画不返回idle（用于Hyperactive成就）',
+			'keepSingAnimation',
+			BOOL);
+		addOption(option);
+
 		option = new Option('ScoreTxt bounce',
 			Language.get("scoretxt_bounce_desc"),
 			'scoretxtbounce',
