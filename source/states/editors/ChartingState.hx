@@ -1006,9 +1006,8 @@ if(_shouldReset) Conductor.songPosition = 0;
 		// 检查是否在播放sing动画
 		if(animName.startsWith('sing'))
 		{
-			// 参考PlayState的playerDance逻辑：
-			// if(boyfriend.holdTimer > Conductor.stepCrochet * (0.0011) * boyfriend.singDuration && anim.startsWith('sing'))
-			// 使用holdTimer和singDuration来决定是否回到idle
+			// 制谱器模式下：总是允许角色回到idle动画
+			// keepSingAnimation只在实际游戏中针对按键持续按下使用
 			var timeThreshold:Float = Conductor.stepCrochet * (0.0011 #if FLX_PITCH / FlxG.sound.music.pitch #end) * char.singDuration;
 			if(char.holdTimer > timeThreshold)
 			{
@@ -1041,8 +1040,16 @@ if(_shouldReset) Conductor.songPosition = 0;
 	// 更新角色的holdTimer和动画状态（用于EditorPlayState中手动更新角色）
 	public function updateCharacter(elapsed:Float):Void
 	{
+		// 临时保存原来的keepSingAnimation值
+		var originalKeepSingAnimation:Bool = ClientPrefs.data.keepSingAnimation;
+		// 在制谱器中临时禁用keepSingAnimation，让角色正常回到idle
+		ClientPrefs.data.keepSingAnimation = false;
+		
 		if(dad != null && dad.visible) dad.update(elapsed);
 		if(boyfriend != null && boyfriend.visible) boyfriend.update(elapsed);
+		
+		// 恢复原来的keepSingAnimation值
+		ClientPrefs.data.keepSingAnimation = originalKeepSingAnimation;
 	}
 
 	// 获取角色的动画偏移（用于显示和调试）
@@ -1314,7 +1321,15 @@ if(_shouldReset) Conductor.songPosition = 0;
 			{
 				if(touchPad.buttonC.justPressed || FlxG.keys.justPressed.F12)
 				{
+					// 临时禁用 keepSingAnimation，使角色在制谱器中正常回到 idle
+					var originalKeepSingAnimation:Bool = ClientPrefs.data.keepSingAnimation;
+					ClientPrefs.data.keepSingAnimation = false;
+					
 					super.update(elapsed);
+					
+					// 恢复原值
+					ClientPrefs.data.keepSingAnimation = originalKeepSingAnimation;
+					
 					openEditorPlayState();
 					lastFocus = PsychUIInputText.focusOn;
 					return;
@@ -1574,7 +1589,14 @@ if(_shouldReset) Conductor.songPosition = 0;
 			}
 		}
 
+		// 临时禁用 keepSingAnimation，使角色在制谱器中正常回到 idle
+		var originalKeepSingAnimation:Bool = ClientPrefs.data.keepSingAnimation;
+		ClientPrefs.data.keepSingAnimation = false;
+		
 		super.update(elapsed);
+		
+		// 恢复原值
+		ClientPrefs.data.keepSingAnimation = originalKeepSingAnimation;
 
 		// 绘制角色碰撞箱
 		if(showHitboxCheckBox != null && showHitboxCheckBox.checked)
