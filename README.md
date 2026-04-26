@@ -1,5 +1,8 @@
 # Friday Night Funkin' - Kathy Engine
 
+> **⚠️ IMPORTANT NOTICE ⚠️**
+> The original account [kittycathy233](https://github.com/kittycathy233) is no longer accessible and cannot be recovered. This repository is temporarily maintained and updated by [kittycathy114](https://github.com/kittycathy114), with future plans to be determined.
+
 ![Psych Engine Mobile Logo](docs/img/KathyEngineLogoTweak.png)
 
 Based on **Psych Engine Mobile** (commit [`d5f4522`](https://github.com/kittycathy114/FNF-KathyEngine/commit/d5f452261faa32cf71b00ba6f7908d134e7e8c8e)), this engine integrates inspiration from [Funk Archive](https://gamebanana.com/mods/496238) and features tailored for [Blue Archive](https://en.wikipedia.org/wiki/Blue_Archive) players, including a user-friendly UI and enhancements from other Psych Engine branches(i think).
@@ -35,7 +38,8 @@ To be updated...
 ### Kathy Team
 | Role              | Contributor          |
 |-------------------|----------------------|
-| Project Lead      | [KittyCathy](https://github.com/kittycathy233) |
+| Original Project Lead | [KittyCathy233](https://github.com/kittycathy233) |
+| Current Maintainer | [kittycathy114](https://github.com/kittycathy114) |
 
 ### Special Thanks
 - Engines:  
@@ -44,7 +48,7 @@ To be updated...
   [Slush Engine](https://github.com/Slushi-Github/Slushi-Engine)・
   [JS Engine](https://github.com/JordanSantiagoYT/FNF-JS-Engine)・
   [Kade Engine](https://github.com/KadeArchive/Kade-Engine)
-- Trickal: Revive (呃呃这个项目目前还没有Trickal的资源hhh):
+- Trickal: Revive (To be updated...):
   [KR](https://trickcal.com/)・
   [CN](https://game.bilibili.com/trickcal/)
 - Blue Archive:  
@@ -55,8 +59,6 @@ To be updated...
   [Kimi (AI)](https://kimi.moonshot.cn/)・
   [DeepSeek (AI)](https://www.deepseek.com/)・
   [CodeBuddy (IDE & AI)](https://www.codebuddy.ai/)
-
-依旧北狐我喜欢你
 
 ---
 
