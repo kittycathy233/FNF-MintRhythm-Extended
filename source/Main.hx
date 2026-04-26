@@ -32,7 +32,7 @@ import flixel.tweens.FlxEase;
 import backend.ClientPrefs;
 import openfl.ui.Keyboard;
 
-#if !mobile
+#if windows
 import hxwindowmode.WindowColorMode;
 #end
 
@@ -213,7 +213,7 @@ class Main extends Sprite
 		Language.load();
 
 	// Sets the window to dark mode. (returns true if it was successful)
-	#if !mobile
+	#if windows
 	WindowColorMode.setDarkMode();
 	#end
 

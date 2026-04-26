@@ -133,7 +133,7 @@
 	<haxelib name="flxgif" version="1.0.3"/>
 	<haxelib name="flxsvg" version="1.1.0"/>
 	<haxelib name="sl-windows-api" version="1.1.0"  if="desktop"/>
-	<haxelib name="hxWindowColorMode" version="0.2.0" if="desktop"/>
+	<haxelib name="hxWindowColorMode" version="0.2.0" if="windows"/>
 
 	<!-- Disable Discord IO Thread -->
 	<haxedef name="DISCORD_DISABLE_IO_THREAD" if="hxdiscord_rpc" />
