@@ -152,6 +152,7 @@ import states.TitleState;
 	public var enableGameLog:Bool = false; // 启用游戏内日志显示（按F3切换）
 	public var requestAdminPrivilege:Bool = false; // 是否请求管理员权限（Windows专用）
 	public var keepSingAnimation:Bool = true; // 保持sing动画不返回idle（用于Hyperactive成就）
+	public var cacheResourcesOnReload:Bool = true; // 重载曲目时缓存资源以加速加载
 
 }
 

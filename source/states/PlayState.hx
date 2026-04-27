@@ -431,11 +431,15 @@ class PlayState extends MusicBeatState
 		//trace('Playback Rate: ' + playbackRate);
 		_lastLoadedModDirectory = Mods.currentModDirectory;
 
-		Paths.clearStoredMemory();
-		if(nextReloadAll)
+		// 只有当不缓存资源或F5刷新时才清空资源
+		if(!ClientPrefs.data.cacheResourcesOnReload || nextReloadAll)
 		{
-			Paths.clearUnusedMemory();
-			LanguageBasic.reloadPhrases();
+			Paths.clearStoredMemory();
+			if(nextReloadAll)
+			{
+				Paths.clearUnusedMemory();
+				LanguageBasic.reloadPhrases();
+			}
 		}
 		nextReloadAll = false;
 

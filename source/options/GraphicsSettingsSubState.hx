@@ -54,6 +54,12 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		var option:Option = new Option('Resource Caching on Reload',
+			'Cache resources when reloading songs to speed up loading times',
+			'cacheResourcesOnReload',
+			BOOL);
+		addOption(option);
+
 		#if !html5
 		// 帧率设置（非HTML5平台）
 		var option:Option = new Option('Framerate',
