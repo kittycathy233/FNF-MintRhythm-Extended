@@ -202,6 +202,22 @@ class Character extends FlxSprite
 
 		// animations
 		animationsArray = json.animations;
+		
+		// 检查是否在编辑器状态
+		var isInEditor:Bool = false;
+		if(FlxG.state != null) {
+			var stateStr:String = Std.string(FlxG.state);
+			isInEditor = stateStr.indexOf('Editor') >= 0;
+		}
+		
+		// 先收集所有已有的动画名称，方便后面检查
+		var existingAnims:Map<String, Bool> = new Map<String, Bool>();
+		if(animationsArray != null && animationsArray.length > 0) {
+			for (anim in animationsArray) {
+				existingAnims.set('' + anim.anim, true);
+			}
+		}
+		
 		if(animationsArray != null && animationsArray.length > 0) {
 			for (anim in animationsArray) {
 				var animAnim:String = '' + anim.anim;
@@ -229,6 +245,46 @@ class Character extends FlxSprite
 
 				if(anim.offsets != null && anim.offsets.length > 1) addOffset(anim.anim, anim.offsets[0], anim.offsets[1]);
 				else addOffset(anim.anim, 0, 0);
+			}
+			
+			// 强制添加-hold动画
+			if(ClientPrefs.data.forceHoldAnimations && !isInEditor) {
+				for (anim in animationsArray) {
+					var animAnim:String = '' + anim.anim;
+					var animName:String = '' + anim.name;
+					var animFps:Int = anim.fps;
+					var animLoop:Bool = !!anim.loop;
+					var animIndices:Array<Int> = anim.indices;
+					
+					// 只处理sing开头的动画
+					if(animAnim.startsWith('sing')) {
+						var holdAnimName:String = animAnim + '-hold';
+						// 检查是否已经有-hold动画
+						if(!existingAnims.exists(holdAnimName)) {
+							// 添加-hold动画副本
+							if(!isAnimateAtlas)
+							{
+								if(animIndices != null && animIndices.length > 0)
+									animation.addByIndices(holdAnimName, animName, animIndices, "", animFps, animLoop);
+								else
+									animation.addByPrefix(holdAnimName, animName, animFps, animLoop);
+							}
+							#if flxanimate
+							else
+							{
+								if(animIndices != null && animIndices.length > 0)
+									atlas.anim.addBySymbolIndices(holdAnimName, animName, animIndices, animFps, animLoop);
+								else
+									atlas.anim.addBySymbol(holdAnimName, animName, animFps, animLoop);
+							}
+							#end
+							
+							// 添加相同的偏移量
+							if(anim.offsets != null && anim.offsets.length > 1) addOffset(holdAnimName, anim.offsets[0], anim.offsets[1]);
+							else addOffset(holdAnimName, 0, 0);
+						}
+					}
+				}
 			}
 		}
 		#if flxanimate

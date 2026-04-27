@@ -58,6 +58,13 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		var option:Option = new Option(
+			"Force Hold Animations",
+			"(实验性)\n强制为所有角色添加-hold动画以触发角色类特性",
+			'forceHoldAnimations',
+			BOOL);
+		addOption(option);
+
 		#if mobile
 		var option:Option = new Option(
 			"Game Over Vibration",

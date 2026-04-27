@@ -153,6 +153,7 @@ import states.TitleState;
 	public var requestAdminPrivilege:Bool = false; // 是否请求管理员权限（Windows专用）
 	public var keepSingAnimation:Bool = true; // 保持sing动画不返回idle（用于Hyperactive成就）
 	public var cacheResourcesOnReload:Bool = true; // 重载曲目时缓存资源以加速加载
+	public var forceHoldAnimations:Bool = false; // 强制为所有角色添加-hold动画以触发角色类特性
 
 }
 
