@@ -1,17 +1,28 @@
 package objects;
 
 import flixel.math.FlxRect;
+import openfl.display.BitmapData;
+import openfl.geom.Matrix;
+import openfl.geom.Rectangle;
+import openfl.geom.Point;
 
 class Bar extends FlxSpriteGroup
 {
 	public var leftBar:FlxSprite;
 	public var rightBar:FlxSprite;
 	public var bg:FlxSprite;
+	public var stripedOverlay:FlxSprite;
 	public var valueFunction:Void->Float = null;
 	public var percent(default, set):Float = 0;
 	public var bounds:Dynamic = {min: 0, max: 1};
 	public var leftToRight(default, set):Bool = true;
 	public var barCenter(default, null):Float = 0;
+	public var showStripes:Bool = false;
+	public var stripeWidth:Int = 7;
+	public var stripeGap:Int = 12;
+	public var stripeAngle:Float = 45;
+	public var stripeColor:FlxColor = FlxColor.WHITE;
+	public var stripeBaseAlpha:Float = 0.2;
 
 	// you might need to change this if you want to use a custom bar
 	public var barWidth(default, set):Int = 1;
@@ -31,15 +42,18 @@ class Bar extends FlxSpriteGroup
 		barHeight = Std.int(bg.height - 6);
 
 		leftBar = new FlxSprite().makeGraphic(Std.int(bg.width), Std.int(bg.height), FlxColor.WHITE);
-		//leftBar.color = FlxColor.WHITE;
 		leftBar.antialiasing = antialiasing = ClientPrefs.data.antialiasing;
 
 		rightBar = new FlxSprite().makeGraphic(Std.int(bg.width), Std.int(bg.height), FlxColor.WHITE);
 		rightBar.color = FlxColor.BLACK;
 		rightBar.antialiasing = ClientPrefs.data.antialiasing;
 
+		stripedOverlay = new FlxSprite();
+		stripedOverlay.antialiasing = ClientPrefs.data.antialiasing;
+
 		add(leftBar);
 		add(rightBar);
+		add(stripedOverlay);
 		add(bg);
 		regenerateClips();
 	}
@@ -59,6 +73,14 @@ class Bar extends FlxSpriteGroup
 		}
 		else percent = 0;
 		super.update(elapsed);
+	}
+
+	override function set_alpha(value:Float):Float
+	{
+		super.set_alpha(value);
+		if(stripedOverlay != null)
+			stripedOverlay.alpha = stripeBaseAlpha * value;
+		return value;
 	}
 	
 	public function setBounds(min:Float, max:Float)
@@ -98,11 +120,63 @@ class Bar extends FlxSpriteGroup
 
 		barCenter = leftBar.x + leftSize + barOffset.x;
 
-		// flixel is retarded
+		if(stripedOverlay != null && showStripes)
+		{
+			stripedOverlay.clipRect = new FlxRect(barOffset.x, barOffset.y, barWidth, barHeight);
+			stripedOverlay.clipRect = stripedOverlay.clipRect;
+			stripedOverlay.visible = true;
+		}
+		else if(stripedOverlay != null)
+		{
+			stripedOverlay.visible = false;
+		}
+
 		leftBar.clipRect = leftBar.clipRect;
 		rightBar.clipRect = rightBar.clipRect;
 	}
 
+	public function createStripedOverlay()
+	{
+		if(stripedOverlay == null || bg == null) return;
+		
+		var width:Int = Std.int(bg.width);
+		var height:Int = Std.int(bg.height);
+		var stripeW:Int = stripeWidth;
+		var gap:Int = stripeGap;
+		var angleRad:Float = stripeAngle * Math.PI / 180;
+		
+		var diagonal:Float = Math.sqrt(width * width + height * height);
+		var totalStripeWidth:Int = stripeW + gap;
+		
+		var padding:Int = Math.ceil(diagonal);
+		var textureSize:Int = Math.ceil(diagonal) + padding * 2;
+		
+		var tempBmp:BitmapData = new BitmapData(textureSize, textureSize, true, 0x00000000);
+		
+		var numStripes:Int = Math.ceil(textureSize / totalStripeWidth) + 2;
+		for(i in 0...numStripes)
+		{
+			var x:Float = i * totalStripeWidth;
+			tempBmp.fillRect(new Rectangle(x, 0, stripeW, textureSize), stripeColor);
+		}
+		
+		var rotatedBmp:BitmapData = new BitmapData(textureSize, textureSize, true, 0x00000000);
+		var matrix:Matrix = new Matrix();
+		matrix.translate(-textureSize / 2, -textureSize / 2);
+		matrix.rotate(-angleRad);
+		matrix.translate(textureSize / 2, textureSize / 2);
+		rotatedBmp.draw(tempBmp, matrix);
+		
+		var finalBmp:BitmapData = new BitmapData(width, height, true, 0x00000000);
+		var srcX:Int = Std.int((textureSize - width) / 2);
+		var srcY:Int = Std.int((textureSize - height) / 2);
+		finalBmp.copyPixels(rotatedBmp, new Rectangle(srcX, srcY, width, height), new Point(0, 0));
+		
+		stripedOverlay.loadGraphic(finalBmp);
+		stripedOverlay.visible = showStripes;
+		updateBar();
+	}
+	
 	public function regenerateClips()
 	{
 		if(leftBar != null)
@@ -116,6 +190,10 @@ class Bar extends FlxSpriteGroup
 			rightBar.setGraphicSize(Std.int(bg.width), Std.int(bg.height));
 			rightBar.updateHitbox();
 			rightBar.clipRect = new FlxRect(0, 0, Std.int(bg.width), Std.int(bg.height));
+		}
+		if(showStripes && stripedOverlay != null)
+		{
+			createStripedOverlay();
 		}
 		updateBar();
 	}

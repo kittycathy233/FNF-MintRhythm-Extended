@@ -821,6 +821,10 @@ isReplaying = false;
 		timeBar.screenCenter(X);
 		timeBar.alpha = 0;
 		timeBar.visible = showTime;
+		if (ClientPrefs.data.timeBarStripes) {
+			timeBar.showStripes = true;
+			timeBar.createStripedOverlay();
+		}
 
 		// 特殊处理Leather样式
 		if (ClientPrefs.data.timebarStyle == "Leather")
@@ -876,6 +880,14 @@ isReplaying = false;
 		healthBar.scrollFactor.set();
 		healthBar.visible = !ClientPrefs.data.hideHud;
 		healthBar.alpha = ClientPrefs.data.healthBarAlpha;
+		if (ClientPrefs.data.healthbarstyle == 'OS') {
+			healthBar.showStripes = true;
+			healthBar.stripeWidth = 7;
+			healthBar.stripeGap = 12;
+			healthBar.stripeAngle = -45;
+			healthBar.stripeColor = FlxColor.BLACK;
+			healthBar.createStripedOverlay();
+		}
 		reloadHealthBarColors();
 		uiGroup.add(healthBar);
 

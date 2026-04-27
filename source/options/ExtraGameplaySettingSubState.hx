@@ -212,6 +212,12 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			STRING,
 			['Psych', 'OS', 'Kade']);
 		addOption(option);
+		
+		option = new Option('Time Bar Stripes',
+			"Show stripes on time bar",
+			'timeBarStripes',
+			BOOL);
+		addOption(option);
 
 		option = new Option('IconBop Style',
 			Language.get("iconbop_style_desc"),
