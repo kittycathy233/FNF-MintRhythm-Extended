@@ -349,7 +349,19 @@
     "gameplay_combospr_desc": "Add a 'Combo' pop-up effect when hitting arrows.",
     "fixed_timestep_desc": "Use fixed timestep\nMay alleviate frame drops, but causes game visual lag at low FPS",
     "ratcounter_desc": "Enable the rating counter to display the number of hits for each rating type.",
-    "watermark_desc": "Show a watermark on the gameplay screen."
+    "watermark_desc": "Show a watermark on the gameplay screen.",
 
-
+    "force_hold_animations_name": "Force Hold Animations",
+    "force_hold_animations_desc": "(Experimental)\nForce add -hold animation to all characters to trigger character class features",
+    "show_haxelibs_name": "Show Haxelibs Info",
+    "show_haxelibs_desc": "Display haxelib libraries and versions in FPS counter",
+    "keep_sing_animation_name": "Keep Sing Animation",
+    "keep_sing_animation_desc": "Keep sing animation without returning to idle (for Hyperactive achievement)",
+    "time_bar_stripes_name": "Time Bar Stripes",
+    "time_bar_stripes_desc": "Show stripes on time bar",
+    "resource_caching_name": "Resource Caching",
+    "resource_caching_desc": "Cache resources when reloading songs to speed up loading times",
+    "enable_game_log_name": "Enable Game Log",
+    "enable_game_log_desc": "Enable in-game log display (Press F3 to toggle)",
+    "show_game_version_name": "Show Game Version"
 }

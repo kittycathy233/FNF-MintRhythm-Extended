@@ -17,7 +17,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		rpcTitle = 'Extra Gameplay Settings Menu'; //for Discord Rich Presence
 
 		// BOOL 类型设置
-		var option:Option = new Option('show Game Version',
+		var option:Option = new Option('Show Game Version',
 			Language.get("show_version_desc"),
 			'exgameversion',
 			BOOL);
@@ -29,7 +29,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		addOption(option);
 
 		option = new Option('Show Haxelibs Info',
-			'Display haxelib libraries and versions in FPS counter',
+			Language.get("show_haxelibs_desc"),
 			'showHaxelibs',
 			BOOL);
 		option.onChange = function() {
@@ -38,14 +38,6 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			}
 		};
 		addOption(option);
-
-		/*Psych Engine v1.0.4已经有这个了，故隐藏此项
-		option = new Option('Focus Game',
-			Language.get("focus_game_desc"),
-			'autoPause',
-			BOOL);
-		addOption(option);
-		*/
 		option = new Option('Show Extra-Rating',
 			Language.get("show_exrating_desc"),
 			'exratingDisplay',
@@ -83,7 +75,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		addOption(option);
 
 		option = new Option('Keep Sing Animation',
-			'保持sing动画不返回idle（用于Hyperactive成就）',
+			Language.get("keep_sing_animation_desc"),
 			'keepSingAnimation',
 			BOOL);
 		addOption(option);
@@ -183,7 +175,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		addOption(option);
 
 		option = new Option('Enable Game Log Display',
-			'Enable in-game log display (Press F3 to toggle)',
+			Language.get("enable_game_log_desc"),
 			'enableGameLog',
 			BOOL);
 		option.onChange = function() {
@@ -214,7 +206,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		addOption(option);
 		
 		option = new Option('Time Bar Stripes',
-			"Show stripes on time bar",
+			Language.get("time_bar_stripes_desc"),
 			'timeBarStripes',
 			BOOL);
 		addOption(option);

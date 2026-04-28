@@ -60,7 +60,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 
 		var option:Option = new Option(
 			"Force Hold Animations",
-			"(实验性)\n强制为所有角色添加-hold动画以触发角色类特性",
+			Language.get("force_hold_animations_desc"),
 			'forceHoldAnimations',
 			BOOL);
 		addOption(option);

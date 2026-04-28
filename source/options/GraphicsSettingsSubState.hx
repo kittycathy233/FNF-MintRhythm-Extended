@@ -55,7 +55,7 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 
 		var option:Option = new Option('Resource Caching on Reload',
-			'Cache resources when reloading songs to speed up loading times',
+			Language.get("resource_caching_desc"),
 			'cacheResourcesOnReload',
 			BOOL);
 		addOption(option);
