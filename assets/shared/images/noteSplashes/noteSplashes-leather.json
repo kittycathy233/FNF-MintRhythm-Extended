@@ -1,64 +1,120 @@
 {
 	"animations": {
 		"purple": {
-			"noteData": 0,
+			"prefix": "splash leather purple 1",
 			"offsets": [
-				-90,
+				-95,
 				-70
 			],
+			"indices": [],
 			"fps": [
-				22,
-				26
+				18,
+				22
 			],
-			"prefix": "note splash left0",
 			"name": "purple",
-			"indices": []
+			"noteData": 0
 		},
-		"blue": {
-			"noteData": 1,
+		"blue2": {
+			"prefix": "splash leather blue 2",
 			"offsets": [
-				-90,
-				-75
+				-95,
+				-70
 			],
+			"indices": [],
 			"fps": [
-				22,
-				26
+				18,
+				22
 			],
-			"prefix": "note splash down0",
-			"name": "blue",
-			"indices": []
+			"name": "blue2",
+			"noteData": 5
 		},
 		"red": {
-			"noteData": 3,
+			"prefix": "splash leather red 1",
 			"offsets": [
-				-90,
-				-75
+				-95,
+				-70
 			],
+			"indices": [],
 			"fps": [
-				22,
-				26
+				18,
+				22
 			],
-			"prefix": "note splash right0",
 			"name": "red",
-			"indices": []
+			"noteData": 3
+		},
+		"red2": {
+			"prefix": "splash leather red 2",
+			"offsets": [
+				-95,
+				-70
+			],
+			"indices": [],
+			"fps": [
+				18,
+				22
+			],
+			"name": "red2",
+			"noteData": 7
+		},
+		"blue": {
+			"prefix": "splash leather blue 1",
+			"offsets": [
+				-95,
+				-70
+			],
+			"indices": [],
+			"fps": [
+				18,
+				22
+			],
+			"name": "blue",
+			"noteData": 1
+		},
+		"purple2": {
+			"prefix": "splash leather purple 2",
+			"offsets": [
+				-95,
+				-70
+			],
+			"indices": [],
+			"fps": [
+				18,
+				22
+			],
+			"name": "purple2",
+			"noteData": 4
 		},
 		"green": {
-			"noteData": 2,
+			"prefix": "splash leather green 1",
 			"offsets": [
-				-90,
-				-75
+				-95,
+				-70
 			],
+			"indices": [],
 			"fps": [
-				22,
-				26
+				18,
+				22
 			],
-			"prefix": "note splash up0",
 			"name": "green",
-			"indices": []
+			"noteData": 2
+		},
+		"green2": {
+			"prefix": "splash leather green 2",
+			"offsets": [
+				-95,
+				-70
+			],
+			"indices": [],
+			"fps": [
+				18,
+				22
+			],
+			"name": "green2",
+			"noteData": 6
 		}
 	},
-	"allowRGB": false,
+	"allowRGB": true,
 	"allowPixel": true,
 	"rgb": null,
-	"scale": 1.5
+	"scale": 1.4
 }

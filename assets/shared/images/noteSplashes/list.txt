@@ -3,4 +3,5 @@ Electric
 Sparkles
 Vanilla
 Leather
+Leather(Legacy)
 None
