@@ -23,9 +23,7 @@
 package mobile.substates;
 
 import flixel.FlxObject;
-import flixel.addons.display.FlxBackdrop;
-import flixel.addons.display.FlxGridOverlay;
-import flixel.util.FlxGradient;
+import flixel.FlxSprite;
 import mobile.backend.TouchUtil;
 import flixel.input.touch.FlxTouch;
 import flixel.ui.FlxButton as UIButton;
@@ -40,7 +38,7 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 	var itemText:Alphabet;
 	var positionText:FlxText;
 	var positionTextBg:FlxSprite;
-	var bg:FlxBackdrop;
+	var bg:FlxSprite;
 	var ui:FlxCamera;
 	var curOption:Int = MobileData.mode;
 	var buttonBinded:Bool = false;
@@ -58,13 +56,11 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		if (ClientPrefs.data.extraButtons != 'NONE')
 			options.push('Pad-Extra');
 
-		bg = new FlxBackdrop(FlxGridOverlay.createGrid(80, 80, 160, 160, true,
-			FlxColor.fromRGB(FlxG.random.int(0, 255), FlxG.random.int(0, 255), FlxG.random.int(0, 255)),
-			FlxColor.fromRGB(FlxG.random.int(0, 255), FlxG.random.int(0, 255), FlxG.random.int(0, 255))));
-		bg.velocity.set(40, 40);
+		// 简单的变暗背景效果
+		bg = new FlxSprite(0, 0);
+		bg.makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
 		bg.alpha = 0;
-		bg.antialiasing = ClientPrefs.data.antialiasing;
-		FlxTween.tween(bg, {alpha: 0.45}, 0.3, {
+		FlxTween.tween(bg, {alpha: 0.6}, 0.3, {
 			ease: FlxEase.quadOut,
 			onComplete: (twn:FlxTween) ->
 			{
@@ -106,8 +102,8 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		positionText.setFormat(Paths.font("vcr.ttf"), 18, FlxColor.WHITE, FlxTextAlign.LEFT);
 		positionText.visible = false;
 
-		positionTextBg = FlxGradient.createGradientFlxSprite(250, 150, [FlxColor.BLACK, FlxColor.BLACK, FlxColor.BLACK, FlxColor.TRANSPARENT], 1, 360);
-		positionTextBg.setPosition(0, FlxG.height - positionTextBg.height);
+		positionTextBg = new FlxSprite(0, FlxG.height - 150);
+		positionTextBg.makeGraphic(250, 150, FlxColor.BLACK);
 		positionTextBg.visible = false;
 		positionTextBg.alpha = 0.8;
 		add(positionTextBg);
