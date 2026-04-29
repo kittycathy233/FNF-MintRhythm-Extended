@@ -137,31 +137,35 @@ class Hitbox extends MobileInputManager implements IMobileControls
 	{
 		super.update(elapsed);
 
-		// 使用简单的 lerp 更新动画
-		for (button in _animatingButtons.keys())
+		// 只在动画启用时才运行动画逻辑
+		if (ClientPrefs.data.hitboxAnimation)
 		{
-			if (!button.active || !button.exists)
-				continue;
-
-			if (_animatingButtons.get(button))
+			// 使用简单的 lerp 更新动画
+			for (button in _animatingButtons.keys())
 			{
-				var targetAlpha = _targetAlphas.get(button);
-				var targetLabelAlpha = _targetLabelAlphas.get(button);
+				if (!button.active || !button.exists)
+					continue;
 
-				// 使用 lerp 平滑过渡
-				var lerpSpeed = _animationSpeed;
-				button.alpha = button.alpha + (targetAlpha - button.alpha) * lerpSpeed;
-
-				if (button.label != null)
-					button.label.alpha = button.label.alpha + (targetLabelAlpha - button.label.alpha) * lerpSpeed;
-
-				// 检查是否接近目标值，如果是则停止动画
-				if (Math.abs(button.alpha - targetAlpha) < 0.001)
+				if (_animatingButtons.get(button))
 				{
-					button.alpha = targetAlpha;
+					var targetAlpha = _targetAlphas.get(button);
+					var targetLabelAlpha = _targetLabelAlphas.get(button);
+
+					// 使用 lerp 平滑过渡
+					var lerpSpeed = _animationSpeed;
+					button.alpha = button.alpha + (targetAlpha - button.alpha) * lerpSpeed;
+
 					if (button.label != null)
-						button.label.alpha = targetLabelAlpha;
-					_animatingButtons.set(button, false);
+						button.label.alpha = button.label.alpha + (targetLabelAlpha - button.label.alpha) * lerpSpeed;
+
+					// 检查是否接近目标值，如果是则停止动画
+					if (Math.abs(button.alpha - targetAlpha) < 0.001)
+					{
+						button.alpha = targetAlpha;
+						if (button.label != null)
+							button.label.alpha = targetLabelAlpha;
+						_animatingButtons.set(button, false);
+					}
 				}
 			}
 		}
@@ -184,27 +188,52 @@ class Hitbox extends MobileInputManager implements IMobileControls
 
 		if (ClientPrefs.data.hitboxType != "Hidden")
 		{
-			// 性能优化：初始化动画状态
-			_animatingButtons.set(hint, false);
-			_targetAlphas.set(hint, 0.00001);
-			_targetLabelAlphas.set(hint, ClientPrefs.data.controlsAlpha);
-
-			hint.onDown.callback = function()
+			if (ClientPrefs.data.hitboxAnimation)
 			{
-				onButtonDown.dispatch(hint);
-				// 性能优化：设置目标 alpha 值，由 update 循环中的 lerp 处理
-				_targetAlphas.set(hint, ClientPrefs.data.controlsAlpha);
-				_targetLabelAlphas.set(hint, 0.00001);
-				_animatingButtons.set(hint, true);
-			}
-
-			hint.onOut.callback = hint.onUp.callback = function()
-			{
-				onButtonUp.dispatch(hint);
-				// 性能优化：设置目标 alpha 值，由 update 循环中的 lerp 处理
+				// 性能优化：初始化动画状态
+				_animatingButtons.set(hint, false);
 				_targetAlphas.set(hint, 0.00001);
 				_targetLabelAlphas.set(hint, ClientPrefs.data.controlsAlpha);
-				_animatingButtons.set(hint, true);
+
+				hint.onDown.callback = function()
+				{
+					onButtonDown.dispatch(hint);
+					// 性能优化：设置目标 alpha 值，由 update 循环中的 lerp 处理
+					_targetAlphas.set(hint, ClientPrefs.data.controlsAlpha);
+					_targetLabelAlphas.set(hint, 0.00001);
+					_animatingButtons.set(hint, true);
+				}
+
+				hint.onOut.callback = hint.onUp.callback = function()
+				{
+					onButtonUp.dispatch(hint);
+					// 性能优化：设置目标 alpha 值，由 update 循环中的 lerp 处理
+					_targetAlphas.set(hint, 0.00001);
+					_targetLabelAlphas.set(hint, ClientPrefs.data.controlsAlpha);
+					_animatingButtons.set(hint, true);
+				}
+			}
+			else
+			{
+				// 禁用动画模式：直接设置 alpha
+				hint.alpha = 0.00001;
+				hint.label.alpha = ClientPrefs.data.controlsAlpha;
+
+				hint.onDown.callback = function()
+				{
+					onButtonDown.dispatch(hint);
+					// 直接设置，无动画
+					hint.alpha = ClientPrefs.data.controlsAlpha;
+					hint.label.alpha = 0.00001;
+				}
+
+				hint.onOut.callback = hint.onUp.callback = function()
+				{
+					onButtonUp.dispatch(hint);
+					// 直接设置，无动画
+					hint.alpha = 0.00001;
+					hint.label.alpha = ClientPrefs.data.controlsAlpha;
+				}
 			}
 		}
 		else

@@ -29,6 +29,7 @@ import flixel.util.FlxGradient;
 import mobile.backend.TouchUtil;
 import flixel.input.touch.FlxTouch;
 import flixel.ui.FlxButton as UIButton;
+import objects.CheckboxThingie;
 
 class MobileControlSelectSubState extends MusicBeatSubstate
 {
@@ -46,6 +47,10 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 	var bindButton:TouchButton;
 	var reset:UIButton;
 	var tweenieShit:Float = 0;
+
+	// 按钮吸附复选框
+	var snapCheckbox:CheckboxThingie;
+	var snapLabel:Alphabet;
 
 	public function new()
 	{
@@ -149,7 +154,7 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		exit.cameras = [ui];
 		add(exit);
 
-		reset = new UIButton(exit.x, exit.height + exit.y + 20, LanguageBasic.getPhrase('mobileC_reset', "Reset"), () ->
+		reset = new UIButton(exit.x, exit.height + exit.y + 20, LanguageBasic.getPhrase('mobileC_reset', 'Reset'), () ->
 		{
 			changeOption(0); // realods the current control mode ig?
 			FlxG.sound.play(Paths.sound('cancelMenu'));
@@ -164,11 +169,43 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		reset.cameras = [ui];
 		add(reset);
 
+		// 添加按钮吸附复选框（在屏幕左侧垂直居中附近）
+		var centerY = FlxG.height / 2;
+		snapCheckbox = new CheckboxThingie(50, centerY, MobileData.buttonSnap);
+		snapCheckbox.cameras = [ui];
+		snapCheckbox.setGraphicSize(Std.int(snapCheckbox.width) * 0.8);
+		snapCheckbox.updateHitbox();
+		snapCheckbox.visible = false; // 默认隐藏
+		add(snapCheckbox);
+
+		// 添加复选框标签
+		snapLabel = new Alphabet(snapCheckbox.x + snapCheckbox.width + 20, centerY, 'Button Snap');
+		snapLabel.cameras = [ui];
+		snapLabel.y += snapCheckbox.height / 2 - snapLabel.height / 2;
+		snapLabel.isMenuItem = false;
+		snapLabel.visible = false; // 默认隐藏
+		add(snapLabel);
+
 		changeOption(0);
 	}
 
 	override function update(elapsed:Float)
 	{
+		// 检测复选框的触摸（只在复选框可见时）
+		if (snapCheckbox.visible && TouchUtil.justPressed)
+		{
+			for (touch in FlxG.touches.list)
+			{
+				if (touch.overlaps(snapCheckbox, ui))
+				{
+					MobileData.buttonSnap = !MobileData.buttonSnap;
+					snapCheckbox.daValue = MobileData.buttonSnap;
+					FlxG.sound.play(Paths.sound('scrollMenu'));
+					break;
+				}
+			}
+		}
+
 		checkArrowButton(leftArrow, () ->
 		{
 			changeOption(-1);
@@ -199,46 +236,50 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 						moveButton(TouchUtil.touch, button);
 				});
 			}
-			control.touchPad.forEachAlive((button:TouchButton) ->
+			// 只有在启用了按钮吸附时才执行吸附逻辑
+			if (MobileData.buttonSnap)
 			{
-				if (button != bindButton && buttonBinded)
+				control.touchPad.forEachAlive((button:TouchButton) ->
 				{
-					bindButton.centerBounds();
-					button.bounds.immovable = true;
-					bindButton.bounds.immovable = false;
-					button.centerBounds();
-					FlxG.overlap(bindButton.bounds, button.bounds, function(a:Dynamic, b:Dynamic)
-					{ // these args dosen't work fuck them :/
-						bindButton.centerInBounds();
-						button.centerBounds();
-						bindButton.bounds.immovable = true;
-						button.bounds.immovable = false;
-						// trace('button${bindButton.tag} & button${button.tag} collided');
-					}, function(a:Dynamic, b:Dynamic)
+					if (button != bindButton && buttonBinded)
 					{
-						if (!bindButton.bounds.immovable)
-						{
-							if (bindButton.bounds.x > button.bounds.x)
-								bindButton.bounds.x = button.bounds.x + button.bounds.width;
-							else
-								bindButton.bounds.x = button.bounds.x - button.bounds.width;
-
-							if (bindButton.bounds.y > button.bounds.y)
-								bindButton.bounds.y = button.bounds.y + button.bounds.height;
-							else if (bindButton.bounds.y != button.bounds.y)
-								bindButton.bounds.y = button.bounds.y - button.bounds.height;
-						}
-						return true;
-					});
-					/*FlxG.collide(bindButton.bounds, button.bounds, function(a:Dynamic, b:Dynamic) { // these args dosen't work fuck them :/
-						bindButton.centerInBounds();
+						bindButton.centerBounds();
+						button.bounds.immovable = true;
+						bindButton.bounds.immovable = false;
 						button.centerBounds();
-						bindButton.bounds.immovable = true;
-						button.bounds.immovable = false;
-						trace('button${bindButton.tag} & button${button.tag} collided');
-					});*/
-				}
-			});
+						FlxG.overlap(bindButton.bounds, button.bounds, function(a:Dynamic, b:Dynamic)
+						{ // these args dosen't work fuck them :/
+							bindButton.centerInBounds();
+							button.centerBounds();
+							bindButton.bounds.immovable = true;
+							button.bounds.immovable = false;
+							// trace('button${bindButton.tag} & button${button.tag} collided');
+						}, function(a:Dynamic, b:Dynamic)
+						{
+							if (!bindButton.bounds.immovable)
+							{
+								if (bindButton.bounds.x > button.bounds.x)
+									bindButton.bounds.x = button.bounds.x + button.bounds.width;
+								else
+									bindButton.bounds.x = button.bounds.x - button.bounds.width;
+
+								if (bindButton.bounds.y > button.bounds.y)
+									bindButton.bounds.y = button.bounds.y + button.bounds.height;
+								else if (bindButton.bounds.y != button.bounds.y)
+									bindButton.bounds.y = button.bounds.y - button.bounds.height;
+							}
+							return true;
+						});
+						/*FlxG.collide(bindButton.bounds, button.bounds, function(a:Dynamic, b:Dynamic) { // these args dosen't work fuck them :/
+							bindButton.centerInBounds();
+							button.centerBounds();
+							bindButton.bounds.immovable = true;
+							button.bounds.immovable = false;
+							trace('button${bindButton.tag} & button${button.tag} collided');
+						});*/
+					}
+				});
+			}
 		}
 
 		tweenieShit += 180 * elapsed;
@@ -273,12 +314,18 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		{
 			case 0 | 1 | 3:
 				reset.visible = false;
+				snapCheckbox.visible = false;
+				snapLabel.visible = false;
 				changeControls();
 			case 2:
 				reset.visible = true;
+				snapCheckbox.visible = true;
+				snapLabel.visible = true;
 				changeControls();
 			case 5:
 				reset.visible = true;
+				snapCheckbox.visible = false;
+				snapLabel.visible = false;
 				changeControls(0, true);
 				control.touchPad.forEachAlive((button:TouchButton) ->
 				{

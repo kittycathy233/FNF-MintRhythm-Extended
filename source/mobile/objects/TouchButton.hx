@@ -299,12 +299,34 @@ class TypedTouchButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 	function updateButton():Void
 	{
 		var overlapFound = checkTouchOverlap();
+		var tempCurrentInput = currentInput; // 保存临时保存临时currentInput
 
-		if (currentInput != null && currentInput.justReleased && overlapFound)
-			onUpHandler();
-
-		if (status != TouchButton.NORMAL && (!overlapFound || (currentInput != null && currentInput.justReleased)))
-			onOutHandler();
+		if (tempCurrentInput != null && tempCurrentInput.justReleased)
+		{
+			// 释放时的处理
+			if (overlapFound)
+			{
+				onUpHandler();
+			}
+			else
+			{
+				onOutHandler();
+			}
+		}
+		else if (status != TouchButton.NORMAL)
+		{
+			if (!overlapFound)
+			{
+				// 正在触摸但已离开 hitbox 范围
+				onOutHandler();
+			}
+		}
+		else if (overlapFound && status == TouchButton.NORMAL)
+		{
+			// 正在滑动进入 hitbox，并且当前状态是 NORMAL
+			// 这个情况在 checkTouchOverlap 调用 checkInput 时会通过 updateStatus 处理
+			// 不需要额外的操作
+		}
 	}
 
 	/**
@@ -320,6 +342,9 @@ class TypedTouchButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 			#if mac
 			var button = FlxMouseButton.getByID(FlxMouseButtonID.LEFT);
 			if (checkInput(FlxG.mouse, button, button.justPressedPosition, camera))
+			{
+				overlap = true;
+			}
 			#else
 			// 性能优化：提前检查是否有触摸点
 			var touches = FlxG.touches.list;
@@ -327,9 +352,13 @@ class TypedTouchButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 				break;
 
 			for (touch in touches)
+			{
 				if (checkInput(touch, touch, touch.justPressedPosition, camera))
+				{
+					overlap = true;
+				}
+			}
 			#end
-			overlap = true;
 
 			// 性能优化：找到重叠后立即返回
 			if (overlap)
@@ -341,15 +370,24 @@ class TypedTouchButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 
 	function checkInput(pointer:FlxPointer, input:IFlxInput, justPressedPosition:FlxPoint, camera:FlxCamera):Bool
 	{
+		var overlaps = overlapsPoint(pointer.getWorldPosition(camera, _point), true, camera);
+
 		if (maxInputMovement != Math.POSITIVE_INFINITY
+			&& justPressedPosition != null
 			&& justPressedPosition.distanceTo(pointer.getScreenPosition(FlxPoint.weak())) > maxInputMovement
 			&& input == currentInput)
 		{
 			currentInput = null;
 		}
-		else if (overlapsPoint(pointer.getWorldPosition(camera, _point), true, camera))
+		else if (overlaps)
 		{
 			updateStatus(input);
+			
+			// 如果是首次按下或者允许滑动，并且没有 currentInput，设置 currentInput
+			if (currentInput == null && input.pressed)
+			{
+				currentInput = input;
+			}
 			return true;
 		}
 
@@ -370,9 +408,18 @@ class TypedTouchButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 		{
 			// Allow 'swiping' to press a button (dragging it over the button while pressed)
 			if (allowSwiping && input.pressed)
+			{
+				// 滑动进入时设置 currentInput
+				if (currentInput == null)
+				{
+					currentInput = input;
+				}
 				onDownHandler();
+			}
 			else
+			{
 				onOverHandler();
+			}
 		}
 	}
 
@@ -440,6 +487,7 @@ class TypedTouchButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 	{
 		status = TouchButton.NORMAL;
 		input.release();
+		currentInput = null;
 		onOut.fire(); // Order matters here, because onOut.fire() could cause a state change and destroy this object.
 	}
 

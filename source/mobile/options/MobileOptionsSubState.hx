@@ -77,6 +77,10 @@ class MobileOptionsSubState extends BaseOptionsMenu
 			option = new Option('Hitbox Position', 'If checked, the hitbox will be put at the bottom of the screen, otherwise will stay at the top.',
 				'hitboxPos', BOOL);
 			addOption(option);
+
+			option = new Option('Hitbox Animation', 'If checked, hitbox buttons will have animation when pressed/released.',
+				'hitboxAnimation', BOOL);
+			addOption(option);
 		}
 
 		option = new Option('Dynamic Controls Color',

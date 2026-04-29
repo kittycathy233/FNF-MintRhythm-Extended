@@ -39,6 +39,7 @@ class MobileData
 	public static var extraActions:Map<String, ExtraActions> = new Map();
 
 	public static var mode(get, set):Int;
+	public static var buttonSnap(get, set):Bool;
 	public static var forcedMode:Null<Int>;
 	public static var save:FlxSave;
 
@@ -163,6 +164,24 @@ class MobileData
 		}
 
 		return save.data.mobileControlsMode;
+	}
+
+	static function set_buttonSnap(snap:Bool):Bool
+	{
+		save.data.buttonSnap = snap;
+		save.flush();
+		return snap;
+	}
+
+	static function get_buttonSnap():Bool
+	{
+		if (save.data.buttonSnap == null)
+		{
+			save.data.buttonSnap = true;
+			save.flush();
+		}
+
+		return save.data.buttonSnap;
 	}
 }
 
