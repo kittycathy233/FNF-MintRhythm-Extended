@@ -39,6 +39,7 @@ import shaders.ErrorHandledShader;
 
 import objects.VideoSprite;
 import objects.Note.EventNote;
+import objects.Note.PreloadedChartNote;
 import objects.*;
 import states.stages.*;
 import states.stages.objects.*;
@@ -283,6 +284,10 @@ class PlayState extends MusicBeatState
 	public var notes:FlxTypedGroup<Note>;
 	public var unspawnNotes:Array<Note> = [];
 	public var eventNotes:Array<EventNote> = [];
+	// 优化音符加载模式变量
+	public var unspawnNotesPreloaded:Array<PreloadedChartNote> = []; // 预加载音符数据
+	public var spawnedNotes:Array<Note> = []; // 跟踪已生成的音符，按预加载索引
+	public var notesAddedCount:Int = 0;
 
 	public var camFollow:FlxObject;
 	private static var prevCamFollow:FlxObject;
@@ -1846,6 +1851,11 @@ isReplaying = false;
 		notes = new FlxTypedGroup<Note>();
 		noteGroup.add(notes);
 
+		// 重置优化音符加载的跟踪数组
+		unspawnNotesPreloaded = [];
+		spawnedNotes = [];
+		notesAddedCount = 0;
+
 		try
 		{
 			var eventsChart:SwagSong = Song.getChart('events', songName);
@@ -1860,7 +1870,33 @@ isReplaying = false;
 		var sectionsData:Array<SwagSection> = PlayState.SONG.notes;
 		var ghostNotesCaught:Int = 0;
 		var daBpm:Float = Conductor.bpm;
+		
+		// 根据设置选择加载方式
+		if (ClientPrefs.data.useOptimizedNoteLoading) {
+			// 优化模式：暂存音符对象，延迟添加到游戏世界
+			generateSongOptimized(sectionsData, daBpm, oldNote, ghostNotesCaught);
+		} else {
+			// 传统模式：原来的逻辑
+			generateSongLegacy(sectionsData, daBpm, oldNote, ghostNotesCaught);
+		}
 	
+		for (event in songData.events) //Event Notes
+			for (i in 0...event[1].length)
+				makeEvent(event, i);
+
+		if (ClientPrefs.data.useOptimizedNoteLoading) {
+			// 优化模式：保持原来的顺序，不排序
+			generatedMusic = true;
+		} else {
+			unspawnNotes.sort(sortByTime);
+			generatedMusic = true;
+		}
+	}
+
+	/**
+	 * 传统音符生成方式 - 与原来完全一致
+	 */
+	private function generateSongLegacy(sectionsData:Array<SwagSection>, daBpm:Float, oldNote:Note, ghostNotesCaught:Int):Void {
 		for (section in sectionsData)
 		{
 			if (section.changeBPM != null && section.changeBPM && section.bpm != null && daBpm != section.bpm)
@@ -1892,7 +1928,6 @@ isReplaying = false;
 							evilNote.destroy();
 							unspawnNotes.remove(evilNote);
 							ghostNotesCaught++;
-							//continue;
 						}
 					}
 				}
@@ -1974,12 +2009,124 @@ isReplaying = false;
 			}
 		}
 		trace('["${SONG.song.toUpperCase()}" CHART INFO]: Ghost Notes Cleared: $ghostNotesCaught');
-		for (event in songData.events) //Event Notes
-			for (i in 0...event[1].length)
-				makeEvent(event, i);
+	}
 
-		unspawnNotes.sort(sortByTime);
-		generatedMusic = true;
+	/**
+	 * 优化音符生成方式 - 预加载数据，延迟创建 Note 对象
+	 */
+	private function generateSongOptimized(sectionsData:Array<SwagSection>, daBpm:Float, oldNote:Note, ghostNotesCaught:Int):Void {
+		unspawnNotesPreloaded = [];
+		spawnedNotes = [];
+		notesAddedCount = 0;
+		trace('["${SONG.song.toUpperCase()}" CHART INFO]: Using Optimized Note Loading');
+		
+		var previousNoteIndex:Int = -1;
+		
+		for (section in sectionsData)
+		{
+			if (section.changeBPM != null && section.changeBPM && section.bpm != null && daBpm != section.bpm)
+				daBpm = section.bpm;
+
+			for (i in 0...section.sectionNotes.length)
+			{
+				final songNotes: Array<Dynamic> = section.sectionNotes[i];
+				var spawnTime: Float = songNotes[0];
+				var noteColumn: Int = Std.int(songNotes[1] % totalColumns);
+				var holdLength: Float = songNotes[2];
+				var noteType: String = !Std.isOfType(songNotes[3], String) ? Note.defaultNoteTypes[songNotes[3]] : songNotes[3];
+				if (Math.isNaN(holdLength))
+					holdLength = 0.0;
+
+				var gottaHitNote:Bool = (songNotes[1] < totalColumns);
+
+				// 处理主音符位置偏移
+				var mainPosOffsetX:Float = 0;
+				if (gottaHitNote)
+					mainPosOffsetX += FlxG.width / 2;
+				else if(ClientPrefs.data.middleScroll)
+				{
+					mainPosOffsetX += 310;
+					if(noteColumn > 1)
+						mainPosOffsetX += FlxG.width / 2 + 25;
+				}
+
+				// 创建主音符的预加载数据
+				var mainNoteIndex:Int = unspawnNotesPreloaded.length;
+				var isAlt: Bool = section.altAnim && !gottaHitNote;
+				
+				var mainNoteData:PreloadedChartNote = {
+					strumTime: spawnTime,
+					noteData: noteColumn,
+					mustPress: gottaHitNote,
+					noteType: noteType,
+					animSuffix: isAlt ? "-alt" : "",
+					gfNote: (section.gfSection && gottaHitNote == section.mustHitSection),
+					isSustainNote: false,
+					sustainLength: holdLength,
+					parentIndex: -1,
+					previousNoteIndex: previousNoteIndex,
+					posOffsetX: mainPosOffsetX,
+					posOffsetY: 0,
+					correctionOffset: 0,
+					curStepCrochet: 0,
+					needsOldNoteScaleAdjust: false,
+					isPixelStage: PlayState.isPixelStage,
+					hasDownScrollCorrection: false
+				};
+				
+				unspawnNotesPreloaded.push(mainNoteData);
+				previousNoteIndex = mainNoteIndex;
+				
+				// 收集音符类型
+				if(!noteTypes.contains(noteType))
+					noteTypes.push(noteType);
+
+				// 处理长音符
+				var curStepCrochet:Float = 60 / daBpm * 1000 / 4.0;
+				final roundSus:Int = Math.round(holdLength / curStepCrochet);
+				if(roundSus > 0)
+				{
+					for (susNote in 0...roundSus)
+					{
+						var susSpawnTime:Float = spawnTime + (curStepCrochet * susNote);
+						
+						// 处理 sustain note 位置偏移
+						var susPosOffsetX:Float = 0;
+						if (gottaHitNote)
+							susPosOffsetX += FlxG.width / 2;
+						else if(ClientPrefs.data.middleScroll)
+						{
+							susPosOffsetX += 310;
+							if(noteColumn > 1)
+								susPosOffsetX += FlxG.width / 2 + 25;
+						}
+						
+						var susNoteData:PreloadedChartNote = {
+							strumTime: susSpawnTime,
+							noteData: noteColumn,
+							mustPress: gottaHitNote,
+							noteType: noteType,
+							animSuffix: isAlt ? "-alt" : "",
+							gfNote: (section.gfSection && gottaHitNote == section.mustHitSection),
+							isSustainNote: true,
+							sustainLength: 0,
+							parentIndex: mainNoteIndex,
+							previousNoteIndex: previousNoteIndex,
+							posOffsetX: susPosOffsetX,
+							posOffsetY: 0,
+							correctionOffset: 0, // 这个在运行时设置
+							curStepCrochet: curStepCrochet,
+							needsOldNoteScaleAdjust: true,
+							isPixelStage: PlayState.isPixelStage,
+							hasDownScrollCorrection: ClientPrefs.data.downScroll
+						};
+						
+						unspawnNotesPreloaded.push(susNoteData);
+						previousNoteIndex = unspawnNotesPreloaded.length - 1;
+					}
+				}
+			}
+		}
 	}
 
 	public static function sortByTime(Obj1:Dynamic, Obj2:Dynamic):Int
@@ -2506,23 +2653,115 @@ isReplaying = false;
 		}
 		doDeathCheck();
 
-		if (unspawnNotes[0] != null)
+		if (ClientPrefs.data.useOptimizedNoteLoading)
 		{
-			var time:Float = spawnTime * playbackRate;
-			if(songSpeed < 1) time /= songSpeed;
-			if(unspawnNotes[0].multSpeed < 1) time /= unspawnNotes[0].multSpeed;
-
-			while (unspawnNotes.length > 0 && unspawnNotes[0].strumTime - Conductor.songPosition < time)
+			// 优化模式
+			if (notesAddedCount < unspawnNotesPreloaded.length)
 			{
-				var dunceNote:Note = unspawnNotes[0];
-				notes.insert(0, dunceNote);
-				dunceNote.spawned = true;
+				while (notesAddedCount < unspawnNotesPreloaded.length)
+				{
+					var noteData:PreloadedChartNote = unspawnNotesPreloaded[notesAddedCount];
+					
+					// 计算 spawning time
+					var time:Float = spawnTime * playbackRate;
+					if(songSpeed < 1) time /= songSpeed;
+					
+					// 我们先假设 multSpeed 为 1！
+					if (noteData.strumTime - Conductor.songPosition >= time) break;
+					
+					// 获取前一个音符（如果已生成）
+					var oldNote:Note = null;
+					if(noteData.previousNoteIndex >= 0 && noteData.previousNoteIndex < notesAddedCount) {
+						oldNote = spawnedNotes[noteData.previousNoteIndex];
+					}
+					
+					// 创建 Note 对象，完全按照传统模式！
+					var note:Note = null;
+					if (noteData.isSustainNote) {
+						note = new Note(noteData.strumTime, noteData.noteData, oldNote, true);
+					} else {
+						note = new Note(noteData.strumTime, noteData.noteData, oldNote, false);
+					}
+					
+					// 设置基本属性
+					note.animSuffix = noteData.animSuffix;
+					note.mustPress = noteData.mustPress;
+					note.gfNote = noteData.gfNote;
+					note.sustainLength = noteData.sustainLength;
+					note.noteType = noteData.noteType;
+					note.scrollFactor.set();
+					
+					// 处理 parent 关系
+					if (noteData.isSustainNote && noteData.parentIndex >= 0 && noteData.parentIndex < notesAddedCount) {
+						note.parent = spawnedNotes[noteData.parentIndex];
+						note.parent.tail.push(note);
+					}
+					
+					// 处理 correctionOffset
+					if (noteData.isSustainNote) {
+						if (noteData.parentIndex >= 0 && noteData.parentIndex < notesAddedCount) {
+							var swagNote:Note = spawnedNotes[noteData.parentIndex];
+							note.correctionOffset = swagNote.height / 2;
+						}
+						
+						// 处理 oldNote 的 scale 调整
+						if (oldNote != null && oldNote.isSustainNote && noteData.needsOldNoteScaleAdjust) {
+							if (!noteData.isPixelStage) {
+								oldNote.scale.y *= Note.SUSTAIN_SIZE / oldNote.frameHeight;
+								oldNote.scale.y /= playbackRate;
+								oldNote.resizeByRatio(noteData.curStepCrochet / Conductor.stepCrochet);
+							} else {
+								oldNote.scale.y /= playbackRate;
+								oldNote.resizeByRatio(noteData.curStepCrochet / Conductor.stepCrochet);
+							}
+						}
+						
+						// 处理 downScroll correction
+						if(noteData.hasDownScrollCorrection && !noteData.isPixelStage) {
+							note.correctionOffset = 0;
+						}
+					}
+					
+					// 应用位置偏移
+					note.x += noteData.posOffsetX;
+					note.y += noteData.posOffsetY;
+					
+					// 保存到跟踪数组
+					spawnedNotes[notesAddedCount] = note;
+					
+					// 生成音符
+					notes.insert(0, note);
+					note.spawned = true;
+					
+					// 调用回调
+					callOnLuas('onSpawnNote', [notes.members.indexOf(note), note.noteData, note.noteType, note.isSustainNote, note.strumTime]);
+					callOnHScript('onSpawnNote', [note]);
+					
+					notesAddedCount++;
+				}
+			}
+		}
+		else
+		{
+			// 传统模式
+			if (unspawnNotes[0] != null)
+			{
+				var time:Float = spawnTime * playbackRate;
+				if(songSpeed < 1) time /= songSpeed;
+				if(unspawnNotes[0].multSpeed < 1) time /= unspawnNotes[0].multSpeed;
 
-				callOnLuas('onSpawnNote', [notes.members.indexOf(dunceNote), dunceNote.noteData, dunceNote.noteType, dunceNote.isSustainNote, dunceNote.strumTime]);
-				callOnHScript('onSpawnNote', [dunceNote]);
+				while (unspawnNotes.length > 0 && unspawnNotes[0].strumTime - Conductor.songPosition < time)
+				{
+					var dunceNote:Note = unspawnNotes[0];
+					notes.insert(0, dunceNote);
+					dunceNote.spawned = true;
 
-				var index:Int = unspawnNotes.indexOf(dunceNote);
-				unspawnNotes.splice(index, 1);
+					callOnLuas('onSpawnNote', [notes.members.indexOf(dunceNote), dunceNote.noteData, dunceNote.noteType, dunceNote.isSustainNote, dunceNote.strumTime]);
+					callOnHScript('onSpawnNote', [dunceNote]);
+
+					var index:Int = unspawnNotes.indexOf(dunceNote);
+					unspawnNotes.splice(index, 1);
+				}
 			}
 		}
 

@@ -60,6 +60,12 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		var option:Option = new Option('Optimized Note Loading',
+			'Optimizes note loading for better performance on high-density charts. Use with caution, may have issues.',
+			'useOptimizedNoteLoading',
+			BOOL);
+		addOption(option);
+
 		#if !html5
 		// 帧率设置（非HTML5平台）
 		var option:Option = new Option('Framerate',

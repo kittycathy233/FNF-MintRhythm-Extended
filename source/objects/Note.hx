@@ -21,6 +21,29 @@ typedef EventNote = {
 	value4:String
 }
 
+/**
+ * 预加载音符数据 - 完整保存音符初始化所需的所有信息
+ */
+typedef PreloadedChartNote = {
+	var strumTime:Float;
+	var noteData:Int;
+	var mustPress:Bool;
+	var noteType:String;
+	var animSuffix:String;
+	var gfNote:Bool;
+	var isSustainNote:Bool;
+	var sustainLength:Float;
+	var parentIndex:Int; // 父音符在预加载数组中的索引
+	var previousNoteIndex:Int; // 前一个音符在预加载数组中的索引
+	var posOffsetX:Float;
+	var posOffsetY:Float;
+	var correctionOffset:Float;
+	var curStepCrochet:Float;
+	var needsOldNoteScaleAdjust:Bool; // 是否需要调整前一个音符的 scale
+	var isPixelStage:Bool;
+	var hasDownScrollCorrection:Bool;
+}
+
 typedef NoteSplashData = {
 	disabled:Bool,
 	texture:String,
@@ -573,8 +596,7 @@ class Note extends FlxSprite
 	}
 
 	@:noCompletion
-	override function set_clipRect(rect:FlxRect):FlxRect
-	{
+	override function set_clipRect(rect:FlxRect):FlxRect {
 		clipRect = rect;
 
 		if (frames != null)

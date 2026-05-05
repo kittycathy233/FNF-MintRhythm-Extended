@@ -147,6 +147,11 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var curSecPure:Int = 0;
 	var curBeatPure:Int = 0;
 	var curStepPure:Int = 0;
+	
+	// 优化音符加载：预保存数据，延迟创建 MetaNote
+	var preloadedNoteData:Array<Dynamic> = [];
+	var preloadedSecNum:Array<Int> = [];
+	var preloadedMetaNotes:Array<MetaNote> = [];
 
 	var chartEditorSave:FlxSave;
 	var mainBox:PsychUIBox;
@@ -3273,11 +3278,33 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		notes = [];
 		events = [];
 		undoActions = [];
+		
+		preloadedNoteData = [];
+		preloadedSecNum = [];
+		preloadedMetaNotes = [];
 
-		for (secNum => section in PlayState.SONG.notes)
-			for (note in section.sectionNotes)
-				if(note != null)
-					notes.push(createNote(note, secNum));
+		if (ClientPrefs.data.useOptimizedNoteLoading)
+		{
+			// 优化模式：只预保存数据
+			for (secNum => section in PlayState.SONG.notes)
+				for (note in section.sectionNotes)
+					if(note != null)
+					{
+						preloadedNoteData.push(note);
+						preloadedSecNum.push(secNum);
+						preloadedMetaNotes.push(null); // 预留位置，后面才创建 MetaNote
+					}
+
+			trace('Optimized mode: preloaded ${preloadedNoteData.length} notes, no MetaNotes created yet');
+		}
+		else
+		{
+			// 传统模式：立即创建所有 MetaNote
+			for (secNum => section in PlayState.SONG.notes)
+				for (note in section.sectionNotes)
+					if(note != null)
+						notes.push(createNote(note, secNum));
+		}
 
 		for (eventNum => event in PlayState.SONG.events)
 			if(event != null && (cachedSectionTimes.length < 1 || event[0] < cachedSectionTimes[cachedSectionTimes.length-1])) //dont spawn events over the time limit
@@ -3681,6 +3708,41 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		function curSecFilter(note:MetaNote)
 		{
 			return (note.strumTime >= minTime && note.strumTime < maxTime);
+		}
+
+		// 优化模式：先创建需要的 MetaNote
+		if (ClientPrefs.data.useOptimizedNoteLoading)
+		{
+			var secToCheck = [curSec];
+			if (!onlyCurrent && (showPreviousSection || showNextSection))
+			{
+				if (showPreviousSection && curSec > 0) secToCheck.push(curSec - 1);
+				if (showNextSection && curSec < PlayState.SONG.notes.length - 1) secToCheck.push(curSec + 1);
+			}
+
+			for (i in 0...preloadedNoteData.length)
+			{
+				var secForNote = preloadedSecNum[i];
+				var shouldCreate = false;
+				for (s in secToCheck)
+				{
+					if (secForNote == s)
+					{
+						shouldCreate = true;
+						break;
+					}
+				}
+
+				if (shouldCreate && preloadedMetaNotes[i] == null)
+				{
+					// 创建 MetaNote
+					var newNote = createNote(preloadedNoteData[i], secForNote);
+					preloadedMetaNotes[i] = newNote;
+					notes.push(newNote);
+				}
+			}
+			
+			notes.sort(PlayState.sortByTime);
 		}
 
 		var firstNote:Bool = false;
