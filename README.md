@@ -1,7 +1,9 @@
 # Friday Night Funkin' - Kathy Engine
 
-> **⚠️ IMPORTANT NOTICE ⚠️**
-> The original account [kittycathy233](https://github.com/kittycathy233) is no longer accessible and cannot be recovered. This repository is temporarily maintained and updated by [kittycathy114](https://github.com/kittycathy114), with future plans to be determined.
+> **⚠️ NOTICE ⚠️**
+>
+> The original account [kittycathy233](https://github.com/kittycathy233) is no longer accessible and cannot be recovered. This repository is temporarily maintained and updated by [kittycathy114](https://github.com/kittycathy114), with future plans to be determined.\
+> [kittycathy233](https://github.com/kittycathy233) has now reincarnated as [kittycathy332](https://github.com/kittycathy332)!
 
 ![Psych Engine Mobile Logo](docs/img/KathyEngineLogoTweak.png)
 
@@ -9,73 +11,81 @@ Based on **Psych Engine Mobile** (commit [`d5f4522`](https://github.com/kittycat
 
 > PsychEngine originally used in the [Mind Games Mod](https://gamebanana.com/mods/301107), designed to fix vanilla issues while preserving casual gameplay. Aimed at providing an accessible alternative for new developers.
 
----
+***
 
 ## 🔧 Customization
+
 To disable features like *Lua Scripts* or *Video Cutscenes*:
+
 1. Open `Project.xml`
 2. Locate target variables (e.g., `VIDEOS_ALLOWED`, `LUA_ALLOWED`)
-3. **Delete line** or **comment it out** using XML syntax:  
+3. **Delete line** or **comment it out** using XML syntax:\
    `<!-- YOUR_LINE_HERE -->`
 
----
+***
 
 ## 📚 Softcoding (.lua/.hx)
+
 As same as [Psych Engine](https://github.com/ShadowMario/FNF-PsychEngine)
 Refer to official documentation:
 [Psych Engine Lua Scripting Wiki](https://shadowmario.github.io/psychengine.lua)
 
----
+***
 
+## ✨ Features
 
-## ✨ Features  
-To be updated...  
+To be updated...\
 [Psych Engine Features](https://github.com/ShadowMario/FNF-PsychEngine)
 
----
+***
 
 ## 💖 Credits
+
 ### Kathy Team
-| Role              | Contributor          |
-|-------------------|----------------------|
-| Original Project Lead | [KittyCathy233](https://github.com/kittycathy233) |
-| Current Maintainer | [kittycathy114](https://github.com/kittycathy114) |
+
+| Role         | Contributor                                                                                                               |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| Project Lead | [kittycathy332](https://github.com/kittycathy332) (original account: [kittycathy233](https://github.com/kittycathy233)) |
 
 ### Special Thanks
+
 - Engines:  
-  [*NovaFlare Engine*](https://github.com/NovaFlare-Engine-Concentration/FNF-NovaFlare-Engine)・
-  [OS Engine](https://github.com/notweuz/FNF-OSEngine)・
+  **[NovaFlare Engine](https://github.com/NovaFlare-Engine-Concentration/FNF-NovaFlare-Engine)**・
+  **[JS Engine](https://github.com/JordanSantiagoYT/FNF-JS-Engine)**・
   [Slush Engine](https://github.com/Slushi-Github/Slushi-Engine)・
-  [JS Engine](https://github.com/JordanSantiagoYT/FNF-JS-Engine)・
+  [OS Engine](https://github.com/notweuz/FNF-OSEngine)・
   [Kade Engine](https://github.com/KadeArchive/Kade-Engine)
-- Trickal: Revive (To be updated...):
+- Trickal: Revive :\
   [KR](https://trickcal.com/)・
   [CN](https://game.bilibili.com/trickcal/)
-- Blue Archive:  
+- Blue Archive:\
   [JP](https://bluearchive.jp/)・
   [Global](https://bluearchive.nexon.com/)・
   [CN](https://bluearchive-cn.com/)
-- Tools:  
+- Tools:\
   [Kimi (AI)](https://kimi.moonshot.cn/)・
   [DeepSeek (AI)](https://www.deepseek.com/)・
   [CodeBuddy (IDE & AI)](https://www.codebuddy.ai/)
 
----
+***
 
 ### Psych Engine Mobile Team
-| Role              | Contributor |
-|-------------------|-------------|
-| Head Porter       | Homura      |
-| Assistant Porter  | Karim       |
-| Project Helper    | Moxie       |
+
+| Role             | Contributor |
+| ---------------- | ----------- |
+| Head Porter      | Homura      |
+| Assistant Porter | Karim       |
+| Project Helper   | Moxie       |
 
 ### Core Psych Engine Team
-| Role                     | Contributor      |
-|--------------------------|------------------|
-| Lead Developer           | Shadow Mario     |
-| Lead Artist/Animator     | Riveren          |
+
+| Role                 | Contributor  |
+| -------------------- | ------------ |
+| Lead Developer       | Shadow Mario |
+| Lead Artist/Animator | Riveren      |
 
 #### Extended Thanks
+
 - bbpanzu (Ex-Programmer)
 - crowplexus (HScript Iris, Input System v3)
 - Kamizeta (Mascot Designer)
@@ -91,6 +101,7 @@ To be updated...
 - Ezhalt (Mascot Jingle)
 - MaliciousBunny (Final Update Video)
 
----
+***
 
 > PsychEngine by **ShadowMario**・Funkin' by **ninjamuffin99**
+
