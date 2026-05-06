@@ -164,11 +164,13 @@ import states.TitleState;
 	public var fallbackPerfectToSick:Bool = true;
 	public var fallbackEXPerfectToSick:Bool = true;
 
+	public var soundTrayStyle:String = 'Flixel';
+
 }
 
 class ClientPrefs {
 	public static var data:SaveVariables = {};
-	public static var defaultData:SaveVariables = {};
+	public static var defaultData:SaveVariables = {}
 
 	//Every key has two binds, add your key bind down here and then add your control on options/ControlsSubState.hx and Controls.hx
 	public static var keyBinds:Map<String, Array<FlxKey>> = [
@@ -288,38 +290,46 @@ class ClientPrefs {
 		for (key in Reflect.fields(data))
 			if (key != 'gameplaySettings' && Reflect.hasField(FlxG.save.data, key))
 				Reflect.setField(data, key, Reflect.field(FlxG.save.data, key));
-
-		// 应用固定时间步长设置
-		FlxG.fixedTimestep = data.fixedTimestep;
-
-		if(Main.fpsVar != null)
-			Main.fpsVar.visible = data.showFPS;
-
-		if(Main.gameLogVar != null)
-			Main.gameLogVar.setEnabled(data.enableGameLog);
-
-		#if (!html5 && !switch)
-		FlxG.autoPause = ClientPrefs.data.autoPause;
-
-		if(FlxG.save.data.framerate == null) {
-			final refreshRate:Int = FlxG.stage.application.window.displayMode.refreshRate;
-			data.framerate = Std.int(FlxMath.bound(refreshRate, 60, 240));
+		
+		// 确保 soundTrayStyle 被正确初始化
+		if (data.soundTrayStyle == null) {
+			data.soundTrayStyle = 'Flixel';
 		}
-		#end
 
-		if (data.fpsRework)
-			FlxG.stage.window.frameRate = data.framerate;
-		else
-		{
-			if (data.framerate > FlxG.drawFramerate)
-			{
-				FlxG.updateFramerate = data.framerate;
-				FlxG.drawFramerate = data.framerate;
+		// 确保 FlxG 完全初始化后再应用设置
+		if (FlxG.game != null) {
+			// 应用固定时间步长设置
+			FlxG.fixedTimestep = data.fixedTimestep;
+
+			if(Main.fpsVar != null)
+				Main.fpsVar.visible = data.showFPS;
+
+			if(Main.gameLogVar != null)
+				Main.gameLogVar.setEnabled(data.enableGameLog);
+
+			#if (!html5 && !switch)
+			FlxG.autoPause = ClientPrefs.data.autoPause;
+
+			if(FlxG.save.data.framerate == null) {
+				final refreshRate:Int = FlxG.stage.application.window.displayMode.refreshRate;
+				data.framerate = Std.int(FlxMath.bound(refreshRate, 60, 240));
 			}
+			#end
+
+			if (data.fpsRework)
+				FlxG.stage.window.frameRate = data.framerate;
 			else
 			{
-				FlxG.drawFramerate = data.framerate;
-				FlxG.updateFramerate = data.framerate;
+				if (data.framerate > FlxG.drawFramerate)
+				{
+					FlxG.updateFramerate = data.framerate;
+					FlxG.drawFramerate = data.framerate;
+				}
+				else
+				{
+					FlxG.drawFramerate = data.framerate;
+					FlxG.updateFramerate = data.framerate;
+				}
 			}
 		}
 
@@ -331,10 +341,12 @@ class ClientPrefs {
 		}
 		
 		// flixel automatically saves your volume!
-		if(FlxG.save.data.volume != null)
-			FlxG.sound.volume = FlxG.save.data.volume;
-		if (FlxG.save.data.mute != null)
-			FlxG.sound.muted = FlxG.save.data.mute;
+		if (FlxG.game != null) {
+			if(FlxG.save.data.volume != null)
+				FlxG.sound.volume = FlxG.save.data.volume;
+			if (FlxG.save.data.mute != null)
+				FlxG.sound.muted = FlxG.save.data.mute;
+		}
 
 		#if DISCORD_ALLOWED DiscordClient.check(); #end
 

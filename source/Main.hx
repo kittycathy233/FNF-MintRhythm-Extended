@@ -177,6 +177,13 @@ class Main extends Sprite
 		#if LUA_ALLOWED Lua.set_callbacks_function(cpp.Callable.fromStaticFunction(psychlua.CallbackHandler.call)); #end
 		Controls.instance = new Controls();
 		ClientPrefs.loadDefaultKeys();
+		
+		// 1. 先绑定 FlxG.save，读取 soundTrayStyle 等需要提前知道的设置
+		FlxG.save.bind('funkin', CoolUtil.getSavePath());
+		if (Reflect.hasField(FlxG.save.data, 'soundTrayStyle')) {
+			ClientPrefs.data.soundTrayStyle = FlxG.save.data.soundTrayStyle;
+		}
+		
 		#if ACHIEVEMENTS_ALLOWED Achievements.load(); #end
 		#if mobile
 		FlxG.signals.postGameStart.addOnce(() ->
@@ -184,14 +191,21 @@ class Main extends Sprite
 			FlxG.scaleMode = new MobileScaleMode();
 		});
 		#end
+		
+		// 2. 在游戏启动后再加载完整的设置（此时 FlxG 已完全初始化）
+		FlxG.signals.postGameStart.addOnce(() ->
+		{
+			ClientPrefs.loadPrefs();
+		});
+		
 		// addChild(new FlxGame(game.width, game.height, #if COPYSTATE_ALLOWED !CopyState.checkExistingFiles() ? CopyState : #end game.initialState, game.framerate, game.framerate, game.skipSplash, game.startFullscreen));
 
 		var game:FlxGame = new FlxGame(game.width, game.height, #if COPYSTATE_ALLOWED !CopyState.checkExistingFiles() ? CopyState : #end game.initialState,
 			#if (flixel < "5.0.0") game.zoom, #end game.framerate, game.framerate, game.skipSplash, game.startFullscreen);
-		// #if BASE_GAME_FILES
-		// @:privateAccess
-		// game._customSoundTray = backend.FunkinSoundTray;
-		// #end
+		if (ClientPrefs.data.soundTrayStyle == 'Funkin') {
+			@:privateAccess
+			game._customSoundTray = backend.FunkinSoundTray;
+		}
 		addChild(game);
 
 		fpsVar = new FPSCounter(10, 3, 0xFFFFFF);

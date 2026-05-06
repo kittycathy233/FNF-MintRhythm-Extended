@@ -1,6 +1,5 @@
 package backend;
 
-#if BASE_GAME_FILES
 import haxe.io.Bytes;
 import openfl.utils.AssetType;
 import flixel.tweens.FlxTween;
@@ -19,7 +18,6 @@ import flixel.system.ui.FlxSoundTray;
  *  V-Slice SoundTray
  *  Wouldn't say this is the best way of implementing this, but it works. // oops spelling error!!!
  *  Also Supports The Mods Folders
- *  only shows when you have base game assets enabled.
  */
 class FunkinSoundTray extends FlxSoundTray
 {
@@ -181,4 +179,3 @@ class FunkinSoundTray extends FlxSoundTray
 		}
 	}
 }
-#end

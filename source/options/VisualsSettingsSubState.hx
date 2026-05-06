@@ -192,6 +192,14 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		BOOL);
 	addOption(option);
 
+	var soundTrayOptions:Array<String> = ['Flixel', 'Funkin'];
+	var option:Option = new Option("Sound Tray Style:",
+		"Choose the style of the sound tray",
+		'soundTrayStyle',
+		STRING,
+		soundTrayOptions);
+	addOption(option);
+
 	super();
 	add(notes);
 	add(splashes);
