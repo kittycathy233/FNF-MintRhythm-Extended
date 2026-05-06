@@ -4025,6 +4025,7 @@ isReplaying = false;
 		{
 			spr.playAnim('static');
 			spr.resetAnim = 0;
+			spr.holdConfirmActive = false;
 		}
 		callOnScripts('onKeyRelease', [key]);
 	}
@@ -4107,6 +4108,7 @@ isReplaying = false;
 
 		if (startedCountdown && !inCutscene && !boyfriend.stunned && generatedMusic)
 		{
+
 			if (notes.length > 0) {
 				for (n in notes) { // I can't do a filter here, that's kinda awesome
 					var canHit:Bool = (n != null && !strumsBlocked[n.noteData] && n.canBeHit
@@ -4294,7 +4296,7 @@ isReplaying = false;
 		}
 
 		if(opponentVocals.length <= 0) vocals.volume = 1;
-		strumPlayAnim(true, Std.int(Math.abs(note.noteData)), Conductor.stepCrochet * 1.25 / 1000 / playbackRate);
+		strumPlayAnim(true, Std.int(Math.abs(note.noteData)), Conductor.stepCrochet * 1.25 / 1000 / playbackRate, note.isSustainNote);
 		note.hitByOpponent = true;
 		
 		stagesFunc(function(stage:BaseStage) stage.opponentNoteHit(note));
@@ -4365,9 +4367,43 @@ isReplaying = false;
 			if(!cpuControlled)
 			{
 				var spr = playerStrums.members[note.noteData];
-				if(spr != null) spr.playAnim('confirm', true);
+				if(spr != null) {
+					// 玩家游玩时，重置 botplay 模式标志
+					spr.isBotplayMode = false;
+					var shouldPlay:Bool = true;
+					if(ClientPrefs.data.singleHoldNoteAnimation && note.isSustainNote) {
+						shouldPlay = !spr.holdConfirmActive;
+					}
+					if(shouldPlay) {
+						spr.playAnim('confirm', true);
+						var isHoldWithSingleAnim:Bool = ClientPrefs.data.singleHoldNoteAnimation && note.isSustainNote;
+						if(ClientPrefs.data.autoResetStrumAnim) {
+							if(!isHoldWithSingleAnim) {
+								spr.resetAnim = Conductor.stepCrochet * 1.25 / 1000 / playbackRate;
+								spr.holdConfirmActive = false;
+							} else {
+								spr.resetAnim = 0;
+								spr.holdConfirmActive = true;
+							}
+						}
+						// 即使禁用 autoResetStrumAnim，也要设置 holdConfirmActive 来控制 singleHoldNoteAnimation
+						else if(isHoldWithSingleAnim) {
+							spr.holdConfirmActive = true;
+						}
+					}
+					
+					if(ClientPrefs.data.singleHoldNoteAnimation && note.isSustainNote) {
+						spr.lastHoldAnimTime = 0; // 每次处理 hold note 时都重置计时器
+					}
+					else if (spr.holdConfirmActive) {
+						if(ClientPrefs.data.autoResetStrumAnim) {
+							spr.holdConfirmActive = false;
+							spr.resetAnim = Conductor.stepCrochet * 1.25 / 1000 / playbackRate;
+						}
+					}
+				}
 			}
-			else strumPlayAnim(false, Std.int(Math.abs(note.noteData)), Conductor.stepCrochet * 1.25 / 1000 / playbackRate);
+			else strumPlayAnim(false, Std.int(Math.abs(note.noteData)), Conductor.stepCrochet * 1.25 / 1000 / playbackRate, note.isSustainNote);
 			vocals.volume = 1;
 
 			if (!note.isSustainNote)
@@ -4962,7 +4998,7 @@ isReplaying = false;
 		#end
 	}
 
-	function strumPlayAnim(isDad:Bool, id:Int, time:Float) {
+	function strumPlayAnim(isDad:Bool, id:Int, time:Float, isHoldNote:Bool = false) {
 		var spr:StrumNote = null;
 		if(isDad) {
 			spr = opponentStrums.members[id];
@@ -4971,8 +5007,33 @@ isReplaying = false;
 		}
 
 		if(spr != null && ClientPrefs.data.cpuStrums) {
-			spr.playAnim('confirm', true);
-			spr.resetAnim = time;
+			var shouldPlay:Bool = true;
+			if(ClientPrefs.data.singleHoldNoteAnimation && isHoldNote) {
+				shouldPlay = !spr.holdConfirmActive;
+			}
+			if(shouldPlay) {
+				spr.playAnim('confirm', true);
+				var isHoldWithSingleAnim:Bool = ClientPrefs.data.singleHoldNoteAnimation && isHoldNote;
+				// 对手箭头和 botplay 模式下玩家箭头都要始终自动恢复
+				if(!isHoldWithSingleAnim) {
+					spr.resetAnim = time;
+					spr.holdConfirmActive = false;
+				} else {
+					spr.resetAnim = 0;
+					spr.holdConfirmActive = true;
+				}
+				// botplay 模式下，标记箭头为 botplay 模式
+				spr.isBotplayMode = true;
+			}
+			
+			if(ClientPrefs.data.singleHoldNoteAnimation && isHoldNote) {
+				spr.lastHoldAnimTime = 0; // 每次处理 hold note 时都重置计时器
+			}
+			else if (spr.holdConfirmActive) {
+				// 对手箭头和 botplay 模式下玩家箭头都要始终自动恢复
+				spr.holdConfirmActive = false;
+				spr.resetAnim = time;
+			}
 		}
 	}
 

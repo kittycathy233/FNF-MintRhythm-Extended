@@ -9,6 +9,7 @@ class StrumNote extends FlxSprite
 {
 	public var rgbShader:RGBShaderReference;
 	public var resetAnim:Float = 0;
+	public var holdConfirmActive:Bool = false;
 	private var noteData:Int = 0;
 	public var direction:Float = 90;
 	public var downScroll:Bool = false;
@@ -148,12 +149,31 @@ class StrumNote extends FlxSprite
 		x += ((FlxG.width / 2) * player);
 	}
 
+	public var lastHoldAnimTime:Float = 0;
+	public var isBotplayMode:Bool = false;
+	
 	override function update(elapsed:Float) {
-		if(resetAnim > 0) {
-			resetAnim -= elapsed;
-			if(resetAnim <= 0) {
-				playAnim('static');
-				resetAnim = 0;
+		// player = 0 是对手箭头，始终能自动恢复
+		// player = 1 且 isBotplayMode 是 true，也始终能自动恢复
+		// 其他情况受 autoResetStrumAnim 控制
+		if(ClientPrefs.data.autoResetStrumAnim || player == 0 || isBotplayMode) {
+			if(holdConfirmActive && resetAnim <= 0) {
+				// 检查是否很久没有处理 hold note 了
+				lastHoldAnimTime += elapsed;
+				if(lastHoldAnimTime >= ClientPrefs.data.holdAnimTimeout) {
+					// 超时了，自动重置到 static
+					playAnim('static');
+					holdConfirmActive = false;
+				}
+			}
+			
+			if(resetAnim > 0) {
+				resetAnim -= elapsed;
+				if(resetAnim <= 0) {
+					playAnim('static');
+					resetAnim = 0;
+					holdConfirmActive = false;
+				}
 			}
 		}
 		super.update(elapsed);

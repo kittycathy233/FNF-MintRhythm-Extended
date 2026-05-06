@@ -163,14 +163,37 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		#end
 
 		var option:Option = new Option("Combo Stacking",
-			Language.get("combostacking_desc"),
-			'comboStacking',
-			BOOL);
-		addOption(option);
+		Language.get("combostacking_desc"),
+		'comboStacking',
+		BOOL);
+	addOption(option);
 
-		super();
-		add(notes);
-		add(splashes);
+	var option:Option = new Option("Single Hold Animation",
+		"Only play confirm animation once when holding long notes",
+		'singleHoldNoteAnimation',
+		BOOL);
+	addOption(option);
+
+	var option:Option = new Option("Hold Animation Timeout",
+		"How long to wait before restoring the default animation (in seconds)",
+		'holdAnimTimeout',
+		FLOAT);
+	option.scrollSpeed = 1.6;
+	option.minValue = 0.05;
+	option.maxValue = 2;
+	option.changeValue = 0.05;
+	option.decimals = 2;
+	addOption(option);
+
+	var option:Option = new Option("Auto Reset Strum Animation",
+		"Automatically reset strum notes to default animation",
+		'autoResetStrumAnim',
+		BOOL);
+	addOption(option);
+
+	super();
+	add(notes);
+	add(splashes);
 	}
 
 	var notesShown:Bool = false;

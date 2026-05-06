@@ -756,6 +756,7 @@ class EditorPlayState extends MusicBeatSubstate
 		{
 			spr.playAnim('static');
 			spr.resetAnim = 0;
+			spr.holdConfirmActive = false;
 		}
 	}
 
@@ -798,6 +799,7 @@ class EditorPlayState extends MusicBeatSubstate
 					keyPressed(i);
 
 		// rewritten inputs???
+
 		if (notes.length > 0) {
 			for (n in notes) { // I can't do a filter here, that's kinda awesome
 				var canHit:Bool = (n != null && n.canBeHit && n.mustPress &&
@@ -830,8 +832,31 @@ class EditorPlayState extends MusicBeatSubstate
 
 		var strum:StrumNote = opponentStrums.members[Std.int(Math.abs(note.noteData))];
 		if(strum != null) {
-			strum.playAnim('confirm', true);
-			strum.resetAnim = Conductor.stepCrochet * 1.25 / 1000 / playbackRate;
+			var shouldPlay:Bool = true;
+			if(ClientPrefs.data.singleHoldNoteAnimation && note.isSustainNote) {
+				shouldPlay = !strum.holdConfirmActive;
+			}
+			if(shouldPlay) {
+				strum.playAnim('confirm', true);
+				// 对手箭头始终能自动恢复
+				var isHoldWithSingleAnim:Bool = ClientPrefs.data.singleHoldNoteAnimation && note.isSustainNote;
+				if(!isHoldWithSingleAnim) {
+					strum.resetAnim = Conductor.stepCrochet * 1.25 / 1000 / playbackRate;
+					strum.holdConfirmActive = false;
+				} else {
+					strum.resetAnim = 0;
+					strum.holdConfirmActive = true;
+				}
+			}
+			
+			// 对手箭头始终能自动恢复
+			if(ClientPrefs.data.singleHoldNoteAnimation && note.isSustainNote) {
+				strum.lastHoldAnimTime = 0; // 每次处理 hold note 时都重置计时器
+			}
+			else if (strum.holdConfirmActive) {
+				strum.holdConfirmActive = false;
+				strum.resetAnim = Conductor.stepCrochet * 1.25 / 1000 / playbackRate;
+			}
 		}
 		note.hitByOpponent = true;
 
@@ -871,7 +896,41 @@ class EditorPlayState extends MusicBeatSubstate
 		}
 
 		var spr:StrumNote = playerStrums.members[note.noteData];
-		if(spr != null) spr.playAnim('confirm', true);
+		if(spr != null) {
+			// 玩家游玩时，重置 botplay 模式标志
+			spr.isBotplayMode = false;
+			var shouldPlay:Bool = true;
+			if(ClientPrefs.data.singleHoldNoteAnimation && note.isSustainNote) {
+				shouldPlay = !spr.holdConfirmActive;
+			}
+			if(shouldPlay) {
+				spr.playAnim('confirm', true);
+				var isHoldWithSingleAnim:Bool = ClientPrefs.data.singleHoldNoteAnimation && note.isSustainNote;
+				if(ClientPrefs.data.autoResetStrumAnim) {
+					if(!isHoldWithSingleAnim) {
+						spr.resetAnim = Conductor.stepCrochet * 1.25 / 1000 / playbackRate;
+						spr.holdConfirmActive = false;
+					} else {
+						spr.resetAnim = 0;
+						spr.holdConfirmActive = true;
+					}
+				}
+				// 即使禁用 autoResetStrumAnim，也要设置 holdConfirmActive 来控制 singleHoldNoteAnimation
+				else if(isHoldWithSingleAnim) {
+					spr.holdConfirmActive = true;
+				}
+			}
+			
+			if(ClientPrefs.data.singleHoldNoteAnimation && note.isSustainNote) {
+				spr.lastHoldAnimTime = 0; // 每次处理 hold note 时都重置计时器
+			}
+			else if (spr.holdConfirmActive) {
+				if(ClientPrefs.data.autoResetStrumAnim) {
+					spr.holdConfirmActive = false;
+					spr.resetAnim = Conductor.stepCrochet * 1.25 / 1000 / playbackRate;
+				}
+			}
+		}
 		vocals.volume = 1;
 
 		// 播放boyfriend角色的sing动画
