@@ -158,7 +158,6 @@ import states.TitleState;
 	public var forceHoldAnimations:Bool = false; // 强制为所有角色添加-hold动画以触发角色类特性
 	public var timeBarStripes:Bool = false; // 时间条是否显示条纹
 	public var singleHoldNoteAnimation:Bool = true; // 按住长条音符时只播放一次confirm动画
-	public var holdAnimTimeout:Float = 0.15; // 按住长条音符后，多久恢复默认动画（秒）
 	public var autoResetStrumAnim:Bool = true; // 是否自动恢复箭头默认动画（普通按键和hold note）
 
 	// 当模组没有perfect/marvelous贴图时，是否改用sick贴图显示

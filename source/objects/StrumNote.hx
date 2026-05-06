@@ -1,5 +1,6 @@
 package objects;
 
+import backend.Conductor;
 import backend.animation.PsychAnimationController;
 
 import shaders.RGBPalette;
@@ -160,7 +161,10 @@ class StrumNote extends FlxSprite
 			if(holdConfirmActive && resetAnim <= 0) {
 				// 检查是否很久没有处理 hold note 了
 				lastHoldAnimTime += elapsed;
-				if(lastHoldAnimTime >= ClientPrefs.data.holdAnimTimeout) {
+				// 动态获取当前时间的 BPM 信息，计算 2 个 16 分音符的时间（毫秒转秒）
+				var currentBPMInfo = Conductor.getBPMFromSeconds(Conductor.songPosition);
+				var timeoutSeconds = (currentBPMInfo.stepCrochet * 2) / 1000;
+				if(lastHoldAnimTime >= timeoutSeconds) {
 					// 超时了，自动重置到 static
 					playAnim('static');
 					holdConfirmActive = false;

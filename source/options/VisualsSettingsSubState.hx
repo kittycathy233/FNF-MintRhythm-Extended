@@ -174,17 +174,6 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		BOOL);
 	addOption(option);
 
-	var option:Option = new Option("Hold Animation Timeout",
-		"How long to wait before restoring the default animation (in seconds)",
-		'holdAnimTimeout',
-		FLOAT);
-	option.scrollSpeed = 1.6;
-	option.minValue = 0.05;
-	option.maxValue = 2;
-	option.changeValue = 0.05;
-	option.decimals = 2;
-	addOption(option);
-
 	var option:Option = new Option("Auto Reset Strum Animation",
 		"Automatically reset strum notes to default animation",
 		'autoResetStrumAnim',
