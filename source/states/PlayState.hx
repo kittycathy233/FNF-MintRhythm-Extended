@@ -7,6 +7,10 @@ import backend.WeekData;
 import backend.Song;
 import backend.Rating;
 
+#if MODS_ALLOWED
+import sys.FileSystem;
+#end
+
 import flixel.FlxBasic;
 import flixel.FlxObject;
 import flixel.FlxSubState;
@@ -3372,6 +3376,22 @@ isReplaying = false;
 	// Stores Note Objects in a Group
 	public var noteGroup:FlxTypedGroup<FlxBasic>;
 
+	private function checkModHasImage(imagePath:String):Bool
+	{
+		var imageKey:String = LanguageBasic.getFileTranslation('images/' + imagePath) + '.png';
+		#if MODS_ALLOWED
+		var modKey:String = imageKey;
+		if(imagePath.startsWith('songs/')) modKey = imagePath;
+		
+		for(mod in Mods.getGlobalMods())
+			if (FileSystem.exists(Paths.mods(mod + '/' + modKey)))
+				return true;
+		if (FileSystem.exists(Paths.mods(Mods.currentModDirectory + '/' + modKey)) || FileSystem.exists(Paths.mods(modKey)))
+			return true;
+		#end
+		return false;
+	}
+
 	private function cachePopUpScore()
 	{
 		var uiFolder:String = "";
@@ -3520,25 +3540,48 @@ isReplaying = false;
 
 		if (ClientPrefs.data.popUpRating)
 		{
-			rating.loadGraphic(Paths.image(uiFolder + daRating.image + ratingexspr + uiPostfix));
+			var ratingImageToUse:String = daRating.image;
+			
+			// 如果是 perfect，检查模组是否有 marvelous 或 perfect 贴图
+			if (daRating.name == 'perfect' && ClientPrefs.data.fallbackPerfectToSick)
+			{
+				var hasMarvelousImg:Bool = checkModHasImage(uiFolder + 'marvelous' + ratingexspr + uiPostfix);
+				var hasPerfectImg:Bool = checkModHasImage(uiFolder + 'perfect' + ratingexspr + uiPostfix);
+				
+				// 优先尝试 marvelous，如果没有就用 perfect，再没有就用 sick
+				if (hasMarvelousImg)
+					ratingImageToUse = 'marvelous';
+				else if (!hasPerfectImg)
+					ratingImageToUse = 'sick';
+			}
+			
+			rating.loadGraphic(Paths.image(uiFolder + ratingImageToUse + ratingexspr + uiPostfix));
 			rating.screenCenter();
 			rating.x = placement - 40;
 			rating.y -= 60;
-			//rating.acceleration.y = 550 * playbackRate * playbackRate;
-			//rating.velocity.y -= FlxG.random.int(140, 175) * playbackRate;
-			//rating.velocity.x -= FlxG.random.int(0, 10) * playbackRate;
 			rating.visible = (!ClientPrefs.data.hideHud && showRating);
 			rating.x += ClientPrefs.data.comboOffset[0] - 30;
 			rating.y -= ClientPrefs.data.comboOffset[1] - 130;
 			rating.antialiasing = antialias;
 
-			theEXrating.loadGraphic(Paths.image(uiFolder + daRating.image + exratingexspr + uiPostfix));
+			var exRatingImageToUse:String = daRating.image;
+			
+			// 同样处理 EX rating
+			if (daRating.name == 'perfect' && ClientPrefs.data.fallbackEXPerfectToSick)
+			{
+				var hasMarvelousEXImg:Bool = checkModHasImage(uiFolder + 'marvelous' + exratingexspr + uiPostfix);
+				var hasPerfectEXImg:Bool = checkModHasImage(uiFolder + 'perfect' + exratingexspr + uiPostfix);
+				
+				if (hasMarvelousEXImg)
+					exRatingImageToUse = 'marvelous';
+				else if (!hasPerfectEXImg)
+					exRatingImageToUse = 'sick';
+			}
+
+			theEXrating.loadGraphic(Paths.image(uiFolder + exRatingImageToUse + exratingexspr + uiPostfix));
 			theEXrating.screenCenter();
 			theEXrating.x = placement - 40;
 			theEXrating.y -= 60;
-			//theEXrating.acceleration.y = 550 * playbackRate * playbackRate;
-			//theEXrating.velocity.y -= FlxG.random.int(140, 175) * playbackRate;
-			//theEXrating.velocity.x -= FlxG.random.int(0, 10) * playbackRate;
 			theEXrating.visible = (!ClientPrefs.data.hideHud && showEXRating);
 			theEXrating.x += ClientPrefs.data.comboOffset[4] - 220;
 			theEXrating.y += -ClientPrefs.data.comboOffset[5] + 150;

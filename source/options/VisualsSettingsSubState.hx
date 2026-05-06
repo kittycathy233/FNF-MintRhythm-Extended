@@ -191,6 +191,18 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		BOOL);
 	addOption(option);
 
+	var option:Option = new Option("Fallback Perfect to Sick",
+		"If mod doesn't have perfect/marvelous rating images, use sick instead",
+		'fallbackPerfectToSick',
+		BOOL);
+	addOption(option);
+
+	var option:Option = new Option("Fallback EX Perfect to Sick",
+		"If mod doesn't have perfect/marvelous EX rating images, use sick instead",
+		'fallbackEXPerfectToSick',
+		BOOL);
+	addOption(option);
+
 	super();
 	add(notes);
 	add(splashes);
