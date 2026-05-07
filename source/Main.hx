@@ -206,6 +206,10 @@ class Main extends Sprite
 			@:privateAccess
 			game._customSoundTray = backend.FunkinSoundTray;
 		}
+		else if (ClientPrefs.data.soundTrayStyle == 'Kathy') {
+			@:privateAccess
+			game._customSoundTray = backend.KathySoundTray;
+		}
 		addChild(game);
 
 		fpsVar = new FPSCounter(10, 3, 0xFFFFFF);
