@@ -199,6 +199,12 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		STRING,
 		soundTrayOptions);
 	addOption(option);
+	
+	var option:Option = new Option("Hold Note Behind:",
+		"Place hold notes behind normal notes and strum arrows",
+		'holdNoteBehind',
+		BOOL);
+	addOption(option);
 
 	super();
 	add(notes);

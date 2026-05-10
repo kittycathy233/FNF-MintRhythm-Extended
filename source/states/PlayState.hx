@@ -285,7 +285,9 @@ class PlayState extends MusicBeatState
 	public var gf:Character = null;
 	public var boyfriend:Character = null;
 
-	public var notes:FlxTypedGroup<Note>;
+	public var notes:FlxTypedGroup<Note>; // 主组，包含所有音符（用于 modchart 兼容性）
+	public var normalNotes:FlxTypedGroup<Note>; // 普通音符组
+	public var holdNotes:FlxTypedGroup<Note>; // Hold notes 组
 	public var unspawnNotes:Array<Note> = [];
 	public var eventNotes:Array<EventNote> = [];
 	// 优化音符加载模式变量
@@ -853,7 +855,15 @@ isReplaying = false;
 		uiGroup.add(timeBar);
 		uiGroup.add(timeTxt);
 
-		noteGroup.add(strumLineNotes);
+		// 根据 holdNoteBehind 设置调整图层顺序
+		if (ClientPrefs.data.holdNoteBehind) {
+			// 如果 holdNoteBehind 是 true，先添加 hold notes（在最下面）
+			// 然后添加 strumLineNotes
+			// 最后添加 normal notes（在最上面）
+		} else {
+			// 如果 holdNoteBehind 是 false，保持原来的顺序
+			noteGroup.add(strumLineNotes);
+		}
 
 		// 处理Song Name类型的调整（排除Leather样式）
 		if (ClientPrefs.data.timeBarType == 'Song Name' && ClientPrefs.data.timebarStyle != "Leather")
@@ -863,6 +873,20 @@ isReplaying = false;
 		}
 
 		generateSong();
+
+		// 根据 holdNoteBehind 设置调整图层顺序
+		if (ClientPrefs.data.holdNoteBehind) {
+			// 如果 holdNoteBehind 是 true，按以下顺序添加：
+			// 1. hold notes（最下面）
+			// 2. strumLineNotes（中间）
+			// 3. normal notes（最上面）
+			noteGroup.add(holdNotes);
+			noteGroup.add(strumLineNotes);
+			noteGroup.add(normalNotes);
+		} else {
+			// 如果 holdNoteBehind 是 false，保持原来的顺序
+			noteGroup.add(notes);
+		}
 
 		noteGroup.add(grpNoteSplashes);
 
@@ -1851,8 +1875,15 @@ isReplaying = false;
 		catch (e:Dynamic) {}
 		FlxG.sound.list.add(inst);
 
-		notes = new FlxTypedGroup<Note>();
-		noteGroup.add(notes);
+		notes = new FlxTypedGroup<Note>(); // 主组（用于 modchart 兼容性）
+		normalNotes = new FlxTypedGroup<Note>(); // 普通音符组
+		holdNotes = new FlxTypedGroup<Note>(); // Hold notes 组
+		
+		// 只有当 holdNoteBehind 为 false 时，才将主 notes 组添加到 noteGroup
+		// 当 holdNoteBehind 为 true 时，我们单独添加 normalNotes 和 holdNotes
+		if (!ClientPrefs.data.holdNoteBehind) {
+			noteGroup.add(notes);
+		}
 
 		// 重置优化音符加载的跟踪数组
 		unspawnNotesPreloaded = [];
@@ -2732,8 +2763,21 @@ isReplaying = false;
 					// 保存到跟踪数组
 					spawnedNotes[notesAddedCount] = note;
 					
-					// 生成音符
-					notes.insert(0, note);
+					// 生成音符，根据 holdNoteBehind 设置调整添加顺序
+					if (ClientPrefs.data.holdNoteBehind) {
+						if (note.isSustainNote) {
+							// 如果是 hold note，添加到 holdNotes 组
+							holdNotes.insert(0, note);
+						} else {
+							// 如果是普通 note，添加到 normalNotes 组
+							normalNotes.insert(0, note);
+						}
+						// 同时也添加到主 notes 组，保持 modchart 兼容性
+						notes.insert(0, note);
+					} else {
+						// 保持原来的行为
+						notes.insert(0, note);
+					}
 					note.spawned = true;
 					
 					// 调用回调
@@ -2756,7 +2800,21 @@ isReplaying = false;
 				while (unspawnNotes.length > 0 && unspawnNotes[0].strumTime - Conductor.songPosition < time)
 				{
 					var dunceNote:Note = unspawnNotes[0];
-					notes.insert(0, dunceNote);
+					// 根据 holdNoteBehind 设置调整添加顺序
+					if (ClientPrefs.data.holdNoteBehind) {
+						if (dunceNote.isSustainNote) {
+							// 如果是 hold note，添加到 holdNotes 组
+							holdNotes.insert(0, dunceNote);
+						} else {
+							// 如果是普通 note，添加到 normalNotes 组
+							normalNotes.insert(0, dunceNote);
+						}
+						// 同时也添加到主 notes 组，保持 modchart 兼容性
+						notes.insert(0, dunceNote);
+					} else {
+						// 保持原来的行为
+						notes.insert(0, dunceNote);
+					}
 					dunceNote.spawned = true;
 
 					callOnLuas('onSpawnNote', [notes.members.indexOf(dunceNote), dunceNote.noteData, dunceNote.noteType, dunceNote.isSustainNote, dunceNote.strumTime]);
@@ -3356,6 +3414,9 @@ isReplaying = false;
 			daNote.visible = false;
 			invalidateNote(daNote);
 		}
+		// 同时清空 normalNotes 和 holdNotes
+		normalNotes.clear();
+		holdNotes.clear();
 		unspawnNotes = [];
 		eventNotes = [];
 	}
@@ -4479,6 +4540,9 @@ isReplaying = false;
 	public function invalidateNote(note:Note):Void {
 		if(!ClientPrefs.data.lowQuality || !cpuControlled) note.kill();
 		notes.remove(note, true);
+		// 同时也从 normalNotes 和 holdNotes 中移除
+		normalNotes.remove(note, true);
+		holdNotes.remove(note, true);
 		note.destroy();
 	}
 

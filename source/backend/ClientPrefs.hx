@@ -166,6 +166,7 @@ import states.TitleState;
 	public var fallbackEXPerfectToSick:Bool = true;
 
 	public var soundTrayStyle:String = 'Flixel';
+	public var holdNoteBehind:Bool = false; // 将 hold note 放在正常音符和 strum 箭头下面
 
 }
 

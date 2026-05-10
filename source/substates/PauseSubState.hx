@@ -367,6 +367,8 @@ class PauseSubState extends MusicBeatSubstate
 				case 'End Song':
 					close();
 					PlayState.instance.notes.clear();
+					PlayState.instance.normalNotes.clear();
+					PlayState.instance.holdNotes.clear();
 					PlayState.instance.unspawnNotes = [];
 					PlayState.instance.finishSong(true);
 				case 'Toggle Botplay':
