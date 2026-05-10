@@ -338,6 +338,7 @@ class PlayState extends MusicBeatState
 	public var replayTxt:FlxText;
 	public var watermarkText:FlxText;
 	public var ratingCounter:FlxText;
+	public var ratingCounterModule:objects.RatingCounter;
 
 	public var iconP1:HealthIcon;
 	public var iconP2:HealthIcon;
@@ -982,14 +983,11 @@ isReplaying = false;
 		watermarkText.visible = !ClientPrefs.data.hideHud;
 		if (ClientPrefs.data.waterMarkPlay)	uiGroup.add(watermarkText);
 
-		ratingCounter = new FlxText(6, 0, 0, "", 20);
-		ratingCounter.setFormat(Paths.font("vcr.ttf"), 18, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		//ratingCounter.borderSize = 1;
-		ratingCounter.scrollFactor.set();
-		ratingCounter.visible = !ClientPrefs.data.hideHud;
-		//ratingCounter.y = (FlxG.height - ratingCounter.height * 5) / 2;
-		ratingCounter.screenCenter(Y);
-		uiGroup.add(ratingCounter);
+		// 使用新的 RatingCounter 模块
+		ratingCounterModule = new objects.RatingCounter(6, 0, ratingsData);
+		ratingCounterModule.updatePosition();
+		ratingCounterModule.setVisible(!ClientPrefs.data.hideHud);
+		ratingCounterModule.addToGroup(uiGroup);
 
 		uiGroup.cameras = [camHUD];
 		noteGroup.cameras = [camHUD];
@@ -1654,11 +1652,12 @@ isReplaying = false;
 
 	public dynamic function fullComboFunction()
 	{
-		var sicks:Int = ratingsData[0].hits;
-		var goods:Int = ratingsData[1].hits;
-		var bads:Int = ratingsData[2].hits;
-		var shits:Int = ratingsData[3].hits;
-        var perfects:Int = (!ClientPrefs.data.rmPerfect && ratingsData.length > 4 && ratingsData[4] != null) ? ratingsData[4].hits : 0;    
+		// 根据是否启用perfect来确定索引
+		var perfects:Int = !ClientPrefs.data.rmPerfect ? ratingsData[0].hits : 0;
+		var sicks:Int = !ClientPrefs.data.rmPerfect ? ratingsData[1].hits : ratingsData[0].hits;
+		var goods:Int = !ClientPrefs.data.rmPerfect ? ratingsData[2].hits : ratingsData[1].hits;
+		var bads:Int = !ClientPrefs.data.rmPerfect ? ratingsData[3].hits : ratingsData[2].hits;
+		var shits:Int = !ClientPrefs.data.rmPerfect ? ratingsData[4].hits : ratingsData[3].hits;
 
 		//ratingFC = "";
 		ratingFC = /*ClientPrefs.data.scoretxtstyle == 'Psych' ? "?" : */"?";
@@ -3436,6 +3435,11 @@ isReplaying = false;
 
 		// 存储打击数据供 HitGraph 使用
 		var daRating:Rating = Conductor.judgeNote(ratingsData, noteDiff / playbackRate);
+		// 触发评分计数器动画
+		if (ratingCounterModule != null && !note.ratingDisabled)
+		{
+			ratingCounterModule.triggerHitAnimation(daRating.name);
+		}
 		if(!cpuControlled || ClientPrefs.data.botplayScore)
 		{
 			if(!note.ratingDisabled)
@@ -3505,6 +3509,12 @@ isReplaying = false;
 
 		//tryna do MS based judgment due to popular demand
 		var daRating:Rating = Conductor.judgeNote(ratingsData, noteDiff / playbackRate);
+
+		// 触发评分计数器动画
+		if (ratingCounterModule != null && !note.ratingDisabled)
+		{
+			ratingCounterModule.triggerHitAnimation(daRating.name);
+		}
 
 		totalNotesHit += daRating.ratingMod;
 		note.ratingMod = daRating.ratingMod;
@@ -3854,31 +3864,11 @@ isReplaying = false;
 	}
 
 	function updateRatingCounters() {
-	// 获取各评分数量
-	var perfects = (!ClientPrefs.data.rmPerfect && ratingsData.length > 4 && ratingsData[4] != null) ? ratingsData[4].hits : 0;
-	var sicks = ratingsData[0].hits;
-	var goods = ratingsData[1].hits;
-	var bads = ratingsData[2].hits;
-	var shits = ratingsData[3].hits;
-	
-	// 计算分母
-	var MA_denominator = sicks + goods + bads + shits; // 非完美总数
-	var PA_denominator = goods + bads + shits;         // 良好及以下总数
-	
-	// 构建文本
-	ratingCounter.text = (!ClientPrefs.data.rmPerfect ? "Perfects: " + perfects + "\n" : "")
-		+ "Sicks: " + sicks
-		+ "\nGoods: " + goods
-		+ "\nBads: " + bads
-		+ "\nShits: " + shits
-		
-		// 添加MA/PA计算
-		+ (ClientPrefs.data.rmPerfect ? "" : 
-			(perfects > 0 && MA_denominator > 0 ? 
-				"\nMA: " + FlxMath.roundDecimal(perfects / MA_denominator, 2) : ""))
-				
-		+ (PA_denominator > 0 ? 
-			"\nPA: " + FlxMath.roundDecimal((perfects + sicks) / PA_denominator, 2) : "");
+	// 使用新的 RatingCounter 模块更新计数
+	if (ratingCounterModule != null)
+	{
+		ratingCounterModule.updateCounters();
+	}
 }
 
 	public var strumsBlocked:Array<Bool> = [];

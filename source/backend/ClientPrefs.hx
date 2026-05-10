@@ -149,6 +149,7 @@ import states.TitleState;
 	public var fixedTimestep:Bool = true; // 固定时间步长（？）
 
 	public var ratCounter:Bool = true; // 评分计数器
+	public var ratCounterAnimation:Bool = true; // 评分计数器动画效果
 	public var waterMarkPlay:Bool = true; // 水印
 	public var enableGameLog:Bool = false; // 启用游戏内日志显示（按F3切换）
 	public var useOptimizedNoteLoading:Bool = false; // 使用优化音符加载模式（快速但谨慎使用）

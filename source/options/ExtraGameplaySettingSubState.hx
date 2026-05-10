@@ -168,6 +168,12 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		option = new Option('Rating Counter Animation',
+			Language.get("ratcounter_anim_desc"),
+			'ratCounterAnimation',
+			BOOL);
+		addOption(option);
+
 		option = new Option('Show Watermark',
 			Language.get("watermark_desc"),
 			'waterMarkPlay',
