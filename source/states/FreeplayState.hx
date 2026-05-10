@@ -128,6 +128,14 @@ class FreeplayState extends MusicBeatState
 				{
 					colors = [146, 113, 253];
 				}
+				if (song.length > 3 && song[3] != null && Std.isOfType(song[3], String))
+				{
+					Mods.currentModDirectory = song[3];
+				}
+				else
+				{
+					WeekData.setDirectoryFromWeek(leWeek);
+				}
 				addSong(song[0], i, song[1], FlxColor.fromRGB(colors[0], colors[1], colors[2]));
 			}
 		}

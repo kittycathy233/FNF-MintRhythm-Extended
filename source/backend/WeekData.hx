@@ -23,6 +23,7 @@ typedef WeekFile =
 class WeekData {
 	public static var weeksLoaded:Map<String, WeekData> = new Map<String, WeekData>();
 	public static var weeksList:Array<String> = [];
+	private static var loadedFiles:Map<String, Bool> = new Map();
 	#if MODS_ALLOWED
 	public static var fileCache:Map<String, {data:WeekFile, mtime:Float}> = new Map();
 	#end
@@ -78,6 +79,7 @@ class WeekData {
 	{
 		weeksList = [];
 		weeksLoaded.clear();
+		loadedFiles = new Map();
 		#if MODS_ALLOWED
 		var directories:Array<String> = [Paths.mods(), Paths.getSharedPath()];
 		var originalLength:Int = directories.length;
@@ -93,22 +95,32 @@ class WeekData {
 		for (i in 0...sexList.length) {
 			for (j in 0...directories.length) {
 				var fileToCheck:String = directories[j] + 'weeks/' + sexList[i] + '.json';
-				if(!weeksLoaded.exists(sexList[i])) {
-					var week:WeekFile = getWeekFile(fileToCheck);
-					if(week != null) {
-						var weekFile:WeekData = new WeekData(week, sexList[i]);
+				if(loadedFiles.exists(fileToCheck)) continue;
+				var week:WeekFile = getWeekFile(fileToCheck);
+				if(week != null) {
+					var newFolder:String = '';
+					#if MODS_ALLOWED
+					if(j >= originalLength) {
+						newFolder = directories[j].substring(Paths.mods().length, directories[j].length-1);
+					}
+					#end
 
+					var shouldAdd:Bool = (isStoryMode == null || (isStoryMode && !week.hideStoryMode) || (!isStoryMode && !week.hideFreeplay));
+					if(!shouldAdd) continue;
+
+					if(weeksLoaded.exists(sexList[i])) {
+						mergeWeekSongs(weeksLoaded.get(sexList[i]), week, newFolder);
+					} else {
+						var weekFile:WeekData = new WeekData(week, sexList[i]);
 						#if MODS_ALLOWED
 						if(j >= originalLength) {
-							weekFile.folder = directories[j].substring(Paths.mods().length, directories[j].length-1);
+							weekFile.folder = newFolder;
 						}
 						#end
-
-						if(weekFile != null && (isStoryMode == null || (isStoryMode && !weekFile.hideStoryMode) || (!isStoryMode && !weekFile.hideFreeplay))) {
-							weeksLoaded.set(sexList[i], weekFile);
-							weeksList.push(sexList[i]);
-						}
+						weeksLoaded.set(sexList[i], weekFile);
+						weeksList.push(sexList[i]);
 					}
+					loadedFiles.set(fileToCheck, true);
 				}
 			}
 		}
@@ -142,23 +154,60 @@ class WeekData {
 
 	private static function addWeek(weekToCheck:String, path:String, directory:String, i:Int, originalLength:Int)
 	{
-		if(!weeksLoaded.exists(weekToCheck))
+		if(loadedFiles.exists(path)) return;
+		var week:WeekFile = getWeekFile(path);
+		if(week != null)
 		{
-			var week:WeekFile = getWeekFile(path);
-			if(week != null)
+			var newFolder:String = '';
+			if(i >= originalLength)
 			{
+				#if MODS_ALLOWED
+				newFolder = directory.substring(Paths.mods().length, directory.length-1);
+				#end
+			}
+
+			var shouldAdd:Bool = (PlayState.isStoryMode && !week.hideStoryMode) || (!PlayState.isStoryMode && !week.hideFreeplay);
+			if(!shouldAdd) return;
+
+			if(weeksLoaded.exists(weekToCheck)) {
+				mergeWeekSongs(weeksLoaded.get(weekToCheck), week, newFolder);
+			} else {
 				var weekFile:WeekData = new WeekData(week, weekToCheck);
 				if(i >= originalLength)
 				{
 					#if MODS_ALLOWED
-					weekFile.folder = directory.substring(Paths.mods().length, directory.length-1);
+					weekFile.folder = newFolder;
 					#end
 				}
-				if((PlayState.isStoryMode && !weekFile.hideStoryMode) || (!PlayState.isStoryMode && !weekFile.hideFreeplay))
+				weeksLoaded.set(weekToCheck, weekFile);
+				weeksList.push(weekToCheck);
+			}
+			loadedFiles.set(path, true);
+		}
+	}
+
+	private static function mergeWeekSongs(existingWeek:WeekData, newWeekFile:WeekFile, newFolder:String):Void
+	{
+		for (song in newWeekFile.songs)
+		{
+			var songName:String = song[0];
+			var alreadyExists:Bool = false;
+			for (existingSong in existingWeek.songs)
+			{
+				if (existingSong[0] == songName)
 				{
-					weeksLoaded.set(weekToCheck, weekFile);
-					weeksList.push(weekToCheck);
+					alreadyExists = true;
+					break;
 				}
+			}
+			if (!alreadyExists)
+			{
+				var newSong:Array<Dynamic> = song.copy();
+				if(newFolder != null && newFolder.length > 0)
+				{
+					newSong.push(newFolder);
+				}
+				existingWeek.songs.push(newSong);
 			}
 		}
 	}
@@ -197,7 +246,7 @@ private static function getWeekFile(path:String):WeekFile {
 		#if MODS_ALLOWED
 			// 缓存解析后的数据
 			fileCache.set(path, {data: parsedData, mtime: currentMTime});
-			#end
+		#end
 			return parsedData;
 		}
 		return null;
