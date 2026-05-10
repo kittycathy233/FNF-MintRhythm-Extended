@@ -203,13 +203,6 @@ class Character extends FlxSprite
 		// animations
 		animationsArray = json.animations;
 		
-		// 检查是否在编辑器状态
-		var isInEditor:Bool = false;
-		if(FlxG.state != null) {
-			var stateStr:String = Std.string(FlxG.state);
-			isInEditor = stateStr.indexOf('Editor') >= 0;
-		}
-		
 		// 先收集所有已有的动画名称，方便后面检查
 		var existingAnims:Map<String, Bool> = new Map<String, Bool>();
 		if(animationsArray != null && animationsArray.length > 0) {
@@ -248,7 +241,7 @@ class Character extends FlxSprite
 			}
 			
 			// 强制添加-hold动画
-			if(ClientPrefs.data.forceHoldAnimations && !isInEditor) {
+			if(ClientPrefs.data.forceHoldAnimations) {
 				for (anim in animationsArray) {
 					var animAnim:String = '' + anim.anim;
 					var animName:String = '' + anim.name;
@@ -256,33 +249,38 @@ class Character extends FlxSprite
 					var animLoop:Bool = !!anim.loop;
 					var animIndices:Array<Int> = anim.indices;
 					
-					// 只处理sing开头的动画
-					if(animAnim.startsWith('sing')) {
-						var holdAnimName:String = animAnim + '-hold';
-						// 检查是否已经有-hold动画
-						if(!existingAnims.exists(holdAnimName)) {
-							// 添加-hold动画副本
-							if(!isAnimateAtlas)
-							{
-								if(animIndices != null && animIndices.length > 0)
-									animation.addByIndices(holdAnimName, animName, animIndices, "", animFps, animLoop);
-								else
-									animation.addByPrefix(holdAnimName, animName, animFps, animLoop);
-							}
-							#if flxanimate
+					// 检查是否已经有-hold或-loop动画
+					var holdAnimName:String = animAnim + '-hold';
+					var loopAnimName:String = animAnim + '-loop';
+					
+					// 双重检查：既要检查 existingAnims map，也要通过 hasAnimation 检查实际存在
+					var alreadyHasHold:Bool = existingAnims.exists(holdAnimName) || existingAnims.exists(loopAnimName);
+					if(!alreadyHasHold) {
+						if(hasAnimation(holdAnimName)) alreadyHasHold = true;
+					}
+					
+					if(!alreadyHasHold) {
+						// 为所有动画添加-hold动画副本
+						if(!isAnimateAtlas)
+						{
+							if(animIndices != null && animIndices.length > 0)
+								animation.addByIndices(holdAnimName, animName, animIndices, "", animFps, animLoop);
 							else
-							{
-								if(animIndices != null && animIndices.length > 0)
-									atlas.anim.addBySymbolIndices(holdAnimName, animName, animIndices, animFps, animLoop);
-								else
-									atlas.anim.addBySymbol(holdAnimName, animName, animFps, animLoop);
-							}
-							#end
-							
-							// 添加相同的偏移量
-							if(anim.offsets != null && anim.offsets.length > 1) addOffset(holdAnimName, anim.offsets[0], anim.offsets[1]);
-							else addOffset(holdAnimName, 0, 0);
+								animation.addByPrefix(holdAnimName, animName, animFps, animLoop);
 						}
+						#if flxanimate
+						else
+						{
+							if(animIndices != null && animIndices.length > 0)
+								atlas.anim.addBySymbolIndices(holdAnimName, animName, animIndices, animFps, animLoop);
+							else
+								atlas.anim.addBySymbol(holdAnimName, animName, animFps, animLoop);
+						}
+						#end
+						
+						// 添加相同的偏移量
+						if(anim.offsets != null && anim.offsets.length > 1) addOffset(holdAnimName, anim.offsets[0], anim.offsets[1]);
+						else addOffset(holdAnimName, 0, 0);
 					}
 				}
 			}
@@ -355,7 +353,8 @@ class Character extends FlxSprite
 		}
 
 		var name:String = getAnimationName();
-		if(isAnimationFinished() && hasAnimation('$name-loop'))
+		// 如果是 hold 动画，不要自动播放 loop 动画
+		if(isAnimationFinished() && hasAnimation('$name-loop') && !name.endsWith('-hold'))
 			playAnim('$name-loop');
 
 		super.update(elapsed);
