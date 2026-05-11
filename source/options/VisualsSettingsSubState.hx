@@ -192,7 +192,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		BOOL);
 	addOption(option);
 
-	var soundTrayOptions:Array<String> = ['Flixel', 'Funkin', 'Kathy'];
+	var soundTrayOptions:Array<String> = ['Flixel', 'Funkin', 'Kathy', 'Dave'];
 	var option:Option = new Option("Sound Tray Style:",
 		"Choose the style of the sound tray",
 		'soundTrayStyle',
