@@ -14,6 +14,7 @@ import flixel.FlxState;
 import openfl.utils.Assets;
 import backend.ClientPrefs;
 import backend.Paths;
+import StringTools;
 #if cpp
 #if windows
 @:cppFileCode('#include <windows.h>')
@@ -48,6 +49,9 @@ class FPSCounter extends Sprite
 
 	// 文本字段
 	private var allInfoText:TextField;
+	
+	// 背景
+	private var bgSprite:Sprite;
 
 	// 布局参数
 	private var lineHeight:Float = 18;
@@ -57,12 +61,16 @@ class FPSCounter extends Sprite
 
 	public var fontName:String = Paths.font("vcr.ttf");
 
-	public function new(x:Float = 10, y:Float = 10, color:Int = 0x000000)
+	public function new(x:Float = 10, y:Float = 10, color:flixel.util.FlxColor = 0xFF000000)
 	{
 		super();
 
+		// 创建背景
+		bgSprite = new Sprite();
+		addChild(bgSprite);
+
 		// 创建单个文本字段，显示所有信息
-		allInfoText = createTextField(18, 0xFFFFFF);
+		allInfoText = createTextField(ClientPrefs.data.fpsFontSize, ClientPrefs.data.fpsColor);
 		addChild(allInfoText);
 
 		#if !officialBuild
@@ -87,12 +95,12 @@ class FPSCounter extends Sprite
 		lastFpsUpdateTime = Timer.stamp();
 	}
 
-	private function createTextField(size:Int, color:Int, bold:Bool = false):TextField
+	private function createTextField(size:Int, color:flixel.util.FlxColor, bold:Bool = false):TextField
 	{
 		var tf = new TextField();
 		tf.selectable = false;
 		tf.mouseEnabled = false;
-		tf.defaultTextFormat = new TextFormat(fontName, size, color, bold);
+		tf.defaultTextFormat = new TextFormat(fontName, size, (color.red << 16) | (color.green << 8) | color.blue, bold);
 		tf.autoSize = LEFT;
 		return tf;
 	}
@@ -100,7 +108,21 @@ class FPSCounter extends Sprite
 	public dynamic function updateText():Void
 	{
 		var currentTime = Timer.stamp();
-		var memory = memoryMegas;
+		var memory:Float = 0;
+		
+		try
+		{
+			memory = memoryMegas;
+			// 确保内存值是有效的数字
+			if (memory < 0 || !Std.is(memory, Float))
+			{
+				memory = 0;
+			}
+		}
+		catch (e:Dynamic)
+		{
+			memory = 0;
+		}
 
 		// 更新内存峰值
 		if (memory > memoryPeakMegas)
@@ -108,47 +130,88 @@ class FPSCounter extends Sprite
 			memoryPeakMegas = memory;
 		}
 
-		// 构建所有信息的文本
-		var allText = '';
+		// 构建所有信息的文本 - 使用数组避免多余空行
+		var textLines:Array<String> = [];
 
-		// FPS信息 - 所有文本统一为白色
-		allText += 'FPS: $currentFPS\n';
-		allText += 'Delay: ${currentDelay}ms\n';
-		allText += 'RAM: ${flixel.util.FlxStringUtil.formatBytes(memory)}\n';
-		allText += 'MEM Peak: ${flixel.util.FlxStringUtil.formatBytes(memoryPeakMegas)}\n';
-		allText += 'Objects: $objectCount\n';
+		// FPS信息 - 根据设置显示
+		if (ClientPrefs.data.fpsShowFPS) textLines.push('FPS: $currentFPS');
+		if (ClientPrefs.data.fpsShowDelay) textLines.push('Delay: ${currentDelay}ms');
+		if (ClientPrefs.data.fpsShowRAM) textLines.push('RAM: ${formatMemory(memory)}');
+		if (ClientPrefs.data.fpsShowMemPeak) textLines.push('MEM Peak: ${formatMemory(memoryPeakMegas)}');
+		if (ClientPrefs.data.fpsShowObjects) textLines.push('Objects: $objectCount');
+		
 		// 版本信息
 		if (ClientPrefs.data.exgameversion)
 		{
-			allText += '\n';
-			allText += 'Psych ${MainMenuState.psychEngineVersion}\n';
-			allText += 'Kathy ${MainMenuState.kathyEngineVersion}\n';
-			allText += 'Commit: ${GameVersion.getGitCommitCount()} (${GameVersion.getGitCommitHash()})\n';
-			allText += 'Build: ${GameVersion.getBuildTime()}\n';
-			if (ClientPrefs.data.showHaxelibs) {
-				allText += '\n';
-				allText += 'Libs:\n${HaxelibInfo.getHaxelibInfo()}\n';
-			}
+			textLines.push('');
+			textLines.push('Psych ${MainMenuState.psychEngineVersion}');
+			textLines.push('Kathy ${MainMenuState.kathyEngineVersion}');
+			textLines.push('Commit: ${GameVersion.getGitCommitCount()} (${GameVersion.getGitCommitHash()})');
+			textLines.push('Build: ${GameVersion.getBuildTime()}');
+		}
+		
+		// 显示haxelib信息 - 独立于版本信息
+		if (ClientPrefs.data.showHaxelibs)
+		{
+			textLines.push('');
+			textLines.push('Libs:');
+			textLines.push(HaxelibInfo.getHaxelibInfo());
+		}
 
-			if (ClientPrefs.data.showRunningOS)
-			{
-				allText += '\n' + os;
-			}
+		// 显示操作系统信息
+		if (ClientPrefs.data.showRunningOS)
+		{
+			textLines.push('');
+			textLines.push(os);
+		}
 
-			// 系统信息（默认一直显示）
-			allText += '\n';
+		// 系统信息 - 只有当显示版本信息或者显示haxelib或者显示操作系统信息时才添加
+		if (ClientPrefs.data.exgameversion || ClientPrefs.data.showHaxelibs || ClientPrefs.data.showRunningOS)
+		{
+			var hasSystemInfo = false;
+			var lastWasBlank:Bool = textLines.length > 0 && textLines[textLines.length - 1] == '';
 
 			// 平台信息
-			#if cpp
-			var arch = getArch() != 'Unknown' ? ' (${getArch()})' : '';
-			#else
-			var arch = '';
-			#end
-			allText += 'Platform: ${LimeSystem.platformName}$arch\n';
+			if (ClientPrefs.data.fpsShowPlatform)
+			{
+				if (!hasSystemInfo && !lastWasBlank)
+				{
+					textLines.push('');
+					lastWasBlank = true;
+					hasSystemInfo = true;
+				}
+				else
+				{
+					hasSystemInfo = true;
+				}
+				#if cpp
+				var arch = getArch() != 'Unknown' ? ' (${getArch()})' : '';
+				#else
+				var arch = '';
+				#end
+				textLines.push('Platform: ${LimeSystem.platformName}$arch');
+				lastWasBlank = false;
+			}
 
 			// 平台版本
-			if (LimeSystem.platformVersion != null && LimeSystem.platformVersion != LimeSystem.platformName)
-				allText += 'OS Ver.: ${LimeSystem.platformVersion}\n';
+			if (ClientPrefs.data.fpsShowOSVersion)
+			{
+				if (LimeSystem.platformVersion != null && LimeSystem.platformVersion != LimeSystem.platformName)
+				{
+					if (!hasSystemInfo && !lastWasBlank)
+					{
+						textLines.push('');
+						lastWasBlank = true;
+						hasSystemInfo = true;
+					}
+					else
+					{
+						hasSystemInfo = true;
+					}
+					textLines.push('OS Ver.: ${LimeSystem.platformVersion}');
+					lastWasBlank = false;
+				}
+			}
 
 			// 显示器信息
 			try
@@ -156,25 +219,89 @@ class FPSCounter extends Sprite
 				var display = LimeSystem.getDisplay(0);
 				if (display != null)
 				{
-					allText += 'Resolution: ${display.currentMode.width}x${display.currentMode.height}\n';
-					allText += 'Refresh: ${display.currentMode.refreshRate}Hz\n';
+					if (ClientPrefs.data.fpsShowResolution)
+					{
+						if (!hasSystemInfo && !lastWasBlank)
+						{
+							textLines.push('');
+							lastWasBlank = true;
+							hasSystemInfo = true;
+						}
+						else
+						{
+							hasSystemInfo = true;
+						}
+						textLines.push('Resolution: ${display.currentMode.width}x${display.currentMode.height}');
+						lastWasBlank = false;
+					}
+
+					if (ClientPrefs.data.fpsShowRefreshRate)
+					{
+						if (!hasSystemInfo && !lastWasBlank)
+						{
+							textLines.push('');
+							lastWasBlank = true;
+							hasSystemInfo = true;
+						}
+						else
+						{
+							hasSystemInfo = true;
+						}
+						textLines.push('Refresh: ${display.currentMode.refreshRate}Hz');
+						lastWasBlank = false;
+					}
 				}
 			}
 			catch (e:Dynamic)
 			{
-				// 忽略显示器信息错误
-			}
-		}
-		else
-		{
-			// 如果版本信息不显示，只显示操作系统信息
-			if (ClientPrefs.data.showRunningOS)
-			{
-				allText += '\n' + os;
 			}
 		}
 
-		allInfoText.htmlText = '<font color="#E6CAFF">$allText</font>';
+		// 移除末尾的空行
+		while (textLines.length > 0 && textLines[textLines.length - 1] == '')
+		{
+			textLines.pop();
+		}
+
+		var allText = textLines.join('\n');
+
+		// 转换颜色为十六进制字符串
+		var colorHex = StringTools.hex((ClientPrefs.data.fpsColor.red << 16) | (ClientPrefs.data.fpsColor.green << 8) | ClientPrefs.data.fpsColor.blue, 6);
+		allInfoText.htmlText = '<font color="#$colorHex">$allText</font>';
+		
+		// 更新字体大小
+		var textColorInt = (ClientPrefs.data.fpsColor.red << 16) | (ClientPrefs.data.fpsColor.green << 8) | ClientPrefs.data.fpsColor.blue;
+		allInfoText.defaultTextFormat = new TextFormat(fontName, ClientPrefs.data.fpsFontSize, textColorInt, false);
+		
+		// 更新透明度
+		this.alpha = ClientPrefs.data.fpsOpacity;
+		
+		// 更新背景
+		updateBackground();
+	}
+	
+	private function updateBackground():Void
+	{
+		bgSprite.graphics.clear();
+		
+		if (ClientPrefs.data.fpsBgEnabled)
+		{
+			var padding = ClientPrefs.data.fpsBgPadding;
+			var w = allInfoText.width + padding * 2;
+			var h = allInfoText.height + padding * 2;
+			
+			var bgColorInt = (ClientPrefs.data.fpsBgColor.red << 16) | (ClientPrefs.data.fpsBgColor.green << 8) | ClientPrefs.data.fpsBgColor.blue;
+			bgSprite.graphics.beginFill(bgColorInt, ClientPrefs.data.fpsBgOpacity);
+			bgSprite.graphics.drawRect(-padding, -padding, w, h);
+			bgSprite.graphics.endFill();
+		}
+	}
+	
+	// 重新应用所有设置
+	public function applySettings():Void
+	{
+		updateText();
+		positionFPS(x, y);
 	}
 
 	private override function __enterFrame(deltaTime:Float):Void
@@ -288,8 +415,36 @@ class FPSCounter extends Sprite
 		return count;
 	}
 
-	inline function get_memoryMegas():Float
-		return cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE);
+	function get_memoryMegas():Float
+	{
+		#if cpp
+		try
+		{
+			var memValue:Dynamic = cpp.vm.Gc.memInfo64(cpp.vm.Gc.MEM_INFO_USAGE);
+			if (Std.is(memValue, Float) || Std.is(memValue, Int))
+			{
+				var mem:Float = cast memValue;
+				if (Math.isFinite(mem) && mem >= 0)
+					return mem;
+			}
+		}
+		catch (e:Dynamic) {}
+
+		try
+		{
+			var memValue:Dynamic = cpp.vm.Gc.memInfo(cpp.vm.Gc.MEM_INFO_USAGE);
+			if (Std.is(memValue, Float) || Std.is(memValue, Int))
+			{
+				var mem:Float = cast memValue;
+				if (Math.isFinite(mem) && mem >= 0)
+					return mem;
+			}
+		}
+		catch (e:Dynamic) {}
+		#end
+
+		return 0;
+	}
 
 	public inline function positionFPS(X:Float, Y:Float, ?scale:Float = 1)
 	{
@@ -326,7 +481,9 @@ class FPSCounter extends Sprite
 
 	#if cpp
 	#if windows
-	@:functionCode('
+	private function getArch():String
+	{
+		@:functionCode('
         SYSTEM_INFO osInfo;
         GetSystemInfo(&osInfo);
         switch(osInfo.wProcessorArchitecture)
@@ -339,22 +496,62 @@ class FPSCounter extends Sprite
             default: return ::String("Unknown");
         }
     ')
+		return "Unknown";
+	}
 	#elseif (ios || mac)
-	@:functionCode('
+	private function getArch():String
+	{
+		@:functionCode('
         const NXArchInfo *archInfo = NXGetLocalArchInfo();
         return ::String(archInfo == NULL ? "Unknown" : archInfo->name);
     ')
+		return "Unknown";
+	}
 	#else
-	@:functionCode('
-        struct utsname osInfo{}; 
+	private function getArch():String
+	{
+		@:functionCode('
+        struct utsname osInfo{};
         uname(&osInfo);
         return ::String(osInfo.machine);
     ')
-	#end
-	@:noCompletion
-	private function getArch():String
-	{
 		return "Unknown";
 	}
 	#end
+	#else
+	private function getArch():String
+	{
+		var platform = LimeSystem.platformName;
+		if (platform != null && (platform.indexOf("x86_64") >= 0 || platform.indexOf("arm64") >= 0 || platform.indexOf("ARM64") >= 0))
+			return platform;
+		return "Unknown";
+	}
+	#end
+
+	/**
+	 * 格式化内存显示，根据设置决定是否强制显示MB
+	 */
+	private function formatMemory(memoryInBytes:Float):String
+	{
+		if (memoryInBytes < 0 || memoryInBytes != memoryInBytes)
+		{
+			memoryInBytes = 0;
+		}
+
+		if (ClientPrefs.data.fpsForceMB)
+		{
+			var memoryInMB = memoryInBytes / (1024 * 1024);
+			return Std.string(Math.round(memoryInMB)) + "MB";
+		}
+
+		try
+		{
+			return flixel.util.FlxStringUtil.formatBytes(memoryInBytes);
+		}
+		catch (e:Dynamic)
+		{
+			var memoryInMB = memoryInBytes / (1024 * 1024);
+			return Std.string(Math.round(memoryInMB)) + "MB";
+		}
+	}
 }

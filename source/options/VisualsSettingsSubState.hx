@@ -127,6 +127,15 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 		option.onChange = onChangeFPSCounter;
+		
+		var option:Option = new Option("FPS Counter Settings...",
+			'Customize FPS counter appearance and content',
+			'_fpsSettings',
+			BUTTON);
+		addOption(option);
+		option.onChange = function() {
+			MusicBeatState.switchState(new FPSCounterSettingsState());
+		};
 
 		//新版lime跟git库的不同，故临时禁用此项，之后也许会改
 		/*#if native

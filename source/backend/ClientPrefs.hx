@@ -168,6 +168,25 @@ import states.TitleState;
 	public var soundTrayStyle:String = 'Flixel';
 	public var holdNoteBehind:Bool = false; // 将 hold note 放在正常音符和 strum 箭头下面
 
+	// FPS计数器自定义设置
+	public var fpsColor:FlxColor = 0xFFE6CAFF; // FPS计数器颜色
+	public var fpsOpacity:Float = 1.0; // FPS计数器不透明度
+	public var fpsFontSize:Int = 14; // FPS计数器字体大小
+	public var fpsShowFPS:Bool = true; // 显示FPS
+	public var fpsShowDelay:Bool = true; // 显示延迟
+	public var fpsShowRAM:Bool = true; // 显示内存使用
+	public var fpsShowMemPeak:Bool = true; // 显示内存峰值
+	public var fpsShowObjects:Bool = true; // 显示对象数量
+	public var fpsBgEnabled:Bool = false; // 是否启用FPS计数器背景
+	public var fpsBgColor:FlxColor = 0xFF000000; // FPS计数器背景颜色
+	public var fpsBgOpacity:Float = 0.5; // FPS计数器背景不透明度
+	public var fpsBgPadding:Int = 5; // FPS计数器背景内边距
+	public var fpsForceMB:Bool = false; // 是否强制显示MB而非GB
+	public var fpsShowPlatform:Bool = true; // 显示Platform信息
+	public var fpsShowOSVersion:Bool = true; // 显示OS版本
+	public var fpsShowResolution:Bool = true; // 显示分辨率
+	public var fpsShowRefreshRate:Bool = true; // 显示刷新率
+
 }
 
 class ClientPrefs {
@@ -303,8 +322,10 @@ class ClientPrefs {
 			// 应用固定时间步长设置
 			FlxG.fixedTimestep = data.fixedTimestep;
 
-			if(Main.fpsVar != null)
+			if(Main.fpsVar != null) {
 				Main.fpsVar.visible = data.showFPS;
+				Main.fpsVar.applySettings();
+			}
 
 			if(Main.gameLogVar != null)
 				Main.gameLogVar.setEnabled(data.enableGameLog);

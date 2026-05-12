@@ -225,6 +225,7 @@ class Main extends Sprite
 		if (fpsVar != null)
 		{
 			fpsVar.visible = ClientPrefs.data.showFPS;
+			fpsVar.applySettings();
 		}
 
 		// 创建游戏日志显示

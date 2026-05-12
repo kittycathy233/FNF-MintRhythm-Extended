@@ -17,28 +17,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		rpcTitle = 'Extra Gameplay Settings Menu'; //for Discord Rich Presence
 
 		// BOOL 类型设置
-		var option:Option = new Option('Show Game Version',
-			Language.get("show_version_desc"),
-			'exgameversion',
-			BOOL);
-		option.onChange = function() {
-			if(Main.fpsVar != null) {
-				Main.fpsVar.updateText();
-			}
-		};
-		addOption(option);
-
-		option = new Option('Show Haxelibs Info',
-			Language.get("show_haxelibs_desc"),
-			'showHaxelibs',
-			BOOL);
-		option.onChange = function() {
-			if(Main.fpsVar != null) {
-				Main.fpsVar.updateText();
-			}
-		};
-		addOption(option);
-		option = new Option('Show Extra-Rating',
+		var option:Option = new Option('Show Extra-Rating',
 			Language.get("show_exrating_desc"),
 			'exratingDisplay',
 			BOOL);
@@ -298,33 +277,6 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		option.maxValue = 1.2;
 		option.changeValue = 0.005;
 		option.decimals = 3; //小数点后三位
-		addOption(option);
-
-		option = new Option('FPS Position',
-			Language.get("fps_position_desc"),
-			'fpsPosition',
-			STRING,
-			['TOP_LEFT', 'TOP_RIGHT', 'BOTTOM_LEFT', 'BOTTOM_RIGHT']);
-		option.onChange = function() {
-			if(Main.fpsVar != null) {
-				Main.fpsVar.positionFPS(10, 3);
-			}
-		};
-		addOption(option);
-
-		option = new Option('FPS Spacing',
-			Language.get("fps_spacing_desc"),
-			'fpsSpacing',
-			INT);
-		option.scrollSpeed = 1;
-		option.minValue = 0;
-		option.maxValue = 200;
-		option.changeValue = 5;
-		option.onChange = function() {
-			if(Main.fpsVar != null) {
-				Main.fpsVar.positionFPS(10, 3);
-			}
-		};
 		addOption(option);
 
 		// 语言设置放在最后

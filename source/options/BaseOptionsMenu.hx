@@ -109,7 +109,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 				checkbox.ID = i;
 				checkboxGroup.add(checkbox);
 			}
-			else
+			else if (optionsArray[i].type != BUTTON)
 			{
 				optionText.x -= 80;
 				optionText.startPosition.x -= 80;
@@ -121,8 +121,16 @@ class BaseOptionsMenu extends MusicBeatSubstate
 				grpTexts.add(valueText);
 				optionsArray[i].child = valueText;
 			}
+			else
+			{
+				// BUTTON type doesn't have a value text
+				optionText.x -= 80;
+				optionText.startPosition.x -= 80;
+			}
 			//optionText.snapToPosition(); //Don't ignore me when i ask for not making a fucking pull request to uncomment this line ok
-			updateTextFrom(optionsArray[i]);
+			if (optionsArray[i].type != BUTTON) {
+				updateTextFrom(optionsArray[i]);
+			}
 		}
 
 		changeSelection();
@@ -132,6 +140,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		keybindManager = new KeybindManager();
 
 		addTouchPad('LEFT_FULL', 'A_B_C');
+		addTouchPadCamera();
 	}
 
 	public function addOption(option:Option) {
@@ -242,6 +251,13 @@ class BaseOptionsMenu extends MusicBeatSubstate
 						if (keybindManager.getOverlay() != null) add(keybindManager.getOverlay());
 						if (keybindManager.getTitle() != null) add(keybindManager.getTitle());
 						if (keybindManager.getInstructions() != null) add(keybindManager.getInstructions());
+					}
+
+				case BUTTON:
+					if(controls.ACCEPT)
+					{
+						FlxG.sound.play(Paths.sound('scrollMenu'));
+						curOption.change();
 					}
 
 				default:
@@ -424,5 +440,13 @@ class BaseOptionsMenu extends MusicBeatSubstate
 			keybindManager = null;
 		}
 		super.destroy();
+	}
+
+	override function closeSubState()
+	{
+		super.closeSubState();
+		controls.isInSubstate = false;
+		removeTouchPad();
+		addTouchPad('LEFT_FULL', 'A_B_C');
 	}
 }

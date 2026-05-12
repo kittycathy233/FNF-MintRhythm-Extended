@@ -14,6 +14,7 @@ enum OptionType {
 	PERCENT;
 	STRING;
 	KEYBIND;
+	BUTTON;
 }
 
 class Option
@@ -51,7 +52,7 @@ class Option
 		this.type = type;
 		this.options = options;
 
-		if(this.type != KEYBIND) this.defaultValue = Reflect.getProperty(ClientPrefs.defaultData, variable);
+		if(this.type != KEYBIND && this.type != BUTTON) this.defaultValue = Reflect.getProperty(ClientPrefs.defaultData, variable);
 		switch(type)
 		{
 			case BOOL:
@@ -76,13 +77,15 @@ class Option
 				defaultValue = '';
 				defaultKeys = {gamepad: 'NONE', keyboard: 'NONE'};
 				keys = {gamepad: 'NONE', keyboard: 'NONE'};
+			case BUTTON:
+				// No need for default value or variable
 		}
 
 		try
 		{
-			if(getValue() == null)
+			if(this.type != BUTTON && getValue() == null)
 				setValue(defaultValue);
-	
+
 			switch(type)
 			{
 				case STRING:
@@ -104,6 +107,7 @@ class Option
 
 	dynamic public function getValue():Dynamic
 	{
+		if (type == BUTTON) return null;
 		var value = Reflect.getProperty(ClientPrefs.data, variable);
 		if(type == KEYBIND) return !Controls.instance.controllerMode ? value.keyboard : value.gamepad;
 		return value;
@@ -111,6 +115,7 @@ class Option
 
 	dynamic public function setValue(value:Dynamic)
 	{
+		if (type == BUTTON) return null;
 		if(type == KEYBIND)
 		{
 			var keys = Reflect.getProperty(ClientPrefs.data, variable);

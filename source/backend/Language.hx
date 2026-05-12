@@ -60,4 +60,9 @@ class Language {
         }
         return value;
     }
+    
+    // 获取游戏字体文件
+    public static function getGameFont():String {
+        return currentLang.get("game_font");
+    }
 }
