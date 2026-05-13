@@ -136,6 +136,7 @@ import states.TitleState;
 	public var enableModsImport:Bool = false; // Enable Mods Import in the main menu
 	public var eventDebug:Bool = true;
 	public var botplayScore:Bool = true;
+	public var botplayPerfectTiming:Bool = false; // BotPlay 模式下强制显示 0ms 命中时间
 	public var systemCursor:Bool = false;
 	public var hudZoomStyle:String = "default";
 	public var showNPS:Bool = true; // Show NPS in the HUD

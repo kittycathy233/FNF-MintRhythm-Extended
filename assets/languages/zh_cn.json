@@ -351,6 +351,7 @@
     "firstlaunch_no": "否",
 
     "bot_addscore_desc": "若启用，当BOT命中音符时也会加分\n（不计入最终成绩）",
+    "botplay_perfect_timing_desc": "若启用，BOT模式下的命中时间将显示为0ms\n同时影响命中历史记录",
     "use_system_cursor_desc": "启用后，游戏将使用系统默认的鼠标指针",
     "nps_desc": "在HUD中显示每秒音符数（NPS）",
 

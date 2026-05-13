@@ -95,6 +95,12 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		option = new Option('BotPlay Perfect Timing',
+			Language.get("botplay_perfect_timing_desc"),
+			'botplayPerfectTiming',
+			BOOL);
+		addOption(option);
+
 		option = new Option('Show "Combo" Sprite',
 			Language.get("gameplay_combospr_desc"),
 			'comboSprDisplay',

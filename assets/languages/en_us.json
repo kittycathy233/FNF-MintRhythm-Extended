@@ -339,6 +339,7 @@
     "firstlaunch_yes": "Yes",
     "firstlaunch_no": "No",
     "bot_addscore_desc": "If enabled, when bot hits notes, the score will increase.\n(Doesn't count towards the final score.)",
+    "botplay_perfect_timing_desc": "If enabled, bot play hit timing will display as 0ms.\nAlso affects hit history records.",
     "use_system_cursor_desc": "If enabled, the game will use your system's default mouse cursor.",
     "nps_desc": "Show NPS in the HUD",
 

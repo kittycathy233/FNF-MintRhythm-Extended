@@ -356,6 +356,7 @@
     "firstlaunch_no": "否",
 
     "bot_addscore_desc": "若啟用，當BOT命中箭頭時也會加分\n（不計最終成績）",
+    "botplay_perfect_timing_desc": "若啟用，BOT模式下的命中時間將顯示為0ms\n同時影響命中歷史記錄",
     "use_system_cursor_desc": "啟用後，遊戲將使用系統預設的滑鼠指標",
     "nps_desc": "在HUD中顯示每秒音符數（NPS）",
 

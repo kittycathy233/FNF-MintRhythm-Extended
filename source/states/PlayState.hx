@@ -3491,7 +3491,14 @@ isReplaying = false;
 			}
 		}
 
-		allNotesMs += noteDiff;
+		// BotPlay Perfect Timing: 记录用于显示的延迟值（可能是0）
+		var displayNoteDiff:Float = noteDiff;
+		if(cpuControlled && ClientPrefs.data.botplayPerfectTiming)
+		{
+			displayNoteDiff = 0;
+		}
+
+		allNotesMs += displayNoteDiff;
 		averageMs = allNotesMs/songHits;
 
 		// 存储打击数据供 HitGraph 使用
@@ -3505,7 +3512,7 @@ isReplaying = false;
 		{
 			if(!note.ratingDisabled)
 			{
-				hitHistory.push([noteDiff, daRating.name, note.strumTime]);
+				hitHistory.push([displayNoteDiff, daRating.name, note.strumTime]);
 				
 				// 记录回放数据（仅在非回放模式下）
 				if(!isReplaying)
@@ -3544,7 +3551,8 @@ isReplaying = false;
 			msTimeTxt.alpha = ratingAlpha;
 			msTimeTxt.y = -ClientPrefs.data.comboOffset[3] + 480;
 			// 调整显示格式，保留两位小数
-			if(cpuControlled) msTimeTxt.text = Std.string(CoolUtil.floorDecimal(noteDiff, 2)) + "ms(BOT)";
+			if(cpuControlled && ClientPrefs.data.botplayPerfectTiming) msTimeTxt.text = "0ms(BOT)";
+			else if(cpuControlled) msTimeTxt.text = Std.string(CoolUtil.floorDecimal(noteDiff, 2)) + "ms(BOT)";
 			else msTimeTxt.text = Std.string(CoolUtil.floorDecimal(noteDiff, 2)) + "ms";
 			msTimeTxt.color = noteDiff < 0 ? FlxColor.ORANGE : FlxColor.CYAN;
 
