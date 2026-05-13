@@ -109,7 +109,8 @@ import states.TitleState;
 	public var iconbopstyle:String = 'Kathy';
 	public var healthbarstyle:String = 'Psych';
 	public var ratingsAlpha:Float = 1;
-	public var customFadeStyle:String = 'Kathy';
+	public var customFadeStyle:String = 'V-Slice';
+	public var blueArchiveLanguage:String = 'EN';
 	public var showRunningOS:Bool = true;
 	//NFE的特性
 	//public var CustomFadeSound:Bool = true;

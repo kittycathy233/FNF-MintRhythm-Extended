@@ -4,12 +4,16 @@ import flixel.text.FlxText;
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.util.FlxTimer;
+import backend.CustomFadeTransition;
 
 class ExtraGameplaySettingSubState extends BaseOptionsMenu
 {
 	var errorText:FlxText = null;
 	var errorBg:FlxSprite = null;
 	var errorTimer:FlxTimer = null;
+	
+	var blueArchiveLanguageOption:Option = null;
+	var blueArchiveLanguageOptionIndex:Int = -1;
 
 	public function new()
 	{
@@ -220,8 +224,20 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			Language.get("loading_style_desc"),
 			'customFadeStyle',
 			STRING,
-			['V-Slice', 'NovaFlare Move', 'NovaFlare Alpha', 'Kathy', 'BA_Schale_Glow']);
-		addOption(option);
+			['V-Slice', 'NovaFlare Move', 'NovaFlare Alpha', 'Blue Archive', 'BA_Schale_Glow']);
+		var loadingStyleOption = addOption(option);
+		
+		option = new Option('Blue Archive Language',
+			'Select language for Blue Archive loading transition',
+			'blueArchiveLanguage',
+			STRING,
+			['CN', 'JP', 'KR', 'EN']);
+		option.onChange = function() {
+			// 当语言改变时，清空图片列表，下次加载时会重新从新语言的文件夹读取
+			CustomFadeTransition.resetBlueArchiveImages();
+		};
+		blueArchiveLanguageOption = addOption(option);
+		blueArchiveLanguageOptionIndex = optionsArray.length - 1;
 
 		option = new Option('TimeBar Style',
 			Language.get("timebar_style_desc"),
@@ -377,11 +393,51 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		});
 	}
 
+	override function changeSelection(change:Int = 0)
+	{
+		var newSelection = FlxMath.wrap(curSelected + change, 0, optionsArray.length - 1);
+		
+		// 如果要选择的是 Blue Archive Language 选项，但当前 loading 样式不是 Blue Archive，则跳过它
+		if (blueArchiveLanguageOptionIndex != -1 && newSelection == blueArchiveLanguageOptionIndex && ClientPrefs.data.customFadeStyle != 'Blue Archive') {
+			// 决定要跳的方向
+			if (change > 0) {
+				newSelection++;
+			} else {
+				newSelection--;
+			}
+			// 确保不会越界
+			newSelection = FlxMath.wrap(newSelection, 0, optionsArray.length - 1);
+		}
+		
+		// 调用父类的 changeSelection，但直接修改 curSelected 来改变位置
+		curSelected = newSelection - change;
+		super.changeSelection(change);
+	}
+	
 	function onChangeAutoPause()
 		FlxG.autoPause = ClientPrefs.data.autoPause;
 
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);
+		
+		// 控制 Blue Archive Language 选项的可见性和禁用状态
+		if (blueArchiveLanguageOptionIndex != -1) {
+			var isBlueArchiveActive:Bool = ClientPrefs.data.customFadeStyle == 'Blue Archive';
+			
+			// 找到选项的视觉元素并调整其透明度
+			for (i in 0...grpOptions.length) {
+				var optText:Alphabet = grpOptions.members[i];
+				if (optText != null && i == blueArchiveLanguageOptionIndex) {
+					optText.alpha = isBlueArchiveActive ? 1 : 0.3;
+				}
+			}
+			
+			for (text in grpTexts) {
+				if (text.ID == blueArchiveLanguageOptionIndex) {
+					text.alpha = isBlueArchiveActive ? 1 : 0.3;
+				}
+			}
+		}
 	}
 }

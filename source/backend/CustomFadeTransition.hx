@@ -14,25 +14,29 @@ import haxe.io.Path;
 import backend.ClientPrefs;
 
 class CustomFadeTransition extends FlxSubState {
-    public static var finishCallback: Void -> Void;
-    public static var isReloading: Bool = false; // 标记是否是刷新操作
-    public static var reloadingStateType:Class<flixel.FlxState> = null; // 存储要 reload 的 state 类型
-    var isTransIn: Bool = false;
-    var isReloadingTransition: Bool = false; // 记住这个转场是否是刷新操作
-    var transBlack: FlxSprite;
-    var transGradient: FlxSprite;
-    var duration: Float;
-    var loadLeft: FlxSprite;
-    var loadRight: FlxSprite;
-    var loadAlpha: FlxSprite;
-    var WaterMark: FlxText;
-    var EventText: FlxText;
-    var StateNameText: FlxText; // 显示要 reload 的 state 名称
-    var transBG: FlxSprite;
-    static var kathyImages:Array<String> = [];
-    static var lastRandomIndex:Int = -1;
-    static var baGlowImages:Array<String> = [];
-    static var currentImageIndex:Int = 0;
+	public static var finishCallback: Void -> Void;
+	public static var isReloading: Bool = false; // 标记是否是刷新操作
+	public static var reloadingStateType:Class<flixel.FlxState> = null; // 存储要 reload 的 state 类型
+	var isTransIn: Bool = false;
+	var isReloadingTransition: Bool = false; // 记住这个转场是否是刷新操作
+	var transBlack: FlxSprite;
+	var transGradient: FlxSprite;
+	var duration: Float;
+	var loadLeft: FlxSprite;
+	var loadRight: FlxSprite;
+	var loadAlpha: FlxSprite;
+	var WaterMark: FlxText;
+	var EventText: FlxText;
+	var StateNameText: FlxText; // 显示要 reload 的 state 名称
+	var transBG: FlxSprite;
+	static var kathyImages:Array<String> = [];
+	static var lastRandomIndex:Int = -1;
+	static var baGlowImages:Array<String> = [];
+	static var currentImageIndex:Int = 0;
+	
+	public static function resetBlueArchiveImages() {
+		kathyImages = [];
+	}
 
     var baLoadingPics:FlxSprite;
     var baGlowPics:FlxSprite;
@@ -54,11 +58,23 @@ class CustomFadeTransition extends FlxSubState {
         super();
     }
     override function create() {
-        // 保存状态后立即重置静态变量
-        var savedReloading = isReloading;
-        var savedReloadingStateType = reloadingStateType;
-        isReloading = false;
-        reloadingStateType = null;
+		// 保存状态后立即重置静态变量
+		var savedReloading = isReloading;
+		var savedReloadingStateType = reloadingStateType;
+		isReloading = false;
+		reloadingStateType = null;
+		
+		// 兼容性检查：确保 customFadeStyle 是有效的值
+		var validStyles:Array<String> = ['V-Slice', 'NovaFlare Move', 'NovaFlare Alpha', 'Blue Archive', 'BA_Schale_Glow'];
+		if (!validStyles.contains(ClientPrefs.data.customFadeStyle)) {
+			ClientPrefs.data.customFadeStyle = 'V-Slice';
+		}
+		
+		// 兼容性检查：确保 blueArchiveLanguage 是有效的值
+		var validLanguages:Array<String> = ['CN', 'JP', 'KR', 'EN'];
+		if (!validLanguages.contains(ClientPrefs.data.blueArchiveLanguage)) {
+			ClientPrefs.data.blueArchiveLanguage = 'EN';
+		}
 
         var cam: FlxCamera = new FlxCamera();
         cam.bgColor = 0x00;
@@ -282,21 +298,23 @@ class CustomFadeTransition extends FlxSubState {
                 
                 
                 }
-            }  else if (ClientPrefs.data.customFadeStyle == 'Kathy') {
+            } else if (ClientPrefs.data.customFadeStyle == 'Blue Archive') {
             // 初始化图片列表（只在第一次加载时）
             
             if (kathyImages.length == 0) {
-                var imagePath = Paths.getPath('images/menuExtend/CustomFadeTransition/Blue_Archive/CN/', IMAGE);
+                var language:String = ClientPrefs.data.blueArchiveLanguage;
+                var basePath:String = 'menuExtend/CustomFadeTransition/Blue_Archive/' + language + '/';
+                var imagePath = Paths.getPath('images/menuExtend/CustomFadeTransition/Blue_Archive/' + language + '/', IMAGE);
                 if (FileSystem.exists(imagePath)) {
                     for (file in FileSystem.readDirectory(imagePath)) {
                         if (Path.extension(file).toLowerCase() != 'txt') {
-                            kathyImages.push('menuExtend/CustomFadeTransition/Blue_Archive/CN/' + Path.withoutExtension(file));
+                            kathyImages.push(basePath + Path.withoutExtension(file));
                         }
                     }
                 }
                 // 如果没有找到图片则使用默认
                 if (kathyImages.length == 0) {
-                    kathyImages.push('menuExtend/CustomFadeTransition/Blue_Archive/CN/LoadingImage_44_Kr');
+                    kathyImages.push(basePath + 'LoadingImage_44_Kr');
                 }
             }
 
@@ -323,10 +341,25 @@ class CustomFadeTransition extends FlxSubState {
             baLoadingPics = new FlxSprite(0, 0).loadGraphic(Paths.image(kathyImages[ClientPrefs.data.randomIndex]));
             baLoadingPics.scrollFactor.set();
             baLoadingPics.antialiasing = ClientPrefs.data.antialiasing;
-            baLoadingPics.screenCenter();
-            baLoadingPics.setGraphicSize(Std.int(baLoadingPics.width), Std.int(baLoadingPics.height * 1.18));
-            baLoadingPics.y = baLoadingPics.y - 20;
+            
+            // 自适应屏幕尺寸，所有语言都使用 16:9 比例（80% 屏幕大小）
+            var targetAspectRatio:Float = 16.0 / 9.0;
+            var targetWidth:Float = FlxG.width * 0.80;
+            var targetHeight:Float = targetWidth / targetAspectRatio;
+            
+            // 如果目标高度超过屏幕高度，则按高度调整
+            if (targetHeight > FlxG.height * 0.80) {
+                targetHeight = FlxG.height * 0.80;
+                targetWidth = targetHeight * targetAspectRatio;
+            }
+            
+            baLoadingPics.setGraphicSize(Std.int(targetWidth), Std.int(targetHeight));
             baLoadingPics.updateHitbox();
+            
+            // 正确居中
+            baLoadingPics.x = (FlxG.width - baLoadingPics.width) / 2;
+            baLoadingPics.y = (FlxG.height - baLoadingPics.height) / 2;
+            
             add(baLoadingPics);
 
             // 保存图片的最终位置
@@ -475,8 +508,8 @@ class CustomFadeTransition extends FlxSubState {
                 if (finishCallback != null) finishCallback();
                 finishCallback = null;
             }
-        } else if (ClientPrefs.data.customFadeStyle == 'Kathy') {
-            transBlack.alpha = baLoadingPics.alpha;
+        } else if (ClientPrefs.data.customFadeStyle == 'Blue Archive') {
+		transBlack.alpha = baLoadingPics.alpha;
            // transBG.alpha = baLoadingPics.alpha;
            /* if (baLoadingPics.alpha <= 0) {
                 close();
