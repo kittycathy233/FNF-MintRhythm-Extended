@@ -964,6 +964,14 @@ isReplaying = false;
 			scoreTxt.scrollFactor.set();
 			scoreTxt.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		}
+		else if (ClientPrefs.data.scoretxtstyle == 'OS')	
+		{
+			scoreTxt = new FlxText(0, healthBar.y + 28, FlxG.width, "", 16);
+			scoreTxt.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			scoreTxt.scrollFactor.set();
+			scoreTxt.borderSize = 1.2;
+			scoreTxt.visible = !ClientPrefs.data.hideHud;
+		}
 		else 
 		{
 		scoreTxt = new FlxText(0, healthBar.y + 40, FlxG.width, "", 20);
@@ -1667,6 +1675,20 @@ isReplaying = false;
             {
                     tempScore = 'Score: ${songScore}';
             }
+            else if (ClientPrefs.data.scoretxtstyle == 'OS')
+            {
+                if (!cpuControlled || ClientPrefs.data.botplayScore)
+                {
+                    if(ratingName == '?') {
+                        tempScore = 'Score: ${songScore} | Combo Breaks: ${songMisses} | Average: ? | Accuracy: ${ratingName}';
+                    } else {
+                        var avgValue:Int = Std.int(Math.abs(Math.round(averageMs)));
+                        tempScore = 'Score: ${songScore} | Combo Breaks: ${songMisses} | Average: ${avgValue}ms | Accuracy: ${percent}% | ${ratingName} [${ratingFC}]';
+                    }
+                } else {
+                    tempScore = '';
+                }
+            }
             else
                 tempScore = LanguageBasic.getPhrase('score_text', 'Score: {1} | Misses: {2} | Rating: {3}', [songScore, songMisses, str]);
         }
@@ -1687,6 +1709,7 @@ isReplaying = false;
 		ratingFC = /*ClientPrefs.data.scoretxtstyle == 'Psych' ? "?" : */"?";
 		if(ClientPrefs.data.scoretxtstyle == 'Kathy') ratingFC = "IDK";
 		if(ClientPrefs.data.scoretxtstyle == 'Kade') ratingFC = "PFC";
+		if(ClientPrefs.data.scoretxtstyle == 'OS') ratingFC = "PFC";
 		if(songMisses == 0)
 		{
 			if (bads > 0 || shits > 0) ratingFC = 'FC';
@@ -1701,7 +1724,7 @@ isReplaying = false;
 	}
 
 	public function doScoreBop():Void {
-		if (!ClientPrefs.data.scoreZoom || ClientPrefs.data.scoretxtstyle == 'Kade')
+		if (!ClientPrefs.data.scoreZoom || ClientPrefs.data.scoretxtstyle == 'Kade' || ClientPrefs.data.scoretxtstyle == 'OS')
 			return;
 
 		if(scoreTxtTween != null)
@@ -3491,14 +3514,12 @@ isReplaying = false;
 			}
 		}
 
-		// BotPlay Perfect Timing: 记录用于显示的延迟值（可能是0）
-		var displayNoteDiff:Float = noteDiff;
 		if(cpuControlled && ClientPrefs.data.botplayPerfectTiming)
 		{
-			displayNoteDiff = 0;
+			noteDiff = 0;
 		}
-
-		allNotesMs += displayNoteDiff;
+		allNotesMs += noteDiff;
+		
 		averageMs = allNotesMs/songHits;
 
 		// 存储打击数据供 HitGraph 使用
@@ -3512,8 +3533,7 @@ isReplaying = false;
 		{
 			if(!note.ratingDisabled)
 			{
-				hitHistory.push([displayNoteDiff, daRating.name, note.strumTime]);
-				
+				hitHistory.push([noteDiff, daRating.name, note.strumTime]);			
 				// 记录回放数据（仅在非回放模式下）
 				if(!isReplaying)
 				{
