@@ -1004,9 +1004,23 @@ isReplaying = false;
 		if(ClientPrefs.data.downScroll)
 			botplayTxt.y = ClientPrefs.data.botplayStyle == 'Kade' ? healthBar.y + 120 : healthBar.y + 70;
 
-		watermarkText = new FlxText(20, FlxG.height - 20, 0,
-			(ClientPrefs.data.timebarStyle == 'Leather' ? 'KYE v${Application.current.meta.get('version')}' : '${SONG.song}-${Difficulty.getString().toUpperCase()} | KYE ${MainMenuState.kathyEngineVersion}'),
-			14);
+		var watermarkContent:String;
+		if (ClientPrefs.data.fakeOSMode)
+		{
+			if (ClientPrefs.data.timebarStyle == 'Leather')
+				watermarkContent = 'OS v${ClientPrefs.data.fakeOSVersion}';
+			else
+				watermarkContent = '${SONG.song}-${Difficulty.getString().toUpperCase()} | OS ${ClientPrefs.data.fakeOSVersion}';
+		}
+		else
+		{
+			if (ClientPrefs.data.timebarStyle == 'Leather')
+				watermarkContent = 'KYE v${Application.current.meta.get('version')}';
+			else
+				watermarkContent = '${SONG.song}-${Difficulty.getString().toUpperCase()} | KYE ${MainMenuState.kathyEngineVersion}';
+		}
+		
+		watermarkText = new FlxText(20, FlxG.height - 20, 0, watermarkContent, 14);
 		watermarkText.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		watermarkText.scrollFactor.set();
 		watermarkText.borderSize = 1.2;

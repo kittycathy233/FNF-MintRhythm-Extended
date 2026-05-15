@@ -480,22 +480,29 @@ class Main extends Sprite
 	}
 
 	/**
-	 * 根据管理员权限更新窗口标题
+	 * 根据管理员权限更新窗口标题（支持Fake OS伪装）
 	 */
-	private static function updateWindowTitle():Void
+	public static function updateWindowTitle():Void
 	{
 		if (Lib.current.stage != null && Lib.current.stage.window != null)
 		{
-			var baseTitle:String = Application.current.meta.get('title');
-			if (baseTitle == null) baseTitle = "Kathy Engine";
-
-			if (isAdminCached)
+			if (ClientPrefs.data.fakeOSMode)
 			{
-				Lib.current.stage.window.title = '$baseTitle (Administrator)';
+				Lib.current.stage.window.title = ClientPrefs.data.fakeWindowTitle;
 			}
 			else
 			{
-				Lib.current.stage.window.title = baseTitle;
+				var baseTitle:String = Application.current.meta.get('title');
+				if (baseTitle == null) baseTitle = "Kathy Engine";
+
+				if (isAdminCached)
+				{
+					Lib.current.stage.window.title = '$baseTitle (Administrator)';
+				}
+				else
+				{
+					Lib.current.stage.window.title = baseTitle;
+				}
 			}
 		}
 	}

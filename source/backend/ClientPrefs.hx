@@ -189,6 +189,12 @@ import states.TitleState;
 	public var fpsShowResolution:Bool = true; // 显示分辨率
 	public var fpsShowRefreshRate:Bool = true; // 显示刷新率
 
+	// Fake OS 伪装功能
+	public var fakeOSMode:Bool = false;
+	public var fakeWindowTitle:String = "Kathy Engine";
+	public var fakeWindowTitlePreset:String = "Kathy Engine";
+	public var fakeOSVersion:String = "1.5.1";
+
 }
 
 class ClientPrefs {
@@ -319,6 +325,11 @@ class ClientPrefs {
 			data.soundTrayStyle = 'Flixel';
 		}
 
+		// 确保 Fake OS 标题从预设中正确初始化
+		if (data.fakeWindowTitlePreset != null) {
+			data.fakeWindowTitle = data.fakeWindowTitlePreset;
+		}
+
 		// 确保 FlxG 完全初始化后再应用设置
 		if (FlxG.game != null) {
 			// 应用固定时间步长设置
@@ -331,6 +342,13 @@ class ClientPrefs {
 
 			if(Main.gameLogVar != null)
 				Main.gameLogVar.setEnabled(data.enableGameLog);
+
+			// 应用 Fake OS 窗口标题
+			#if (!mobile && !html5)
+			if (data.fakeOSMode && FlxG.stage != null && FlxG.stage.window != null) {
+				FlxG.stage.window.title = data.fakeWindowTitle;
+			}
+			#end
 
 			#if (!html5 && !switch)
 			FlxG.autoPause = ClientPrefs.data.autoPause;

@@ -215,6 +215,30 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		BOOL);
 	addOption(option);
 
+	// Fake OS 伪装设置
+	var option:Option = new Option("Fake OS Mode",
+		"",
+		'fakeOSMode',
+		BOOL);
+	addOption(option);
+	option.onChange = onChangeFakeOSMode;
+
+	var option:Option = new Option("Fake Window Title",
+		"",
+		'fakeWindowTitlePreset',
+		STRING,
+		["Kathy Engine", "Friday Night Funkin': MintRhythm Engine", "Friday Night Funkin': OS Engine", "Friday Night Funkin': Psych Engine", "Friday Night Funkin'", "FNF", "WTF in FNF", "Rhythm Game", "Not FNF", "Just a Game"]);
+	addOption(option);
+	option.onChange = onChangeFakeWindowTitle;
+
+	var option:Option = new Option("Fake OS Version",
+		"",
+		'fakeOSVersion',
+		STRING,
+		["1.0.0", "1.0.1", "1.1.0", "1.2.0", "1.3.0", "1.3.1", "1.4.0", "1.4.1", "1.5.0", "1.5.1"]);
+	addOption(option);
+	option.onChange = onChangeFakeOSMode;
+
 	super();
 	add(notes);
 	add(splashes);
@@ -346,6 +370,22 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 	{
 		if(Main.fpsVar != null)
 			Main.fpsVar.visible = ClientPrefs.data.showFPS;
+	}
+
+	// Fake OS 相关函数
+	function onChangeFakeOSMode()
+	{
+		#if (!mobile && !html5)
+		Main.updateWindowTitle();
+		#end
+	}
+
+	function onChangeFakeWindowTitle()
+	{
+		ClientPrefs.data.fakeWindowTitle = ClientPrefs.data.fakeWindowTitlePreset;
+		#if (!mobile && !html5)
+		Main.updateWindowTitle();
+		#end
 	}
 
 	/*#if native
