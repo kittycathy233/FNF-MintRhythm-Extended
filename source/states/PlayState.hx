@@ -3585,9 +3585,17 @@ isReplaying = false;
 			msTimeTxt.alpha = ratingAlpha;
 			msTimeTxt.y = -ClientPrefs.data.comboOffset[3] + 480;
 			// 调整显示格式，保留两位小数
-			if(cpuControlled && ClientPrefs.data.botplayPerfectTiming) msTimeTxt.text = "0ms(BOT)";
-			else if(cpuControlled) msTimeTxt.text = Std.string(CoolUtil.floorDecimal(noteDiff, 2)) + "ms(BOT)";
-			else msTimeTxt.text = Std.string(CoolUtil.floorDecimal(noteDiff, 2)) + "ms";
+			var modeLabel:String = "";
+			if (ClientPrefs.data.showModeLabelInMsTxt) {
+				if (isReplaying) {
+					modeLabel = "(REP)";
+				} else if (cpuControlled) {
+					modeLabel = "(BOT)";
+				}
+			}
+			
+			if(cpuControlled && ClientPrefs.data.botplayPerfectTiming) msTimeTxt.text = "0ms" + modeLabel;
+			else msTimeTxt.text = Std.string(CoolUtil.floorDecimal(noteDiff, 2)) + "ms" + modeLabel;
 			msTimeTxt.color = noteDiff < 0 ? FlxColor.ORANGE : FlxColor.CYAN;
 
 			if (msTimeTxtTween1 != null){

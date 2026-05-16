@@ -104,6 +104,7 @@ import states.TitleState;
 	public var ratbounce:Bool = true;
 	public var scoretxtstyle:String = 'Kathy';
 	public var rmmsTimeTxt:Bool = false;
+	public var showModeLabelInMsTxt:Bool = true;
 	public var scoretxtbounce:Bool = false;
 	public var exratbounce:Bool = false;
 	public var iconbopstyle:String = 'Kathy';

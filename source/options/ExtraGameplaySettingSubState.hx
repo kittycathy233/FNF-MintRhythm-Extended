@@ -49,8 +49,14 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			Language.get("rm_ms_offset_desc"),
 			'rmmsTimeTxt',
 			BOOL);
-
 		addOption(option);
+
+		option = new Option('Show mode label in ms text',
+			'Show (BOT) or (REPLAY) label in ms timing text',
+			'showModeLabelInMsTxt',
+			BOOL);
+		addOption(option);
+
 		option = new Option('Show NPS',
 			Language.get("nps_desc"),
 			'showNPS',
