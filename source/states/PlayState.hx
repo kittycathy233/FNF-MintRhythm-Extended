@@ -3736,7 +3736,19 @@ isReplaying = false;
 			}
 			else
 			{
-				if (ClientPrefs.data.ratingFallStyle == "Legacy")
+				if (ClientPrefs.data.ratingFallStyle == "Leather")
+				{
+					// Leather 风格，直接向下移动，像 LeatherEngine 那样
+					rating.velocity.y = FlxG.random.int(30, 60);
+					rating.velocity.x = FlxG.random.int(-10, 10);
+					
+					theEXrating.velocity.y = FlxG.random.int(30, 60);
+					theEXrating.velocity.x = FlxG.random.int(-10, 10);
+					
+					comboSpr.velocity.y = FlxG.random.int(30, 60);
+					comboSpr.velocity.x = FlxG.random.int(-10, 10);
+				}
+				else if (ClientPrefs.data.ratingFallStyle == "Legacy")
 				{
 					rating.acceleration.y = 550 * playbackRate * playbackRate;
 					rating.velocity.y -= FlxG.random.int(140, 175) * playbackRate;
@@ -3752,13 +3764,6 @@ isReplaying = false;
 					rating.velocity.y = 0;
 					theEXrating.velocity.y = 0;
 					comboSpr.velocity.y = 0;
-				}
-				else if (ClientPrefs.data.ratingFallStyle == "Leather")
-				{
-					rating.velocity.y = FlxG.random.int(30, 60);
-					theEXrating.velocity.y = FlxG.random.int(40, 80);
-					comboSpr.velocity.y = FlxG.random.int(30, 60);
-					//呃呃没改完
 				}
 				else
 				{
@@ -3800,13 +3805,14 @@ isReplaying = false;
 
 			if (ClientPrefs.data.comboStacking)
 			{
-				if (ClientPrefs.data.ratbounce == true && !PlayState.isPixelStage)
+				// 只有 Kathy/Kathy(Legacy) 风格才能用 bounce
+				if (ClientPrefs.data.ratbounce == true && !PlayState.isPixelStage && (ClientPrefs.data.ratingFallStyle == "Kathy" || ClientPrefs.data.ratingFallStyle == "Kathy(Legacy)"))
 				{
 					rating.scale.set(0.85, 0.8);
 					FlxTween.tween(rating.scale, {x: 0.7, y: 0.7}, 0.35, {ease: FlxEase.quartOut});
 				}
 
-				if(ClientPrefs.data.exratbounce == true && ClientPrefs.data.exratingDisplay)
+				if(ClientPrefs.data.exratbounce == true && ClientPrefs.data.exratingDisplay && (ClientPrefs.data.ratingFallStyle == "Kathy" || ClientPrefs.data.ratingFallStyle == "Kathy(Legacy)"))
 				{
 					theEXrating.angle = (Math.random() * 10) * (Math.random() > .5 ? 1 : -1);
 					theEXrating.scale.set(0.85, 0.85);
@@ -3816,13 +3822,13 @@ isReplaying = false;
 			}
 			else
 			{
-				// Combo Stacking禁用时，统一切换符号
-				if (ClientPrefs.data.ratbounce == true && !PlayState.isPixelStage && ClientPrefs.data.ratingFallStyle != "Kathy(Legacy)")
+				// 只有 Kathy/Kathy(Legacy) 风格才能用 bounce
+				if (ClientPrefs.data.ratbounce == true && !PlayState.isPixelStage && (ClientPrefs.data.ratingFallStyle == "Kathy" || ClientPrefs.data.ratingFallStyle == "Kathy(Legacy)"))
 				{
 					rating.angle = (Math.random() * 7) * (Math.random() > .5 ? 1 : -1);
 				}
 
-				if(ClientPrefs.data.exratbounce == true && ClientPrefs.data.exratingDisplay && ClientPrefs.data.ratingFallStyle != "Kathy(Legacy)")
+				if(ClientPrefs.data.exratbounce == true && ClientPrefs.data.exratingDisplay && (ClientPrefs.data.ratingFallStyle == "Kathy" || ClientPrefs.data.ratingFallStyle == "Kathy(Legacy)"))
 				{
 					theEXrating.angle = (Math.random() * 7) * (Math.random() > .5 ? 1 : -1);
 				}
@@ -3886,9 +3892,17 @@ isReplaying = false;
 				}
 				else
 				{
-					if (ClientPrefs.data.ratingFallStyle == "Legacy")
+					if (ClientPrefs.data.ratingFallStyle == "Leather")
 					{
+						// Leather 风格
 						numScore.velocity.y = FlxG.random.int(30, 60);
+						numScore.velocity.x = FlxG.random.float(-5, 5);
+					}
+					else if (ClientPrefs.data.ratingFallStyle == "Legacy")
+					{
+						// Legacy 风格，跟 rating 一样的加速度逻辑
+						numScore.acceleration.y = FlxG.random.int(200, 300) * playbackRate * playbackRate;
+						numScore.velocity.y -= FlxG.random.int(140, 160) * playbackRate;
 						numScore.velocity.x = FlxG.random.float(-5, 5) * playbackRate;
 					}
 					else if (ClientPrefs.data.ratingFallStyle == "Kathy" || ClientPrefs.data.ratingFallStyle == "Kathy(Legacy)")
@@ -3899,8 +3913,8 @@ isReplaying = false;
 					}
 					else 
 					{
-						numScore.velocity.y = FlxG.random.int(20, 40);
-						numScore.velocity.x = FlxG.random.float(-5, 5) * playbackRate;
+						numScore.velocity.y = FlxG.random.int(30, 60);
+						numScore.velocity.x = FlxG.random.float(-5, 5);
 					}
 				}
 				numScore.visible = !ClientPrefs.data.hideHud;

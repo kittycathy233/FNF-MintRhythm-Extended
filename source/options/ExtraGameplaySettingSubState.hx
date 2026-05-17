@@ -14,6 +14,13 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 	
 	var blueArchiveLanguageOption:Option = null;
 	var blueArchiveLanguageOptionIndex:Int = -1;
+	
+	var ratingBounceOption:Option = null;
+	var ratingBounceOptionIndex:Int = -1;
+	var extraRatingBounceOption:Option = null;
+	var extraRatingBounceOptionIndex:Int = -1;
+	var ratingFallStyleOption:Option = null;
+	var ratingFallStyleOptionIndex:Int = -1;
 
 	public function new()
 	{
@@ -31,13 +38,15 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			Language.get("rating_bounce_desc"),
 			'ratbounce',
 			BOOL);
-		addOption(option);
+		ratingBounceOption = addOption(option);
+		ratingBounceOptionIndex = optionsArray.length - 1;
 
 		option = new Option('Extra-Rating Bounce',
 			Language.get("exrating_bounce_desc"),
 			'exratbounce',
 			BOOL);
-		addOption(option);
+		extraRatingBounceOption = addOption(option);
+		extraRatingBounceOptionIndex = optionsArray.length - 1;
 
 		option = new Option('Remove Perfect! Note Judgement',
 			Language.get("rm_perfect_judge_desc"),
@@ -121,8 +130,12 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			Language.get("rating_fall_style_desc"),
 			'ratingFallStyle',
 			STRING,
-			['Simple', 'Legacy', 'Kathy', 'Kathy(Legacy)']);
-		addOption(option);
+			['Leather', 'Legacy', 'Kathy', 'Kathy(Legacy)']);
+		option.onChange = function() {
+			updateBounceOptionsVisibility();
+		};
+		ratingFallStyleOption = addOption(option);
+		ratingFallStyleOptionIndex = optionsArray.length - 1;
 
 		option = new Option('Show Event Information',
 			Language.get("events_debug_desc"),
@@ -402,6 +415,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 	override function changeSelection(change:Int = 0)
 	{
 		var newSelection = FlxMath.wrap(curSelected + change, 0, optionsArray.length - 1);
+		var isKathyStyle:Bool = ClientPrefs.data.ratingFallStyle == 'Kathy' || ClientPrefs.data.ratingFallStyle == 'Kathy(Legacy)';
 		
 		// 如果要选择的是 Blue Archive Language 选项，但当前 loading 样式不是 Blue Archive，则跳过它
 		if (blueArchiveLanguageOptionIndex != -1 && newSelection == blueArchiveLanguageOptionIndex && ClientPrefs.data.customFadeStyle != 'Blue Archive') {
@@ -415,6 +429,27 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			newSelection = FlxMath.wrap(newSelection, 0, optionsArray.length - 1);
 		}
 		
+		// 如果要选择的是 Rating Bounce 或 Extra-Rating Bounce 选项，但当前不是 Kathy 风格，则跳过它们
+		if (!isKathyStyle) {
+			if (ratingBounceOptionIndex != -1 && newSelection == ratingBounceOptionIndex) {
+				if (change > 0) {
+					newSelection++;
+				} else {
+					newSelection--;
+				}
+				newSelection = FlxMath.wrap(newSelection, 0, optionsArray.length - 1);
+			}
+			
+			if (extraRatingBounceOptionIndex != -1 && newSelection == extraRatingBounceOptionIndex) {
+				if (change > 0) {
+					newSelection++;
+				} else {
+					newSelection--;
+				}
+				newSelection = FlxMath.wrap(newSelection, 0, optionsArray.length - 1);
+			}
+		}
+		
 		// 调用父类的 changeSelection，但直接修改 curSelected 来改变位置
 		curSelected = newSelection - change;
 		super.changeSelection(change);
@@ -426,6 +461,8 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);
+		
+		updateBounceOptionsVisibility();
 		
 		// 控制 Blue Archive Language 选项的可见性和禁用状态
 		if (blueArchiveLanguageOptionIndex != -1) {
@@ -442,6 +479,43 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			for (text in grpTexts) {
 				if (text.ID == blueArchiveLanguageOptionIndex) {
 					text.alpha = isBlueArchiveActive ? 1 : 0.3;
+				}
+			}
+		}
+	}
+	
+	function updateBounceOptionsVisibility()
+	{
+		var isKathyStyle:Bool = ClientPrefs.data.ratingFallStyle == 'Kathy' || ClientPrefs.data.ratingFallStyle == 'Kathy(Legacy)';
+		
+		// 更新 Rating Bounce 选项的可见性
+		if (ratingBounceOptionIndex != -1) {
+			for (i in 0...grpOptions.length) {
+				var optText:Alphabet = grpOptions.members[i];
+				if (optText != null && i == ratingBounceOptionIndex) {
+					optText.alpha = isKathyStyle ? 1 : 0.3;
+				}
+			}
+			
+			for (checkbox in checkboxGroup) {
+				if (checkbox.ID == ratingBounceOptionIndex) {
+					checkbox.alpha = isKathyStyle ? 1 : 0.3;
+				}
+			}
+		}
+		
+		// 更新 Extra-Rating Bounce 选项的可见性
+		if (extraRatingBounceOptionIndex != -1) {
+			for (i in 0...grpOptions.length) {
+				var optText:Alphabet = grpOptions.members[i];
+				if (optText != null && i == extraRatingBounceOptionIndex) {
+					optText.alpha = isKathyStyle ? 1 : 0.3;
+				}
+			}
+			
+			for (checkbox in checkboxGroup) {
+				if (checkbox.ID == extraRatingBounceOptionIndex) {
+					checkbox.alpha = isKathyStyle ? 1 : 0.3;
 				}
 			}
 		}
