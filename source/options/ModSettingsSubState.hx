@@ -142,8 +142,11 @@ class ModSettingsSubState extends BaseOptionsMenu
 
 		super();
 
-		bg.alpha = 0.75;
-		bg.color = FlxColor.WHITE;
+		if(bg != null)
+		{
+			bg.alpha = 0.75;
+			bg.color = FlxColor.WHITE;
+		}
 		reloadCheckboxes();
 	}
 

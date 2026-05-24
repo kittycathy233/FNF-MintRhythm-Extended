@@ -627,12 +627,16 @@ class FreeplayState extends MusicBeatState
 		else if (controls.ACCEPT && !player.playingMusic)
 		{
 			persistentUpdate = false;
+			
+			// 显式设置当前mod目录，确保谱面文件路径正确
+			Mods.currentModDirectory = songs[curSelected].folder;
+			
 			var songLowercase:String = Paths.formatToSongPath(songs[curSelected].songName);
 			var poop:String = Highscore.formatSong(songLowercase, curDifficulty);
 
 			try
-						{
-							var songData = Song.loadFromJson(poop, songLowercase);
+			{
+				var songData = Song.loadFromJson(poop, songLowercase);
 							
 							if (songData == null) {
 								// 显示错误信息
@@ -811,6 +815,10 @@ class FreeplayState extends MusicBeatState
 										{
 											PlayState.replayGameplaySettings = null;
 										}
+										
+										// 显式设置当前mod目录，确保谱面文件路径正确
+										Mods.currentModDirectory = songs[curSelected].folder;
+										
 										var songLowercase:String = Paths.formatToSongPath(songs[curSelected].songName);
 										var poop:String = Highscore.formatSong(songLowercase, curDifficulty);
 										var songData = Song.loadFromJson(poop, songLowercase);
