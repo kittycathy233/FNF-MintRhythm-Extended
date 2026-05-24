@@ -181,6 +181,13 @@ class HScript extends Iris
 		set('FlxAnimate', FlxAnimate);
 		#end
 
+		// Flixel Addons & Effects for Mods
+		set('FlxSkewedSprite', flixel.addons.effects.FlxSkewedSprite);
+		set('FlxBackdrop', flixel.addons.display.FlxBackdrop);
+		set('FlxEmitter', flixel.effects.particles.FlxEmitter);
+		set('FlxTypedEmitter', flixel.effects.particles.FlxEmitter.FlxTypedEmitter);
+		set('FlxParticle', flixel.effects.particles.FlxParticle);
+
 		// Functions & Variables
 		set('setVar', function(name:String, value:Dynamic) {
 			MusicBeatState.getVariables().set(name, value);
