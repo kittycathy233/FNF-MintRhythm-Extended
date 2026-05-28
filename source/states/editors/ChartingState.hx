@@ -1155,7 +1155,8 @@ if(_shouldReset) Conductor.songPosition = 0;
 			gfVersion: 'gf',
 			stage: 'stage',
 			specialInst: "", // 添加默认值
-    		specialVocal: "", // 添加默认值
+			specialVocal: "", // 添加默认值
+			specialEvents: "", // 添加默认值
 			format: 'psych_v1'
 		};
 		Song.chartPath = null;
@@ -1193,6 +1194,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 
 		specialInstInputText.text = PlayState.SONG.specialInst != null ? PlayState.SONG.specialInst : '';
 		specialVocalInputText.text = PlayState.SONG.specialVocal != null ? PlayState.SONG.specialVocal : '';
+		specialEventsInputText.text = PlayState.SONG.specialEvents != null ? PlayState.SONG.specialEvents : '';
 
 		playerDropDown.selectedLabel = PlayState.SONG.player1;
 		opponentDropDown.selectedLabel = PlayState.SONG.player2;
@@ -4903,6 +4905,7 @@ for (i in 0...GRID_PLAYERS)
 	var audioOffsetStepper:PsychUINumericStepper;
  	var specialInstInputText:PsychUIInputText;
 	var specialVocalInputText:PsychUIInputText;
+	var specialEventsInputText:PsychUIInputText;
 
 	var stageDropDown:PsychUIDropDownMenu;
 	var playerDropDown:PsychUIDropDownMenu;
@@ -4993,18 +4996,29 @@ for (i in 0...GRID_PLAYERS)
 			//updateWaveform();
 		};
 
+		specialEventsInputText = new PsychUIInputText(objX + 200, objY + 200, 100, '', 8);
+		specialEventsInputText.onChange = function(old:String, cur:String)
+		{
+			PlayState.SONG.specialEvents = specialEventsInputText.text;
+			//updateWaveform();
+		};
+
 		tab_group.add(new FlxText(songNameInputText.x, songNameInputText.y - 15, 80, Language.get('charting_songname')).setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(songNameInputText);
 		tab_group.add(allowVocalsCheckBox);
 		tab_group.add(reloadAudioButton);
+		tab_group.add(new FlxText(specialInstInputText.x, specialInstInputText.y - 15, 100, 'Special Inst:').setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(specialInstInputText);
+		tab_group.add(new FlxText(specialVocalInputText.x, specialVocalInputText.y - 15, 100, 'Special Vocal:').setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(specialVocalInputText);
+		tab_group.add(new FlxText(specialEventsInputText.x, specialEventsInputText.y - 15, 100, 'Special Events:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(specialEventsInputText);
 	#if (mac || mobile)
 		tab_group.add(reloadJsonButton);
 	#end
 
 	// Show Characters checkbox
-	showCharactersCheckBox = new PsychUICheckBox(objX + 200, specialVocalInputText.y + 40, 'Show Characters', 100);
+	showCharactersCheckBox = new PsychUICheckBox(objX + 200, specialEventsInputText.y + 40, 'Show Characters', 100);
 	showCharactersCheckBox.checked = chartEditorSave.data.showCharacters;
 	showCharactersCheckBox.onClick = function()
 	{
@@ -5367,12 +5381,55 @@ for (i in 0...GRID_PLAYERS)
 				upperBox.isMinimized = true;
 	
 				updateChartData();
+				
+				// 保存 events 数据
+				var eventsData:String = PsychJsonPrinter.print({events: PlayState.SONG.events, format: 'mr_psych_v1'}, ['events']);
+				
+				// 获取格式化后的曲名前缀
+				var formattedSongName:String = Paths.formatToSongPath(PlayState.SONG.song);
+				
+				// 保存普通 events 文件（带曲名前缀）
 				#if mobile
-				StorageUtil.saveContent('events.json', PsychJsonPrinter.print({events: PlayState.SONG.events, format: 'mr_psych_v1'}, ['events']));
+				var eventsFileName:String = formattedSongName + '-events.json';
+				StorageUtil.saveContent(eventsFileName, eventsData);
 				#else
-				fileDialog.save('events.json', PsychJsonPrinter.print({events: PlayState.SONG.events, format: 'mr_psych_v1'}, ['events']),
-					function() showOutput('Events saved successfully to: ${fileDialog.path}'), null,
-					function() showOutput('Error on saving events!', true));
+				// 使用变量存储回调
+				var hasSavedSpecialEvents:Bool = false;
+				
+				// 普通 events 文件名（带曲名前缀）
+				var regularEventsFileName:String = formattedSongName + '-events.json';
+				
+				var saveEventsCallback:Void->Void = function()
+				{
+					// 如果设置了 specialEvents，并且还没有保存 special events 文件，尝试保存
+					if(PlayState.SONG.specialEvents != null && PlayState.SONG.specialEvents.length > 0 && !hasSavedSpecialEvents)
+					{
+						hasSavedSpecialEvents = true;
+						var specialEventsName:String = formattedSongName + '-events-' + PlayState.SONG.specialEvents + '.json';
+						fileDialog.save(specialEventsName, eventsData,
+							function() 
+							{
+								showOutput('Events saved successfully to: ' + regularEventsFileName + ' and ' + specialEventsName);
+							}, 
+							null,
+							function() 
+							{
+								showOutput('Events saved successfully to: ' + regularEventsFileName + ' (failed to save ' + specialEventsName + ')');
+							}
+						);
+					}
+					else if(!hasSavedSpecialEvents)
+					{
+						showOutput('Events saved successfully to: ' + regularEventsFileName);
+					}
+				};
+				
+				var saveEventsErrorCallback:Void->Void = function()
+				{
+					showOutput('Error on saving events!', true);
+				};
+				
+				fileDialog.save(regularEventsFileName, eventsData, saveEventsCallback, null, saveEventsErrorCallback);
 				#end
 			}, btnWid);
 			btn.text.alignment = LEFT;

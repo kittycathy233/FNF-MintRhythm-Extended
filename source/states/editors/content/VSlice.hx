@@ -44,6 +44,7 @@ typedef VSliceMetadata =
 	var generatedBy:String;
 	var version:String;
 	@:optional var instrumental:String;
+	@:optional var specialEvents:String;
 }
 
 typedef VSlicePlayData =
@@ -306,12 +307,15 @@ class VSlice
 					trace('Set specialInst and specialVocal to: ' + instrumental);
 					Reflect.setField(swagSong, 'specialInst', instrumental);
 					Reflect.setField(swagSong, 'specialVocal', instrumental);
+					// specialEvents 与 specialInst/specialVocal 同步
+					Reflect.setField(swagSong, 'specialEvents', instrumental);
 					trace('specialInst value: ' + Reflect.field(swagSong, 'specialInst'));
 					trace('specialVocal value: ' + Reflect.field(swagSong, 'specialVocal'));
+					trace('specialEvents value: ' + Reflect.field(swagSong, 'specialEvents'));
 				}
 				else
 				{
-					trace('Instrumental is empty, not setting specialInst and specialVocal');
+					trace('Instrumental is empty, not setting specialInst, specialVocal and specialEvents');
 				}
 			songDifficulties.set(diff, swagSong);
 		}
@@ -329,13 +333,22 @@ class VSlice
 					switch(Type.typeof(event.v))
 					{
 						case TObject:
-							for (field in Reflect.fields(event.v))
+							// 按顺序获取 value1, value2, value3, value4
+							var valueOrder:Array<String> = ['value1', 'value2', 'value3', 'value4'];
+							for (valueName in valueOrder)
 							{
-								fields.push(Std.string(Reflect.field(event.v, field)));
-								if(fields.length == 2) break;
+								if(Reflect.hasField(event.v, valueName))
+								{
+									fields.push(Std.string(Reflect.field(event.v, valueName)));
+								}
+								else
+								{
+									fields.push('');
+								}
 							}
 						case TClass(String):
 							fields.push(event.v);
+							while(fields.length < 4) fields.push('');
 						case TClass(Array):
 							var arr:Array<Dynamic> = cast event.v;
 							if(arr != null && arr.length > 0)
@@ -343,15 +356,16 @@ class VSlice
 								for (value in arr)
 								{
 									fields.push(Std.string(value));
-
-									if(fields.length == 2) break;
+									if(fields.length == 4) break;
 								}
 							}
+							while(fields.length < 4) fields.push('');
 						default:
 							fields.push(Std.string(event.v));
+							while(fields.length < 4) fields.push('');
 					}
 				}
-				while(fields.length < 2) fields.push('');
+				while(fields.length < 4) fields.push('');
 
 				fields.insert(0, event.e);
 				fileEvents.push([event.t, [fields]]);
@@ -372,7 +386,7 @@ class VSlice
 				var subEvents:Array<Array<Dynamic>> = cast event[1];
 				if(subEvents != null && subEvents.length > 0)
 					for (lilEvent in subEvents)
-						events.push({t: event[0], e: lilEvent[0], v: {value1: lilEvent[1], value2: lilEvent[2]}});
+						events.push({t: event[0], e: lilEvent[0], v: {value1: lilEvent[1], value2: lilEvent[2], value3: lilEvent[3], value4: lilEvent[4]}});
 			}
 		}
 
@@ -506,6 +520,7 @@ class VSlice
 			generatedBy: generatedBy,
 			version: metadataVersion, //idk what "version" does on V-Slice, but it seems to break without it
 			instrumental: instrumental
+			// specialEvents: specialEvents // 注释掉导出至 VSlice 的特性，因为 V-Slice metadata 中没有这个字段
 		};
 		return {chart: chart, metadata: metadata};
 	}

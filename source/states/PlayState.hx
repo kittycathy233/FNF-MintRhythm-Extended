@@ -492,7 +492,8 @@ class PlayState extends MusicBeatState
 					badWindow: ClientPrefs.data.badWindow,
 					safeFrames: ClientPrefs.data.safeFrames,
 					ratingOffset: ClientPrefs.data.ratingOffset,
-					hitsoundVolume: ClientPrefs.data.hitsoundVolume
+					hitsoundVolume: ClientPrefs.data.hitsoundVolume,
+					noteOffset: ClientPrefs.data.noteOffset,
 				};
 				
 				// 覆盖 ClientPrefs.data 中的判定相关字段
@@ -504,6 +505,7 @@ class PlayState extends MusicBeatState
 				if (Reflect.hasField(replayJudgmentSettings, 'safeFrames')) ClientPrefs.data.safeFrames = replayJudgmentSettings.safeFrames;
 				if (Reflect.hasField(replayJudgmentSettings, 'ratingOffset')) ClientPrefs.data.ratingOffset = replayJudgmentSettings.ratingOffset;
 				if (Reflect.hasField(replayJudgmentSettings, 'hitsoundVolume')) ClientPrefs.data.hitsoundVolume = replayJudgmentSettings.hitsoundVolume;
+				if (Reflect.hasField(replayJudgmentSettings, 'noteOffset')) ClientPrefs.data.noteOffset = replayJudgmentSettings.noteOffset;
 				
 				// 重新初始化 ratingsData 以确保与当前 rmPerfect 设置一致
 				ratingsData = Rating.loadDefault();
@@ -1929,7 +1931,27 @@ isReplaying = false;
 
 		try
 		{
-			var eventsChart:SwagSong = Song.getChart('events', songName);
+			var eventsChart:SwagSong = null;
+			
+			// 如果设置了 specialEvents，只尝试加载对应的 events 文件（不回退到普通 events.json）
+			if(songData.specialEvents != null && songData.specialEvents.length > 0)
+			{
+				try
+				{
+					eventsChart = Song.getChart('events-' + songData.specialEvents, songName);
+				}
+				catch(e:Dynamic) {}
+			}
+			else
+			{
+				// 如果 specialEvents 为空，尝试加载普通 events 文件
+				try
+				{
+					eventsChart = Song.getChart('events', songName);
+				}
+				catch(e:Dynamic) {}
+			}
+			
 			if(eventsChart != null)
 				for (event in eventsChart.events) //Event Notes
 					for (i in 0...event[1].length)
@@ -4688,6 +4710,7 @@ isReplaying = false;
 			if (Reflect.hasField(originalJudgmentSettings, 'safeFrames')) ClientPrefs.data.safeFrames = originalJudgmentSettings.safeFrames;
 			if (Reflect.hasField(originalJudgmentSettings, 'ratingOffset')) ClientPrefs.data.ratingOffset = originalJudgmentSettings.ratingOffset;
 			if (Reflect.hasField(originalJudgmentSettings, 'hitsoundVolume')) ClientPrefs.data.hitsoundVolume = originalJudgmentSettings.hitsoundVolume;
+			if (Reflect.hasField(originalJudgmentSettings, 'noteOffset')) ClientPrefs.data.noteOffset = originalJudgmentSettings.noteOffset;
 			
 			// 重新初始化 ratingsData 以确保与恢复后的 rmPerfect 设置一致
 			ratingsData = Rating.loadDefault();

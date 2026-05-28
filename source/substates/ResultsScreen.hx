@@ -378,7 +378,8 @@ class ResultsScreen extends FlxSubState
 							badWindow: ClientPrefs.data.badWindow,
 							safeFrames: ClientPrefs.data.safeFrames,
 							ratingOffset: ClientPrefs.data.ratingOffset,
-							hitsoundVolume: ClientPrefs.data.hitsoundVolume
+							hitsoundVolume: ClientPrefs.data.hitsoundVolume,
+							noteOffset: ClientPrefs.data.noteOffset,
 						},
 						gameplaySettings: {
 							// Basic gameplay preferences
