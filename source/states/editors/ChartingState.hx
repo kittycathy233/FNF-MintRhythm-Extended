@@ -882,6 +882,9 @@ if(_shouldReset) Conductor.songPosition = 0;
 		
 		// 设置相机缩放以获得更好的视觉效果
 		camChart.zoom = 0.4;
+		
+		// 初始化角色透明度
+		updateHeads(true);
 	}
 
 	function updateCharacters()
@@ -927,6 +930,9 @@ if(_shouldReset) Conductor.songPosition = 0;
 			// 定义boyfriend的拖动范围
 			boyfriendDragRange = {minX: 900, maxX: 1800, minY: 50, maxY: 300};
 		}
+		
+		// 更新角色透明度
+		updateHeads(true);
 	}
 
 	function drawCharacterDragRange(char:Character, spriteGroup:FlxSpriteGroup, color:FlxColor):Void
@@ -4037,6 +4043,23 @@ for (i in 0...GRID_PLAYERS)
 				}
 			}
 		}
+			// 根据mustHitSection调整角色颜色
+		if(showCharactersCheckBox.checked && charactersLoaded)
+		{
+			if(mustHitSection)
+			{
+				// 启用mustHitSection时，dad变暗，boyfriend正常
+				if(dad != null) dad.color = 0xFF666666;
+				if(boyfriend != null) boyfriend.color = 0xFFFFFFFF;
+			}
+			else
+			{
+				// 禁用mustHitSection时，boyfriend变暗，dad正常
+				if(dad != null) dad.color = 0xFFFFFFFF;
+				if(boyfriend != null) boyfriend.color = 0xFF666666;
+			}
+		}
+		
 		_lastGfSection = isGfSection;
 		_lastSec = curSec;
 	}
