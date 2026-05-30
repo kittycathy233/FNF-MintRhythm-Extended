@@ -3103,6 +3103,7 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		PlayState.SONG = song;
 		StageData.loadDirectory(PlayState.SONG);
 		Conductor.bpm = PlayState.SONG.bpm;
+		Conductor.mapBPMChanges(PlayState.SONG);
 	}
 
 	function loadMusic(?killAudio:Bool = false)
@@ -3539,6 +3540,12 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		}
 		cachedSectionRow.push(row);
 		cachedSectionTimes.push(time);
+		
+		// 同步更新 Conductor 的 BPM 变更映射！
+		if(PlayState.SONG != null)
+		{
+			Conductor.mapBPMChanges(PlayState.SONG);
+		}
 	}
 
 	var showPreviousSection:Bool = true;
