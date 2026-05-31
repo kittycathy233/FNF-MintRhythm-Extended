@@ -183,69 +183,6 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	private var dragOffsetX:Float = 0;
 	private var dragOffsetY:Float = 0;
 
-	// 碰撞箱绘制相关
-	private var dadHitboxSprites:FlxSpriteGroup;
-	private var boyfriendHitboxSprites:FlxSpriteGroup;
-
-	// 角色拖动范围可视化相关
-	private var dadDragRangeSprites:FlxSpriteGroup;
-	private var boyfriendDragRangeSprites:FlxSpriteGroup;
-	private var showDragRangeCheckBox:PsychUICheckBox;
-
-	// 角色拖动范围定义
-	private var dadDragRange:{minX:Float, maxX:Float, minY:Float, maxY:Float};
-	private var boyfriendDragRange:{minX:Float, maxX:Float, minY:Float, maxY:Float};
-
-	function drawCharacterHitbox(char:Character, spriteGroup:FlxSpriteGroup, color:FlxColor):Void
-	{
-		if (char == null || !char.visible || !char.isOnScreen(camChart))
-		{
-			// 隐藏所有碰撞箱sprite
-			for (spr in spriteGroup.members)
-				spr.visible = false;
-			return;
-		}
-
-		@:privateAccess
-		var lineSize:Int = Std.int(Math.max(2, Math.floor(3 / camChart.zoom)));
-
-		var sprX:Float = char.x - char.offset.x;
-		var sprY:Float = char.y - char.offset.y;
-		var sprWidth:Int = Std.int(char.frameWidth * char.scale.x);
-		var sprHeight:Int = Std.int(char.frameHeight * char.scale.y);
-
-		// 确保有4个sprite可用
-		while(spriteGroup.members.length < 4)
-		{
-			var spr:FlxSprite = new FlxSprite().makeGraphic(1, 1, color);
-			spr.alpha = 0.8;
-			spr.cameras = [camChart];
-			spriteGroup.add(spr);
-		}
-
-		for (num => sel in spriteGroup.members)
-		{
-			sel.x = sprX;
-			sel.y = sprY;
-			sel.cameras = [camChart];
-			switch(num)
-			{
-				case 0: //Top
-					sel.setGraphicSize(sprWidth, lineSize);
-				case 1: //Bottom
-					sel.setGraphicSize(sprWidth, lineSize);
-					sel.y += sprHeight - lineSize;
-				case 2: //Left
-					sel.setGraphicSize(lineSize, sprHeight);
-				case 3: //Right
-					sel.setGraphicSize(lineSize, sprHeight);
-					sel.x += sprWidth - lineSize;
-			}
-			sel.updateHitbox();
-			sel.scrollFactor.set(char.scrollFactor.x, char.scrollFactor.y);
-			sel.visible = true;
-		}
-	}
 	
 
 	private var lastBeat:Int = 0;
@@ -315,13 +252,10 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 	// 轨道颜色标识控制
 	var trackColorsCheckBox:PsychUICheckBox; // 主题设置中的复选框
-	var trackSeparators:Array<FlxSprite> = []; // 轨道分隔线
 
 	// 视觉效果控制变量
 	var iconBopEnabled:Bool = true;        // 小图标跳动开关
-	var bgBopEnabled:Bool = false;         // 背景跳动开关
-	var mustHitTweenEnabled:Bool = true;   // 倒三角tween开关
-	var bgBopTween:FlxTween;             // 背景跳动tween
+	var mustHitTweenEnabled:Bool = true;  // mustHitIndicator的倒三角tween
 
 	var timeLine:FlxSprite;
 	var infoText:FlxText;
@@ -401,6 +335,14 @@ if(_shouldReset) Conductor.songPosition = 0;
 		if(chartEditorSave.data.backupLimit != null) backupLimit = chartEditorSave.data.backupLimit;
 		if(chartEditorSave.data.vortex != null) vortexEnabled = chartEditorSave.data.vortex;
 
+		// 加载视觉效果设置
+		if(chartEditorSave.data.iconBopEnabled != null) iconBopEnabled = chartEditorSave.data.iconBopEnabled;
+		if(chartEditorSave.data.mustHitTweenEnabled != null) mustHitTweenEnabled = chartEditorSave.data.mustHitTweenEnabled;
+		if(chartEditorSave.data.showCharacters == null) chartEditorSave.data.showCharacters = false;
+		if(chartEditorSave.data.allowDragCharacters == null) chartEditorSave.data.allowDragCharacters = false;
+		if(chartEditorSave.data.mouseScrollSnap == null) chartEditorSave.data.mouseScrollSnap = false;
+		if(chartEditorSave.data.ignoreProgressWarns == null) chartEditorSave.data.ignoreProgressWarns = false;
+
 		if(chartEditorSave.data.customBgColor == null) chartEditorSave.data.customBgColor = '303030';
 		if(chartEditorSave.data.customGridColors == null || chartEditorSave.data.customGridColors.length < 2)
 			chartEditorSave.data.customGridColors = ['DFDFDF', 'BFBFBF'];
@@ -467,52 +409,6 @@ if(_shouldReset) Conductor.songPosition = 0;
 		playerTrackOverlay.scrollFactor.set(0, 0); // X和Y方向都固定，不随网格滚动
 		playerTrackOverlay.visible = chartEditorSave.data.showTrackColors;
 		add(playerTrackOverlay);
-
-
-
-		// 添加轨道之间的垂直分隔线（新布局：对手(0-3) → Event(4-7) → 玩家(8-11)）
-		var totalColumns:Int = GRID_PLAYERS * GRID_COLUMNS_PER_PLAYER + (SHOW_EVENT_COLUMN ? EVENT_TRACK_COUNT : 0);
-
-		// 对手/Event之间的分隔线（在第3列后）
-		if(SHOW_EVENT_COLUMN)
-		{
-			var separatorX1:Float = gridLayout.opponentX + GRID_SIZE * GRID_COLUMNS_PER_PLAYER + TRACK_SPACING / 2 - 2;
-			var separator1 = new FlxSprite(separatorX1, gridY).makeGraphic(4, Std.int(gridHeight) + extraHeight, FlxColor.BLACK);
-			separator1.alpha = 1.0; // 黑色分隔线完全不透明
-			separator1.scrollFactor.set(0, 0); // X和Y方向都固定，不随网格滚动
-			separator1.visible = chartEditorSave.data.showTrackSeparators; // 由新选项控制
-			add(separator1);
-			trackSeparators.push(separator1);
-
-			// Event/玩家之间的分隔线（在第7列后）
-			var separatorX2:Float = gridLayout.eventX + GRID_SIZE * EVENT_TRACK_COUNT + TRACK_SPACING / 2 - 2;
-			var separator2 = new FlxSprite(separatorX2, gridY).makeGraphic(4, Std.int(gridHeight) + extraHeight, FlxColor.BLACK);
-			separator2.alpha = 1.0; // 黑色分隔线完全不透明
-			separator2.scrollFactor.set(0, 0); // X和Y方向都固定，不随网格滚动
-			separator2.visible = chartEditorSave.data.showTrackSeparators; // 由新选项控制
-			add(separator2);
-			trackSeparators.push(separator2);
-		}
-
-
-
-		// 初始化碰撞箱绘制所需的FlxSpriteGroup
-		dadHitboxSprites = new FlxSpriteGroup();
-		dadHitboxSprites.cameras = [camChart];
-		add(dadHitboxSprites);
-
-		boyfriendHitboxSprites = new FlxSpriteGroup();
-		boyfriendHitboxSprites.cameras = [camChart];
-		add(boyfriendHitboxSprites);
-
-		// 初始化拖动范围绘制所需的FlxSpriteGroup
-		dadDragRangeSprites = new FlxSpriteGroup();
-		dadDragRangeSprites.cameras = [camChart];
-		add(dadDragRangeSprites);
-
-		boyfriendDragRangeSprites = new FlxSpriteGroup();
-		boyfriendDragRangeSprites.cameras = [camChart];
-		add(boyfriendDragRangeSprites);
 
 		add(strumLineNotes);
 
@@ -647,6 +543,10 @@ if(_shouldReset) Conductor.songPosition = 0;
 			var iconStartOffset:Int = (i == 0) ? (GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT) : 0;
 			icon.x = gridLayout.startX + GRID_SIZE * iconStartOffset + (iconStartOffset > 0 ? TRACK_SPACING * 2 : 0) + GRID_SIZE * (GRID_COLUMNS_PER_PLAYER / 2) - icon.width / 2;
 		}
+		// 设置 mustHitIndicator 的初始位置
+		var initialMustHit:Bool = (PlayState.SONG.notes.length > 0 && PlayState.SONG.notes[0] != null && PlayState.SONG.notes[0].mustHitSection);
+		var initialTargetX:Float = initialMustHit ? (icons[0].x + icons[0].width / 2) : (icons[1].x + icons[1].width / 2);
+		mustHitIndicator.x = initialTargetX;
 		opponentGridBg.stripes = prevOpponentGridBg.stripes = nextOpponentGridBg.stripes = gridStripes;
 		if(SHOW_EVENT_COLUMN) eventGridBg.stripes = prevEventGridBg.stripes = nextEventGridBg.stripes = gridStripes;
 		playerGridBg.stripes = prevPlayerGridBg.stripes = nextPlayerGridBg.stripes = gridStripes;
@@ -859,9 +759,6 @@ if(_shouldReset) Conductor.songPosition = 0;
 
 		add(dad);
 
-		// 定义dad的拖动范围
-		dadDragRange = {minX: -1200, maxX: -200, minY: 50, maxY: 300};
-
 		// 创建玩家角色（右侧）
 		if(boyfriend != null) remove(boyfriend);
 		boyfriend = new Character(stageData.boyfriend[0], stageData.boyfriend[1], PlayState.SONG.player1, true);
@@ -874,9 +771,6 @@ if(_shouldReset) Conductor.songPosition = 0;
 		boyfriend.y = 200;
 
 		add(boyfriend);
-
-		// 定义boyfriend的拖动范围
-		boyfriendDragRange = {minX: 900, maxX: 1800, minY: 50, maxY: 300};
 
 		charactersLoaded = true;
 		
@@ -907,9 +801,6 @@ if(_shouldReset) Conductor.songPosition = 0;
 			dad.y = 100;
 
 			add(dad);
-
-			// 定义dad的拖动范围
-			dadDragRange = {minX: -1200, maxX: -200, minY: 50, maxY: 300};
 		}
 
 		// 更新玩家角色
@@ -926,69 +817,10 @@ if(_shouldReset) Conductor.songPosition = 0;
 			boyfriend.y = 100;
 
 			add(boyfriend);
-
-			// 定义boyfriend的拖动范围
-			boyfriendDragRange = {minX: 900, maxX: 1800, minY: 50, maxY: 300};
 		}
 		
 		// 更新角色透明度
 		updateHeads(true);
-	}
-
-	function drawCharacterDragRange(char:Character, spriteGroup:FlxSpriteGroup, color:FlxColor):Void
-	{
-		if (char == null || !char.visible || !char.isOnScreen(camChart))
-		{
-			// 隐藏所有拖动范围sprite
-			for (spr in spriteGroup.members)
-				spr.visible = false;
-			return;
-		}
-
-		@:privateAccess
-		var lineSize:Int = Std.int(Math.max(2, Math.floor(2 / camChart.zoom)));
-
-		// 以角色当前位置为中心，绘制固定大小的参考框（200x200像素）
-		var refBoxSize:Float = 200;
-		var rangeMinX:Float = char.x - refBoxSize / 2;
-		var rangeMaxX:Float = char.x + refBoxSize / 2;
-		var rangeMinY:Float = char.y - refBoxSize / 2;
-		var rangeMaxY:Float = char.y + refBoxSize / 2;
-
-		var rangeWidth:Float = rangeMaxX - rangeMinX;
-		var rangeHeight:Float = rangeMaxY - rangeMinY;
-
-		// 确保有4个sprite可用（4个边框）
-		while(spriteGroup.members.length < 4)
-		{
-			var spr:FlxSprite = new FlxSprite().makeGraphic(1, 1, color);
-			spr.alpha = 0.5;
-			spr.cameras = [camChart];
-			spriteGroup.add(spr);
-		}
-
-		for (num => sel in spriteGroup.members)
-		{
-			sel.x = rangeMinX;
-			sel.y = rangeMinY;
-			sel.cameras = [camChart];
-			switch(num)
-			{
-				case 0: //Top
-					sel.setGraphicSize(Std.int(rangeWidth), lineSize);
-				case 1: //Bottom
-					sel.setGraphicSize(Std.int(rangeWidth), lineSize);
-					sel.y += rangeHeight - lineSize;
-				case 2: //Left
-					sel.setGraphicSize(lineSize, Std.int(rangeHeight));
-				case 3: //Right
-					sel.setGraphicSize(lineSize, Std.int(rangeHeight));
-					sel.x += rangeWidth - lineSize;
-			}
-			sel.updateHitbox();
-			sel.scrollFactor.set(char.scrollFactor.x, char.scrollFactor.y);
-			sel.visible = true;
-		}
 	}
 
 	// 播放角色的sing动画
@@ -1560,7 +1392,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 		}
 
 		// 角色拖动逻辑
-		if(dragCharactersCheckBox != null && dragCharactersCheckBox.checked && PsychUIInputText.focusOn == null && !ignoreClickForThisFrame)
+		if(chartEditorSave.data.allowDragCharacters && PsychUIInputText.focusOn == null && !ignoreClickForThisFrame)
 		{
 			// 检测鼠标左键按下
 			if(FlxG.mouse.justPressed)
@@ -1610,36 +1442,6 @@ if(_shouldReset) Conductor.songPosition = 0;
 		
 		// 恢复原值
 		ClientPrefs.data.keepSingAnimation = originalKeepSingAnimation;
-
-		// 绘制角色碰撞箱
-		if(showHitboxCheckBox != null && showHitboxCheckBox.checked)
-		{
-			drawCharacterHitbox(dad, dadHitboxSprites, FlxColor.RED);
-			drawCharacterHitbox(boyfriend, boyfriendHitboxSprites, FlxColor.BLUE);
-		}
-		else
-		{
-			// 隐藏碰撞箱
-			if(dadHitboxSprites != null)
-				for(spr in dadHitboxSprites.members) spr.visible = false;
-			if(boyfriendHitboxSprites != null)
-				for(spr in boyfriendHitboxSprites.members) spr.visible = false;
-		}
-
-		// 绘制角色拖动范围
-		if(showDragRangeCheckBox != null && showDragRangeCheckBox.checked && dragCharactersCheckBox != null && dragCharactersCheckBox.checked)
-		{
-			drawCharacterDragRange(dad, dadDragRangeSprites, 0xFFFF4444);
-			drawCharacterDragRange(boyfriend, boyfriendDragRangeSprites, 0xFF4444FF);
-		}
-		else
-		{
-			// 隐藏拖动范围
-			if(dadDragRangeSprites != null)
-				for(spr in dadDragRangeSprites.members) spr.visible = false;
-			if(boyfriendDragRangeSprites != null)
-				for(spr in boyfriendDragRangeSprites.members) spr.visible = false;
-		}
 
 		if(songFinished)
 		{
@@ -2552,22 +2354,6 @@ if(_shouldReset) Conductor.songPosition = 0;
 						}});
 			}
 			}
-		}
-
-		// Add background bounce effect on every beat
-		if (bgBopEnabled && songBeatNoOffset != lastBeatHit) {
-			if(bgBopTween != null)
-				bgBopTween.cancel();
-			// 立即设置放大效果
-			bg.scale.set(1.02, 1.02);
-			// 快速缩小至默认大小
-			bgBopTween = FlxTween.tween(bg.scale, {x: 1.0, y: 1.0}, 0.1, {
-				ease: FlxEase.quadOut,
-				onComplete: function(twn:FlxTween) {
-					bgBopTween = null;
-				}
-			});
-
 		}
 
 		if(Conductor.songPosition != lastTime || forceDataUpdate)
@@ -3655,18 +3441,6 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 				eventTrackOverlay.height = Std.int(opponentGridBg.height) + extraHeight;
 			}
 		}
-		
-		// 更新轨道分隔线的位置和高度
-		if(SHOW_EVENT_COLUMN && trackSeparators.length >= 2)
-		{
-			trackSeparators[0].x = gridLayout.opponentX + GRID_SIZE * GRID_COLUMNS_PER_PLAYER + TRACK_SPACING / 2 - 2;
-			trackSeparators[0].y = gridY;
-			trackSeparators[0].height = Std.int(opponentGridBg.height) + extraHeight;
-			
-			trackSeparators[1].x = gridLayout.eventX + GRID_SIZE * EVENT_TRACK_COUNT + TRACK_SPACING / 2 - 2;
-			trackSeparators[1].y = gridY;
-			trackSeparators[1].height = Std.int(opponentGridBg.height) + extraHeight;
-		}
 
 		if(!prevOpponentGridBg.visible) eventLockOverlay.y = opponentGridBg.y;
 		eventLockOverlay.scale.y = hei;
@@ -4027,19 +3801,21 @@ for (i in 0...GRID_PLAYERS)
 		}
 			// 只在mustHitSection状态改变时执行Tween动画（使用之前记录的mustHitChanged）
 			// 修复后：交换iconP1和iconP2的目标，匹配图标显示位置
-			if (mustHitChanged && mustHitTweenEnabled)
+			if (mustHitChanged)
 			{
-				if (mustHitSection)
+				var targetX:Float = mustHitSection ? (iconP1.x + iconP1.width / 2) : (iconP2.x + iconP2.width / 2);
+				
+				if (mustHitTweenEnabled)
 				{
-					// 指示器移动到玩家图标（现在对应iconP1的显示位置）
+					// 指示器移动到对应图标（使用quartout）
 					FlxTween.cancelTweensOf(mustHitIndicator);
-					FlxTween.tween(mustHitIndicator, {x: iconP1.x + iconP1.width / 2}, 0.3, {ease: FlxEase.backOut});
+					FlxTween.tween(mustHitIndicator, {x: targetX}, 0.3, {ease: FlxEase.quartOut});
 				}
 				else
 				{
-					// 指示器移动到对手图标（现在对应iconP2的显示位置）
+					// 禁用tween时直接设置位置
 					FlxTween.cancelTweensOf(mustHitIndicator);
-					FlxTween.tween(mustHitIndicator, {x: iconP2.x + iconP2.width / 2}, 0.3, {ease: FlxEase.backOut});
+					mustHitIndicator.x = targetX;
 				}
 			}
 		}
@@ -4079,8 +3855,6 @@ for (i in 0...GRID_PLAYERS)
 	var opponentVolumeStepper:PsychUINumericStepper;
 	var opponentMuteCheckBox:PsychUICheckBox;
 
-	var dragCharactersCheckBox:PsychUICheckBox;
-	var showHitboxCheckBox:PsychUICheckBox;
 	function addChartingTab()
 	{
 		var tab_group = mainBox.getTab(Language.get('charting_charting_text')).menu;
@@ -4097,10 +3871,20 @@ for (i in 0...GRID_PLAYERS)
 		playbackSlider.label = Language.get('charting_playback_text');
 		
 		objY += 60;
-		mouseSnapCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_mousescrsnap_text'), 100, function() chartEditorSave.data.mouseScrollSnap = mouseSnapCheckBox.checked);
+		mouseSnapCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_mousescrsnap_text'), 100, function() 
+		{
+			chartEditorSave.data.mouseScrollSnap = mouseSnapCheckBox.checked;
+			chartEditorSave.flush();
+		});
+		if(chartEditorSave.data.mouseScrollSnap == null) chartEditorSave.data.mouseScrollSnap = false;
 		mouseSnapCheckBox.checked = chartEditorSave.data.mouseScrollSnap;
 
-		ignoreProgressCheckBox = new PsychUICheckBox(objX + 150, objY, Language.get('charting_ignwarning_text'), 100, function() chartEditorSave.data.ignoreProgressWarns = ignoreProgressCheckBox.checked);
+		ignoreProgressCheckBox = new PsychUICheckBox(objX + 150, objY, Language.get('charting_ignwarning_text'), 100, function() 
+		{
+			chartEditorSave.data.ignoreProgressWarns = ignoreProgressCheckBox.checked;
+			chartEditorSave.flush();
+		});
+		if(chartEditorSave.data.ignoreProgressWarns == null) chartEditorSave.data.ignoreProgressWarns = false;
 		ignoreProgressCheckBox.checked = chartEditorSave.data.ignoreProgressWarns;
 
 		objY += 50;
@@ -4122,17 +3906,6 @@ for (i in 0...GRID_PLAYERS)
 		opponentMuteCheckBox = new PsychUICheckBox(objX + 200, objY, Language.get('charting_mute_text'), 60, updateAudioVolume);
 
 		objY += 50;
-		dragCharactersCheckBox = new PsychUICheckBox(objX, objY, '允许拖动角色', 120, function() chartEditorSave.data.allowDragCharacters = dragCharactersCheckBox.checked);
-		if(chartEditorSave.data.allowDragCharacters == null) chartEditorSave.data.allowDragCharacters = false;
-		dragCharactersCheckBox.checked = chartEditorSave.data.allowDragCharacters;
-
-		showHitboxCheckBox = new PsychUICheckBox(objX + 150, objY, '显示碰撞箱', 120, function() chartEditorSave.data.showCharacterHitboxes = showHitboxCheckBox.checked);
-		if(chartEditorSave.data.showCharacterHitboxes == null) chartEditorSave.data.showCharacterHitboxes = false;
-		showHitboxCheckBox.checked = chartEditorSave.data.showCharacterHitboxes;
-
-		showDragRangeCheckBox = new PsychUICheckBox(objX + 300, objY, '显示拖动范围', 120, function() chartEditorSave.data.showCharacterDragRange = showDragRangeCheckBox.checked);
-		if(chartEditorSave.data.showCharacterDragRange == null) chartEditorSave.data.showCharacterDragRange = false;
-		showDragRangeCheckBox.checked = chartEditorSave.data.showCharacterDragRange;
 
 		tab_group.add(playbackSlider);
 		tab_group.add(mouseSnapCheckBox);
@@ -4154,10 +3927,6 @@ for (i in 0...GRID_PLAYERS)
 		tab_group.add(playerMuteCheckBox);
 		tab_group.add(opponentVolumeStepper);
 		tab_group.add(opponentMuteCheckBox);
-
-		tab_group.add(dragCharactersCheckBox);
-		tab_group.add(showHitboxCheckBox);
-		tab_group.add(showDragRangeCheckBox);
 	}
 
 	var gameOverCharDropDown:PsychUIDropDownMenu;
@@ -6449,20 +6218,16 @@ for (i in 0...GRID_PLAYERS)
 					// 初始化变量（从保存数据中读取）
 					if(chartEditorSave.data.iconBopEnabled != null)
 						iconBopEnabled = chartEditorSave.data.iconBopEnabled;
-					if(chartEditorSave.data.bgBopEnabled != null)
-						bgBopEnabled = chartEditorSave.data.bgBopEnabled;
 					if(chartEditorSave.data.mustHitTweenEnabled != null)
 						mustHitTweenEnabled = chartEditorSave.data.mustHitTweenEnabled;
 					if(chartEditorSave.data.showTrackColors == null)
 						chartEditorSave.data.showTrackColors = true;
-					if(chartEditorSave.data.showTrackSeparators == null)
-						chartEditorSave.data.showTrackSeparators = true;
 
 
-					var checkY = 100;
+					var checkY = state.bg.y + 60;
 
 					// 小图标跳动
-					var iconBopCheckBox:PsychUICheckBox = new PsychUICheckBox(state.bg.x + 20, checkY, Language.get('visualeffect_iconbop'), 200);
+					var iconBopCheckBox:PsychUICheckBox = new PsychUICheckBox(state.bg.x + 40, checkY, Language.get('visualeffect_iconbop'), 200);
 					iconBopCheckBox.checked = iconBopEnabled;
 					iconBopCheckBox.onClick = function()
 					{
@@ -6473,26 +6238,8 @@ for (i in 0...GRID_PLAYERS)
 					state.add(iconBopCheckBox);
 					checkY += 30;
 
-					// 背景跳动
-					var bgBopCheckBox:PsychUICheckBox = new PsychUICheckBox(state.bg.x + 20, checkY, Language.get('visualeffect_bgbop'), 200);
-					bgBopCheckBox.checked = bgBopEnabled;
-					bgBopCheckBox.onClick = function()
-					{
-						bgBopEnabled = chartEditorSave.data.bgBopEnabled = bgBopCheckBox.checked;
-						chartEditorSave.flush();
-						if(!bgBopEnabled && bgBopTween != null)
-						{
-							bgBopTween.cancel();
-							bgBopTween = null;
-							bg.scale.set(1.0, 1.0);
-						}
-					};
-					bgBopCheckBox.cameras = state.cameras;
-					state.add(bgBopCheckBox);
-					checkY += 30;
-
 					// 倒三角tween
-					var mustHitTweenCheckBox:PsychUICheckBox = new PsychUICheckBox(state.bg.x + 20, checkY, Language.get('visualeffect_musthittween'), 200);
+					var mustHitTweenCheckBox:PsychUICheckBox = new PsychUICheckBox(state.bg.x + 40, checkY, Language.get('visualeffect_musthittween'), 200);
 					mustHitTweenCheckBox.checked = mustHitTweenEnabled;
 					mustHitTweenCheckBox.onClick = function()
 					{
@@ -6506,7 +6253,7 @@ for (i in 0...GRID_PLAYERS)
 					checkY += 30;
 
 					// 轨道颜色
-					var trackColorsCheckBox2:PsychUICheckBox = new PsychUICheckBox(state.bg.x + 20, checkY, Language.get('visualeffect_trackcolors'), 200);
+					var trackColorsCheckBox2:PsychUICheckBox = new PsychUICheckBox(state.bg.x + 40, checkY, Language.get('visualeffect_trackcolors'), 200);
 					trackColorsCheckBox2.checked = chartEditorSave.data.showTrackColors;
 					trackColorsCheckBox2.onClick = function()
 					{
@@ -6521,65 +6268,40 @@ for (i in 0...GRID_PLAYERS)
 					state.add(trackColorsCheckBox2);
 					checkY += 30;
 
-					// 轨道分隔线
-					var trackSeparatorsCheckBox:PsychUICheckBox = new PsychUICheckBox(state.bg.x + 20, checkY, Language.get('charting_showseparators_text'), 200);
-					trackSeparatorsCheckBox.checked = chartEditorSave.data.showTrackSeparators;
-					trackSeparatorsCheckBox.onClick = function()
-					{
-						chartEditorSave.data.showTrackSeparators = trackSeparatorsCheckBox.checked;
-						chartEditorSave.flush();
-						// 立即应用设置
-						for (separator in trackSeparators)
-						{
-							if(separator != null) separator.visible = trackSeparatorsCheckBox.checked;
-						}
-					};
-					trackSeparatorsCheckBox.cameras = state.cameras;
-					state.add(trackSeparatorsCheckBox);
-					checkY += 30;
-
-
 					// 显示角色
-					var showCharacterCheckBox:PsychUICheckBox = new PsychUICheckBox(state.bg.x + 20, checkY, Language.get('visualeffect_showcharacter'), 200);
-					showCharacterCheckBox.checked = showCharactersCheckBox.checked;
+					var showCharacterCheckBox:PsychUICheckBox = new PsychUICheckBox(state.bg.x + 40, checkY, Language.get('visualeffect_showcharacter'), 200);
+					showCharacterCheckBox.checked = chartEditorSave.data.showCharacters;
 					showCharacterCheckBox.onClick = function()
 					{
-						if(dad != null) dad.visible = showCharacterCheckBox.checked;
-						if(boyfriend != null) boyfriend.visible = showCharacterCheckBox.checked;
-						if(showHitboxCheckBox != null)
+						chartEditorSave.data.showCharacters = showCharacterCheckBox.checked;
+						chartEditorSave.flush();
+						showCharactersCheckBox.checked = showCharacterCheckBox.checked;
+						if(!charactersLoaded && showCharacterCheckBox.checked)
 						{
-							dadHitboxSprites.visible = showHitboxCheckBox.checked && showCharacterCheckBox.checked;
-							boyfriendHitboxSprites.visible = showHitboxCheckBox.checked && showCharacterCheckBox.checked;
+							initCharacters();
+						}
+						else
+						{
+							if(dad != null) dad.visible = showCharacterCheckBox.checked;
+							if(boyfriend != null) boyfriend.visible = showCharacterCheckBox.checked;
 						}
 					};
 					showCharacterCheckBox.cameras = state.cameras;
 					state.add(showCharacterCheckBox);
 					checkY += 30;
 
-					// 碰撞箱
-					var showHitboxCheckBox2:PsychUICheckBox = new PsychUICheckBox(state.bg.x + 20, checkY, Language.get('visualeffect_hitbox'), 200);
-					showHitboxCheckBox2.checked = showHitboxCheckBox.checked;
-					showHitboxCheckBox2.onClick = function()
-					{
-						showHitboxCheckBox.checked = showHitboxCheckBox2.checked;
-						dadHitboxSprites.visible = showHitboxCheckBox.checked && dad.visible;
-						boyfriendHitboxSprites.visible = showHitboxCheckBox.checked && boyfriend.visible;
-					};
-					showHitboxCheckBox2.cameras = state.cameras;
-					state.add(showHitboxCheckBox2);
-					checkY += 30;
-
 					// 可拖动角色
-					var dragCharacterCheckBox2:PsychUICheckBox = new PsychUICheckBox(state.bg.x + 20, checkY, Language.get('visualeffect_dragcharacter'), 200);
-					dragCharacterCheckBox2.checked = dragCharactersCheckBox.checked;
+					var dragCharacterCheckBox2:PsychUICheckBox = new PsychUICheckBox(state.bg.x + 40, checkY, Language.get('visualeffect_dragcharacter'), 200);
+					dragCharacterCheckBox2.checked = chartEditorSave.data.allowDragCharacters;
 					dragCharacterCheckBox2.onClick = function()
 					{
-						dragCharactersCheckBox.checked = dragCharacterCheckBox2.checked;
+						chartEditorSave.data.allowDragCharacters = dragCharacterCheckBox2.checked;
+						chartEditorSave.flush();
 					};
 					dragCharacterCheckBox2.cameras = state.cameras;
 					state.add(dragCharacterCheckBox2);
 
-					var btnY = 350;
+					var btnY = state.bg.y + 240;
 					var btn:PsychUIButton = new PsychUIButton(0, btnY, 'OK', state.close);
 					btn.screenCenter(X);
 					btn.cameras = state.cameras;
