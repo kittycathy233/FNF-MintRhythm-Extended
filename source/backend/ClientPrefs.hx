@@ -159,7 +159,7 @@ import states.TitleState;
 	public var requestAdminPrivilege:Bool = false; // 是否请求管理员权限（Windows专用）
 	public var keepSingAnimation:Bool = true; // 保持sing动画不返回idle（用于Hyperactive成就）
 	public var cacheResourcesOnReload:Bool = true; // 重载曲目时缓存资源以加速加载
-	public var forceHoldAnimations:Bool = false; // 强制为所有角色添加-hold动画以触发角色类特性
+	public var forceHoldAnimations:Bool = false; // 箭头命中时只播放一次动画，不依赖hold动画
 	public var timeBarStripes:Bool = false; // 时间条是否显示条纹
 	public var singleHoldNoteAnimation:Bool = true; // 按住长条音符时只播放一次confirm动画
 	public var autoResetStrumAnim:Bool = true; // 是否自动恢复箭头默认动画（普通按键和hold note）

@@ -239,51 +239,6 @@ class Character extends FlxSprite
 				if(anim.offsets != null && anim.offsets.length > 1) addOffset(anim.anim, anim.offsets[0], anim.offsets[1]);
 				else addOffset(anim.anim, 0, 0);
 			}
-			
-			// 强制添加-hold动画
-			if(ClientPrefs.data.forceHoldAnimations) {
-				for (anim in animationsArray) {
-					var animAnim:String = '' + anim.anim;
-					var animName:String = '' + anim.name;
-					var animFps:Int = anim.fps;
-					var animLoop:Bool = !!anim.loop;
-					var animIndices:Array<Int> = anim.indices;
-					
-					// 检查是否已经有-hold或-loop动画
-					var holdAnimName:String = animAnim + '-hold';
-					var loopAnimName:String = animAnim + '-loop';
-					
-					// 双重检查：既要检查 existingAnims map，也要通过 hasAnimation 检查实际存在
-					var alreadyHasHold:Bool = existingAnims.exists(holdAnimName) || existingAnims.exists(loopAnimName);
-					if(!alreadyHasHold) {
-						if(hasAnimation(holdAnimName)) alreadyHasHold = true;
-					}
-					
-					if(!alreadyHasHold) {
-						// 为所有动画添加-hold动画副本
-						if(!isAnimateAtlas)
-						{
-							if(animIndices != null && animIndices.length > 0)
-								animation.addByIndices(holdAnimName, animName, animIndices, "", animFps, animLoop);
-							else
-								animation.addByPrefix(holdAnimName, animName, animFps, animLoop);
-						}
-						#if flxanimate
-						else
-						{
-							if(animIndices != null && animIndices.length > 0)
-								atlas.anim.addBySymbolIndices(holdAnimName, animName, animIndices, animFps, animLoop);
-							else
-								atlas.anim.addBySymbol(holdAnimName, animName, animFps, animLoop);
-						}
-						#end
-						
-						// 添加相同的偏移量
-						if(anim.offsets != null && anim.offsets.length > 1) addOffset(holdAnimName, anim.offsets[0], anim.offsets[1]);
-						else addOffset(holdAnimName, 0, 0);
-					}
-				}
-			}
 		}
 		#if flxanimate
 		if(isAnimateAtlas) copyAtlasValues();
@@ -353,8 +308,8 @@ class Character extends FlxSprite
 		}
 
 		var name:String = getAnimationName();
-		// 如果是 hold 动画，不要自动播放 loop 动画
-		if(isAnimationFinished() && hasAnimation('$name-loop') && !name.endsWith('-hold'))
+		// 如果是 hold 动画或启用了单次动画模式，不要自动播放 loop 动画
+		if(isAnimationFinished() && hasAnimation('$name-loop') && !name.endsWith('-hold') && !ClientPrefs.data.forceHoldAnimations)
 			playAnim('$name-loop');
 
 		super.update(elapsed);

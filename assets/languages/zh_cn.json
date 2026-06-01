@@ -365,8 +365,8 @@
     "ratcounter_desc": "启用评分计数器以显示每种评分类型的命中次数",
     "watermark_desc": "在游戏画面上显示水印",
 
-    "force_hold_animations_name": "强制Hold动画",
-    "force_hold_animations_desc": "(实验性)\n强制为所有角色添加-hold动画以触发角色类特性",
+    "force_hold_animations_name": "单次动画模式",
+    "force_hold_animations_desc": "箭头命中时只播放一次动画，不依赖hold动画",
     "show_haxelibs_name": "显示Haxelib信息",
     "show_haxelibs_desc": "在FPS计数器中显示Haxelib库和版本信息",
     "keep_sing_animation_name": "保持Sing动画",

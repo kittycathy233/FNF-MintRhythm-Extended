@@ -367,7 +367,28 @@
     "gameplay_combospr_desc": "命中箭頭時添加「Combo」彈出效果",
     "fixed_timestep_desc": "使用固定時間步長\n可以緩解畫面丟幀，但是低幀率時會導致遊戲畫面滯後",
     "ratcounter_desc": "啟用評分計數器以顯示每種評分類型的命中次數",
-    "watermark_desc": "在遊戲畫面上顯示水印"
+    "watermark_desc": "在遊戲畫面上顯示水印",
+
+    "force_hold_animations_name": "單次動畫模式",
+    "force_hold_animations_desc": "箭頭命中時只播放一次動畫，不依賴hold動畫",
+    "show_haxelibs_name": "顯示Haxelib資訊",
+    "show_haxelibs_desc": "在FPS計數器中顯示Haxelib資訊",
+    "keep_sing_animation_name": "保持Sing動畫",
+    "keep_sing_animation_desc": "保持sing動畫不返回idle（用於Hyperactive成就）",
+    "time_bar_stripes_name": "時間條條紋",
+    "time_bar_stripes_desc": "時間條是否顯示條紋",
+    "single_hold_note_animation_name": "長按單次動畫",
+    "single_hold_note_animation_desc": "按住長按音符時只播放一次confirm動畫",
+    "auto_reset_strum_anim_name": "自動重置箭頭動畫",
+    "auto_reset_strum_anim_desc": "是否自動恢復箭頭預設動畫（普通按鍵和hold note）",
+    "fallback_perfect_to_sick_name": "用Sick代替Perfect",
+    "fallback_perfect_to_sick_desc": "當模組沒有perfect/marvelous貼圖時，是否改用sick貼圖顯示",
+    "fallback_experfect_to_sick_name": "用Sick代替ExPerfect",
+    "fallback_experfect_to_sick_desc": "當模組沒有ex-perfect/ex-marvelous貼圖時，是否改用sick貼圖顯示",
+    "sound_tray_style_name": "音訊面板風格",
+    "sound_tray_style_desc": "設定音訊面板的視覺風格",
+    "hold_note_behind_name": "長按音符在後",
+    "hold_note_behind_desc": "將hold note放在正常音符和strum箭頭下面"
 
 
 }

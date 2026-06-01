@@ -352,8 +352,8 @@
     "ratcounter_desc": "Enable the rating counter to display the number of hits for each rating type.",
     "watermark_desc": "Show a watermark on the gameplay screen.",
 
-    "force_hold_animations_name": "Force Hold Animations",
-    "force_hold_animations_desc": "(Experimental)\nForce add -hold animation to all characters to trigger character class features",
+    "force_hold_animations_name": "Single Animation Mode",
+    "force_hold_animations_desc": "Play animation only once when arrow is hit, no need for hold animation",
     "show_haxelibs_name": "Show Haxelibs Info",
     "show_haxelibs_desc": "Display haxelib libraries and versions in FPS counter",
     "keep_sing_animation_name": "Keep Sing Animation",
