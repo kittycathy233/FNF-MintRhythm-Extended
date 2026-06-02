@@ -196,6 +196,9 @@ import states.TitleState;
 	public var fakeWindowTitlePreset:String = "Kathy Engine";
 	public var fakeOSVersion:String = "1.5.1";
 
+	// Leather 风格相关
+	public var biggerInfoText:Bool = false; // 更大的信息文本
+
 }
 
 class ClientPrefs {

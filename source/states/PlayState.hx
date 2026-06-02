@@ -1,5 +1,6 @@
 package states;
 
+import Main;
 import sys.thread.Thread;
 import backend.Highscore;
 import backend.StageData;
@@ -803,18 +804,28 @@ isReplaying = false;
 		var showTime:Bool = (ClientPrefs.data.timeBarType != 'Disabled');
 
 		timeTxt = new FlxText(STRUM_X + (FlxG.width / 2) - 248, 19, 640, "", 32);
-		timeTxt.setFormat(Paths.font("vcr.ttf"), ClientPrefs.data.timebarStyle == "Leather" ? 16 : 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE,
-			FlxColor.BLACK);
+		// 设置时间条文本大小和边框大小
+		var baseTextSize:Int = (ClientPrefs.data.timebarStyle == "Leather" || ClientPrefs.data.timebarStyle == "Leather (Legacy)") ? 16 : 32;
+		var baseBorderSize:Float = (ClientPrefs.data.timebarStyle == "Leather" || ClientPrefs.data.timebarStyle == "Leather (Legacy)") ? 1 : 2;
+		// 应用 biggerInfoText
+		if (ClientPrefs.data.biggerInfoText && (ClientPrefs.data.timebarStyle == "Leather" || ClientPrefs.data.timebarStyle == "Leather (Legacy)")) {
+			baseTextSize = 20;
+			baseBorderSize = 1.5;
+		} else if (ClientPrefs.data.biggerInfoText) {
+			baseTextSize = 32;
+			baseBorderSize = 2;
+		}
+		timeTxt.setFormat(Paths.font("vcr.ttf"), baseTextSize, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		timeTxt.scrollFactor.set();
 		timeTxt.alpha = 0;
-		timeTxt.borderSize = ClientPrefs.data.timebarStyle == "Leather" ? 1 : 2;
+		timeTxt.borderSize = baseBorderSize;
 		timeTxt.visible = updateTime = showTime;
 		timeTxt.screenCenter(X);
 
 		if (ClientPrefs.data.downScroll)
 			timeTxt.y = FlxG.height - 44;
 
-		if (ClientPrefs.data.timeBarType == 'Song Name' && ClientPrefs.data.timebarStyle != "Leather")
+		if (ClientPrefs.data.timeBarType == 'Song Name' && ClientPrefs.data.timebarStyle != "Leather" && ClientPrefs.data.timebarStyle != "Leather (Legacy)")
 		{
 			timeTxt.text = SONG.song;
 		}
@@ -825,7 +836,7 @@ isReplaying = false;
 		{
 			barStyle = "barKEL";
 		}
-		else if (ClientPrefs.data.timebarStyle == "Leather")
+		else if (ClientPrefs.data.timebarStyle == "Leather" || ClientPrefs.data.timebarStyle == "Leather (Legacy)")
 		{
 			barStyle = "barLE";
 		}
@@ -843,19 +854,50 @@ isReplaying = false;
 		// 特殊处理Leather样式
 		if (ClientPrefs.data.timebarStyle == "Leather")
 		{
-			timeTxt.size = 16;
-			timeBar.y = FlxG.height - (timeBar.height + 1);
-			timeTxt.y = timeBar.y - (timeTxt.height);
+			// Leather 样式：文本在条内部
+			timeTxt.size = ClientPrefs.data.biggerInfoText ? 20 : 16;
+			if (ClientPrefs.data.biggerInfoText) {
+				timeTxt.borderSize = 1.5;
+			}
+			if (ClientPrefs.data.downScroll) {
+				timeBar.y = FlxG.height - (timeBar.height + 1);
+				timeTxt.y = timeBar.y;
+			} else {
+				timeBar.y = 1;
+				timeTxt.y = timeBar.y;
+			}
 			timeTxt.text = SONG.song + " ~ " + Difficulty.getString().toUpperCase() + " (0:00)";
 		}
-		
+		else if (ClientPrefs.data.timebarStyle == "Leather (Legacy)")
+		{
+			// Leather (Legacy) 样式：文本在条外部（原来的行为）
+			timeTxt.size = ClientPrefs.data.biggerInfoText ? 20 : 16;
+			if (ClientPrefs.data.biggerInfoText) {
+				timeTxt.borderSize = 1.5;
+			}
+			if (ClientPrefs.data.downScroll) {
+				// downScroll 时，条在底部，文本在条上方
+				timeBar.y = FlxG.height - (timeBar.height + 1);
+				timeTxt.y = timeBar.y - timeTxt.height;
+			} else {
+				// 普通模式，条在顶部，文本在条下方
+				timeBar.y = 1;
+				timeTxt.y = timeBar.y + timeBar.height;
+			}
+			timeTxt.text = SONG.song + " ~ " + Difficulty.getString().toUpperCase() + " (0:00)";
+		}
 		else
 		{
 			timeBar.y = timeTxt.y + (timeTxt.height / 4);
 		}
 
+		// 先添加条再添加文本，确保文本在上面
 		uiGroup.add(timeBar);
 		uiGroup.add(timeTxt);
+		// 对于 Leather (Legacy) 样式，设置为青色
+		if (ClientPrefs.data.timebarStyle == "Leather (Legacy)") {
+			timeBar.setColors(FlxColor.CYAN, FlxColor.BLACK);
+		}
 
 		// 根据 holdNoteBehind 设置调整图层顺序
 		if (ClientPrefs.data.holdNoteBehind) {
@@ -868,7 +910,7 @@ isReplaying = false;
 		}
 
 		// 处理Song Name类型的调整（排除Leather样式）
-		if (ClientPrefs.data.timeBarType == 'Song Name' && ClientPrefs.data.timebarStyle != "Leather")
+		if (ClientPrefs.data.timeBarType == 'Song Name' && ClientPrefs.data.timebarStyle != "Leather" && ClientPrefs.data.timebarStyle != "Leather (Legacy)")
 		{
 			timeTxt.size = 24;
 			timeTxt.y += 3;
@@ -910,7 +952,16 @@ isReplaying = false;
 		FlxG.worldBounds.set(0, 0, FlxG.width, FlxG.height);
 		moveCameraSection();
 
-		healthBar = new Bar(0, FlxG.height * (!ClientPrefs.data.downScroll ? 0.89 : 0.11), 'healthBar', function() return health, 0, 2);
+		// 计算血条 Y 位置
+		var healthBarY:Float = 0;
+		if (ClientPrefs.data.healthbarstyle == 'Leather') {
+			// LeatherEngine 原版：0.9 (正常) / 60 (downscroll)
+			healthBarY = !ClientPrefs.data.downScroll ? FlxG.height * 0.9 : 60;
+		} else {
+			healthBarY = FlxG.height * (!ClientPrefs.data.downScroll ? 0.89 : 0.11);
+		}
+
+		healthBar = new Bar(0, healthBarY, 'healthBar', function() return health, 0, 2);
 		healthBar.screenCenter(X);
 		healthBar.leftToRight = false;
 		healthBar.scrollFactor.set();
@@ -940,15 +991,27 @@ isReplaying = false;
 		uiGroup.add(msTimeTxt);
 
 		iconP1 = new HealthIcon(boyfriend.healthIcon, true);
-		iconP1.y = healthBar.y - 75;
+		if (ClientPrefs.data.healthbarstyle == 'Leather') {
+			// LeatherEngine 原版：图标在血条上居中
+			iconP1.y = healthBar.y - (iconP1.height / 2) - iconP1.offset.y;
+		} else {
+			iconP1.y = healthBar.y - 75;
+		}
 		iconP1.visible = !ClientPrefs.data.hideHud;
 		iconP1.alpha = ClientPrefs.data.healthBarAlpha;
+		iconP1.startSize = iconP1.scale.x;
 		uiGroup.add(iconP1);
 
 		iconP2 = new HealthIcon(dad.healthIcon, false);
-		iconP2.y = healthBar.y - 75;
+		if (ClientPrefs.data.healthbarstyle == 'Leather') {
+			// LeatherEngine 原版：图标在血条上居中
+			iconP2.y = healthBar.y - (iconP2.height / 2) - iconP2.offset.y;
+		} else {
+			iconP2.y = healthBar.y - 75;
+		}
 		iconP2.visible = !ClientPrefs.data.hideHud;
 		iconP2.alpha = ClientPrefs.data.healthBarAlpha;
+		iconP2.startSize = iconP2.scale.x;
 		uiGroup.add(iconP2);
 
 		if(ClientPrefs.data.scoretxtstyle == 'Kade') 
@@ -972,6 +1035,17 @@ isReplaying = false;
 			scoreTxt.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			scoreTxt.scrollFactor.set();
 			scoreTxt.borderSize = 1.2;
+			scoreTxt.visible = !ClientPrefs.data.hideHud;
+		}
+		else if (ClientPrefs.data.scoretxtstyle == 'Leather')	
+		{
+			// LeatherEngine 原版：healthBarBG.y + 45
+			// 字号：biggerInfoText ? 20 : 16
+			scoreTxt = new FlxText(0, healthBar.y + 45, FlxG.width, "", 20);
+			scoreTxt.screenCenter(X);
+			scoreTxt.scrollFactor.set();
+			scoreTxt.setFormat(Paths.font("vcr.ttf"), ClientPrefs.data.biggerInfoText ? 20 : 16, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			scoreTxt.borderSize = 1.25;
 			scoreTxt.visible = !ClientPrefs.data.hideHud;
 		}
 		else 
@@ -1705,10 +1779,34 @@ isReplaying = false;
                     tempScore = '';
                 }
             }
+            else if (ClientPrefs.data.scoretxtstyle == 'Leather')
+            {
+                // LeatherEngine 原版格式：<  Score:${songScore} ~ Misses:${misses} ~ Accuracy:${accuracy}% ~ ${ratingStr}  >
+                if (!cpuControlled || ClientPrefs.data.botplayScore)
+                {
+                    var leatherAcc:Float = totalPlayed != 0 ? CoolUtil.floorDecimal(ratingPercent * 100, 2) : 100.0;
+                    var leatherRank:String = getLeatherRank(leatherAcc, songMisses);
+                    if (!instakillOnMiss)
+                        tempScore = '<  Score: ${songScore} ~ Misses: ${songMisses} ~ Accuracy: ${leatherAcc}% ~ ${leatherRank}  >';
+                    else
+                        tempScore = '<  Score: ${songScore} ~ Accuracy: ${leatherAcc}% ~ ${leatherRank}  >';
+                } else {
+                    tempScore = '';
+                }
+            }
             else
                 tempScore = LanguageBasic.getPhrase('score_text', 'Score: {1} | Misses: {2} | Rating: {3}', [songScore, songMisses, str]);
         }
-        else tempScore = LanguageBasic.getPhrase('score_text_instakill', 'Score: {1} | Rating: {2}', [songScore, str]);
+        else {
+            // instakill 模式：根据不同样式显示不同格式
+            if (ClientPrefs.data.scoretxtstyle == 'Leather') {
+                var leatherAcc:Float = totalPlayed != 0 ? CoolUtil.floorDecimal(ratingPercent * 100, 2) : 100.0;
+                var leatherRank:String = getLeatherRank(leatherAcc);
+                tempScore = '<  Score: ${songScore} ~ ${leatherRank}  >';
+            } else {
+                tempScore = LanguageBasic.getPhrase('score_text_instakill', 'Score: {1} | Rating: {2}', [songScore, str]);
+            }
+        }
         scoreTxt.text = tempScore;
     }
 
@@ -1737,6 +1835,52 @@ isReplaying = false;
 			if (songMisses < 10) ratingFC = 'SDCB';
 			else ratingFC = 'Clear';
 		}
+	}
+
+	public function getLeatherRank(accuracy:Float, ?misses:Int):String {
+		var conditions:Array<Bool> = [
+			accuracy == 100, // SSSS
+			accuracy >= 98, // SSS
+			accuracy >= 95, // SS
+			accuracy >= 92, // S
+			accuracy >= 89, // AA
+			accuracy >= 85, // A
+			accuracy >= 80, // B+
+			accuracy >= 70, // B
+			accuracy >= 65, // C
+			accuracy >= 50, // D
+			accuracy >= 10, // E
+			accuracy >= 5, // F
+			accuracy < 4, // G
+		];
+		var missesRating:String = "";
+		if (misses != null) {
+			if (misses == 0) {
+				missesRating = "FC ~ ";
+				if (ratingsData[3].hits < 10 && ratingsData[4].hits == 0)
+					missesRating = "SDB ~ ";
+				if (ratingsData[3].hits == 0 && ratingsData[4].hits == 0)
+					missesRating = "GFC ~ ";
+				if (ratingsData[2].hits < 10 && ratingsData[3].hits == 0 && ratingsData[4].hits == 0)
+					missesRating = "SDG ~ ";
+				if (ratingsData[2].hits == 0 && ratingsData[3].hits == 0 && ratingsData[4].hits == 0)
+					missesRating = "PFC ~ ";
+				if (ratingsData[1].hits < 10 && ratingsData[2].hits == 0 && ratingsData[3].hits == 0 && ratingsData[4].hits == 0)
+					missesRating = "SDP ~ ";
+				if (ratingsData[1].hits == 0 && ratingsData[2].hits == 0 && ratingsData[3].hits == 0 && ratingsData[4].hits == 0)
+					missesRating = "MFC ~ ";
+			}
+			if (misses > 0 && misses < 10)
+				missesRating = "SDCB ~ ";
+			if (misses >= 10)
+				missesRating = "CLEAR ~ ";
+		}
+		var rankNames:Array<String> = ["SSSS", "SSS", "SS", "S", "AA", "A", "B+", "B", "C", "D", "E", "F", "G"];
+		for (i in 0...conditions.length) {
+			if (conditions[i])
+				return missesRating + rankNames[i];
+		}
+		return missesRating + "G";
 	}
 
 	public function doScoreBop():Void {
@@ -2678,7 +2822,7 @@ isReplaying = false;
 			var curTime:Float = Math.max(0, Conductor.songPosition - ClientPrefs.data.noteOffset);
 			songPercent = (curTime / songLength);
 
-			if (ClientPrefs.data.timebarStyle == "Leather")
+			if (ClientPrefs.data.timebarStyle == "Leather" || ClientPrefs.data.timebarStyle == "Leather (Legacy)")
 			{
 				// 计算剩余时间
 				var timeLeft:Float = Math.max(0, songLength - curTime);
@@ -2915,6 +3059,11 @@ isReplaying = false;
 			timeBarRightColor = FlxColor.interpolate(timeBarRightColor, timeBarRightColorTarget, elapsed * 5);
 			timeBar.setColors(timeBarRightColor, timeBarLeftColor); //不是，timebar的颜色是反着来的吗？
 		}
+		else if (ClientPrefs.data.timebarStyle == 'Leather (Legacy)')
+		{
+			// Leather (Legacy) 始终为青色，不更新
+			timeBar.setColors(FlxColor.CYAN, FlxColor.BLACK);
+		}
 
 		if (generatedMusic)
 		{
@@ -3029,11 +3178,20 @@ isReplaying = false;
 
 			if (["VSlice(New)", "VSlice(Old)", "Dave", "Codename", "Leather"].contains(ClientPrefs.data.iconbopstyle))
 			{
-				var rate:Float = elapsed * speedMultiplier * playbackRate;
-				iconP1.scale.x = FlxMath.lerp(iconP1.scale.x, 1, rate);
-				iconP1.scale.y = FlxMath.lerp(iconP1.scale.y, 1, rate);
-				iconP2.scale.x = FlxMath.lerp(iconP2.scale.x, 1, rate);
-				iconP2.scale.y = FlxMath.lerp(iconP2.scale.y, 1, rate);
+				var rate:Float;
+				var targetScale:Float;
+				if (ClientPrefs.data.iconbopstyle == "Leather") {
+					// Leather 风格使用帧率无关的算法，与 LeatherEngine 原版一致
+					rate = 0.1 / ((Main.game != null ? Main.game.framerate : 60) / 60) * playbackRate;
+					targetScale = iconP1.startSize;
+				} else {
+					rate = elapsed * speedMultiplier * playbackRate;
+					targetScale = 1;
+				}
+				iconP1.scale.x = FlxMath.lerp(iconP1.scale.x, targetScale, rate);
+				iconP1.scale.y = FlxMath.lerp(iconP1.scale.y, targetScale, rate);
+				iconP2.scale.x = FlxMath.lerp(iconP2.scale.x, targetScale, rate);
+				iconP2.scale.y = FlxMath.lerp(iconP2.scale.y, targetScale, rate);
 
 				// 添加边界限制和碰撞箱更新
 				iconP1.scale.x = FlxMath.bound(iconP1.scale.x, Math.NEGATIVE_INFINITY, ICON_BOUND);
@@ -4850,7 +5008,12 @@ isReplaying = false;
 						iconP1.scale.set(1.4, 1.4);
 						iconP2.scale.set(1.4, 1.4);
 
-            	case /*"Leather" | */"VSlice(New)" | "Codename" | "VSlice(Old)" | "NovaFlare" | "Kathy":
+					case "Leather":
+						// Leather 风格使用 add 方法，与原版一致
+						iconP1.scale.add(0.2 * iconP1.startSize, 0.2 * iconP1.startSize);
+						iconP2.scale.add(0.2 * iconP2.startSize, 0.2 * iconP2.startSize);
+
+            	case "VSlice(New)" | "Codename" | "VSlice(Old)" | "NovaFlare" | "Kathy":
 						iconP1.scale.set(1.3, 1.3);
 						iconP2.scale.set(1.3, 1.3);
 
@@ -4938,7 +5101,12 @@ isReplaying = false;
                 	iconP1.scale.set(1.4, 1.4);
                 	iconP2.scale.set(1.4, 1.4);
 
-            	case /*"Leather" | */"VSlice(New)" | "Codename" | "VSlice(Old)" | "NovaFlare" | "Kathy":
+				case "Leather":
+					// Leather 风格使用 add 方法，与原版一致
+					iconP1.scale.add(0.2 * iconP1.startSize, 0.2 * iconP1.startSize);
+					iconP2.scale.add(0.2 * iconP2.startSize, 0.2 * iconP2.startSize);
+
+            	case "VSlice(New)" | "Codename" | "VSlice(Old)" | "NovaFlare" | "Kathy":
                 	iconP1.scale.set(1.3, 1.3);
                 	iconP2.scale.set(1.3, 1.3);
                 

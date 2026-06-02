@@ -22,6 +22,11 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 	var ratingFallStyleOption:Option = null;
 	var ratingFallStyleOptionIndex:Int = -1;
 
+	var biggerInfoTextOption:Option = null;
+	var biggerInfoTextOptionIndex:Int = -1;
+	var timebarStyleOption:Option = null;
+	var timebarStyleOptionIndex:Int = -1;
+
 	public function new()
 	{
 		title = 'Extra Options\n\nNot Done';
@@ -216,7 +221,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			Language.get("healthbar_style_desc"),
 			'healthbarstyle',
 			STRING,
-			['Psych', 'OS', 'Kade']);
+			['Psych', 'OS', 'Kade', 'Leather']);
 		addOption(option);
 		
 		option = new Option('Time Bar Stripes',
@@ -236,7 +241,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			Language.get("scoretxt_style_desc"),
 			'scoretxtstyle',
 			STRING,
-			['Psych', 'OS', 'Kathy', 'Kade', 'V-Slice']);
+			['Psych', 'OS', 'Kathy', 'Kade', 'V-Slice', 'Leather']);
 		addOption(option);
 
 		option = new Option('Loading Style',
@@ -262,8 +267,16 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			Language.get("timebar_style_desc"),
 			'timebarStyle',
 			STRING,
-			['Psych', 'Kade (Legacy)', 'Leather']);
-		addOption(option);
+			['Psych', 'Kade (Legacy)', 'Leather', 'Leather (Legacy)']);
+		option.onChange = function() {
+			updateBiggerInfoTextVisibility();
+		};
+		timebarStyleOption = addOption(option);
+		timebarStyleOptionIndex = optionsArray.length - 1;
+
+		option = new Option('Bigger Info Text', 'When toggled, the time bar will have a larger font.', 'biggerInfoText', BOOL);
+		biggerInfoTextOption = addOption(option);
+		biggerInfoTextOptionIndex = optionsArray.length - 1;
 
 		option = new Option('BotPlayTxt Style',
 			Language.get("botplaytxt_style_desc"),
@@ -416,6 +429,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 	{
 		var newSelection = FlxMath.wrap(curSelected + change, 0, optionsArray.length - 1);
 		var isKathyStyle:Bool = ClientPrefs.data.ratingFallStyle == 'Kathy' || ClientPrefs.data.ratingFallStyle == 'Kathy(Legacy)';
+		var isLeatherStyle:Bool = ClientPrefs.data.timebarStyle == 'Leather' || ClientPrefs.data.timebarStyle == 'Leather (Legacy)';
 		
 		// 如果要选择的是 Blue Archive Language 选项，但当前 loading 样式不是 Blue Archive，则跳过它
 		if (blueArchiveLanguageOptionIndex != -1 && newSelection == blueArchiveLanguageOptionIndex && ClientPrefs.data.customFadeStyle != 'Blue Archive') {
@@ -449,6 +463,16 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 				newSelection = FlxMath.wrap(newSelection, 0, optionsArray.length - 1);
 			}
 		}
+
+		// 如果要选择的是 Bigger Info Text 选项，但当前不是 Leather 风格，则跳过它
+		if (!isLeatherStyle && biggerInfoTextOptionIndex != -1 && newSelection == biggerInfoTextOptionIndex) {
+			if (change > 0) {
+				newSelection++;
+			} else {
+				newSelection--;
+			}
+			newSelection = FlxMath.wrap(newSelection, 0, optionsArray.length - 1);
+		}
 		
 		// 调用父类的 changeSelection，但直接修改 curSelected 来改变位置
 		curSelected = newSelection - change;
@@ -463,6 +487,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		super.update(elapsed);
 		
 		updateBounceOptionsVisibility();
+		updateBiggerInfoTextVisibility();
 		
 		// 控制 Blue Archive Language 选项的可见性和禁用状态
 		if (blueArchiveLanguageOptionIndex != -1) {
@@ -516,6 +541,35 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			for (checkbox in checkboxGroup) {
 				if (checkbox.ID == extraRatingBounceOptionIndex) {
 					checkbox.alpha = isKathyStyle ? 1 : 0.3;
+				}
+			}
+		}
+	}
+
+	function updateBiggerInfoTextVisibility()
+	{
+		var isLeatherStyle:Bool = ClientPrefs.data.timebarStyle == 'Leather' || ClientPrefs.data.timebarStyle == 'Leather (Legacy)';
+		
+		if (biggerInfoTextOptionIndex != -1) {
+			// 更新选项文本的透明度
+			for (i in 0...grpOptions.length) {
+				var optText:Alphabet = grpOptions.members[i];
+				if (optText != null && i == biggerInfoTextOptionIndex) {
+					optText.alpha = isLeatherStyle ? 1 : 0.3;
+				}
+			}
+			
+			// 更新值文本的透明度
+			for (text in grpTexts) {
+				if (text.ID == biggerInfoTextOptionIndex) {
+					text.alpha = isLeatherStyle ? 1 : 0.3;
+				}
+			}
+			
+			// 更新复选框的透明度（针对 BOOL 类型）
+			for (checkbox in checkboxGroup) {
+				if (checkbox.ID == biggerInfoTextOptionIndex) {
+					checkbox.alpha = isLeatherStyle ? 1 : 0.3;
 				}
 			}
 		}

@@ -5,6 +5,7 @@ class HealthIcon extends FlxSprite
 	public var sprTracker:FlxSprite;
 	private var isPlayer:Bool = false;
 	private var char:String = '';
+	public var startSize:Float = 1;
 
 	public function new(char:String = 'face', isPlayer:Bool = false, ?allowGPU:Bool = true)
 	{
@@ -34,6 +35,7 @@ class HealthIcon extends FlxSprite
 			loadGraphic(graphic, true, Math.floor(graphic.width / iSize), Math.floor(graphic.height));
 			iconOffsets[0] = (width - 150) / iSize;
 			iconOffsets[1] = (height - 150) / iSize;
+			startSize = scale.x;
 			updateHitbox();
 
 			animation.add(char, [for(i in 0...frames.frames.length) i], 0, false, isPlayer);
