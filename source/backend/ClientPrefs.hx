@@ -199,6 +199,15 @@ import states.TitleState;
 	// Leather 风格相关
 	public var biggerInfoText:Bool = false; // 更大的信息文本
 
+	// Simple Info Display (Leather风格) 设置
+	public var fpsLayer:String = "Stage"; // FPS计数器所在图层: "Stage" 或 "Game"
+	public var fpsStyle:String = "Psych"; // FPS计数器样式: "Psych" 或 "Simple"
+	public var simpleInfoColor:FlxColor = 0x000000; // SimpleInfoDisplay 颜色
+	public var simpleInfoFontSize:Int = 12; // SimpleInfoDisplay 字体大小（_sans 用 12px，与 Leather 一致）
+	public var simpleInfoShowFPS:Bool = true; // SimpleInfoDisplay 显示FPS
+	public var simpleInfoShowMem:Bool = true; // SimpleInfoDisplay 显示内存
+	public var simpleInfoShowVersion:Bool = false; // SimpleInfoDisplay 显示版本
+
 }
 
 class ClientPrefs {
@@ -339,10 +348,8 @@ class ClientPrefs {
 			// 应用固定时间步长设置
 			FlxG.fixedTimestep = data.fixedTimestep;
 
-			if(Main.fpsVar != null) {
-				Main.fpsVar.visible = data.showFPS;
-				Main.fpsVar.applySettings();
-			}
+			// 根据当前设置更新 FPS 计数器（updateFPSLayer 内部已调用 updateFPSCounterVisibility
+			Main.updateFPSLayer();
 
 			if(Main.gameLogVar != null)
 				Main.gameLogVar.setEnabled(data.enableGameLog);

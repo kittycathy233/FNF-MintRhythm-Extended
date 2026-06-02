@@ -420,5 +420,16 @@
     "fps_show_resolution_name": "显示分辨率",
     "fps_show_resolution_desc": "切换屏幕分辨率显示",
     "fps_show_refresh_rate_name": "显示刷新率",
-    "fps_show_refresh_rate_desc": "切换刷新率显示"
+    "fps_show_refresh_rate_desc": "切换刷新率显示",
+    
+    "simpleinfo_text_color_name": "文字颜色",
+    "simpleinfo_text_color_desc": "更改Simple FPS计数器的文字颜色",
+    "simpleinfo_font_size_name": "字体大小",
+    "simpleinfo_font_size_desc": "更改Simple FPS计数器的字体大小",
+    "simpleinfo_show_fps_name": "显示FPS",
+    "simpleinfo_show_fps_desc": "切换FPS数值显示",
+    "simpleinfo_show_mem_name": "显示内存",
+    "simpleinfo_show_mem_desc": "切换内存使用量和峰值显示",
+    "simpleinfo_show_version_name": "显示版本",
+    "simpleinfo_show_version_desc": "切换游戏版本号显示"
 }

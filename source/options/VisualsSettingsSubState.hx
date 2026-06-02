@@ -127,14 +127,39 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 		option.onChange = onChangeFPSCounter;
+
+		var option:Option = new Option("FPS Counter Style:",
+			"Choose between Psych (detailed) or Simple (Leather) style",
+			'fpsStyle',
+			STRING,
+			['Psych', 'Simple']);
+		addOption(option);
+		option.onChange = onChangeFPSStyle;
+
+		var option:Option = new Option("FPS Counter Layer:",
+			"Stage (screen-space) or Game (1280x720)",
+			'fpsLayer',
+			STRING,
+			['Stage', 'Game']);
+		addOption(option);
+		option.onChange = onChangeFPSLayer;
 		
-		var option:Option = new Option("FPS Counter Settings...",
-			'Customize FPS counter appearance and content',
+		var option:Option = new Option("Psych FPS Settings...",
+			'Customize Psych style FPS counter appearance and content',
 			'_fpsSettings',
 			BUTTON);
 		addOption(option);
 		option.onChange = function() {
 			MusicBeatState.switchState(new FPSCounterSettingsState());
+		};
+		
+		var option:Option = new Option("Simple FPS Settings...",
+			'Customize Simple (Leather) style FPS counter appearance and content',
+			'_simpleInfoSettings',
+			BUTTON);
+		addOption(option);
+		option.onChange = function() {
+			MusicBeatState.switchState(new SimpleInfoDisplaySettingsState());
 		};
 
 		//新版lime跟git库的不同，故临时禁用此项，之后也许会改
@@ -368,8 +393,17 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 
 	function onChangeFPSCounter()
 	{
-		if(Main.fpsVar != null)
-			Main.fpsVar.visible = ClientPrefs.data.showFPS;
+		Main.updateFPSCounterVisibility();
+	}
+
+	function onChangeFPSStyle()
+	{
+		Main.updateFPSLayer();
+	}
+
+	function onChangeFPSLayer()
+	{
+		Main.updateFPSLayer();
 	}
 
 	// Fake OS 相关函数

@@ -405,5 +405,16 @@
     "fps_show_resolution_name": "Show Resolution",
     "fps_show_resolution_desc": "Toggle screen resolution display",
     "fps_show_refresh_rate_name": "Show Refresh Rate",
-    "fps_show_refresh_rate_desc": "Toggle refresh rate display"
+    "fps_show_refresh_rate_desc": "Toggle refresh rate display",
+    
+    "simpleinfo_text_color_name": "Text Color",
+    "simpleinfo_text_color_desc": "Change the text color of Simple FPS counter",
+    "simpleinfo_font_size_name": "Font Size",
+    "simpleinfo_font_size_desc": "Change the font size of Simple FPS counter",
+    "simpleinfo_show_fps_name": "Show FPS",
+    "simpleinfo_show_fps_desc": "Toggle FPS value display",
+    "simpleinfo_show_mem_name": "Show Memory",
+    "simpleinfo_show_mem_desc": "Toggle memory usage and peak display",
+    "simpleinfo_show_version_name": "Show Version",
+    "simpleinfo_show_version_desc": "Toggle game version display"
 }

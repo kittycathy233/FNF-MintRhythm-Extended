@@ -53,6 +53,7 @@ class Main extends Sprite
 		startFullscreen: false // if the game should start at fullscreen mode
 	};
 
+	public static var fpsLayer:Sprite;
 	public static var fpsVar:FPSCounter;
 	public static var gameLogVar:GameLogDisplay;
 
@@ -216,17 +217,21 @@ class Main extends Sprite
 		}
 		addChild(game);
 
+		// 创建 fpsLayer 作为 FPS 计数器的统一容器
+		fpsLayer = new Sprite();
+		fpsLayer.x = 0;
+		fpsLayer.y = 0;
+		Lib.current.stage.addChild(fpsLayer);
+
+		// fpsVar 现在内部支持 Psych 和 Simple 两种渲染模式
 		fpsVar = new FPSCounter(10, 3, 0xFFFFFF);
-		Lib.current.stage.addChild(fpsVar);
+		fpsLayer.addChild(fpsVar);
+		
+		// 根据设置更新 fpsLayer 的位置和缩放
+		updateFPSLayer();
 		Lib.current.stage.align = "tl";
 		Lib.current.stage.scaleMode = StageScaleMode.SHOW_ALL;
 		Lib.current.stage.quality = StageQuality.BEST;
-		
-		if (fpsVar != null)
-		{
-			fpsVar.visible = ClientPrefs.data.showFPS;
-			fpsVar.applySettings();
-		}
 
 		// 创建游戏日志显示
 		gameLogVar = new GameLogDisplay();
@@ -279,6 +284,9 @@ class Main extends Sprite
 		// shader coords fix
 		FlxG.signals.gameResized.add(function(w, h)
 		{
+			// 更新 fpsLayer 的缩放和偏移（随窗口大小变化）
+			updateFPSLayer();
+			
 			if (fpsVar != null)
 				fpsVar.positionFPS(10, 3, Math.min(w / FlxG.width, h / FlxG.height));
 			if (FlxG.cameras != null)
@@ -297,6 +305,9 @@ class Main extends Sprite
 		// 监听 stage 窗口大小变化，更新 FPS 计数器位置
 		Lib.current.stage.addEventListener(Event.RESIZE, function(e:Event):Void
 		{
+			// 先更新 fpsLayer 的缩放和偏移
+			updateFPSLayer();
+			
 			if (fpsVar != null)
 			{
 				fpsVar.positionFPS(10, 3, 1);
@@ -507,6 +518,81 @@ class Main extends Sprite
 		}
 	}
 	#end
+
+	/**
+	 * 根据 fpsLayer 设置调整 FPS 计数器图层的缩放和位置
+	 * "Stage" - 屏幕像素坐标系，不受游戏缩放影响
+	 * "Game"  - 1280x720 游戏坐标系，随游戏一起缩放并居中
+	 * 
+	 * 注意：此函数统一管理 fpsLayer 的缩放/偏移和计数器在 fpsLayer 内的位置，
+	 *       避免 positionFPS/positionSimpleInfo 的双重缩放问题
+	 */
+	public static function updateFPSLayer():Void
+	{
+		if(fpsLayer == null) return;
+
+		// 始终保持在 Lib.current.stage 上，避免渲染兼容性问题
+		if(fpsLayer.parent != Lib.current.stage) {
+			if(fpsLayer.parent != null) {
+				fpsLayer.parent.removeChild(fpsLayer);
+			}
+			Lib.current.stage.addChild(fpsLayer);
+		}
+
+		var screenWidth:Float = Lib.current.stage.stageWidth;
+		var screenHeight:Float = Lib.current.stage.stageHeight;
+
+		// 先更新可见性（applySettings 会被调用，可能覆盖位置）
+		updateFPSCounterVisibility();
+
+		if(ClientPrefs.data.fpsLayer == "Game") {
+			// Game 模式：与游戏画面对齐 —— 缩放 + 居中偏移
+			var gameWidth:Float = 1280;
+			var gameHeight:Float = 720;
+			var scale:Float = Math.min(screenWidth / gameWidth, screenHeight / gameHeight);
+
+			// 设置 fpsLayer 的缩放和偏移（全局）
+			fpsLayer.scaleX = scale;
+			fpsLayer.scaleY = scale;
+			fpsLayer.x = (screenWidth - gameWidth * scale) / 2;
+			fpsLayer.y = (screenHeight - gameHeight * scale) / 2;
+
+			// fpsVar 在 fpsLayer 内部，使用 1280x720 坐标（无额外缩放）
+			if(fpsVar != null) {
+				fpsVar.scaleX = 1;
+				fpsVar.scaleY = 1;
+
+				var spacing:Float = ClientPrefs.data.fpsSpacing;
+				var isRight:Bool = ClientPrefs.data.fpsPosition.indexOf("RIGHT") != -1;
+				var isBottom:Bool = ClientPrefs.data.fpsPosition.indexOf("BOTTOM") != -1;
+				fpsVar.x = isRight ? (gameWidth - 220 - spacing) : spacing;
+				fpsVar.y = isBottom ? (gameHeight - 40 - spacing) : spacing;
+			}
+		} else {
+			// Stage 模式：不缩放 fpsLayer，使用屏幕像素坐标
+			fpsLayer.scaleX = 1;
+			fpsLayer.scaleY = 1;
+			fpsLayer.x = 0;
+			fpsLayer.y = 0;
+
+			// Stage 模式下，positionFPS 使用 stage 坐标逻辑
+			if(fpsVar != null) {
+				fpsVar.positionFPS(10, 3, 1);
+			}
+		}
+	}
+
+	/**
+	 * 根据 fpsStyle 和 showFPS 设置更新 FPS 计数器的可见性
+	 * fpsVar 内部已支持 Psych 和 Simple 两种渲染模式
+	 */
+	public static function updateFPSCounterVisibility():Void
+	{
+		if(fpsVar != null) {
+			fpsVar.visible = ClientPrefs.data.showFPS;
+			fpsVar.applySettings();
+		}
+	}
 
 	static function resetSpriteCache(sprite:Sprite):Void
 	{

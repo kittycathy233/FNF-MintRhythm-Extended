@@ -15,6 +15,7 @@ import openfl.utils.Assets;
 import backend.ClientPrefs;
 import backend.Paths;
 import StringTools;
+import lime.app.Application;
 #if cpp
 #if windows
 @:cppFileCode('#include <windows.h>')
@@ -107,6 +108,49 @@ class FPSCounter extends Sprite
 
 	public dynamic function updateText():Void
 	{
+		// Simple/Leather 模式：使用 _sans 字体，简洁格式（与 SimpleInfoDisplay 一致）
+		if (ClientPrefs.data.fpsStyle == "Simple")
+		{
+			var currentTime = Timer.stamp();
+			var memory:Float = 0;
+			try
+			{
+				memory = memoryMegas;
+				if (memory < 0 || !Std.is(memory, Float)) memory = 0;
+			}
+			catch (e:Dynamic) { memory = 0; }
+
+			if (memory > memoryPeakMegas) memoryPeakMegas = memory;
+
+			var textLines:Array<String> = [];
+
+			if (ClientPrefs.data.simpleInfoShowFPS) textLines.push(currentFPS + " fps");
+			if (ClientPrefs.data.simpleInfoShowMem) textLines.push(formatSimpleMemory(memory) + " / " + formatSimpleMemory(memoryPeakMegas));
+			if (ClientPrefs.data.simpleInfoShowVersion)
+			{
+				var version:String = Application.current.meta.get('version');
+				if (version == null) version = "0.0.0";
+				textLines.push("v" + version);
+			}
+
+			var allText = textLines.join('\n');
+
+			// 颜色（Simple 模式使用自己的颜色设置）
+			var simpleColorInt = (ClientPrefs.data.simpleInfoColor.red << 16) | (ClientPrefs.data.simpleInfoColor.green << 8) | ClientPrefs.data.simpleInfoColor.blue;
+			var colorHex = StringTools.hex(simpleColorInt, 6);
+			allInfoText.htmlText = '<font color="#$colorHex">$allText</font>';
+
+			// _sans 字体和字号（Simple 模式使用系统 _sans 字体，而非 vcr.ttf）
+			allInfoText.defaultTextFormat = new TextFormat("_sans", ClientPrefs.data.simpleInfoFontSize, simpleColorInt, false);
+
+			// 隐藏背景（Simple 模式没有背景）
+			bgSprite.visible = false;
+			this.alpha = 1;
+
+			return;
+		}
+
+		// Psych 风格：详细信息（原有逻辑）
 		var currentTime = Timer.stamp();
 		var memory:Float = 0;
 		
@@ -282,6 +326,9 @@ class FPSCounter extends Sprite
 	
 	private function updateBackground():Void
 	{
+		// Psych 模式下重新显示背景
+		bgSprite.visible = true;
+
 		bgSprite.graphics.clear();
 		
 		if (ClientPrefs.data.fpsBgEnabled)
@@ -328,7 +375,9 @@ class FPSCounter extends Sprite
 
 		var currentCount = times.length;
 		// 只在显示更新时更新 FPS 值，避免数值跳动
-		if (Timer.stamp() - lastFpsUpdateTime > 0.5)
+		// Simple/Leather 模式更新频率更高（每 0.1 秒），Psych 模式保持原频率（每 0.5 秒）
+		var updateInterval:Float = (ClientPrefs.data.fpsStyle == "Simple") ? 0.1 : 0.5;
+		if (Timer.stamp() - lastFpsUpdateTime > updateInterval)
 		{
 			currentFPS = Math.round((currentCount + cacheCount) / 2);
 			cacheCount = currentCount;
@@ -553,5 +602,20 @@ class FPSCounter extends Sprite
 			var memoryInMB = memoryInBytes / (1024 * 1024);
 			return Std.string(Math.round(memoryInMB)) + "MB";
 		}
+	}
+
+	/**
+	 * Simple/Leather 模式的内存格式化：MB/GB 自动切换，保留两位小数
+	 */
+	private function formatSimpleMemory(memoryInBytes:Float):String
+	{
+		if (memoryInBytes < 0 || memoryInBytes != memoryInBytes) memoryInBytes = 0;
+
+		var memoryInMB:Float = memoryInBytes / (1024 * 1024);
+
+		if (memoryInMB < 1024)
+			return Math.round(memoryInMB * 100) / 100 + "MB";
+		else
+			return Math.round((memoryInMB / 1024) * 100) / 100 + "GB";
 	}
 }

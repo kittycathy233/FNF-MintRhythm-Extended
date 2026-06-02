@@ -1,19 +1,21 @@
 package options;
 
-import flixel.addons.display.FlxBackdrop;
-import flixel.addons.display.FlxGridOverlay;
+import flixel.FlxG;
+import flixel.util.FlxColor;
+import flixel.text.FlxText;
+import flixel.tweens.FlxTween;
+import flixel.tweens.FlxEase;
 import flixel.addons.display.shapes.FlxShapeCircle;
 import flixel.input.keyboard.FlxKey;
 import flixel.input.gamepad.FlxGamepadInputID;
 import lime.system.Clipboard;
 import flixel.util.FlxGradient;
-import Std;
-import Main;
+import backend.ClientPrefs;
 import backend.Language;
 import backend.Paths;
 import backend.MusicBeatState;
 
-class FPSCounterSettingsState extends MusicBeatState
+class SimpleInfoDisplaySettingsState extends MusicBeatState
 {
 	var curSelected:Int = 0;
 	var onColorPicker:Bool = false;
@@ -63,33 +65,16 @@ class FPSCounterSettingsState extends MusicBeatState
 		super.create();
 
 		#if DISCORD_ALLOWED
-		DiscordClient.changePresence("FPS Counter Settings Menu", null);
+		DiscordClient.changePresence("Simple Info Display Settings Menu", null);
 		#end
 
 		options = [
-			{name: Language.get("fps_text_color_name"), desc: Language.get("fps_text_color_desc"), type: "color", min: null, max: null, change: null},
-			{name: Language.get("fps_bg_color_name"), desc: Language.get("fps_bg_color_desc"), type: "color", min: null, max: null, change: null},
-			{name: Language.get("fps_text_opacity_name"), desc: Language.get("fps_text_opacity_desc"), type: "percent", min: 0.0, max: 1.0, change: 0.05},
-			{name: Language.get("fps_bg_opacity_name"), desc: Language.get("fps_bg_opacity_desc"), type: "percent", min: 0.0, max: 1.0, change: 0.05},
-			{name: Language.get("fps_font_size_name"), desc: Language.get("fps_font_size_desc"), type: "int", min: 8, max: 48, change: 1},
-			{name: Language.get("fps_bg_padding_name"), desc: Language.get("fps_bg_padding_desc"), type: "int", min: 0, max: 30, change: 1},
-			{name: Language.get("fps_show_fps_name"), desc: Language.get("fps_show_fps_desc"), type: "bool", min: null, max: null, change: null},
-			{name: Language.get("fps_show_delay_name"), desc: Language.get("fps_show_delay_desc"), type: "bool", min: null, max: null, change: null},
-			{name: Language.get("fps_show_ram_name"), desc: Language.get("fps_show_ram_desc"), type: "bool", min: null, max: null, change: null},
-			{name: Language.get("fps_show_mempeak_name"), desc: Language.get("fps_show_mempeak_desc"), type: "bool", min: null, max: null, change: null},
-			{name: Language.get("fps_show_objects_name"), desc: Language.get("fps_show_objects_desc"), type: "bool", min: null, max: null, change: null},
-			{name: Language.get("fps_force_mb_name"), desc: Language.get("fps_force_mb_desc"), type: "bool", min: null, max: null, change: null},
-			{name: Language.get("fps_bg_enabled_name"), desc: Language.get("fps_bg_enabled_desc"), type: "bool", min: null, max: null, change: null},
-			{name: Language.get("fps_position_name"), desc: Language.get("fps_position_desc"), type: "fps_position", min: null, max: null, change: null},
-			{name: Language.get("fps_spacing_name"), desc: Language.get("fps_spacing_desc"), type: "int", min: 0, max: 200, change: 5},
-			{name: Language.get("show_game_version_name"), desc: Language.get("show_version_desc"), type: "bool", min: null, max: null, change: null},
-			{name: Language.get("show_haxelibs_name"), desc: Language.get("show_haxelibs_desc"), type: "bool", min: null, max: null, change: null},
-			{name: Language.get("show_running_os_name"), desc: Language.get("show_running_os_desc"), type: "bool", min: null, max: null, change: null},
-			{name: Language.get("fps_show_platform_name"), desc: Language.get("fps_show_platform_desc"), type: "bool", min: null, max: null, change: null},
-			{name: Language.get("fps_show_os_version_name"), desc: Language.get("fps_show_os_version_desc"), type: "bool", min: null, max: null, change: null},
-			{name: Language.get("fps_show_resolution_name"), desc: Language.get("fps_show_resolution_desc"), type: "bool", min: null, max: null, change: null},
-			{name: Language.get("fps_show_refresh_rate_name"), desc: Language.get("fps_show_refresh_rate_desc"), type: "bool", min: null, max: null, change: null},
-			{name: "FPS Counter Layer", desc: "Switch between Stage (screen-space) or Game (1280x720)", type: "fps_layer", min: null, max: null, change: null}
+			{name: Language.get("simpleinfo_text_color_name"), desc: Language.get("simpleinfo_text_color_desc"), type: "color", min: null, max: null, change: null},
+			{name: Language.get("simpleinfo_font_size_name"), desc: Language.get("simpleinfo_font_size_desc"), type: "int", min: 8, max: 24, change: 1},
+			{name: Language.get("simpleinfo_show_fps_name"), desc: Language.get("simpleinfo_show_fps_desc"), type: "bool", min: null, max: null, change: null},
+			{name: Language.get("simpleinfo_show_mem_name"), desc: Language.get("simpleinfo_show_mem_desc"), type: "bool", min: null, max: null, change: null},
+			{name: Language.get("simpleinfo_show_version_name"), desc: Language.get("simpleinfo_show_version_desc"), type: "bool", min: null, max: null, change: null},
+			{name: "FPS Counter Layer", desc: "Stage (screen) or Game (1280x720)", type: "fps_layer", min: null, max: null, change: null}
 		];
 
 		bgSprite = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
@@ -102,17 +87,11 @@ class FPSCounterSettingsState extends MusicBeatState
 		darkOverlay.alpha = 0;
 		add(darkOverlay);
 
-		var grid:FlxBackdrop = new FlxBackdrop(FlxGridOverlay.createGrid(80, 80, 160, 160, true, 0x33FFFFFF, 0x0));
-		grid.velocity.set(40, 40);
-		grid.alpha = 0;
-		FlxTween.tween(grid, {alpha: 1}, 0.5, {ease: FlxEase.quadOut});
-		add(grid);
-
 		var fontFile = Language.getGameFont();
 		if (fontFile == null) fontFile = "vcr.ttf";
 		var fontPath = Paths.font(fontFile);
 
-		titleText = new FlxText(75, 45, 400, "FPS Counter\nSettings", 32);
+		titleText = new FlxText(75, 45, 400, "Simple Info Display\nSettings (Leather Style)", 32);
 		titleText.setFormat(fontPath, 32, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		titleText.alpha = 1;
 		add(titleText);
@@ -122,20 +101,20 @@ class FPSCounterSettingsState extends MusicBeatState
 		leftPanelElements = [];
 		
 		var startY:Float = 140;
-		var spacing:Float = 28;
+		var spacing:Float = 35;
 
 		for (i in 0...options.length)
 		{
 			var opt = options[i];
 
-			var text:FlxText = new FlxText(50, startY + i * spacing, 300, opt.name, 20);
+			var text:FlxText = new FlxText(50, startY + i * spacing, 350, opt.name, 20);
 			text.setFormat(fontPath, 20, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			text.alpha = (i == 0) ? 1 : 0.6;
 			add(text);
 			optionTexts.push(text);
 			leftPanelElements.push(text);
 
-			var value:FlxText = new FlxText(350, startY + i * spacing, 300, getCurrentValue(i), 18);
+			var value:FlxText = new FlxText(400, startY + i * spacing, 300, getCurrentValue(i), 18);
 			value.setFormat(fontPath, 18, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			value.alpha = (i == 0) ? 1 : 0.6;
 			add(value);
@@ -154,17 +133,17 @@ class FPSCounterSettingsState extends MusicBeatState
 		rightBg1.visible = true;
 		add(rightBg1);
 
-		var rightBg2:FlxSprite = new FlxSprite(750, 160).makeGraphic(FlxG.width - 780, 540, FlxColor.BLACK);
+		var rightBg2:FlxSprite = new FlxSprite(750, 160).makeGraphic(FlxG.width - 780, 380, FlxColor.BLACK);
 		rightBg2.alpha = 0.4;
 		rightBg2.visible = true;
 		add(rightBg2);
 
-		previewBg = new FlxSprite(0, 0).makeGraphic(0, 0, ClientPrefs.data.fpsBgColor);
-		previewBg.alpha = ClientPrefs.data.fpsBgOpacity;
+		previewBg = new FlxSprite(0, 0).makeGraphic(0, 0, FlxColor.BLACK);
+		previewBg.alpha = 0.8;
 		add(previewBg);
 
-		previewText = new FlxText(0, 0, 0, "", 20);
-		previewText.setFormat(Paths.font("vcr.ttf"), 20, ClientPrefs.data.fpsColor);
+		previewText = new FlxText(0, 0, 0, "", 14);
+		previewText.setFormat("_sans", 14, ClientPrefs.data.simpleInfoColor);
 		add(previewText);
 		updatePreview();
 
@@ -272,29 +251,12 @@ class FPSCounterSettingsState extends MusicBeatState
 	{
 		switch(index)
 		{
-			case 0: return "#" + StringTools.hex(ClientPrefs.data.fpsColor, 6);
-			case 1: return "#" + StringTools.hex(ClientPrefs.data.fpsBgColor, 6);
-			case 2: return Std.int(ClientPrefs.data.fpsOpacity * 100) + "%";
-			case 3: return Std.int(ClientPrefs.data.fpsBgOpacity * 100) + "%";
-			case 4: return Std.string(ClientPrefs.data.fpsFontSize);
-			case 5: return Std.string(ClientPrefs.data.fpsBgPadding);
-			case 6: return ClientPrefs.data.fpsShowFPS ? "ON" : "OFF";
-			case 7: return ClientPrefs.data.fpsShowDelay ? "ON" : "OFF";
-			case 8: return ClientPrefs.data.fpsShowRAM ? "ON" : "OFF";
-			case 9: return ClientPrefs.data.fpsShowMemPeak ? "ON" : "OFF";
-			case 10: return ClientPrefs.data.fpsShowObjects ? "ON" : "OFF";
-			case 11: return ClientPrefs.data.fpsForceMB ? "ON" : "OFF";
-			case 12: return ClientPrefs.data.fpsBgEnabled ? "ON" : "OFF";
-			case 13: return ClientPrefs.data.fpsPosition;
-			case 14: return Std.string(ClientPrefs.data.fpsSpacing);
-			case 15: return ClientPrefs.data.exgameversion ? "ON" : "OFF";
-			case 16: return ClientPrefs.data.showHaxelibs ? "ON" : "OFF";
-			case 17: return ClientPrefs.data.showRunningOS ? "ON" : "OFF";
-			case 18: return ClientPrefs.data.fpsShowPlatform ? "ON" : "OFF";
-			case 19: return ClientPrefs.data.fpsShowOSVersion ? "ON" : "OFF";
-			case 20: return ClientPrefs.data.fpsShowResolution ? "ON" : "OFF";
-			case 21: return ClientPrefs.data.fpsShowRefreshRate ? "ON" : "OFF";
-			case 22: return ClientPrefs.data.fpsLayer;
+			case 0: return "#" + StringTools.hex(ClientPrefs.data.simpleInfoColor, 6);
+			case 1: return Std.string(ClientPrefs.data.simpleInfoFontSize);
+			case 2: return ClientPrefs.data.simpleInfoShowFPS ? "ON" : "OFF";
+			case 3: return ClientPrefs.data.simpleInfoShowMem ? "ON" : "OFF";
+			case 4: return ClientPrefs.data.simpleInfoShowVersion ? "ON" : "OFF";
+			case 5: return ClientPrefs.data.fpsLayer;
 		}
 		return "";
 	}
@@ -303,35 +265,27 @@ class FPSCounterSettingsState extends MusicBeatState
 	{
 		var textLines:Array<String> = [];
 		
-		if(ClientPrefs.data.fpsShowFPS) textLines.push("FPS: 60");
-		if(ClientPrefs.data.fpsShowDelay) textLines.push("Delay: 0.0ms");
-		if(ClientPrefs.data.fpsShowRAM) {
-			if(ClientPrefs.data.fpsForceMB) textLines.push("RAM: 2048MB");
-			else textLines.push("RAM: 2GB");
+		if(ClientPrefs.data.simpleInfoShowFPS) textLines.push("60 fps");
+		if(ClientPrefs.data.simpleInfoShowMem) {
+			textLines.push("175.87MB / 234.72MB");
 		}
-		if(ClientPrefs.data.fpsShowMemPeak) {
-			if(ClientPrefs.data.fpsForceMB) textLines.push("Mem Peak: 3072MB");
-			else textLines.push("Mem Peak: 3GB");
-		}
-		if(ClientPrefs.data.fpsShowObjects) textLines.push("Objects: 42");
+		if(ClientPrefs.data.simpleInfoShowVersion) textLines.push("v1.0.0");
 
 		var text = textLines.join("\n");
 
 		previewText.text = text;
-		previewText.color = ClientPrefs.data.fpsColor;
-		previewText.size = ClientPrefs.data.fpsFontSize;
-		previewText.alpha = ClientPrefs.data.fpsOpacity;
+		previewText.color = ClientPrefs.data.simpleInfoColor;
+		previewText.size = ClientPrefs.data.simpleInfoFontSize;
 
-		var padding = ClientPrefs.data.fpsBgPadding;
-		previewBg.makeGraphic(Std.int(previewText.width + padding * 2), Std.int(previewText.height + padding * 2), ClientPrefs.data.fpsBgColor);
-		previewBg.alpha = ClientPrefs.data.fpsBgEnabled ? ClientPrefs.data.fpsBgOpacity : 0.2;
+		var padding = 10;
+		previewBg.makeGraphic(Std.int(previewText.width + padding * 2), Std.int(previewText.height + padding * 2), FlxColor.BLACK);
 		previewBg.setPosition(800 - padding, 200 - padding);
 		previewText.setPosition(800, 200);
 	}
 
 	private function updateColorPickerUI():Void
 	{
-		var color:FlxColor = currentColorType == "text" ? ClientPrefs.data.fpsColor : ClientPrefs.data.fpsBgColor;
+		var color:FlxColor = ClientPrefs.data.simpleInfoColor;
 
 		alphabetR.text = Std.string(color.red);
 		alphabetG.text = Std.string(color.green);
@@ -456,7 +410,8 @@ class FPSCounterSettingsState extends MusicBeatState
 			_activeTweens.push(tweenB);
 			_activeTweens.push(tweenHex);
 			
-			new FlxTimer().start(0.4, function(_) {
+			new FlxTimer().start(0.4, function(_)
+			{
 				alphabetR.visible = false;
 				alphabetG.visible = false;
 				alphabetB.visible = false;
@@ -473,7 +428,7 @@ class FPSCounterSettingsState extends MusicBeatState
 
 		if(visible)
 		{
-			_storedColor = currentColorType == "text" ? ClientPrefs.data.fpsColor : ClientPrefs.data.fpsBgColor;
+			_storedColor = ClientPrefs.data.simpleInfoColor;
 			updateColorPickerUI();
 		}
 	}
@@ -502,41 +457,23 @@ class FPSCounterSettingsState extends MusicBeatState
 
 			switch(opt.type)
 			{
-				case "percent":
-					if(curSelected == 2)
-					{
-						ClientPrefs.data.fpsOpacity = FlxMath.bound(ClientPrefs.data.fpsOpacity + change * 0.05, 0, 1);
-					}
-					else if(curSelected == 3)
-					{
-						ClientPrefs.data.fpsBgOpacity = FlxMath.bound(ClientPrefs.data.fpsBgOpacity + change * 0.05, 0, 1);
-					}
 				case "int":
-					if (curSelected == 4)
+					if(curSelected == 1)
 					{
-						ClientPrefs.data.fpsFontSize = Std.int(FlxMath.bound(ClientPrefs.data.fpsFontSize + change, 8, 48));
-					}
-					else if (curSelected == 5)
-					{
-						ClientPrefs.data.fpsBgPadding = Std.int(FlxMath.bound(ClientPrefs.data.fpsBgPadding + change, 0, 30));
-					}
-					else if (curSelected == 14)
-					{
-						ClientPrefs.data.fpsSpacing = Std.int(FlxMath.bound(ClientPrefs.data.fpsSpacing + change * 5, 0, 200));
+						ClientPrefs.data.simpleInfoFontSize = Std.int(FlxMath.bound(ClientPrefs.data.simpleInfoFontSize + change, 8, 24));
 					}
 			}
 
 			optionValues[curSelected].text = getCurrentValue(curSelected);
 			updatePreview();
-			updateFPSCounter();
+			updateSimpleInfoDisplay();
 			FlxG.sound.play(Paths.sound('scrollMenu'));
 		}
 
 		if (controls.ACCEPT)
 		{
-			if (curSelected == 0 || curSelected == 1)
+			if (curSelected == 0)
 			{
-				currentColorType = curSelected == 0 ? "text" : "bg";
 				setColorPickerVisible(true);
 				FlxG.sound.play(Paths.sound('scrollMenu'));
 			}
@@ -545,14 +482,7 @@ class FPSCounterSettingsState extends MusicBeatState
 				toggleBoolOption(curSelected);
 				optionValues[curSelected].text = getCurrentValue(curSelected);
 				updatePreview();
-				updateFPSCounter();
-				FlxG.sound.play(Paths.sound('scrollMenu'));
-			}
-			else if (curSelected == 13)
-			{
-				cycleFPSPosition();
-				optionValues[curSelected].text = getCurrentValue(curSelected);
-				updateFPSCounter();
+				updateSimpleInfoDisplay();
 				FlxG.sound.play(Paths.sound('scrollMenu'));
 			}
 			else if (options[curSelected].type == "fps_layer")
@@ -564,12 +494,14 @@ class FPSCounterSettingsState extends MusicBeatState
 		}
 	}
 
-	private function cycleFPSPosition():Void
+	private function toggleBoolOption(index:Int):Void
 	{
-		var positions = ["TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT"];
-		var currentIndex = positions.indexOf(ClientPrefs.data.fpsPosition);
-		var newIndex = (currentIndex + 1) % positions.length;
-		ClientPrefs.data.fpsPosition = positions[newIndex];
+		switch(index)
+		{
+			case 2: ClientPrefs.data.simpleInfoShowFPS = !ClientPrefs.data.simpleInfoShowFPS;
+			case 3: ClientPrefs.data.simpleInfoShowMem = !ClientPrefs.data.simpleInfoShowMem;
+			case 4: ClientPrefs.data.simpleInfoShowVersion = !ClientPrefs.data.simpleInfoShowVersion;
+		}
 	}
 
 	private function cycleFPSLayer():Void
@@ -581,67 +513,26 @@ class FPSCounterSettingsState extends MusicBeatState
 		Main.updateFPSLayer();
 	}
 
-	private function toggleBoolOption(index:Int):Void
+	private function updateSimpleInfoDisplay():Void
 	{
-		switch(index)
-		{
-			case 6: ClientPrefs.data.fpsShowFPS = !ClientPrefs.data.fpsShowFPS;
-			case 7: ClientPrefs.data.fpsShowDelay = !ClientPrefs.data.fpsShowDelay;
-			case 8: ClientPrefs.data.fpsShowRAM = !ClientPrefs.data.fpsShowRAM;
-			case 9: ClientPrefs.data.fpsShowMemPeak = !ClientPrefs.data.fpsShowMemPeak;
-			case 10: ClientPrefs.data.fpsShowObjects = !ClientPrefs.data.fpsShowObjects;
-			case 11: ClientPrefs.data.fpsForceMB = !ClientPrefs.data.fpsForceMB;
-			case 12: ClientPrefs.data.fpsBgEnabled = !ClientPrefs.data.fpsBgEnabled;
-			case 15: ClientPrefs.data.exgameversion = !ClientPrefs.data.exgameversion;
-			case 16: ClientPrefs.data.showHaxelibs = !ClientPrefs.data.showHaxelibs;
-			case 17: ClientPrefs.data.showRunningOS = !ClientPrefs.data.showRunningOS;
-			case 18: ClientPrefs.data.fpsShowPlatform = !ClientPrefs.data.fpsShowPlatform;
-			case 19: ClientPrefs.data.fpsShowOSVersion = !ClientPrefs.data.fpsShowOSVersion;
-			case 20: ClientPrefs.data.fpsShowResolution = !ClientPrefs.data.fpsShowResolution;
-			case 21: ClientPrefs.data.fpsShowRefreshRate = !ClientPrefs.data.fpsShowRefreshRate;
-		}
-	}
-
-	private function updateFPSCounter():Void
-	{
-		if(Main.fpsVar != null)
-		{
-			Main.updateFPSLayer();
-		}
+		Main.updateFPSLayer();
 	}
 
 	private function resetOptionToDefault(index:Int):Void
 	{
 		switch(index)
 		{
-			case 0: ClientPrefs.data.fpsColor = 0xFFE6CAFF;
-			case 1: ClientPrefs.data.fpsBgColor = 0xFF000000;
-			case 2: ClientPrefs.data.fpsOpacity = 1.0;
-			case 3: ClientPrefs.data.fpsBgOpacity = 0.5;
-			case 4: ClientPrefs.data.fpsFontSize = 14;
-			case 5: ClientPrefs.data.fpsBgPadding = 5;
-			case 6: ClientPrefs.data.fpsShowFPS = true;
-			case 7: ClientPrefs.data.fpsShowDelay = true;
-			case 8: ClientPrefs.data.fpsShowRAM = true;
-			case 9: ClientPrefs.data.fpsShowMemPeak = true;
-			case 10: ClientPrefs.data.fpsShowObjects = true;
-			case 11: ClientPrefs.data.fpsForceMB = false;
-			case 12: ClientPrefs.data.fpsBgEnabled = false;
-			case 13: ClientPrefs.data.fpsPosition = "TOP_LEFT";
-			case 14: ClientPrefs.data.fpsSpacing = 10;
-			case 15: ClientPrefs.data.exgameversion = false;
-			case 16: ClientPrefs.data.showHaxelibs = false;
-			case 17: ClientPrefs.data.showRunningOS = false;
-			case 18: ClientPrefs.data.fpsShowPlatform = false;
-			case 19: ClientPrefs.data.fpsShowOSVersion = false;
-			case 20: ClientPrefs.data.fpsShowResolution = false;
-			case 21: ClientPrefs.data.fpsShowRefreshRate = false;
-			case 22: ClientPrefs.data.fpsLayer = "Stage";
+			case 0: ClientPrefs.data.simpleInfoColor = 0x000000;
+			case 1: ClientPrefs.data.simpleInfoFontSize = 12;
+			case 2: ClientPrefs.data.simpleInfoShowFPS = true;
+			case 3: ClientPrefs.data.simpleInfoShowMem = true;
+			case 4: ClientPrefs.data.simpleInfoShowVersion = false;
+			case 5: ClientPrefs.data.fpsLayer = "Stage";
 		}
 		
 		optionValues[index].text = getCurrentValue(index);
 		updatePreview();
-		updateFPSCounter();
+		updateSimpleInfoDisplay();
 	}
 
 	private function updateSelection():Void
@@ -715,17 +606,10 @@ class FPSCounterSettingsState extends MusicBeatState
 		{
 			if(onColorPicker)
 			{
-				if(currentColorType == "text")
-				{
-					ClientPrefs.data.fpsColor = 0xFFE6CAFF;
-				}
-				else
-				{
-					ClientPrefs.data.fpsBgColor = 0xFF000000;
-				}
+				ClientPrefs.data.simpleInfoColor = 0x000000;
 				updateColorPickerUI();
 				updatePreview();
-				updateFPSCounter();
+				updateSimpleInfoDisplay();
 				updateOptionValues();
 				FlxG.sound.play(Paths.sound('scrollMenu'));
 			}
@@ -814,13 +698,12 @@ class FPSCounterSettingsState extends MusicBeatState
 				var color:Null<FlxColor> = FlxColor.fromString('#' + newColor);
 				if(color != null)
 				{
-					if(currentColorType == "text") ClientPrefs.data.fpsColor = color;
-					else ClientPrefs.data.fpsBgColor = color;
+					ClientPrefs.data.simpleInfoColor = color;
 
 					_storedColor = color;
 					updateColorPickerUI();
 					updatePreview();
-					updateFPSCounter();
+					updateSimpleInfoDisplay();
 					updateOptionValues();
 				}
 
@@ -866,7 +749,7 @@ class FPSCounterSettingsState extends MusicBeatState
 				copyButton.alpha = 1;
 				if(generalPressed)
 				{
-					var color = currentColorType == "text" ? ClientPrefs.data.fpsColor : ClientPrefs.data.fpsBgColor;
+					var color = ClientPrefs.data.simpleInfoColor;
 					Clipboard.text = color.toHexString(false, false);
 					FlxG.sound.play(Paths.sound('scrollMenu'));
 				}
@@ -882,13 +765,12 @@ class FPSCounterSettingsState extends MusicBeatState
 
 					if(newColor != null && formattedText.length == 6)
 					{
-						if(currentColorType == "text") ClientPrefs.data.fpsColor = newColor;
-						else ClientPrefs.data.fpsBgColor = newColor;
+						ClientPrefs.data.simpleInfoColor = newColor;
 
 						_storedColor = newColor;
 						updateColorPickerUI();
 						updatePreview();
-						updateFPSCounter();
+						updateSimpleInfoDisplay();
 						updateOptionValues();
 						FlxG.sound.play(Paths.sound('scrollMenu'));
 					}
@@ -904,12 +786,12 @@ class FPSCounterSettingsState extends MusicBeatState
 				hexTypeNum = -1;
 				if(pointerOverlaps(colorWheel))
 				{
-					_storedColor = currentColorType == "text" ? ClientPrefs.data.fpsColor : ClientPrefs.data.fpsBgColor;
+					_storedColor = ClientPrefs.data.simpleInfoColor;
 					holdingOnObj = colorWheel;
 				}
 				else if(pointerOverlaps(colorGradient))
 				{
-					_storedColor = currentColorType == "text" ? ClientPrefs.data.fpsColor : ClientPrefs.data.fpsBgColor;
+					_storedColor = ClientPrefs.data.simpleInfoColor;
 					holdingOnObj = colorGradient;
 				}
 				else if(pointerOverlaps(colorPalette))
@@ -920,28 +802,14 @@ class FPSCounterSettingsState extends MusicBeatState
 					var newColor = FlxColor.fromRGB((newColorInt >> 16) & 0xFF, (newColorInt >> 8) & 0xFF, newColorInt & 0xFF);
 					newColor.alpha = (newColorInt >> 24) & 0xFF;
 
-					if(currentColorType == "text") ClientPrefs.data.fpsColor = newColor;
-					else ClientPrefs.data.fpsBgColor = newColor;
+					ClientPrefs.data.simpleInfoColor = newColor;
 
 					_storedColor = newColor;
 					updateColorPickerUI();
 					updatePreview();
-					updateFPSCounter();
+					updateSimpleInfoDisplay();
 					updateOptionValues();
 					FlxG.sound.play(Paths.sound('scrollMenu'));
-				}
-				else if(pointerY() >= alphabetHex.y && pointerY() < alphabetHex.y + alphabetHex.height &&
-						Math.abs(pointerX() - 980) <= 84)
-				{
-					hexTypeNum = 0;
-					for(letter in alphabetHex.letters)
-					{
-						if(letter.x - letter.offset.x + letter.width <= pointerX()) hexTypeNum++;
-						else break;
-					}
-					if(hexTypeNum > 5) hexTypeNum = 5;
-					hexTypeLine.visible = true;
-					centerHexTypeLine();
 				}
 				else holdingOnObj = null;
 			}
@@ -951,10 +819,10 @@ class FPSCounterSettingsState extends MusicBeatState
 				if (FlxG.mouse.justReleased || (controls.controllerMode && !controls.ACCEPT))
 				{
 					holdingOnObj = null;
-					_storedColor = currentColorType == "text" ? ClientPrefs.data.fpsColor : ClientPrefs.data.fpsBgColor;
+					_storedColor = ClientPrefs.data.simpleInfoColor;
 					updateColorPickerUI();
 					updatePreview();
-					updateFPSCounter();
+					updateSimpleInfoDisplay();
 					updateOptionValues();
 					FlxG.sound.play(Paths.sound('scrollMenu'));
 				}
@@ -963,23 +831,21 @@ class FPSCounterSettingsState extends MusicBeatState
 					if (holdingOnObj == colorGradient)
 					{
 						var newBrightness = 1 - FlxMath.bound((pointerY() - colorGradient.y) / colorGradient.height, 0, 1);
-						_storedColor.alpha = 1;
+						_storedColor.alpha = 255;
 						if(_storedColor.brightness == 0)
 						{
 							var color = FlxColor.fromRGBFloat(newBrightness, newBrightness, newBrightness);
-							if(currentColorType == "text") ClientPrefs.data.fpsColor = color;
-							else ClientPrefs.data.fpsBgColor = color;
+							ClientPrefs.data.simpleInfoColor = color;
 						}
 						else
 						{
 							var color = FlxColor.fromHSB(_storedColor.hue, _storedColor.saturation, newBrightness);
-							if(currentColorType == "text") ClientPrefs.data.fpsColor = color;
-							else ClientPrefs.data.fpsBgColor = color;
+							ClientPrefs.data.simpleInfoColor = color;
 						}
 
 						updateColorPickerUI();
 						updatePreview();
-						updateFPSCounter();
+						updateSimpleInfoDisplay();
 						updateOptionValues();
 					}
 					else if (holdingOnObj == colorWheel)
@@ -992,19 +858,17 @@ class FPSCounterSettingsState extends MusicBeatState
 						if(sat != 0)
 						{
 							var color = FlxColor.fromHSB(hue, sat, _storedColor.brightness);
-							if(currentColorType == "text") ClientPrefs.data.fpsColor = color;
-							else ClientPrefs.data.fpsBgColor = color;
+							ClientPrefs.data.simpleInfoColor = color;
 						}
 						else
 						{
 							var color = FlxColor.fromRGBFloat(_storedColor.brightness, _storedColor.brightness, _storedColor.brightness);
-							if(currentColorType == "text") ClientPrefs.data.fpsColor = color;
-							else ClientPrefs.data.fpsBgColor = color;
+							ClientPrefs.data.simpleInfoColor = color;
 						}
 
 						updateColorPickerUI();
 						updatePreview();
-						updateFPSCounter();
+						updateSimpleInfoDisplay();
 						updateOptionValues();
 					}
 				}
