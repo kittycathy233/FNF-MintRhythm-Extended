@@ -96,6 +96,15 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.onChange = onChangeHitsoundVolume;
 
 		var option:Option = new Option(
+			"Hitsound",
+			Language.get("hitsound_desc"),
+			'hitsound',
+			STRING,
+			CoolUtil.coolTextFile(Paths.txt('hitsoundList')));
+		addOption(option);
+		option.onChange = onChangeHitsound;
+
+		var option:Option = new Option(
 			"Rating Offset",
 			Language.get("ratingoffset_desc"),
 			'ratingOffset',
@@ -173,7 +182,19 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 	}
 
 	function onChangeHitsoundVolume()
-		FlxG.sound.play(Paths.sound('hitsound'), ClientPrefs.data.hitsoundVolume);
+	{
+		var useSound:String = 'hitsound';
+		if (ClientPrefs.data.hitsound != 'none' && ClientPrefs.data.hitsound != null && ClientPrefs.data.hitsound.length > 0)
+			useSound = 'hitsounds/' + ClientPrefs.data.hitsound;
+		FlxG.sound.play(Paths.sound(useSound), ClientPrefs.data.hitsoundVolume);
+	}
+
+	function onChangeHitsound()
+	{
+		var soundName:String = ClientPrefs.data.hitsound;
+		if (soundName != null && soundName != 'none')
+			FlxG.sound.play(Paths.sound('hitsounds/' + soundName), 1.0);
+	}
 
 	function onChangeAutoPause()
 		FlxG.autoPause = ClientPrefs.data.autoPause;

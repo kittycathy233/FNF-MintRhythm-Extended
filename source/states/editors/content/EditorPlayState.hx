@@ -92,6 +92,8 @@ class EditorPlayState extends MusicBeatSubstate
 		cachePopUpScore();
 		guitarHeroSustains = ClientPrefs.data.guitarHeroSustains;
 		if(ClientPrefs.data.hitsoundVolume > 0) Paths.sound('hitsound');
+		if (ClientPrefs.data.hitsound != 'none' && ClientPrefs.data.hitsound != null && ClientPrefs.data.hitsound.length > 0)
+			Paths.sound('hitsounds/' + ClientPrefs.data.hitsound);
 
 		/* setting up Editor PlayState stuff */
 		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
@@ -876,7 +878,13 @@ class EditorPlayState extends MusicBeatSubstate
 
 		note.wasGoodHit = true;
 		if (note.hitsoundVolume > 0 && !note.hitsoundDisabled)
-			FlxG.sound.play(Paths.sound(note.hitsound), note.hitsoundVolume);
+		{
+			var useSound:String = note.hitsound;
+			if (ClientPrefs.data.hitsound != 'none' && ClientPrefs.data.hitsound != null && ClientPrefs.data.hitsound.length > 0
+				&& note.hitsound == 'hitsound')
+				useSound = 'hitsounds/' + ClientPrefs.data.hitsound;
+			FlxG.sound.play(Paths.sound(useSound), note.hitsoundVolume);
+		}
 
 		if(note.hitCausesMiss) {
 			noteMiss(note);

@@ -1173,6 +1173,8 @@ isReplaying = false;
 
 		//PRECACHING THINGS THAT GET USED FREQUENTLY TO AVOID LAGSPIKES
 		if(ClientPrefs.data.hitsoundVolume > 0) Paths.sound('hitsound');
+		if (ClientPrefs.data.hitsound != 'none' && ClientPrefs.data.hitsound != null && ClientPrefs.data.hitsound.length > 0)
+			Paths.sound('hitsounds/' + ClientPrefs.data.hitsound);
 		if(!ClientPrefs.data.ghostTapping) for (i in 1...4) Paths.sound('missnote$i');
 		Paths.image('alphabet');
 
@@ -4689,7 +4691,13 @@ isReplaying = false;
 		note.wasGoodHit = true;
 
 		if (note.hitsoundVolume > 0 && !note.hitsoundDisabled)
-			FlxG.sound.play(Paths.sound(note.hitsound), note.hitsoundVolume);
+		{
+			var useSound:String = note.hitsound;
+			if (ClientPrefs.data.hitsound != 'none' && ClientPrefs.data.hitsound != null && ClientPrefs.data.hitsound.length > 0
+				&& note.hitsound == 'hitsound')
+				useSound = 'hitsounds/' + ClientPrefs.data.hitsound;
+			FlxG.sound.play(Paths.sound(useSound), note.hitsoundVolume);
+		}
 
 		if(!note.hitCausesMiss) //Common notes
 		{
