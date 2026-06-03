@@ -84,10 +84,12 @@ import states.TitleState;
 
 	public var comboOffset:Array<Int> = [0, 0, 0, 0, 0, 0];
 	public var ratingOffset:Int = 0;
-	public var sickWindow:Float = 42.40;
-	public var goodWindow:Float = 87.50;
-	public var badWindow:Float = 124.60;
-	public var safeFrames:Float = 9.2;
+	public var hitWindowPreset:String = 'Psych / Kade';
+	public var perfectWindow:Float = 23.00;
+	public var sickWindow:Float = 45.00;
+	public var goodWindow:Float = 90.00;
+	public var badWindow:Float = 135.00;
+	public var safeFrames:Float = 10.0;
 	public var guitarHeroSustains:Bool = true;
 	public var discordRPC:Bool = true;
 	public var loadingScreen:Bool = true;
@@ -96,7 +98,6 @@ import states.TitleState;
 
 	//杂七杂八的特性
 	public var fpsCounterSize:Int = 14;
-	public var perfectWindow:Float = 16.50;
 	public var rainbowfpscounter:Bool = false;
 	public var exgameversion:Bool = true;
 	public var exratingDisplay:Bool = true;

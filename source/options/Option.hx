@@ -41,6 +41,7 @@ class Option
 
 	public var defaultKeys:Keybind = null;
 	public var keys:Keybind = null;
+	public var disabled:Bool = false;
 
 	public function new(name:String, description:String = '', variable:String, type:OptionType = BOOL, ?options:Array<String> = null, ?translation:String = null)
 	{

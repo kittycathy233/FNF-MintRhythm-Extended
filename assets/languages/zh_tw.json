@@ -272,6 +272,8 @@
     "goodwindow_desc": "調整「Good」評分的時間容許範圍（毫秒）",
     "badwindow_name": "Bad判定視窗",
     "badwindow_desc": "調整「Bad」評分的時間容許範圍（毫秒）",
+    "hitwindowpreset_name": "判定視窗預設",
+    "hitwindowpreset_desc": "一鍵套用預設的判定視窗時間\nLeather / Psych / Funkin'",
     "safeframes_name": "安全幀數",
     "safeframes_desc": "調整提前/延後判定音符的幀數",
     "flashing_warning_text": "注意！\n本引擎包含相當多的閃爍光效！\n你要啟用這些特效嗎？",

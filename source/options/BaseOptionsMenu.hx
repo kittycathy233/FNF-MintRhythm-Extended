@@ -107,6 +107,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 				var checkbox:CheckboxThingie = new CheckboxThingie(optionText.x - 105, optionText.y, Std.string(optionsArray[i].getValue()) == 'true');
 				checkbox.sprTracker = optionText;
 				checkbox.ID = i;
+				if (optionsArray[i].disabled) checkbox.alpha = 0.3;
 				checkboxGroup.add(checkbox);
 			}
 			else if (optionsArray[i].type != BUTTON)
@@ -118,6 +119,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 				valueText.sprTracker = optionText;
 				valueText.copyAlpha = true;
 				valueText.ID = i;
+				if (optionsArray[i].disabled) valueText.alpha = 0.3;
 				grpTexts.add(valueText);
 				optionsArray[i].child = valueText;
 			}
@@ -173,7 +175,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 				// 双击，什么都不做（交由右键或其它逻辑处理）
 			} else {
 				// 单击，BOOL类型切换
-				if (curOption != null && curOption.type == BOOL) {
+				if (curOption != null && curOption.type == BOOL && !curOption.disabled) {
 					// 检查鼠标是否点击在复选框区域内
 					var checkbox:CheckboxThingie = null;
 					for (cb in checkboxGroup) {
@@ -230,138 +232,147 @@ class BaseOptionsMenu extends MusicBeatSubstate
 
 		if(nextAccept <= 0)
 		{
-			switch(curOption.type)
+			if(curOption.disabled)
 			{
-				case BOOL:
-					if(controls.ACCEPT)
-					{
-						FlxG.sound.play(Paths.sound('scrollMenu'));
-						curOption.setValue((curOption.getValue() == true) ? false : true);
-						curOption.change();
-						reloadCheckboxes();
-					}
-
-				case KEYBIND:
-					if(controls.ACCEPT)
-					{
-						keybindManager.startBinding(curOption, function() {
-							reloadCheckboxes();
-						});
-						// Add UI elements to display
-						if (keybindManager.getOverlay() != null) add(keybindManager.getOverlay());
-						if (keybindManager.getTitle() != null) add(keybindManager.getTitle());
-						if (keybindManager.getInstructions() != null) add(keybindManager.getInstructions());
-					}
-
-				case BUTTON:
-					if(controls.ACCEPT)
-					{
-						FlxG.sound.play(Paths.sound('scrollMenu'));
-						curOption.change();
-					}
-
-				default:
-					if(controls.UI_LEFT || controls.UI_RIGHT)
-					{
-						var pressed = (controls.UI_LEFT_P || controls.UI_RIGHT_P);
-						if(holdTime > OptionsConfig.INPUT_COOLDOWN || pressed)
+				// 禁用的选项不允许修改
+			}
+			else
+			{
+				switch(curOption.type)
+				{
+					case BOOL:
+						if(controls.ACCEPT)
 						{
-							if(pressed)
-							{
-								var add:Dynamic = null;
-								if(curOption.type != STRING)
-									add = controls.UI_LEFT ? -curOption.changeValue : curOption.changeValue;
-
-								switch(curOption.type)
-								{
-									case INT, FLOAT, PERCENT:
-										holdValue = curOption.getValue() + add;
-										if(holdValue < curOption.minValue) holdValue = curOption.minValue;
-										else if (holdValue > curOption.maxValue) holdValue = curOption.maxValue;
-
-										if(curOption.type == INT)
-										{
-											holdValue = Math.round(holdValue);
-											curOption.setValue(holdValue);
-										}
-										else
-										{
-											holdValue = FlxMath.roundDecimal(holdValue, curOption.decimals);
-											curOption.setValue(holdValue);
-										}
-
-									case STRING:
-										var num:Int = curOption.curOption;
-										if(controls.UI_LEFT_P) --num;
-										else num++;
-
-										if(num < 0)
-											num = curOption.options.length - 1;
-										else if(num >= curOption.options.length)
-											num = 0;
-
-										curOption.curOption = num;
-										curOption.setValue(curOption.options[num]);
-
-									default:
-								}
-								updateTextFrom(curOption);
-								curOption.change();
-								FlxG.sound.play(Paths.sound('scrollMenu'));
-							}
-							else if(curOption.type != STRING)
-							{
-								holdValue += curOption.scrollSpeed * elapsed * (controls.UI_LEFT ? -1 : 1);
-								if(holdValue < curOption.minValue) holdValue = curOption.minValue;
-								else if (holdValue > curOption.maxValue) holdValue = curOption.maxValue;
-
-								switch(curOption.type)
-								{
-									case INT:
-										curOption.setValue(Math.round(holdValue));
-
-									case PERCENT:
-										curOption.setValue(FlxMath.roundDecimal(holdValue, curOption.decimals));
-
-									default:
-								}
-								updateTextFrom(curOption);
-								curOption.change();
-							}
+							FlxG.sound.play(Paths.sound('scrollMenu'));
+							curOption.setValue((curOption.getValue() == true) ? false : true);
+							curOption.change();
+							reloadCheckboxes();
 						}
 
-						if(curOption.type != STRING)
-							holdTime += elapsed;
-					}
-					else if(controls.UI_LEFT_R || controls.UI_RIGHT_R)
-					{
-						if(holdTime > OptionsConfig.INPUT_COOLDOWN) FlxG.sound.play(Paths.sound('scrollMenu'));
-						holdTime = 0;
-					}
+					case KEYBIND:
+						if(controls.ACCEPT)
+						{
+							keybindManager.startBinding(curOption, function() {
+								reloadCheckboxes();
+							});
+							if (keybindManager.getOverlay() != null) add(keybindManager.getOverlay());
+							if (keybindManager.getTitle() != null) add(keybindManager.getTitle());
+							if (keybindManager.getInstructions() != null) add(keybindManager.getInstructions());
+						}
+
+					case BUTTON:
+						if(controls.ACCEPT)
+						{
+							FlxG.sound.play(Paths.sound('scrollMenu'));
+							curOption.change();
+						}
+
+					default:
+						if(controls.UI_LEFT || controls.UI_RIGHT)
+						{
+							var pressed = (controls.UI_LEFT_P || controls.UI_RIGHT_P);
+							if(holdTime > OptionsConfig.INPUT_COOLDOWN || pressed)
+							{
+								if(pressed)
+								{
+									var add:Dynamic = null;
+									if(curOption.type != STRING)
+										add = controls.UI_LEFT ? -curOption.changeValue : curOption.changeValue;
+
+									switch(curOption.type)
+									{
+										case INT, FLOAT, PERCENT:
+											holdValue = curOption.getValue() + add;
+											if(holdValue < curOption.minValue) holdValue = curOption.minValue;
+											else if (holdValue > curOption.maxValue) holdValue = curOption.maxValue;
+
+											if(curOption.type == INT)
+											{
+												holdValue = Math.round(holdValue);
+												curOption.setValue(holdValue);
+											}
+											else
+											{
+												holdValue = FlxMath.roundDecimal(holdValue, curOption.decimals);
+												curOption.setValue(holdValue);
+											}
+
+										case STRING:
+											var num:Int = curOption.curOption;
+											if(controls.UI_LEFT_P) --num;
+											else num++;
+
+											if(num < 0)
+												num = curOption.options.length - 1;
+											else if(num >= curOption.options.length)
+												num = 0;
+
+											curOption.curOption = num;
+											curOption.setValue(curOption.options[num]);
+
+										default:
+									}
+									updateTextFrom(curOption);
+									curOption.change();
+									FlxG.sound.play(Paths.sound('scrollMenu'));
+								}
+								else if(curOption.type != STRING)
+								{
+									holdValue += curOption.scrollSpeed * elapsed * (controls.UI_LEFT ? -1 : 1);
+									if(holdValue < curOption.minValue) holdValue = curOption.minValue;
+									else if (holdValue > curOption.maxValue) holdValue = curOption.maxValue;
+
+									switch(curOption.type)
+									{
+										case INT:
+											curOption.setValue(Math.round(holdValue));
+
+										case PERCENT:
+											curOption.setValue(FlxMath.roundDecimal(holdValue, curOption.decimals));
+
+										default:
+									}
+									updateTextFrom(curOption);
+									curOption.change();
+								}
+							}
+
+							if(curOption.type != STRING)
+								holdTime += elapsed;
+						}
+						else if(controls.UI_LEFT_R || controls.UI_RIGHT_R)
+						{
+							if(holdTime > OptionsConfig.INPUT_COOLDOWN) FlxG.sound.play(Paths.sound('scrollMenu'));
+							holdTime = 0;
+						}
+				}
 			}
 
 			if(controls.RESET || touchPad.buttonC.justPressed)
 			{
 				var leOption:Option = optionsArray[curSelected];
-				if(leOption.type != KEYBIND)
+				if(!leOption.disabled)
 				{
-					leOption.setValue(leOption.defaultValue);
-					if(leOption.type != BOOL)
+					if(leOption.type != KEYBIND)
 					{
-						if(leOption.type == STRING) leOption.curOption = leOption.options.indexOf(leOption.getValue());
-						updateTextFrom(leOption);
+						leOption.setValue(leOption.defaultValue);
+						if(leOption.type != BOOL)
+						{
+							if(leOption.type == STRING) leOption.curOption = leOption.options.indexOf(leOption.getValue());
+							updateTextFrom(leOption);
+						}
 					}
-				}
-				else
-				{
-					leOption.setValue(!Controls.instance.controllerMode ? leOption.defaultKeys.keyboard : leOption.defaultKeys.gamepad);
-					if (keybindManager != null) {
-						keybindManager.updateBindDisplay(null, leOption, grpTexts);
+					else
+					{
+						leOption.setValue(!Controls.instance.controllerMode ? leOption.defaultKeys.keyboard : leOption.defaultKeys.gamepad);
+						if (keybindManager != null) {
+							keybindManager.updateBindDisplay(null, leOption, grpTexts);
+						}
 					}
+					leOption.change();
+					FlxG.sound.play(Paths.sound('cancelMenu'));
+					reloadCheckboxes();
 				}
-				leOption.change();
-				FlxG.sound.play(Paths.sound('cancelMenu'));
-				reloadCheckboxes();
 			}
 		}
 
@@ -399,11 +410,29 @@ class BaseOptionsMenu extends MusicBeatSubstate
 			item.targetY = num - curSelected;
 			item.alpha = 0.6;
 			if (item.targetY == 0) item.alpha = 1;
+			// 禁用选项淡化（即便选中状态也会变淡）
+			if (optionsArray[num].disabled)
+			{
+				if (item.targetY == 0) item.alpha = 0.55;
+				else item.alpha = 0.3;
+			}
 		}
 		for (text in grpTexts)
 		{
 			text.alpha = 0.6;
 			if(text.ID == curSelected) text.alpha = 1;
+			if (optionsArray[text.ID].disabled)
+			{
+				if (text.ID == curSelected) text.alpha = 0.55;
+				else text.alpha = 0.3;
+			}
+		}
+		for (checkbox in checkboxGroup)
+		{
+			if (optionsArray[checkbox.ID].disabled)
+				checkbox.alpha = 0.3;
+			else
+				checkbox.alpha = 1;
 		}
 
 		descBox.setPosition(descText.x - 10, descText.y - 10);

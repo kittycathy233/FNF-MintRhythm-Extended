@@ -116,58 +116,6 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		addOption(option);
 
 		var option:Option = new Option(
-			"Perfect!! Hit Window",
-			Language.get("perfectwindow_desc"),
-			'perfectWindow',
-			FLOAT);
-		option.displayFormat = '%vms';
-		option.scrollSpeed = 15;
-		option.minValue = 5;
-		option.maxValue = 45.0;
-		option.changeValue = 0.1;
-		option.onChange = function() adjustHitWindow('perfectWindow', ClientPrefs.data.perfectWindow);
-		addOption(option);
-
-		var option:Option = new Option(
-			"Sick! Hit Window",
-			Language.get("sickwindow_desc"),
-			'sickWindow',
-			FLOAT);
-		option.displayFormat = '%vms';
-		option.scrollSpeed = 15;
-		option.minValue = 15.0;
-		option.maxValue = 45.0;
-		option.changeValue = 0.1;
-		option.onChange = function() adjustHitWindow('sickWindow', ClientPrefs.data.sickWindow);
-		addOption(option);
-
-		var option:Option = new Option(
-			"Good Hit Window",
-			Language.get("goodwindow_desc"),
-			'goodWindow',
-			FLOAT);
-		option.displayFormat = '%vms';
-		option.scrollSpeed = 30;
-		option.minValue = 15.0;
-		option.maxValue = 90.0;
-		option.changeValue = 0.1;
-		option.onChange = function() adjustHitWindow('goodWindow', ClientPrefs.data.goodWindow);
-		addOption(option);
-
-		var option:Option = new Option(
-			"Bad Hit Window",
-			Language.get("badwindow_desc"),
-			'badWindow',
-			FLOAT);
-		option.displayFormat = '%vms';
-		option.scrollSpeed = 60;
-		option.minValue = 15.0;
-		option.maxValue = 135.0;
-		option.changeValue = 0.1;
-		option.onChange = function() adjustHitWindow('badWindow', ClientPrefs.data.badWindow);
-		addOption(option);
-
-		var option:Option = new Option(
 			"Safe Frames",
 			Language.get("safeframes_desc"),
 			'safeFrames',
@@ -178,8 +126,76 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.changeValue = 0.1;
 		addOption(option);
 
+		var hitWindowPresetOption:Option = new Option(
+			"Hit Window Preset",
+			Language.get("hitwindowpreset_desc"),
+			'hitWindowPreset',
+			STRING,
+			['Leather', 'Psych / Kade', 'Funkin\'', 'Custom']);
+		hitWindowPresetOption.onChange = onChangeHitWindowPreset;
+		addOption(hitWindowPresetOption);
+
+		var perfectWindowOption:Option = new Option(
+			"Perfect!! Hit Window",
+			Language.get("perfectwindow_desc"),
+			'perfectWindow',
+			FLOAT);
+		perfectWindowOption.displayFormat = '%vms';
+		perfectWindowOption.scrollSpeed = 15;
+		perfectWindowOption.minValue = 5;
+		perfectWindowOption.maxValue = 45.0;
+		perfectWindowOption.changeValue = 0.1;
+		perfectWindowOption.onChange = function() { adjustHitWindow('perfectWindow', ClientPrefs.data.perfectWindow); markPresetCustom(); };
+		addOption(perfectWindowOption);
+
+		var sickWindowOption:Option = new Option(
+			"Sick! Hit Window",
+			Language.get("sickwindow_desc"),
+			'sickWindow',
+			FLOAT);
+		sickWindowOption.displayFormat = '%vms';
+		sickWindowOption.scrollSpeed = 15;
+		sickWindowOption.minValue = 15.0;
+		sickWindowOption.maxValue = 75.0;
+		sickWindowOption.changeValue = 0.1;
+		sickWindowOption.onChange = function() { adjustHitWindow('sickWindow', ClientPrefs.data.sickWindow); markPresetCustom(); };
+		addOption(sickWindowOption);
+
+		var goodWindowOption:Option = new Option(
+			"Good Hit Window",
+			Language.get("goodwindow_desc"),
+			'goodWindow',
+			FLOAT);
+		goodWindowOption.displayFormat = '%vms';
+		goodWindowOption.scrollSpeed = 30;
+		goodWindowOption.minValue = 15.0;
+		goodWindowOption.maxValue = 130.0;
+		goodWindowOption.changeValue = 0.1;
+		goodWindowOption.onChange = function() { adjustHitWindow('goodWindow', ClientPrefs.data.goodWindow); markPresetCustom(); };
+		addOption(goodWindowOption);
+
+		var badWindowOption:Option = new Option(
+			"Bad Hit Window",
+			Language.get("badwindow_desc"),
+			'badWindow',
+			FLOAT);
+		badWindowOption.displayFormat = '%vms';
+		badWindowOption.scrollSpeed = 60;
+		badWindowOption.minValue = 15.0;
+		badWindowOption.maxValue = 150.0;
+		badWindowOption.changeValue = 0.1;
+		badWindowOption.onChange = function() { adjustHitWindow('badWindow', ClientPrefs.data.badWindow); markPresetCustom(); };
+		addOption(badWindowOption);
+
+		presetDependentOptions = [perfectWindowOption, sickWindowOption, goodWindowOption, badWindowOption];
+
 		super();
+
+		// 初始化完成后，根据当前预设刷新禁用状态
+		refreshPresetDisabledState();
 	}
+
+	var presetDependentOptions:Array<Option> = null;
 
 	function onChangeHitsoundVolume()
 	{
@@ -233,6 +249,60 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 					ClientPrefs.data.goodWindow = newValue;
 				}
 			default:
+		}
+	}
+
+	// 预设配置表 - 参考 Leather Engine timingPresets.txt
+	// 名称, perfect, sick, good, bad (单位: ms)
+	static var hitWindowPresets:Map<String, { perfectWindow:Float, sickWindow:Float, goodWindow:Float, badWindow:Float }> = [
+		'Leather'      => { perfectWindow: 25.00, sickWindow: 50.00, goodWindow: 70.00,  badWindow: 100.00 },
+		'Psych / Kade' => { perfectWindow: 23.00, sickWindow: 45.00, goodWindow: 90.00,  badWindow: 135.00 },
+		'Funkin\''        => { perfectWindow: 16.00, sickWindow: 33.00, goodWindow: 124.00, badWindow: 149.00 }
+	];
+
+	function onChangeHitWindowPreset()
+	{
+		var presetName:String = ClientPrefs.data.hitWindowPreset;
+
+		if (hitWindowPresets.exists(presetName))
+		{
+			var preset = hitWindowPresets.get(presetName);
+			ClientPrefs.data.perfectWindow = preset.perfectWindow;
+			ClientPrefs.data.sickWindow = preset.sickWindow;
+			ClientPrefs.data.goodWindow = preset.goodWindow;
+			ClientPrefs.data.badWindow = preset.badWindow;
+
+			// 立刻刷新下方 4 个窗口选项的显示文本（复制 BaseOptionsMenu.updateTextFrom 的逻辑）
+			for (opt in presetDependentOptions)
+			{
+				var val:Dynamic = opt.getValue();
+				opt.text = opt.displayFormat.replace('%v', Std.string(val)).replace('%d', Std.string(opt.defaultValue));
+			}
+		}
+
+		refreshPresetDisabledState();
+	}
+
+	// 根据预设切换: 非 Custom 状态下窗口滑块不可修改，Custom 状态下才解锁
+	function refreshPresetDisabledState()
+	{
+		var isCustom:Bool = ClientPrefs.data.hitWindowPreset == 'Custom';
+		for (opt in presetDependentOptions)
+		{
+			opt.disabled = !isCustom;
+		}
+
+		// 刷新视觉效果（改变 changeSelection 中的淡化逻辑依赖 curSelected）
+		changeSelection(0);
+	}
+
+	function markPresetCustom()
+	{
+		// 当用户手动调整单个窗口时，自动切换到 Custom
+		if (ClientPrefs.data.hitWindowPreset != 'Custom')
+		{
+			ClientPrefs.data.hitWindowPreset = 'Custom';
+			refreshPresetDisabledState();
 		}
 	}
 }

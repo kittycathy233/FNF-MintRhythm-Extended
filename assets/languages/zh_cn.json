@@ -302,6 +302,8 @@
     "goodwindow_desc": "调整「Good」判定的时间范围（毫秒）",
     "badwindow_name": "Bad判定窗口",
     "badwindow_desc": "调整「Bad」判定的时间范围（毫秒）",
+    "hitwindowpreset_name": "判定窗口预设",
+    "hitwindowpreset_desc": "一键套用预设的判定窗口时间\nLeather / Psych / Funkin'",
     "safeframes_name": "安全帧数",
     "safeframes_desc": "调整提前/延后判定音符的帧数",
     "flashing_warning_text": "注意！\n此引擎包含闪光效果！\n你要启用这些特效吗？\n提示：大部分模组修改此项实际上没有作用",
