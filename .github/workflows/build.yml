@@ -32,31 +32,31 @@ jobs:
     runs-on: ${{ inputs.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup Haxe
-        uses: krdlab/setup-haxe@master
+        uses: krdlab/setup-haxe@v1
         with:
           haxe-version: ${{ env.HAXE_VERSION }}
 
-      - name: Setup Android NDK
+      - name: Setup NDK
         if: inputs.name == 'Android'
         id: setup-ndk
-        uses: nttld/setup-ndk@main
+        uses: nttld/setup-ndk@v1
         with:
           ndk-version: r27d
           add-to-path: false
 
-      - name: Install libVLC
+      - name: Install VLC
         if: contains(inputs.name, 'Linux')
         run: sudo apt install libvlc-dev libvlccore-dev
 
       - name: Install Libraries
         run: ${{ inputs.setupCommand }}
 
-      - name: Configure Android
+      - name: Config Android
         if: inputs.name == 'Android'
         run: |
           haxelib run lime config ANDROID_SDK $ANDROID_HOME
@@ -78,8 +78,8 @@ jobs:
           mv ${{ env.PROJECT_NAME }}.app Payload
           zip -r ${{ env.PROJECT_NAME }}.ipa Payload
 
-      - name: Upload Artifact
-        uses: actions/upload-artifact@main
+      - name: Upload
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.artifactName }}
           path: ${{ inputs.artifactPath }}

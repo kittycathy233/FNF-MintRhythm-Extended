@@ -4,13 +4,13 @@ jobs:
   lock-closed-issues:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@main
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Lock closed issues
+      - name: Lock Issues
         run: |
           issues=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/issues?state=closed" | jq -r '.[] | .number')
           for issue in $issues; do
