@@ -41,7 +41,7 @@ jobs:
           fi
 
   build:
-    name: Build All
+    name: ${{ matrix.name }}
     needs: get-commit-hash
     strategy:
       matrix:
