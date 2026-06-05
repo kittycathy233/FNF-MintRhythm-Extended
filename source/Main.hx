@@ -489,6 +489,7 @@ class Main extends Sprite
 		// 更新窗口标题
 		updateWindowTitle();
 	}
+	#end
 
 	/**
 	 * 根据管理员权限更新窗口标题（支持Fake OS伪装）
@@ -506,18 +507,19 @@ class Main extends Sprite
 				var baseTitle:String = Application.current.meta.get('title');
 				if (baseTitle == null) baseTitle = "Kathy Engine";
 
+				#if (cpp && windows && !mobile)
 				if (isAdminCached)
 				{
 					Lib.current.stage.window.title = '$baseTitle (Administrator)';
 				}
 				else
+				#end
 				{
 					Lib.current.stage.window.title = baseTitle;
 				}
 			}
 		}
 	}
-	#end
 
 	/**
 	 * 根据 fpsLayer 设置调整 FPS 计数器图层的缩放和位置
