@@ -27,31 +27,21 @@ class Conductor
 	public static function judgeNote(arr:Array<Rating>, diff:Float=0):Rating
 	{
 		var data:Array<Rating> = arr;
-		
+
 		var absDiff:Float = Math.abs(diff);
 
 		// Perfect判定逻辑 (现在在第一位)
-		if (!ClientPrefs.data.rmPerfect && absDiff <= data[0].hitWindow) 
+		if (!ClientPrefs.data.rmPerfect && absDiff <= data[0].hitWindow)
 			return data[0];
 
 		// 确定起始索引
 		var startIndex:Int = !ClientPrefs.data.rmPerfect ? 1 : 0;
-		
-		// 使用插值来平滑判定
+
+		// 按时间差匹配判定等级
 		for(i in startIndex...data.length)
 		{
-			var window:Float = data[i].hitWindow;
-			if (absDiff <= window)
-			{
-				// 在判定窗口边缘使用插值,让判定更平滑
-				var nextWindow:Float = (i + 1 < data.length) ? data[i + 1].hitWindow : window;
-				var t:Float = (absDiff - window) / (nextWindow - window);
-				if(t > 0 && t < 0.2) // 只在边缘20%的范围内插值
-				{
-					return data[i]; 
-				}
+			if (absDiff <= data[i].hitWindow)
 				return data[i];
-			}
 		}
 		return data[data.length - 1];
 	}

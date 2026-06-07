@@ -73,6 +73,25 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 		option.onChange = onChangeVibration;
+
+		var mobileCompOption:Option = new Option(
+			"Mobile Judgment Compensation",
+			Language.get("mobilejudgmentcomp_desc", ["自动为触屏输入叠加判定偏移以补偿触屏延迟"]),
+			'mobileJudgmentCompensation',
+			BOOL);
+		addOption(mobileCompOption);
+
+		var mobileOffsetOption:Option = new Option(
+			"Mobile Judgment Offset",
+			Language.get("mobilejudgmentoffset_desc", ["移动端判定补偿量（毫秒）"]),
+			'mobileJudgmentOffset',
+			FLOAT);
+		mobileOffsetOption.displayFormat = '%vms';
+		mobileOffsetOption.scrollSpeed = 5;
+		mobileOffsetOption.minValue = 0.0;
+		mobileOffsetOption.maxValue = 30.0;
+		mobileOffsetOption.changeValue = 1.0;
+		addOption(mobileOffsetOption);
 		#end
 
 		var option:Option = new Option(
@@ -187,6 +206,25 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		badWindowOption.onChange = function() { adjustHitWindow('badWindow', ClientPrefs.data.badWindow); markPresetCustom(); };
 		addOption(badWindowOption);
 
+		var shitWindowOption:Option = new Option(
+			"Shit Hit Window",
+			Language.get("shitwindow_desc", ["判定兜底窗口，同时作为 safeZoneOffset 的固定值上限"]),
+			'shitWindow',
+			FLOAT);
+		shitWindowOption.displayFormat = '%vms';
+		shitWindowOption.scrollSpeed = 60;
+		shitWindowOption.minValue = 135.0;
+		shitWindowOption.maxValue = 250.0;
+		shitWindowOption.changeValue = 1.0;
+		addOption(shitWindowOption);
+
+		var useShitWindowOption:Option = new Option(
+			"Use Shit Window as SafeZone",
+			Language.get("useshitwindow_desc", ["启用后 safeZoneOffset 使用 Shit Window 固定值，而非通过 Safe Frames 计算"]),
+			'useShitWindowAsSafeZone',
+			BOOL);
+		addOption(useShitWindowOption);
+
 		presetDependentOptions = [perfectWindowOption, sickWindowOption, goodWindowOption, badWindowOption];
 
 		super();
@@ -247,6 +285,13 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 				ClientPrefs.data.badWindow = newValue;
 				if (newValue <= ClientPrefs.data.goodWindow) {
 					ClientPrefs.data.goodWindow = newValue;
+				} else if (newValue >= ClientPrefs.data.shitWindow) {
+					ClientPrefs.data.shitWindow = newValue + 10; // shitWindow 始终比 badWindow 大
+				}
+			case 'shitWindow':
+				ClientPrefs.data.shitWindow = newValue;
+				if (newValue <= ClientPrefs.data.badWindow) {
+					ClientPrefs.data.badWindow = newValue - 10; // badWindow 始终比 shitWindow 小
 				}
 			default:
 		}

@@ -20,6 +20,8 @@ import states.TitleState;
 	public var popUpRating:Bool = true;
 	//public var vsync:Bool = false;
 	public var gameOverVibration:Bool = false;
+	public var mobileJudgmentCompensation:Bool = FlxG.onMobile; // 移动端判定补偿（触屏自动加偏移）
+	public var mobileJudgmentOffset:Float = 10.0; // 移动端补偿量（ms）
 	public var fpsRework:Bool = false;
 	
 	public var downScroll:Bool = false;
@@ -89,6 +91,8 @@ import states.TitleState;
 	public var sickWindow:Float = 45.00;
 	public var goodWindow:Float = 90.00;
 	public var badWindow:Float = 135.00;
+	public var shitWindow:Float = 180.00; // Shit判定窗口（作为safeZoneOffset上限）
+	public var useShitWindowAsSafeZone:Bool = true; // 是否使用shitWindow替代safeFrames计算safeZoneOffset
 	public var safeFrames:Float = 10.0;
 	public var guitarHeroSustains:Bool = true;
 	public var discordRPC:Bool = true;

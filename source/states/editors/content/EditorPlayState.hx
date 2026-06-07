@@ -84,7 +84,10 @@ class EditorPlayState extends MusicBeatSubstate
 
 	override function create()
 	{
-		Conductor.safeZoneOffset = (ClientPrefs.data.safeFrames / 60) * 1000 * playbackRate;
+		if (ClientPrefs.data.useShitWindowAsSafeZone)
+			Conductor.safeZoneOffset = ClientPrefs.data.shitWindow * playbackRate;
+		else
+			Conductor.safeZoneOffset = (ClientPrefs.data.safeFrames / 60) * 1000 * playbackRate;
 		Conductor.songPosition -= startOffset;
 		startOffset = Conductor.crochet;
 		timerToStart = startOffset;

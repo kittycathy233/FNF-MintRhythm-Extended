@@ -1243,7 +1243,11 @@ isReplaying = false;
 		playbackRate = value;
 		FlxG.animationTimeScale = value;
 		Conductor.offset = Reflect.hasField(PlayState.SONG, 'offset') ? (PlayState.SONG.offset / value) : 0;
-		Conductor.safeZoneOffset = (ClientPrefs.data.safeFrames / 60) * 1000 * value;
+		// safeZoneOffset: 启用shitWindow模式时使用固定值，否则沿用safeFrames计算
+		if (ClientPrefs.data.useShitWindowAsSafeZone)
+			Conductor.safeZoneOffset = ClientPrefs.data.shitWindow * value;
+		else
+			Conductor.safeZoneOffset = (ClientPrefs.data.safeFrames / 60) * 1000 * value;
 		#if VIDEOS_ALLOWED
 		if(videoCutscene != null && videoCutscene.videoSprite != null) videoCutscene.videoSprite.bitmap.rate = value;
 		#end
@@ -3698,6 +3702,10 @@ isReplaying = false;
 		// 移除Math.abs()来允许显示负值
 		var noteDiff:Float = note.strumTime - Conductor.songPosition + ClientPrefs.data.ratingOffset;
 
+		// 移动端判定补偿：触屏输入存在额外延迟，自动叠加补偿偏移使判定更宽容
+		if (ClientPrefs.data.mobileJudgmentCompensation)
+			noteDiff += ClientPrefs.data.mobileJudgmentOffset;
+
 		// 在回放模式下，优先使用延迟覆盖值（最高优先级）
 		if(isReplaying && currentNoteDelayOverride != null)
 		{
@@ -3808,15 +3816,7 @@ isReplaying = false;
 		var theEXrating:FlxSprite = new FlxSprite();
 		var score:Int = 350;
 
-		//tryna do MS based judgment due to popular demand
-		var daRating:Rating = Conductor.judgeNote(ratingsData, noteDiff / playbackRate);
-
-		// 触发评分计数器动画
-		if (ratingCounterModule != null && !note.ratingDisabled)
-		{
-			ratingCounterModule.triggerHitAnimation(daRating.name);
-		}
-
+		// 复用上方已计算的 daRating（避免重复调用 judgeNote）
 		totalNotesHit += daRating.ratingMod;
 		note.ratingMod = daRating.ratingMod;
 		if(!note.ratingDisabled) daRating.hits++;
