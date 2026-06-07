@@ -1859,17 +1859,25 @@ isReplaying = false;
 		if (misses != null) {
 			if (misses == 0) {
 				missesRating = "FC ~ ";
-				if (ratingsData[3].hits < 10 && ratingsData[4].hits == 0)
+				
+				// 根据是否启用perfect来确定索引
+				var perfects:Int = !ClientPrefs.data.rmPerfect ? ratingsData[0].hits : 0;
+				var sicks:Int = !ClientPrefs.data.rmPerfect ? ratingsData[1].hits : ratingsData[0].hits;
+				var goods:Int = !ClientPrefs.data.rmPerfect ? ratingsData[2].hits : ratingsData[1].hits;
+				var bads:Int = !ClientPrefs.data.rmPerfect ? ratingsData[3].hits : ratingsData[2].hits;
+				var shits:Int = !ClientPrefs.data.rmPerfect ? ratingsData[4].hits : ratingsData[3].hits;
+				
+				if (bads < 10 && shits == 0)
 					missesRating = "SDB ~ ";
-				if (ratingsData[3].hits == 0 && ratingsData[4].hits == 0)
+				if (bads == 0 && shits == 0)
 					missesRating = "GFC ~ ";
-				if (ratingsData[2].hits < 10 && ratingsData[3].hits == 0 && ratingsData[4].hits == 0)
+				if (goods < 10 && bads == 0 && shits == 0)
 					missesRating = "SDG ~ ";
-				if (ratingsData[2].hits == 0 && ratingsData[3].hits == 0 && ratingsData[4].hits == 0)
+				if (goods == 0 && bads == 0 && shits == 0)
 					missesRating = "PFC ~ ";
-				if (ratingsData[1].hits < 10 && ratingsData[2].hits == 0 && ratingsData[3].hits == 0 && ratingsData[4].hits == 0)
+				if (sicks < 10 && goods == 0 && bads == 0 && shits == 0)
 					missesRating = "SDP ~ ";
-				if (ratingsData[1].hits == 0 && ratingsData[2].hits == 0 && ratingsData[3].hits == 0 && ratingsData[4].hits == 0)
+				if (sicks == 0 && goods == 0 && bads == 0 && shits == 0)
 					missesRating = "MFC ~ ";
 			}
 			if (misses > 0 && misses < 10)
