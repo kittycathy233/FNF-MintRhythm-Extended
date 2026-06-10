@@ -26,4 +26,5 @@ haxelib install sl-windows-api 1.1.0 --quiet
 haxelib install hxWindowColorMode 0.2.0 --quiet
 haxelib git funkin.vis https://github.com/FunkinCrew/funkVis 22b1ce089dd924f15cdc4632397ef3504d464e90 --quiet --skip-dependencies
 haxelib git grig.audio https://gitlab.com/haxe-grig/grig.audio.git cbf91e2180fd2e374924fe74844086aab7891666 --quiet
+haxelib git spine-haxe https://github.com/kittycathy332/spine-haxe-Archive.git  --quiet --skip-dependencies
 echo Finished!
