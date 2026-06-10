@@ -3702,8 +3702,9 @@ isReplaying = false;
 		// 移除Math.abs()来允许显示负值
 		var noteDiff:Float = note.strumTime - Conductor.songPosition + ClientPrefs.data.ratingOffset;
 
-		// 移动端判定补偿：触屏输入存在额外延迟，自动叠加补偿偏移使判定更宽容
-		if (ClientPrefs.data.mobileJudgmentCompensation)
+		// 移动端判定补偿：触屏输入倾向于出现额外正向(偏晚) 延迟，
+		// 因此仅在 noteDiff < 0 时叠加偏移，避免把本来就偏早的按键推得更提前。
+		if (ClientPrefs.data.mobileJudgmentCompensation && noteDiff < 0)
 			noteDiff += ClientPrefs.data.mobileJudgmentOffset;
 
 		// 在回放模式下，优先使用延迟覆盖值（最高优先级）
@@ -3734,7 +3735,7 @@ isReplaying = false;
 		
 		averageMs = allNotesMs/songHits;
 
-		// 存储打击数据供 HitGraph 使用
+		// 存储打击数据供 HitGraph 使用，同时一次性计算 daRating 给后续计分/动画/EX贴图 共用
 		var daRating:Rating = Conductor.judgeNote(ratingsData, noteDiff / playbackRate);
 		// 触发评分计数器动画
 		if (ratingCounterModule != null && !note.ratingDisabled)

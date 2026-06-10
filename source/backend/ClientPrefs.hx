@@ -93,6 +93,7 @@ import states.TitleState;
 	public var badWindow:Float = 135.00;
 	public var shitWindow:Float = 180.00; // Shit判定窗口（作为safeZoneOffset上限）
 	public var useShitWindowAsSafeZone:Bool = true; // 是否使用shitWindow替代safeFrames计算safeZoneOffset
+	public var softJudgmentEdge:Bool = false; // 是否在判定窗口边缘启用软边缘插值（避免卡边界时判定跳变）
 	public var safeFrames:Float = 10.0;
 	public var guitarHeroSustains:Bool = true;
 	public var discordRPC:Bool = true;
@@ -343,6 +344,21 @@ class ClientPrefs {
 		if (data.soundTrayStyle == null) {
 			data.soundTrayStyle = 'Flixel';
 		}
+
+		// 为 1.5.x 新增的移动端判定补偿字段填充默认值（兼容老存档升级）
+		// FlxG.save.data 里没有对应键时，Reflect.hasField 返回 false，此时保持类声明中的默认值。
+		if (!Reflect.hasField(FlxG.save.data, 'mobileJudgmentCompensation'))
+			data.mobileJudgmentCompensation = FlxG.onMobile;
+		if (!Reflect.hasField(FlxG.save.data, 'mobileJudgmentOffset') || data.mobileJudgmentOffset < 0)
+			data.mobileJudgmentOffset = 10.0;
+
+		// 为 1.5.x 新增的 Shit 窗口与 SafeZone 模式填充默认值（兼容老存档升级）
+		if (!Reflect.hasField(FlxG.save.data, 'shitWindow') || data.shitWindow <= 0)
+			data.shitWindow = 180.0;
+		if (!Reflect.hasField(FlxG.save.data, 'useShitWindowAsSafeZone'))
+			data.useShitWindowAsSafeZone = true;
+		if (!Reflect.hasField(FlxG.save.data, 'softJudgmentEdge'))
+			data.softJudgmentEdge = false;
 
 		// 确保 Fake OS 标题从预设中正确初始化
 		if (data.fakeWindowTitlePreset != null) {

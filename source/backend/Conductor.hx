@@ -38,10 +38,23 @@ class Conductor
 		var startIndex:Int = !ClientPrefs.data.rmPerfect ? 1 : 0;
 
 		// 按时间差匹配判定等级
+		var useSoftEdge:Bool = ClientPrefs.data.softJudgmentEdge;
 		for(i in startIndex...data.length)
 		{
-			if (absDiff <= data[i].hitWindow)
+			var window:Float = data[i].hitWindow;
+			if (absDiff <= window)
+			{
+				// 启用软边缘时，在当前窗口最外 20% 区域倾向"向下一级"判定，
+				// 以避免刚好卡边界时出现明显跳变。
+				if (useSoftEdge && i + 1 < data.length)
+				{
+					var nextWindow:Float = data[i + 1].hitWindow;
+					var t:Float = (absDiff - window) / (nextWindow - window);
+					if (t > -0.2 && t < 0.0) // 最外 20% 边缘带
+						return data[i + 1];
+				}
 				return data[i];
+			}
 		}
 		return data[data.length - 1];
 	}

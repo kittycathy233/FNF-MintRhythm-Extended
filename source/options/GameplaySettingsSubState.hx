@@ -201,7 +201,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		badWindowOption.displayFormat = '%vms';
 		badWindowOption.scrollSpeed = 60;
 		badWindowOption.minValue = 15.0;
-		badWindowOption.maxValue = 150.0;
+		badWindowOption.maxValue = 200.0;
 		badWindowOption.changeValue = 0.1;
 		badWindowOption.onChange = function() { adjustHitWindow('badWindow', ClientPrefs.data.badWindow); markPresetCustom(); };
 		addOption(badWindowOption);
@@ -214,8 +214,9 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		shitWindowOption.displayFormat = '%vms';
 		shitWindowOption.scrollSpeed = 60;
 		shitWindowOption.minValue = 135.0;
-		shitWindowOption.maxValue = 250.0;
+		shitWindowOption.maxValue = 300.0;
 		shitWindowOption.changeValue = 1.0;
+		shitWindowOption.onChange = function() { adjustHitWindow('shitWindow', ClientPrefs.data.shitWindow); markPresetCustom(); };
 		addOption(shitWindowOption);
 
 		var useShitWindowOption:Option = new Option(
@@ -224,6 +225,13 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 			'useShitWindowAsSafeZone',
 			BOOL);
 		addOption(useShitWindowOption);
+
+		var softEdgeOption:Option = new Option(
+			"Soft Judgment Edge",
+			Language.get("softedge_desc", ["在判定窗口的最外 20% 边缘启用软插值，避免卡边界时出现判定跳变"]),
+			'softJudgmentEdge',
+			BOOL);
+		addOption(softEdgeOption);
 
 		presetDependentOptions = [perfectWindowOption, sickWindowOption, goodWindowOption, badWindowOption];
 
@@ -259,7 +267,8 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 			lime.ui.Haptic.vibrate(0, 500);
 	}
 
-	// 添加联动逻辑
+	// 添加联动逻辑：保持窗口严格升序 (perfect < sick < good < bad < shit)
+	// 被联动的窗口只会跟随当前值，不会无限自增/自减。
 	function adjustHitWindow(optionKey:String, newValue:Float) {
 		switch(optionKey) {
 			case 'perfectWindow':
@@ -286,23 +295,30 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 				if (newValue <= ClientPrefs.data.goodWindow) {
 					ClientPrefs.data.goodWindow = newValue;
 				} else if (newValue >= ClientPrefs.data.shitWindow) {
-					ClientPrefs.data.shitWindow = newValue + 10; // shitWindow 始终比 badWindow 大
+					ClientPrefs.data.shitWindow = newValue; // 与其它窗口保持一致的跟随策略
 				}
 			case 'shitWindow':
 				ClientPrefs.data.shitWindow = newValue;
 				if (newValue <= ClientPrefs.data.badWindow) {
-					ClientPrefs.data.badWindow = newValue - 10; // badWindow 始终比 shitWindow 小
+					ClientPrefs.data.badWindow = newValue; // badWindow 跟随 shitWindow，不会无限减小
 				}
 			default:
 		}
+		// 所有窗口夹到合理范围，避免滑块溢出或顺序错乱
+		function clamp(v:Float, lo:Float, hi:Float):Float { return Math.max(lo, Math.min(hi, v)); }
+		ClientPrefs.data.perfectWindow = clamp(ClientPrefs.data.perfectWindow, 5,   250);
+		ClientPrefs.data.sickWindow    = clamp(ClientPrefs.data.sickWindow,    15,  250);
+		ClientPrefs.data.goodWindow    = clamp(ClientPrefs.data.goodWindow,    15,  250);
+		ClientPrefs.data.badWindow     = clamp(ClientPrefs.data.badWindow,     15,  300);
+		ClientPrefs.data.shitWindow    = clamp(ClientPrefs.data.shitWindow,    135, 300);
 	}
 
 	// 预设配置表 - 参考 Leather Engine timingPresets.txt
-	// 名称, perfect, sick, good, bad (单位: ms)
-	static var hitWindowPresets:Map<String, { perfectWindow:Float, sickWindow:Float, goodWindow:Float, badWindow:Float }> = [
-		'Leather'      => { perfectWindow: 25.00, sickWindow: 50.00, goodWindow: 70.00,  badWindow: 100.00 },
-		'Psych / Kade' => { perfectWindow: 23.00, sickWindow: 45.00, goodWindow: 90.00,  badWindow: 135.00 },
-		'Funkin\''        => { perfectWindow: 16.00, sickWindow: 33.00, goodWindow: 124.00, badWindow: 149.00 }
+	// 名称, perfect, sick, good, bad, shit (单位: ms)
+	static var hitWindowPresets:Map<String, { perfectWindow:Float, sickWindow:Float, goodWindow:Float, badWindow:Float, shitWindow:Float }> = [
+		'Leather'      => { perfectWindow: 25.00, sickWindow: 50.00, goodWindow: 70.00,  badWindow: 100.00, shitWindow: 130.00 },
+		'Psych / Kade' => { perfectWindow: 23.00, sickWindow: 45.00, goodWindow: 90.00,  badWindow: 135.00, shitWindow: 180.00 },
+		'Funkin\''        => { perfectWindow: 16.00, sickWindow: 33.00, goodWindow: 124.00, badWindow: 149.00, shitWindow: 180.00 }
 	];
 
 	function onChangeHitWindowPreset()
@@ -316,6 +332,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 			ClientPrefs.data.sickWindow = preset.sickWindow;
 			ClientPrefs.data.goodWindow = preset.goodWindow;
 			ClientPrefs.data.badWindow = preset.badWindow;
+			ClientPrefs.data.shitWindow = preset.shitWindow;
 
 			// 立刻刷新下方 4 个窗口选项的显示文本（复制 BaseOptionsMenu.updateTextFrom 的逻辑）
 			for (opt in presetDependentOptions)
