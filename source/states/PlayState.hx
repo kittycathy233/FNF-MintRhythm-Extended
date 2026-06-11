@@ -296,6 +296,9 @@ class PlayState extends MusicBeatState
 	public var spawnedNotes:Array<Note> = []; // 跟踪已生成的音符，按预加载索引
 	public var notesAddedCount:Int = 0;
 
+	// 分帧延迟初始化：将非关键操作分散到后续帧，避免 create() 中主线程长时间阻塞
+	private var _deferredInitStep:Int = -1; // -1=未开始, 0+=进行中
+
 	public var camFollow:FlxObject;
 	private static var prevCamFollow:FlxObject;
 
@@ -1172,6 +1175,7 @@ isReplaying = false;
 		FlxG.stage.addEventListener(KeyboardEvent.KEY_UP, onKeyRelease);
 
 		//PRECACHING THINGS THAT GET USED FREQUENTLY TO AVOID LAGSPIKES
+		// 以下资源已由 LoadingState.prepareToSong() 在后台线程预加载，此处仅为确保缓存命中（几乎无开销）
 		if(ClientPrefs.data.hitsoundVolume > 0) Paths.sound('hitsound');
 		if (ClientPrefs.data.hitsound != 'none' && ClientPrefs.data.hitsound != null && ClientPrefs.data.hitsound.length > 0)
 			Paths.sound('hitsounds/' + ClientPrefs.data.hitsound);
@@ -1200,10 +1204,12 @@ isReplaying = false;
 		super.create();
 		iconP1InitialY = iconP1.y;
    	 	iconP2InitialY = iconP2.y;
-		Paths.clearUnusedMemory();
 
+		// 倒计时资源已由 LoadingState 后台预加载，此处为缓存命中（几乎无开销）
 		cacheCountdown();
-		cachePopUpScore();
+
+		// 标记需要延迟执行的非关键初始化（在首帧 update 中分摊到后续帧，避免卡死）
+		_deferredInitStep = 0;
 
 		if(eventNotes.length < 1) eventHandler.checkEventNote();
 	}
@@ -2148,6 +2154,9 @@ isReplaying = false;
 	 * 传统音符生成方式 - 与原来完全一致
 	 */
 	private function generateSongLegacy(sectionsData:Array<SwagSection>, daBpm:Float, oldNote:Note, ghostNotesCaught:Int):Void {
+		// 使用 Map 做 O(1) 查找替代 O(n) 线性扫描检测 Ghost Note
+		var ghostNoteMap:Map<String, Int> = new Map();
+
 		for (section in sectionsData)
 		{
 			if (section.changeBPM != null && section.changeBPM && section.bpm != null && daBpm != section.bpm)
@@ -2166,20 +2175,20 @@ isReplaying = false;
 				var gottaHitNote:Bool = (songNotes[1] < totalColumns);
 
 				if (i != 0) {
-					// CLEAR ANY POSSIBLE GHOST NOTES
-					for (evilNote in unspawnNotes) {
-						var matches: Bool = (noteColumn == evilNote.noteData && gottaHitNote == evilNote.mustPress && evilNote.noteType == noteType);
-						if (matches && Math.abs(spawnTime - evilNote.strumTime) < flixel.math.FlxMath.EPSILON) {
-							if (evilNote.tail.length > 0)
-								for (tail in evilNote.tail)
-								{
-									tail.destroy();
-									unspawnNotes.remove(tail);
-								}
-							evilNote.destroy();
-							unspawnNotes.remove(evilNote);
-							ghostNotesCaught++;
-						}
+					// CLEAR ANY POSSIBLE GHOST NOTES — O(1) Map查找替代 O(n) 线性扫描
+					var ghostKey:String = '${noteColumn}_${gottaHitNote}_${noteType}_$spawnTime';
+					if (ghostNoteMap.exists(ghostKey))
+					{
+						var evilNote:Note = unspawnNotes[ghostNoteMap.get(ghostKey)];
+						if (evilNote.tail.length > 0)
+							for (tail in evilNote.tail)
+							{
+								tail.destroy();
+								unspawnNotes.remove(tail);
+							}
+						evilNote.destroy();
+						unspawnNotes.remove(evilNote);
+						ghostNotesCaught++;
 					}
 				}
 
@@ -2193,6 +2202,8 @@ isReplaying = false;
 	
 				swagNote.scrollFactor.set();
 				unspawnNotes.push(swagNote);
+				// 注册到 Ghost Note 查找 Map（用于后续检测重复音符）
+				ghostNoteMap.set('${noteColumn}_${gottaHitNote}_${noteType}_$spawnTime', unspawnNotes.length - 1);
 
 				var curStepCrochet:Float = 60 / daBpm * 1000 / 4.0;
 				final roundSus:Int = Math.round(swagNote.sustainLength / curStepCrochet);
@@ -2569,6 +2580,21 @@ isReplaying = false;
 
 	override public function update(elapsed:Float)
 	{
+		// 分帧延迟初始化：将非关键操作分散到后续帧，避免 create() 中长时间阻塞主线程
+		if (_deferredInitStep >= 0)
+		{
+			switch (_deferredInitStep)
+			{
+				case 0:
+					cachePopUpScore(); // 第1帧：缓存评分弹窗图片
+				case 1:
+					Paths.clearUnusedMemory(); // 第2帧：GC清理（画面已渲染后执行）
+				default:
+					_deferredInitStep = -2; // 完成
+			}
+			_deferredInitStep++;
+		}
+
 		// 回放模式下的自动按键逻辑
 		if(isReplaying && startedCountdown && !paused && !endingSong)
 		{

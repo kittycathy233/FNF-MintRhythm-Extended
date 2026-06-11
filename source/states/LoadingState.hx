@@ -663,6 +663,57 @@ class LoadingState extends MusicBeatState
 			}
 			completedThread();
 		});
+
+		// 额外任务：预加载 PlayState.create() 中常用的游戏资源（避免主线程同步阻塞）
+		threadsMax++;
+		threadPool.run(() ->
+		{
+			try
+			{
+				// 游戏音效（原在 PlayState.create() 中同步加载）
+				soundsToPrepare.push('hitsound');
+				if (ClientPrefs.data.hitsound != 'none' && ClientPrefs.data.hitsound != null && ClientPrefs.data.hitsound.length > 0)
+					soundsToPrepare.push('hitsounds/' + ClientPrefs.data.hitsound);
+				if (!ClientPrefs.data.ghostTapping)
+				{
+					soundsToPrepare.push('missnote1');
+					soundsToPrepare.push('missnote2');
+					soundsToPrepare.push('missnote3');
+				}
+
+				// 常用图片
+				imagesToPrepare.push('alphabet');
+
+				// 倒计时图片（根据 stageUI 选择正确的变体，stage 数据此时已加载完毕）
+				var stageData:StageFile = null;
+				try { stageData = StageData.getStageFile(song.stage); } catch(_) {}
+				var isPixel:Bool = stageData != null && stageData.isPixelStage == true;
+				if (isPixel)
+				{
+					imagesToPrepare.push('pixelUI/ready-pixel');
+					imagesToPrepare.push('pixelUI/set-pixel');
+					imagesToPrepare.push('pixelUI/date-pixel');
+					soundsToPrepare.push('intro3-pixel');
+					soundsToPrepare.push('intro2-pixel');
+					soundsToPrepare.push('intro1-pixel');
+					soundsToPrepare.push('introGo-pixel');
+				}
+				else
+				{
+					imagesToPrepare.push('ready');
+					imagesToPrepare.push('set');
+					imagesToPrepare.push('go');
+					soundsToPrepare.push('intro3');
+					soundsToPrepare.push('intro2');
+					soundsToPrepare.push('intro1');
+					soundsToPrepare.push('introGo');
+				}
+			}
+			catch (e:Dynamic)
+			{
+			}
+			completedThread();
+		});
 	}
 
 	public static function clearInvalids()

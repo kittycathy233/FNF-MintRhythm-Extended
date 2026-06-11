@@ -23,7 +23,24 @@ import backend.Mods;
 class FreeplayState extends MusicBeatState
 {
 	public static var isFreeplayPlayingMusic:Bool = false;
-	
+
+	// 谱面数据缓存：避免试听和进入游戏时重复加载同一谱面
+	private static var _songDataCache:Map<String, SwagSong> = new Map();
+
+	// 获取缓存的谱面数据，若不存在则加载并缓存
+	private static function getCachedSongData(folder:String, poop:String, songLowercase:String):SwagSong
+	{
+		var cacheKey:String = folder + '_' + poop;
+		var songData:SwagSong = _songDataCache.get(cacheKey);
+		if (songData == null)
+		{
+			songData = Song.loadFromJson(poop, songLowercase);
+			if (songData != null)
+				_songDataCache.set(cacheKey, songData);
+		}
+		return songData;
+	}
+
 	var songs:Array<SongMetadata> = [];
 
 	var selector:FlxText;
@@ -500,10 +517,10 @@ class FreeplayState extends MusicBeatState
 				FlxG.sound.music.volume = 0;
 
 				Mods.currentModDirectory = songs[curSelected].folder;
-						var poop:String = Highscore.formatSong(songs[curSelected].songName.toLowerCase(), curDifficulty);
-						var songData = Song.loadFromJson(poop, songs[curSelected].songName.toLowerCase());
+				var poop:String = Highscore.formatSong(songs[curSelected].songName.toLowerCase(), curDifficulty);
+				var songData:SwagSong = getCachedSongData(songs[curSelected].folder, poop, songs[curSelected].songName.toLowerCase());
 
-						if (songData == null) {
+				if (songData == null) {
 							// 显示错误信息
 							missingText.text = 'ERROR: Could not load chart file: $poop';
 							missingText.screenCenter(Y);
@@ -636,9 +653,9 @@ class FreeplayState extends MusicBeatState
 
 			try
 			{
-				var songData = Song.loadFromJson(poop, songLowercase);
-							
-							if (songData == null) {
+				var songData:SwagSong = getCachedSongData(songs[curSelected].folder, poop, songLowercase);
+
+				if (songData == null) {
 								// 显示错误信息
 								missingText.text = 'ERROR: Could not load chart file: $poop';
 								missingText.screenCenter(Y);
@@ -795,48 +812,48 @@ class FreeplayState extends MusicBeatState
 								missingTextBG.visible = true;
 							}
 							// Set pending replay data and load song
-										PlayState.pendingReplayData = replayArr;
-										PlayState.shouldStartReplay = true;
-										// 提取并保存判定设置
-										if (meta != null && Reflect.hasField(meta, 'judgmentSettings'))
-										{
-											PlayState.replayJudgmentSettings = Reflect.field(meta, 'judgmentSettings');
-										}
-										else
-										{
-											PlayState.replayJudgmentSettings = null;
-										}
-										// 提取并保存游戏设置
-										if (meta != null && Reflect.hasField(meta, 'gameplaySettings'))
-										{
-											PlayState.replayGameplaySettings = Reflect.field(meta, 'gameplaySettings');
-										}
-										else
-										{
-											PlayState.replayGameplaySettings = null;
-										}
-										
-										// 显式设置当前mod目录，确保谱面文件路径正确
-										Mods.currentModDirectory = songs[curSelected].folder;
-										
-										var songLowercase:String = Paths.formatToSongPath(songs[curSelected].songName);
-										var poop:String = Highscore.formatSong(songLowercase, curDifficulty);
-										var songData = Song.loadFromJson(poop, songLowercase);
-										
-										if (songData == null) {
-											// 显示错误信息
-											missingText.text = 'ERROR: Could not load chart file for replay: $poop';
-											missingText.screenCenter(Y);
-											missingText.visible = true;
-											missingTextBG.visible = true;
-											FlxG.sound.play(Paths.sound('cancelMenu'));
-											return;
-										}
-										
-										PlayState.isStoryMode = false;
-										PlayState.storyDifficulty = curDifficulty;
-										LoadingState.prepareToSong();
-										LoadingState.loadAndSwitchState(new PlayState());
+						PlayState.pendingReplayData = replayArr;
+						PlayState.shouldStartReplay = true;
+						// 提取并保存判定设置
+						if (meta != null && Reflect.hasField(meta, 'judgmentSettings'))
+						{
+							PlayState.replayJudgmentSettings = Reflect.field(meta, 'judgmentSettings');
+						}
+						else
+						{
+							PlayState.replayJudgmentSettings = null;
+						}
+						// 提取并保存游戏设置
+						if (meta != null && Reflect.hasField(meta, 'gameplaySettings'))
+						{
+							PlayState.replayGameplaySettings = Reflect.field(meta, 'gameplaySettings');
+						}
+						else
+						{
+							PlayState.replayGameplaySettings = null;
+						}
+
+						// 显式设置当前mod目录，确保谱面文件路径正确
+						Mods.currentModDirectory = songs[curSelected].folder;
+
+						var songLowercase:String = Paths.formatToSongPath(songs[curSelected].songName);
+						var poop:String = Highscore.formatSong(songLowercase, curDifficulty);
+						var songData:SwagSong = getCachedSongData(songs[curSelected].folder, poop, songLowercase);
+
+						if (songData == null) {
+							// 显示错误信息
+							missingText.text = 'ERROR: Could not load chart file for replay: $poop';
+							missingText.screenCenter(Y);
+							missingText.visible = true;
+							missingTextBG.visible = true;
+							FlxG.sound.play(Paths.sound('cancelMenu'));
+							return;
+						}
+
+						PlayState.isStoryMode = false;
+						PlayState.storyDifficulty = curDifficulty;
+						LoadingState.prepareToSong();
+						LoadingState.loadAndSwitchState(new PlayState());
 						}
 						catch (e:Dynamic)
 						{
@@ -1287,9 +1304,12 @@ class FreeplayState extends MusicBeatState
 		bgScaleLerp = 0;
 		bgBeatElapsed = 0;
 		bgBeatDuration = 0;
-		
+
 		// 重置Freeplay播放标志
 		isFreeplayPlayingMusic = false;
+
+		// 清理谱面缓存，释放内存
+		_songDataCache.clear();
 
 		super.destroy();
 
