@@ -4274,7 +4274,36 @@ isReplaying = false;
 			var canHit:Bool = n != null && !strumsBlocked[n.noteData] && n.canBeHit && n.mustPress && !n.tooLate && !n.wasGoodHit && !n.blockHit;
 			return canHit && !n.isSustainNote && n.noteData == key;
 		});
-		plrInputNotes.sort(sortHitNotes);
+
+		// 根据输入系统设置选择排序方式
+		var dontHit:Array<Note> = [];
+		if (ClientPrefs.data.inputSystem == 'rhythm')
+		{
+			// Rhythm模式：按时间距离降序排列（离当前时间最远的/最过期的排在前面）
+			plrInputNotes.sort(function(a:Note, b:Note):Int {
+				if (a.lowPriority && !b.lowPriority) return 1;
+				else if (!a.lowPriority && b.lowPriority) return -1;
+				return FlxSort.byValues(FlxSort.DESCENDING, a.strumTime, b.strumTime);
+			});
+
+			// Rhythm模式的dontHit机制：只允许击中离判定线最近的shouldHit音符，其余标记为dontHit
+			// shouldHit等效判定：非blockHit且非hitCausesMiss（即普通可击中音符）
+			var coolNote:Note = null;
+			for (note in plrInputNotes) {
+				var isShouldHit:Bool = !note.blockHit && !note.hitCausesMiss;
+				if (coolNote != null) {
+					if (note.strumTime > coolNote.strumTime && isShouldHit)
+						dontHit.push(note);
+				} else if (isShouldHit) {
+					coolNote = note;
+				}
+			}
+		}
+		else
+		{
+			// 默认模式：按strumTime升序排列（最近的音符在前）
+			plrInputNotes.sort(sortHitNotes);
+		}
 
 		// 记录按键按下的索引（用于后续记录抬起动作）- 在判断是否有音符之后设置，以确保索引正确
 		if(!isReplaying && key >= 0 && key < 4)
@@ -4300,7 +4329,17 @@ isReplaying = false;
 					}
 				}
 			}
-			goodNoteHit(funnyNote);
+
+			// Rhythm模式：如果击中的音符在dontHit列表中，触发miss而非goodNoteHit
+			if (ClientPrefs.data.inputSystem == 'rhythm' && dontHit.contains(funnyNote))
+			{
+				noteMiss(funnyNote);
+				invalidateNote(funnyNote);
+			}
+			else
+			{
+				goodNoteHit(funnyNote);
+			}
 		}
 		else
 		{

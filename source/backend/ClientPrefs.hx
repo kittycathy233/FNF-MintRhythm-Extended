@@ -96,6 +96,7 @@ import states.TitleState;
 	public var softJudgmentEdge:Bool = false; // 是否在判定窗口边缘启用软边缘插值（避免卡边界时判定跳变）
 	public var safeFrames:Float = 10.0;
 	public var guitarHeroSustains:Bool = true;
+	public var inputSystem:String = 'default'; // 输入判定系统: 'default' (传统) 或 'rhythm' (Rhythm模式，只允许击中最近的音符)
 	public var discordRPC:Bool = true;
 	public var loadingScreen:Bool = true;
 	public var basiclanguage:String = 'en-US';

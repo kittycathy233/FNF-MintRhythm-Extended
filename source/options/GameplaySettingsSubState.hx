@@ -35,7 +35,15 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 			'ghostTapping',
 			BOOL);
 		addOption(option);
-		
+
+		var option:Option = new Option(
+			"Input System",
+			"选择输入判定系统模式\nDefault = 传统模式（按时间升序，最近的优先）\nRhythm = Rhythm模式（只允许击中离判定线最近的音符，其余触发Miss）",
+			'inputSystem',
+			STRING,
+			['default', 'rhythm']);
+		addOption(option);
+
 		var option:Option = new Option(
 			"Auto Pause",
 			Language.get("autopause_desc"),
