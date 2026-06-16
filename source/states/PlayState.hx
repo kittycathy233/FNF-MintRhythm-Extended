@@ -4697,42 +4697,21 @@ isReplaying = false;
 			if(char != null)
 			{
 				var canPlay:Bool = true;
-				
-				// 检查是否是 sustain note 的 tail 部分，如果是则检查 parent note 是否已经处理过动画
-				var isSustainTail:Bool = note.isSustainNote && note.parent != null;
-				var parentAlreadyHandledAnim:Bool = isSustainTail && note.parent.extraData.exists('animPlayed') && note.parent.extraData.get('animPlayed');
-				
-				if(!parentAlreadyHandledAnim)
+				if(note.isSustainNote)
 				{
 					if(ClientPrefs.data.forceHoldAnimations)
 					{
-						// 单次动画模式：hold note 检查是否已在播放相同动画，普通音符始终刷新
-						if(note.isSustainNote && char.getAnimationName() == animToPlay) canPlay = false;
+						if(char.getAnimationName() == animToPlay) canPlay = false;
 					}
-					else if(note.isSustainNote)
+					else
 					{
-						// 原有的逻辑
 						var holdAnim:String = animToPlay + '-hold';
 						if(char.animation.exists(holdAnim)) animToPlay = holdAnim;
 						if(char.getAnimationName() == holdAnim || char.getAnimationName() == holdAnim + '-loop') canPlay = false;
 					}
-
-					if(canPlay)
-					{
-						char.playAnim(animToPlay, true);
-						// 标记 parent note 已经播放过动画
-						if(isSustainTail)
-						{
-							note.parent.extraData.set('animPlayed', true);
-						}
-						else if(!note.isSustainNote)
-						{
-							// 这是主音符，也标记它
-							note.extraData.set('animPlayed', true);
-						}
-					}
 				}
-				
+
+				if(canPlay) char.playAnim(animToPlay, true);
 				char.holdTimer = 0;
 			}
 		}
@@ -4790,42 +4769,21 @@ isReplaying = false;
 				if(char != null)
 				{
 					var canPlay:Bool = true;
-					
-					// 检查是否是 sustain note 的 tail 部分，如果是则检查 parent note 是否已经处理过动画
-					var isSustainTail:Bool = note.isSustainNote && note.parent != null;
-					var parentAlreadyHandledAnim:Bool = isSustainTail && note.parent.extraData.exists('animPlayed') && note.parent.extraData.get('animPlayed');
-					
-					if(!parentAlreadyHandledAnim)
+					if(note.isSustainNote)
 					{
 						if(ClientPrefs.data.forceHoldAnimations)
 						{
-							// 单次动画模式：hold note 检查是否已在播放相同动画，普通音符始终刷新
-							if(note.isSustainNote && char.getAnimationName() == animToPlay) canPlay = false;
+							if(char.getAnimationName() == animToPlay) canPlay = false;
 						}
-						else if(note.isSustainNote)
+						else
 						{
-							// 原有的逻辑
 							var holdAnim:String = animToPlay + '-hold';
 							if(char.animation.exists(holdAnim)) animToPlay = holdAnim;
 							if(char.getAnimationName() == holdAnim || char.getAnimationName() == holdAnim + '-loop') canPlay = false;
 						}
-	
-						if(canPlay)
-						{
-							char.playAnim(animToPlay, true);
-							// 标记 parent note 已经播放过动画
-							if(isSustainTail)
-							{
-								note.parent.extraData.set('animPlayed', true);
-							}
-							else if(!note.isSustainNote)
-							{
-								// 这是主音符，也标记它
-								note.extraData.set('animPlayed', true);
-							}
-						}
 					}
-					
+
+					if(canPlay) char.playAnim(animToPlay, true);
 					char.holdTimer = 0;
 
 					if(note.noteType == 'Hey!')

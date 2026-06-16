@@ -308,8 +308,7 @@ class Character extends FlxSprite
 		}
 
 		var name:String = getAnimationName();
-		// 如果是 hold 动画或启用了单次动画模式，不要自动播放 loop 动画
-		if(isAnimationFinished() && hasAnimation('$name-loop') && !name.endsWith('-hold') && !ClientPrefs.data.forceHoldAnimations)
+		if(isAnimationFinished() && hasAnimation('$name-loop') && !ClientPrefs.data.forceHoldAnimations)
 			playAnim('$name-loop');
 
 		super.update(elapsed);
