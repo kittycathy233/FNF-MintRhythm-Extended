@@ -163,6 +163,7 @@ import states.TitleState;
 	public var ratCounterAnimation:Bool = true; // 评分计数器动画效果
 	public var waterMarkPlay:Bool = true; // 水印
 	public var enableGameLog:Bool = false; // 启用游戏内日志显示（按F3切换）
+	public var enableConsoleLog:Bool = #if (debug || mobile) true #else false #end; // 是否在终端/控制台输出日志（debug/移动端默认启用，其余可自定义
 	public var useOptimizedNoteLoading:Bool = false; // 使用优化音符加载模式（快速但谨慎使用）
 	public var requestAdminPrivilege:Bool = false; // 是否请求管理员权限（Windows专用）
 	public var keepSingAnimation:Bool = true; // 保持sing动画不返回idle（用于Hyperactive成就）

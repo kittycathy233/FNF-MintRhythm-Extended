@@ -80,9 +80,36 @@ class Main extends Sprite
 		#end
 	}
 
+	public static var originalHaxeTrace:Dynamic->?haxe.PosInfos->Void = null;
+
+	public static function shouldLogToConsole():Bool
+	{
+		#if debug
+		return true;
+		#else
+		return ClientPrefs.data != null && ClientPrefs.data.enableConsoleLog;
+		#end
+	}
+
+	public static function hookConsoleLog():Void
+	{
+		if (originalHaxeTrace != null) return;
+		originalHaxeTrace = haxe.Log.trace;
+		haxe.Log.trace = function(v:Dynamic, ?pos:haxe.PosInfos):Void
+		{
+			if (shouldLogToConsole() && originalHaxeTrace != null)
+			{
+				originalHaxeTrace(v, pos);
+			}
+		};
+	}
+
 	public function new()
 	{
 		super();
+		// 尽早劫持日志输出，避免 debug 编译以外时污染终端
+		hookConsoleLog();
+
 		#if mobile
 		#if android
 		StorageUtil.requestPermissions();

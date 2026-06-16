@@ -204,6 +204,14 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		};
 		addOption(option);
 
+		#if !mobile
+		option = new Option('Enable Console Log Output',
+			Language.get("enable_console_log_desc"),
+			'enableConsoleLog',
+			BOOL);
+		addOption(option);
+		#end
+
 	// PERCENT 类型设置
 		option = new Option('Ratings Opacity',
 			Language.get("rating_opac_desc"),
