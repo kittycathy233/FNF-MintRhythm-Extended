@@ -27,6 +27,9 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 	var timebarStyleOption:Option = null;
 	var timebarStyleOptionIndex:Int = -1;
 
+	var enableGameLogOption:Option = null;
+	var enableConsoleLogOption:Option = null;
+
 	public function new()
 	{
 		title = 'Extra Options\n\nNot Done';
@@ -202,14 +205,17 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 				Main.gameLogVar.setEnabled(ClientPrefs.data.enableGameLog);
 			}
 		};
-		addOption(option);
+		enableGameLogOption = addOption(option);
 
 		#if !mobile
 		option = new Option('Enable Console Log Output',
 			Language.get("enable_console_log_desc"),
 			'enableConsoleLog',
 			BOOL);
-		addOption(option);
+		option.onChange = function() {
+			refreshGameLogDisabledState();
+		};
+		enableConsoleLogOption = addOption(option);
 		#end
 
 	// PERCENT 类型设置
@@ -400,6 +406,8 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		};
 		addOption(option);
 
+		refreshGameLogDisabledState();
+
 		super();
 	}
 
@@ -431,6 +439,25 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			if (errorText != null) errorText.visible = false;
 			if (errorBg != null) errorBg.visible = false;
 		});
+	}
+
+	function refreshGameLogDisabledState()
+	{
+		if (enableGameLogOption != null)
+		{
+			#if mobile
+			enableGameLogOption.disabled = false;
+			#else
+			var shouldDisable:Bool = !ClientPrefs.data.enableConsoleLog;
+			enableGameLogOption.disabled = shouldDisable;
+			if (shouldDisable && ClientPrefs.data.enableGameLog)
+			{
+				ClientPrefs.data.enableGameLog = false;
+				if (Main.gameLogVar != null)
+					Main.gameLogVar.setEnabled(false);
+			}
+			#end
+		}
 	}
 
 	override function changeSelection(change:Int = 0)
