@@ -496,14 +496,12 @@ class Note extends FlxSprite
 	{
 		super.update(elapsed);
 
+		var earlyWindow:Float = Conductor.safeZoneOffset * earlyHitMult;
+		var lateWindow:Float = Conductor.safeZoneOffset * lateHitMult;
+		var timeUntilHit:Float = (strumTime - Conductor.songPosition);
+
 		if (mustPress)
 		{
-			// 使用更精确的浮点数计算
-			var earlyWindow:Float = Conductor.safeZoneOffset * earlyHitMult;
-			var lateWindow:Float = Conductor.safeZoneOffset * lateHitMult;
-			
-			// 增加小数位的精度
-			var timeUntilHit:Float = (strumTime - Conductor.songPosition);
 			canBeHit = (timeUntilHit > -lateWindow && timeUntilHit < earlyWindow);
 
 			if (strumTime < Conductor.songPosition - lateWindow && !wasGoodHit)
@@ -511,13 +509,16 @@ class Note extends FlxSprite
 		}
 		else
 		{
-			canBeHit = false;
+			canBeHit = (timeUntilHit > -lateWindow && timeUntilHit < earlyWindow);
 
 			if (!wasGoodHit && strumTime <= Conductor.songPosition)
 			{
 				if(!isSustainNote || (prevNote.wasGoodHit && !ignoreNote))
 					wasGoodHit = true;
 			}
+
+			if (strumTime < Conductor.songPosition - lateWindow && !wasGoodHit)
+				tooLate = true;
 		}
 
 		if (tooLate && !inEditor)

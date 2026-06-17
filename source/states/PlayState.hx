@@ -3136,6 +3136,11 @@ isReplaying = false;
 								if(cpuControlled && !daNote.blockHit && daNote.canBeHit && (daNote.isSustainNote || daNote.strumTime <= Conductor.songPosition))
 									goodNoteHit(daNote);
 							}
+							else if (!daNote.hitByOpponent && !daNote.ignoreNote && daNote.canBeHit && (daNote.isSustainNote || daNote.strumTime <= Conductor.songPosition))
+							{
+								opponentNoteHit(daNote);
+								if (!daNote.isSustainNote) daNote.wasGoodHit = true;
+							}
 							else if (daNote.wasGoodHit && !daNote.hitByOpponent && !daNote.ignoreNote)
 								opponentNoteHit(daNote);
 
