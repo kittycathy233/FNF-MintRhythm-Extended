@@ -61,9 +61,10 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 
 		var option:Option = new Option('Optimized Note Loading',
-			'Optimizes note loading for better performance on high-density charts. Use with caution, may have issues.',
+			'Auto-detects high-density charts and uses optimized loading. OFF = always legacy, ON = always optimized, AUTO = automatic based on chart NPS.',
 			'useOptimizedNoteLoading',
-			BOOL);
+			STRING,
+			['OFF', 'ON', 'AUTO']);
 		addOption(option);
 
 		#if !html5

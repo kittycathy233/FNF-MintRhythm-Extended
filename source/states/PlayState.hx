@@ -295,6 +295,7 @@ class PlayState extends MusicBeatState
 	public var unspawnNotesPreloaded:Array<PreloadedChartNote> = []; // 预加载音符数据
 	public var spawnedNotes:Array<Note> = []; // 跟踪已生成的音符，按预加载索引
 	public var notesAddedCount:Int = 0;
+	private var useOptimizedLoading:Bool = false; // 本次歌曲实际采用的加载方式
 
 	// 分帧延迟初始化：将非关键操作分散到后续帧，避免 create() 中主线程长时间阻塞
 	private var _deferredInitStep:Int = -1; // -1=未开始, 0+=进行中
@@ -2127,9 +2128,28 @@ isReplaying = false;
 		var sectionsData:Array<SwagSection> = PlayState.SONG.notes;
 		var ghostNotesCaught:Int = 0;
 		var daBpm:Float = Conductor.bpm;
-		
-		// 根据设置选择加载方式
-		if (ClientPrefs.data.useOptimizedNoteLoading) {
+
+		// 根据设置选择加载方式：OFF / ON / AUTO
+		useOptimizedLoading = false;
+		var setting:String = ClientPrefs.data.useOptimizedNoteLoading;
+		if (setting == null) setting = 'AUTO';
+		if (setting.toUpperCase() == 'ON')
+		{
+			useOptimizedLoading = true;
+			trace('[OptimizedNoteLoading] setting=ON → force OPTIMIZED (deferred note creation)');
+		}
+		else if (setting.toUpperCase() == 'AUTO')
+		{
+			useOptimizedLoading = shouldUseOptimizedLoading(sectionsData, songLength);
+			trace('[OptimizedNoteLoading] setting=AUTO to ' + (useOptimizedLoading ? 'OPTIMIZED' : 'LEGACY'));
+		}
+		else
+		{
+			useOptimizedLoading = false;
+			trace('[OptimizedNoteLoading] setting=OFF → LEGACY (eager note creation)');
+		}
+
+		if (useOptimizedLoading) {
 			// 优化模式：暂存音符对象，延迟添加到游戏世界
 			generateSongOptimized(sectionsData, daBpm, oldNote, ghostNotesCaught);
 		} else {
@@ -2141,13 +2161,66 @@ isReplaying = false;
 			for (i in 0...event[1].length)
 				makeEvent(event, i);
 
-		if (ClientPrefs.data.useOptimizedNoteLoading) {
+		if (useOptimizedLoading) {
 			// 优化模式：保持原来的顺序，不排序
 			generatedMusic = true;
 		} else {
 			unspawnNotes.sort(sortByTime);
 			generatedMusic = true;
 		}
+	}
+
+	/**
+	 * 自动检测：统计有效箭头总数（玩家+对手），除以歌曲秒数计算 notesPerSecond，达到 100 及以上返回 true
+	 * 如果 music.length 还没加载好，用最后一个箭头的 strumTime 作为估算时长
+	 */
+	private function shouldUseOptimizedLoading(sectionsData:Array<SwagSection>, msLen:Float):Bool
+	{
+		var totalNotes:Int = 0;
+		var totalSections:Int = 0;
+		var lastStrumTimeMs:Float = 0;
+
+		if (sectionsData != null)
+		{
+			for (i in 0...sectionsData.length)
+			{
+				var section:Dynamic = sectionsData[i];
+				if (section == null) continue;
+				totalSections++;
+				var notes:Array<Dynamic> = Reflect.field(section, 'sectionNotes');
+				if (notes == null) continue;
+				totalNotes += notes.length;
+				for (j in 0...notes.length)
+				{
+					var noteArr:Array<Dynamic> = notes[j];
+					if (noteArr == null || noteArr.length < 1) continue;
+					var t:Float = Std.parseFloat(Std.string(noteArr[0]));
+					if (!Math.isNaN(t) && t > lastStrumTimeMs)
+						lastStrumTimeMs = t;
+				}
+			}
+		}
+
+		var seconds:Float = 0;
+		var lenSource:String = 'music.length';
+		if (msLen > 0)
+			seconds = msLen / 1000.0;
+		else if (lastStrumTimeMs > 0)
+		{
+			// 音乐还没加载好时，用最后一个箭头的 strumTime 估算，加 2 秒缓冲
+			seconds = (lastStrumTimeMs + 2000.0) / 1000.0;
+			lenSource = 'lastStrumTime(+2s pad)';
+		}
+
+		if (seconds <= 0)
+		{
+			trace('[OptimizedNoteLoading] sections=$totalSections totalNotes=$totalNotes no duration available → LEGACY');
+			return false;
+		}
+
+		var notesPerSecond:Float = totalNotes / seconds;
+		trace('[OptimizedNoteLoading] sections=$totalSections totalNotes=$totalNotes seconds=$seconds($lenSource) notesPerSecond=$notesPerSecond threshold(1w)=100 threshold(1w>)=50');
+		return notesPerSecond >= 100 || (totalNotes > 10000 && notesPerSecond > 50);
 	}
 
 	/**
@@ -2930,7 +3003,7 @@ isReplaying = false;
 		}
 		doDeathCheck();
 
-		if (ClientPrefs.data.useOptimizedNoteLoading)
+		if (useOptimizedLoading)
 		{
 			// 优化模式
 			if (notesAddedCount < unspawnNotesPreloaded.length)

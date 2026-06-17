@@ -152,6 +152,59 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var preloadedNoteData:Array<Dynamic> = [];
 	var preloadedSecNum:Array<Int> = [];
 	var preloadedMetaNotes:Array<MetaNote> = [];
+	private var useOptimizedLoading:Bool = false; // 本次编辑实际采用的加载方式
+
+	private function resolveOptimizedLoading():Bool
+	{
+		var setting:String = ClientPrefs.data.useOptimizedNoteLoading;
+		if (setting == null) setting = 'AUTO';
+		setting = setting.toUpperCase();
+		if (setting == 'ON') return true;
+		if (setting == 'OFF') return false;
+		// AUTO：按谱面 notesPerSecond 自动判断
+		var totalNotes:Int = 0;
+		var totalSections:Int = 0;
+		var lastStrumTimeMs:Float = 0;
+		if (PlayState.SONG != null && PlayState.SONG.notes != null)
+		{
+			var secs:Array<Dynamic> = cast PlayState.SONG.notes;
+			for (i in 0...secs.length)
+			{
+				var section:Dynamic = secs[i];
+				if (section == null) continue;
+				totalSections++;
+				var notes:Array<Dynamic> = Reflect.field(section, 'sectionNotes');
+				if (notes == null) continue;
+				totalNotes += notes.length;
+				for (j in 0...notes.length)
+				{
+					var noteArr:Array<Dynamic> = notes[j];
+					if (noteArr == null || noteArr.length < 1) continue;
+					var t:Float = Std.parseFloat(Std.string(noteArr[0]));
+					if (!Math.isNaN(t) && t > lastStrumTimeMs)
+						lastStrumTimeMs = t;
+				}
+			}
+		}
+		var msLen:Float = (FlxG.sound.music != null) ? FlxG.sound.music.length : 0;
+		var seconds:Float = 0;
+		var lenSource:String = 'music.length';
+		if (msLen > 0)
+			seconds = msLen / 1000.0;
+		else if (lastStrumTimeMs > 0)
+		{
+			seconds = (lastStrumTimeMs + 2000.0) / 1000.0;
+			lenSource = 'lastStrumTime(+2s pad)';
+		}
+		if (seconds <= 0)
+		{
+			trace('[ChartingState.OptimizedNoteLoading] sections=$totalSections totalNotes=$totalNotes no duration → LEGACY');
+			return false;
+		}
+		var notesPerSecond:Float = totalNotes / seconds;
+		trace('[ChartingState.OptimizedNoteLoading] sections=$totalSections totalNotes=$totalNotes seconds=$seconds($lenSource) notesPerSecond=$notesPerSecond threshold(1w)=100 threshold(1w>)=50');
+		return notesPerSecond >= 100 || (totalNotes > 10000 && notesPerSecond > 50);
+	}
 
 	var chartEditorSave:FlxSave;
 	var mainBox:PsychUIBox;
@@ -3078,7 +3131,10 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		preloadedSecNum = [];
 		preloadedMetaNotes = [];
 
-		if (ClientPrefs.data.useOptimizedNoteLoading)
+		useOptimizedLoading = resolveOptimizedLoading();
+		trace('[OptimizedNoteLoading] ChartingState → ' + (useOptimizedLoading ? 'OPTIMIZED' : 'LEGACY'));
+
+		if (useOptimizedLoading)
 		{
 			// 优化模式：只预保存数据
 			for (secNum => section in PlayState.SONG.notes)
@@ -3500,7 +3556,7 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		}
 
 		// 优化模式：先创建需要的 MetaNote
-		if (ClientPrefs.data.useOptimizedNoteLoading)
+		if (useOptimizedLoading)
 		{
 			var secToCheck = [curSec];
 			if (!onlyCurrent && (showPreviousSection || showNextSection))
