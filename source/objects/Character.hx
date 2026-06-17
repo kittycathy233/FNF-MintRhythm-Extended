@@ -4,6 +4,7 @@ import backend.animation.PsychAnimationController;
 
 import flixel.util.FlxSort;
 import flixel.util.FlxDestroyUtil;
+import flixel.tweens.FlxTween;
 
 import openfl.utils.AssetType;
 import openfl.utils.Assets;
@@ -74,6 +75,33 @@ class Character extends FlxSprite
 	public var missingText:FlxText;
 	public var hasMissAnimations:Bool = false;
 	public var vocalsFile:String = '';
+
+	// Ghost effect for multi-press notes
+	/**
+	 * How much the ghost anims move when played (pixels)
+	 */
+	public var ghostDisplacement:Float = 40;
+
+	/**
+	 * Array of all ghost sprites
+	 */
+	public var doubleGhosts:Array<FlxSprite> = [];
+
+	/**
+	 * Array of all ghost tweens
+	 */
+	public var ghostTweenGrp:Array<FlxTween> = [];
+
+	/**
+	 * Alpha that the ghost sprites appear at
+	 */
+	public var ghostAlpha:Float = 0.6;
+
+	/**
+	 * The hit time of the last note in milliseconds.
+	 * Only used for multi-press ghost detection.
+	 */
+	public var lastHitTime:Float = -1000;
 
 	//Used on Character Editor
 	public var imageFile:String = '';
@@ -311,6 +339,11 @@ class Character extends FlxSprite
 		if(isAnimationFinished() && hasAnimation('$name-loop') && !ClientPrefs.data.forceHoldAnimations)
 			playAnim('$name-loop');
 
+		// Update ghost sprites
+		for (ghost in doubleGhosts)
+			if (ghost != null && ghost.active)
+				ghost.update(elapsed);
+
 		super.update(elapsed);
 	}
 
@@ -420,6 +453,111 @@ class Character extends FlxSprite
 		}
 	}
 
+	// ===== Ghost Effect for Multi-Press Notes =====
+
+	function genGhosts(count:Int):Void
+	{
+		while (doubleGhosts.length < count)
+		{
+			var ghost = new FlxSprite();
+			ghost.visible = false;
+			ghost.antialiasing = true;
+			ghost.alpha = ghostAlpha;
+			doubleGhosts.push(ghost);
+		}
+	}
+
+	/**
+	 * Play a ghost animation at a specific note direction.
+	 * Creates a copy of the character that fades out while sliding in the sing direction.
+	 */
+	public function playGhostAnim(ghostID:Int = 0, animName:String, force:Bool = false, reversed:Bool = false, frame:Int = 0)
+	{
+		if (ghostID >= doubleGhosts.length) genGhosts(ghostID + 1);
+
+		var ghost = doubleGhosts[ghostID];
+
+		// Copy visual properties from character to ghost
+		if (!isAnimateAtlas)
+		{
+			if (ghost.frames == null)
+				ghost.frames = frames;
+		}
+		#if flxanimate
+		else
+		{
+			// For animate atlas characters, we need a different approach
+			// Use a static frame capture approach
+			if (ghost.frames == null && frames != null)
+				ghost.frames = frames;
+		}
+		#end
+
+		ghost.scale.copyFrom(scale);
+		ghost.offset.copyFrom(offset);
+		ghost.origin.copyFrom(origin);
+		ghost.antialiasing = antialiasing;
+		ghost.angle = angle;
+		ghost.x = x;
+		ghost.y = y;
+		ghost.flipX = flipX;
+		ghost.flipY = flipY;
+		ghost.alpha = alpha * ghostAlpha;
+		ghost.visible = true;
+		ghost.color = FlxColor.fromRGB(healthColorArray[0], healthColorArray[1], healthColorArray[2]);
+
+		// Cancel existing tween for this ghost slot
+		if (ghostTweenGrp[ghostID] != null)
+			ghostTweenGrp[ghostID].cancel();
+
+		// Calculate displacement direction based on sing animation direction
+		final direction:String = animName.substring(4).split('-')[0].toLowerCase();
+
+		inline function resolveDir(xAxis:Bool):Float
+		{
+			return switch (direction)
+			{
+				case 'up': !xAxis ? -ghostDisplacement : 0;
+				case 'down': !xAxis ? ghostDisplacement : 0;
+				case 'right': xAxis ? ghostDisplacement : 0;
+				case 'left': xAxis ? -ghostDisplacement : 0;
+				default: 0;
+			}
+		}
+
+		final moveX = x + resolveDir(true);
+		final moveY = y + resolveDir(false);
+
+		ghostTweenGrp[ghostID] = FlxTween.tween(ghost, {alpha: 0, x: moveX, y: moveY}, 0.75,
+			{
+				onComplete: function(twn:FlxTween) {
+					ghost.visible = false;
+					ghostTweenGrp[ghostID] = null;
+				}
+			});
+
+		// Play the animation on the ghost
+		if (!isAnimateAtlas)
+		{
+			if (ghost.animation != null && animation.curAnim != null)
+				ghost.animation.play(animName, force, reversed, frame);
+
+			if (animOffsets.exists(animName))
+			{
+				var daOffset = animOffsets.get(animName);
+				ghost.offset.set(daOffset[0], daOffset[1]);
+			}
+		}
+		#if flxanimate
+		else
+		{
+			// For atlas-based characters, just set the frame to match
+			if (animation.curAnim != null)
+				ghost.animation.play(animName, force, reversed, frame);
+		}
+		#end
+	}
+
 	function loadMappedAnims():Void
 	{
 		try
@@ -490,6 +628,17 @@ class Character extends FlxSprite
 			color = FlxColor.BLACK;
 		}
 
+		// Draw ghost sprites behind the main character
+		for (ghost in doubleGhosts)
+		{
+			if (ghost != null && ghost.visible)
+			{
+				ghost.cameras = cameras;
+				ghost.scrollFactor.copyFrom(scrollFactor);
+				ghost.draw();
+			}
+		}
+
 		if(isAnimateAtlas)
 		{
 			if(atlas.anim.curInstance != null)
@@ -543,6 +692,20 @@ class Character extends FlxSprite
 
 	public override function destroy()
 	{
+		// Clean up ghost tweens and sprites
+		if (ghostTweenGrp != null)
+		{
+			for (twn in ghostTweenGrp)
+				if (twn != null) twn.cancel();
+			ghostTweenGrp = [];
+		}
+		if (doubleGhosts != null)
+		{
+			for (ghost in doubleGhosts)
+				if (ghost != null) ghost.destroy();
+			doubleGhosts = [];
+		}
+
 		atlas = FlxDestroyUtil.destroy(atlas);
 		super.destroy();
 	}

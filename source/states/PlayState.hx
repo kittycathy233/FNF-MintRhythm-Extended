@@ -4797,8 +4797,19 @@ isReplaying = false;
 					}
 				}
 
-				if(canPlay) char.playAnim(animToPlay, true);
+				if(canPlay)
+				{
+					// Ghost effect: detect multi-press (multiple notes hit at nearly the same time)
+					if(ClientPrefs.data.ghostEffect && !note.isSustainNote && Math.abs(char.lastHitTime - note.strumTime) < 3)
+						char.playGhostAnim(note.noteData, animToPlay, true);
+
+					char.playAnim(animToPlay, true);
+				}
 				char.holdTimer = 0;
+
+				// Update last hit time for multi-press detection
+				if(!note.isSustainNote || note.prevNote != null && note.prevNote.isSustainNote)
+					char.lastHitTime = note.strumTime;
 			}
 		}
 
@@ -4869,10 +4880,21 @@ isReplaying = false;
 						}
 					}
 
-					if(canPlay) char.playAnim(animToPlay, true);
-					char.holdTimer = 0;
+				if(canPlay)
+				{
+					// Ghost effect: detect multi-press (multiple notes hit at nearly the same time)
+					if(ClientPrefs.data.ghostEffect && !note.isSustainNote && Math.abs(char.lastHitTime - note.strumTime) < 3)
+						char.playGhostAnim(note.noteData, animToPlay, true);
 
-					if(note.noteType == 'Hey!')
+					char.playAnim(animToPlay, true);
+				}
+				char.holdTimer = 0;
+
+				// Update last hit time for multi-press detection (only for non-sustain notes)
+				if(!note.isSustainNote || note.prevNote != null && note.prevNote.isSustainNote)
+					char.lastHitTime = note.strumTime;
+
+				if(note.noteType == 'Hey!')
 					{
 						if(char.hasAnimation(animCheck))
 						{

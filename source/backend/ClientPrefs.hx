@@ -174,6 +174,7 @@ import states.TitleState;
 	public var timeBarGradient:Bool = false; // 时间条是否使用渐变（对手色→玩家色，仅Psych样式）
 	public var singleHoldNoteAnimation:Bool = true; // 按住长条音符时只播放一次confirm动画
 	public var autoResetStrumAnim:Bool = true; // 是否自动恢复箭头默认动画（普通按键和hold note）
+	public var ghostEffect:Bool = true; // 多押时角色的ghost残影效果
 
 	// 当模组没有perfect/marvelous贴图时，是否改用sick贴图显示
 	public var fallbackPerfectToSick:Bool = true;

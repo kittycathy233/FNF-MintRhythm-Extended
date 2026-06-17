@@ -86,6 +86,12 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		option = new Option('Ghost Effect (Multi-Press)',
+			'Show a ghost afterimage of the character when hitting multiple notes at once',
+			'ghostEffect',
+			BOOL);
+		addOption(option);
+
 		option = new Option('ScoreTxt bounce',
 			Language.get("scoretxt_bounce_desc"),
 			'scoretxtbounce',
