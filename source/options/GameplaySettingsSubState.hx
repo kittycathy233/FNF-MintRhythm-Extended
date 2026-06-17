@@ -53,6 +53,13 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.onChange = onChangeAutoPause;
 
 		var option:Option = new Option(
+			"GC On Resume",
+			"恢复游戏时强制清理内存（可能导致恢复延迟）",
+			'gcOnResume',
+			BOOL);
+		addOption(option);
+
+		var option:Option = new Option(
 			"Pop Up Score",
 			Language.get("popupscore_desc"),
 			'popUpRating',

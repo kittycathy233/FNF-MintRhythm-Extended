@@ -332,7 +332,8 @@ class PauseSubState extends MusicBeatSubstate
 			switch (daSelected)
 			{
 				case "Resume":
-					Paths.clearUnusedMemory();
+					if (ClientPrefs.data.gcOnResume)
+						Paths.clearUnusedMemory();
 					close();
 				case 'Change Difficulty':
 					menuItems = difficultyChoices;
