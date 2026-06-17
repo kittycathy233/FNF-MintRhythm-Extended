@@ -171,6 +171,7 @@ import states.TitleState;
 	public var cacheResourcesOnReload:Bool = true; // 重载曲目时缓存资源以加速加载
 	public var forceHoldAnimations:Bool = false; // 箭头命中时只播放一次动画，不依赖hold动画
 	public var timeBarStripes:Bool = false; // 时间条是否显示条纹
+	public var timeBarGradient:Bool = false; // 时间条是否使用渐变（对手色→玩家色，仅Psych样式）
 	public var singleHoldNoteAnimation:Bool = true; // 按住长条音符时只播放一次confirm动画
 	public var autoResetStrumAnim:Bool = true; // 是否自动恢复箭头默认动画（普通按键和hold note）
 

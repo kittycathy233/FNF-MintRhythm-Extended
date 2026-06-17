@@ -1,6 +1,7 @@
 package objects;
 
 import flixel.math.FlxRect;
+import flixel.util.FlxColor;
 import openfl.display.BitmapData;
 import openfl.geom.Matrix;
 import openfl.geom.Rectangle;
@@ -28,6 +29,11 @@ class Bar extends FlxSpriteGroup
 	public var barWidth(default, set):Int = 1;
 	public var barHeight(default, set):Int = 1;
 	public var barOffset:FlxPoint = new FlxPoint(3, 3);
+
+	public var useGradient:Bool = false;
+	public var gradientLeftColor:FlxColor = FlxColor.WHITE;
+	public var gradientRightColor:FlxColor = FlxColor.BLACK;
+	var gradientBitmap:BitmapData = null;
 
 	public function new(x:Float, y:Float, image:String = 'healthBar', valueFunction:Void->Float = null, boundX:Float = 0, boundY:Float = 1)
 	{
@@ -95,6 +101,60 @@ class Bar extends FlxSpriteGroup
 			leftBar.color = left;
 		if (right != null)
 			rightBar.color = right;
+	}
+
+	public function setGradientColors(leftColor:FlxColor, rightColor:FlxColor)
+	{
+		gradientLeftColor = leftColor;
+		gradientRightColor = rightColor;
+		if (bg != null)
+			applyGradient();
+	}
+
+	public function applyGradient()
+	{
+		if (bg == null) return;
+		var totalW:Int = Std.int(bg.width);
+		var totalH:Int = Std.int(bg.height);
+		if (totalW <= 0 || totalH <= 0) return;
+
+		if (gradientBitmap != null)
+			gradientBitmap.dispose();
+		gradientBitmap = new BitmapData(totalW, totalH, true, 0x00000000);
+
+		var leftA:Int = (gradientLeftColor >> 24) & 0xFF;
+		var leftR:Int = (gradientLeftColor >> 16) & 0xFF;
+		var leftG:Int = (gradientLeftColor >> 8) & 0xFF;
+		var leftB:Int = gradientLeftColor & 0xFF;
+		var rightA:Int = (gradientRightColor >> 24) & 0xFF;
+		var rightR:Int = (gradientRightColor >> 16) & 0xFF;
+		var rightG:Int = (gradientRightColor >> 8) & 0xFF;
+		var rightB:Int = gradientRightColor & 0xFF;
+
+		for (x in 0...totalW)
+		{
+			var t:Float = x / Math.max(totalW - 1, 1);
+			var a:Int = Std.int(leftA + (rightA - leftA) * t);
+			var r:Int = Std.int(leftR + (rightR - leftR) * t);
+			var g:Int = Std.int(leftG + (rightG - leftG) * t);
+			var b:Int = Std.int(leftB + (rightB - leftB) * t);
+			var argb:Int = (a << 24) | (r << 16) | (g << 8) | b;
+			gradientBitmap.fillRect(new Rectangle(x, 0, 1, totalH), argb);
+		}
+
+		if (leftBar != null)
+		{
+			leftBar.loadGraphic(gradientBitmap);
+			leftBar.antialiasing = ClientPrefs.data.antialiasing;
+			leftBar.color = FlxColor.WHITE;
+		}
+		if (rightBar != null)
+		{
+			rightBar.makeGraphic(Std.int(bg.width), Std.int(bg.height), FlxColor.BLACK);
+			rightBar.antialiasing = ClientPrefs.data.antialiasing;
+			rightBar.color = FlxColor.WHITE;
+		}
+		updateBar();
 	}
 
 	public function updateBar()

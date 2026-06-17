@@ -903,6 +903,14 @@ isReplaying = false;
 			timeBar.setColors(FlxColor.CYAN, FlxColor.BLACK);
 		}
 
+		// Psych样式下的渐变时间条：对手色→玩家色
+		if (ClientPrefs.data.timebarStyle == "Psych" && ClientPrefs.data.timeBarGradient && dad != null && boyfriend != null) {
+			var dadColor:FlxColor = FlxColor.fromRGB(dad.healthColorArray[0], dad.healthColorArray[1], dad.healthColorArray[2]);
+			var bfColor:FlxColor = FlxColor.fromRGB(boyfriend.healthColorArray[0], boyfriend.healthColorArray[1], boyfriend.healthColorArray[2]);
+			timeBar.useGradient = true;
+			timeBar.setGradientColors(dadColor, bfColor);
+		}
+
 		// 根据 holdNoteBehind 设置调整图层顺序
 		if (ClientPrefs.data.holdNoteBehind) {
 			// 如果 holdNoteBehind 是 true，先添加 hold notes（在最下面）
@@ -5091,6 +5099,13 @@ isReplaying = false;
 					timeBarRightColorTarget = FlxColor.fromRGB(dad.healthColorArray[0], dad.healthColorArray[1], dad.healthColorArray[2]);
 				}
 			}
+		}
+
+		if (ClientPrefs.data.timebarStyle == 'Psych' && ClientPrefs.data.timeBarGradient && timeBar != null && dad != null && boyfriend != null) {
+			var dadColor:FlxColor = FlxColor.fromRGB(dad.healthColorArray[0], dad.healthColorArray[1], dad.healthColorArray[2]);
+			var bfColor:FlxColor = FlxColor.fromRGB(boyfriend.healthColorArray[0], boyfriend.healthColorArray[1], boyfriend.healthColorArray[2]);
+			timeBar.useGradient = true;
+			timeBar.setGradientColors(dadColor, bfColor);
 		}
 
 		super.stepHit();

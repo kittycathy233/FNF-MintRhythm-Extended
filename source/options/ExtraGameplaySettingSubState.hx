@@ -244,6 +244,12 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		option = new Option('Time Bar Gradient',
+			'Only works with Psych style. Gradient from opponent color to player color.',
+			'timeBarGradient',
+			BOOL);
+		addOption(option);
+
 		option = new Option('IconBop Style',
 			Language.get("iconbop_style_desc"),
 			'iconbopstyle',
