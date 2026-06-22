@@ -3779,20 +3779,28 @@ isReplaying = false;
 	// Stores Note Objects in a Group
 	public var noteGroup:FlxTypedGroup<FlxBasic>;
 
+	// checkModHasImage 缓存：避免每次note命中都执行文件系统查询
+	var _modImageCache:Map<String, Bool> = null;
+
 	private function checkModHasImage(imagePath:String):Bool
 	{
+		if (_modImageCache == null) _modImageCache = [];
+		if (_modImageCache.exists(imagePath)) return _modImageCache.get(imagePath);
+
 		var imageKey:String = LanguageBasic.getFileTranslation('images/' + imagePath) + '.png';
+		var result:Bool = false;
 		#if MODS_ALLOWED
 		var modKey:String = imageKey;
 		if(imagePath.startsWith('songs/')) modKey = imagePath;
-		
+
 		for(mod in Mods.getGlobalMods())
 			if (FileSystem.exists(Paths.mods(mod + '/' + modKey)))
-				return true;
-		if (FileSystem.exists(Paths.mods(Mods.currentModDirectory + '/' + modKey)) || FileSystem.exists(Paths.mods(modKey)))
-			return true;
+			{ result = true; break; }
+		if (!result && (FileSystem.exists(Paths.mods(Mods.currentModDirectory + '/' + modKey)) || FileSystem.exists(Paths.mods(modKey))))
+			result = true;
 		#end
-		return false;
+		_modImageCache.set(imagePath, result);
+		return result;
 	}
 
 	private function cachePopUpScore()
@@ -3807,6 +3815,8 @@ isReplaying = false;
 			Paths.image(uiFolder + theEXrating.image + uiPostfix + exratingexspr);
 		for (i in 0...10)
 			Paths.image(uiFolder + 'num' + i + uiPostfix + numexspr);
+		// 预缓存 combo 图片（popUpScore 中每次命中都会加载）
+		Paths.image(uiFolder + 'combo' + uiPostfix);
 	}
 
 	private function popUpScore(note:Note = null):Void

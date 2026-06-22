@@ -33,12 +33,21 @@ class Mods
 
 	private static var globalMods:Array<String> = [];
 
+	// directoriesWithFile 结果缓存，避免重复的 FileSystem.exists 调用
+	static var _directoriesCache:Map<String, Array<String>> = null;
+
+	public static function invalidateDirectoriesCache()
+	{
+		_directoriesCache = null;
+	}
+
 	inline public static function getGlobalMods()
 		return globalMods;
 
 	inline public static function pushGlobalMods() // prob a better way to do this but idc
 	{
 		globalMods = [];
+		invalidateDirectoriesCache();
 		for(mod in parseList().enabled)
 		{
 			var pack:Dynamic = getPack(mod);
@@ -93,6 +102,10 @@ class Mods
 
 	inline public static function directoriesWithFile(path:String, fileToFind:String, mods:Bool = true)
 	{
+		if (_directoriesCache == null) _directoriesCache = [];
+		var cacheKey:String = '$path|$fileToFind|$mods|${Paths.currentLevel}|$currentModDirectory|' + getGlobalMods().join(',');
+		if (_directoriesCache.exists(cacheKey)) return _directoriesCache.get(cacheKey);
+
 		var foldersToCheck:Array<String> = [];
 		//Main folder
 		if(FileSystem.exists(path + fileToFind))
@@ -128,6 +141,7 @@ class Mods
 			}
 		}
 		#end
+		_directoriesCache.set(cacheKey, foldersToCheck);
 		return foldersToCheck;
 	}
 
@@ -182,6 +196,7 @@ class Mods
 	private static function updateModList()
 	{
 		#if MODS_ALLOWED
+		invalidateDirectoriesCache();
 		// Find all that are already ordered
 		var list:Array<Array<Dynamic>> = [];
 		var added:Array<String> = [];

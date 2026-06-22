@@ -690,15 +690,30 @@ inline static public function inst(song:String, ?specialInst:String = null, ?mod
 		return FileSystem.readDirectory(directory);
 		#else
 		var dirs:Array<String> = [];
-		for(dir in Assets.list().filter(folder -> folder.startsWith(directory)))
+		var seen:haxe.ds.StringSet = new haxe.ds.StringSet();
+		var matchingDirs = Assets.list().filter(folder -> folder.startsWith(directory));
+		@:privateAccess
+		var libraries = lime.utils.Assets.libraries.keys();
+		for(dir in matchingDirs)
 		{
-			@:privateAccess
-			for(library in lime.utils.Assets.libraries.keys())
+			var added:Bool = false;
+			for(library in libraries)
 			{
-				if(library != 'default' && Assets.exists('$library:$dir') && (!dirs.contains('$library:$dir') || !dirs.contains(dir)))
-					dirs.push('$library:$dir');
-				else if(Assets.exists(dir) && !dirs.contains(dir))
-					dirs.push(dir);
+				if(library != 'default')
+				{
+					var libKey:String = '$library:$dir';
+					if(!seen.exists(libKey) && Assets.exists(libKey))
+					{
+						seen.add(libKey);
+						dirs.push(libKey);
+						added = true;
+					}
+				}
+			}
+			if(!added && !seen.exists(dir) && Assets.exists(dir))
+			{
+				seen.add(dir);
+				dirs.push(dir);
 			}
 		}
 		return dirs.map(dir -> dir.substr(dir.lastIndexOf("/") + 1));
