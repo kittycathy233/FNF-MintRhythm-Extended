@@ -90,6 +90,23 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		// 飞溅数量限制设置
+		var option:Option = new Option('Splash Limit',
+			'Limit the maximum number of simultaneous note splashes. OFF = no limit.',
+			'splashLimitEnabled',
+			BOOL);
+		addOption(option);
+
+		var option:Option = new Option('Max Splashes',
+			'Maximum number of note splashes that can exist at the same time. Only works when Splash Limit is ON.',
+			'splashLimit',
+			INT);
+		option.minValue = 1;
+		option.maxValue = 128;
+		option.defaultValue = 16;
+		option.displayFormat = '%v';
+		addOption(option);
+
 		super();
 		insert(3, aris);
 

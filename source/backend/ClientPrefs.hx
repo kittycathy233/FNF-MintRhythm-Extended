@@ -35,6 +35,8 @@ import states.TitleState;
 	public var noteSkin:String = 'Default';
 	public var splashSkin:String = 'Psych';
 	public var splashAlpha:Float = 0.6;
+	public var splashLimitEnabled:Bool = false; // 是否启用飞溅数量限制
+	public var splashLimit:Int = 16; // 飞溅最大同时存在数量（默认16）
 	public var lowQuality:Bool = false;
 	public var shaders:Bool = true;
 	public var cacheOnGPU:Bool = #if !switch false #else true #end; // GPU Caching made by Raltyro

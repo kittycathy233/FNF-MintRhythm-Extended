@@ -5013,6 +5013,15 @@ isReplaying = false;
 	}
 
 	public function spawnNoteSplash(x:Float = 0, y:Float = 0, ?data:Int = 0, ?note:Note, ?strum:StrumNote) {
+		// 飞溅数量限制检查
+		if (ClientPrefs.data.splashLimitEnabled) {
+			var aliveCount:Int = 0;
+			for (splash in grpNoteSplashes)
+				if (splash.alive) aliveCount++;
+			if (aliveCount >= ClientPrefs.data.splashLimit)
+				return; // 达到上限，跳过本次飞溅
+		}
+
 		var splash:NoteSplash = grpNoteSplashes.recycle(NoteSplash);
 		splash.babyArrow = strum;
 		splash.spawnSplashNote(x, y, data, note);
