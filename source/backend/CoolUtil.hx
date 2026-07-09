@@ -2,6 +2,9 @@ package backend;
 
 import openfl.utils.Assets;
 import lime.utils.Assets as LimeAssets;
+import flixel.addons.display.FlxGridOverlay;
+import flixel.graphics.FlxGraphic;
+import flixel.FlxG;
 
 #if cpp
 @:cppFileCode('#include <thread>')
@@ -9,6 +12,8 @@ import lime.utils.Assets as LimeAssets;
 class CoolUtil
 {
 	private static var cachedTips:String = null;
+	private static var _coolTextFileCache:Map<String, Array<String>> = null;
+	private static var _gridCache:Map<String, FlxGraphic> = null;
 	
 	public static function checkForUpdates(url:String = null):String {
 		if (url == null || url.length == 0)
@@ -81,13 +86,39 @@ class CoolUtil
 
 	inline public static function coolTextFile(path:String):Array<String>
 	{
+		if (_coolTextFileCache == null) _coolTextFileCache = [];
+		if (_coolTextFileCache.exists(path)) return _coolTextFileCache.get(path);
+
 		var daList:String = null;
 		#if (sys && MODS_ALLOWED)
 		if(FileSystem.exists(path)) daList = File.getContent(path);
 		#else
 		if(Assets.exists(path)) daList = Assets.getText(path);
 		#end
-		return daList != null ? listFromString(daList) : [];
+		var result:Array<String> = daList != null ? listFromString(daList) : [];
+		_coolTextFileCache.set(path, result);
+		return result;
+	}
+
+	public static function invalidateCoolTextFileCache(?path:String):Void
+	{
+		if (_coolTextFileCache == null) return;
+		if (path == null)
+			_coolTextFileCache = [];
+		else if (_coolTextFileCache.exists(path))
+			_coolTextFileCache.remove(path);
+	}
+
+	public static function getCachedGrid(columns:Int, rows:Int, pWidth:Int, pHeight:Int, useRect:Bool, color1:Int, color2:Int):FlxGraphic
+	{
+		if (_gridCache == null) _gridCache = [];
+		var key:String = '$columns,$rows,$pWidth,$pHeight,$useRect,$color1,$color2';
+		if (_gridCache.exists(key)) return _gridCache.get(key);
+		var bmp = FlxGridOverlay.createGrid(columns, rows, pWidth, pHeight, useRect, color1, color2);
+		var graphic:FlxGraphic = FlxG.bitmap.add(bmp, false, 'cached_grid_$key');
+		graphic.persist = true;
+		_gridCache.set(key, graphic);
+		return graphic;
 	}
 
 	inline public static function colorFromString(color:String):FlxColor

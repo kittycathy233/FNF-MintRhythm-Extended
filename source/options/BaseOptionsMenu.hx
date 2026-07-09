@@ -12,6 +12,7 @@ import backend.InputFormatter;
 
 import flixel.addons.display.FlxBackdrop;
 import flixel.addons.display.FlxGridOverlay;
+import backend.CoolUtil;
 
 class BaseOptionsMenu extends MusicBeatSubstate
 {
@@ -25,6 +26,12 @@ class BaseOptionsMenu extends MusicBeatSubstate
 
 	private var descBox:FlxSprite;
 	private var descText:FlxText;
+
+	private var _optionsBuildIndex:Int = 0;
+	private var _optionsBuilt:Bool = false;
+	private var _buildPerFrame:Int = 1;
+	private var _loadingText:FlxText = null;
+	private var _grid:FlxBackdrop;
 
 	public var title:String;
 	public var rpcTitle:String;
@@ -45,15 +52,6 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		DiscordClient.changePresence(rpcTitle, null);
 		#end
 
-		bg1 = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.WHITE);
-		bg1.screenCenter();
-		bg1.antialiasing = ClientPrefs.data.antialiasing;
-		bg1.alpha = 0;
-		add(bg1);
-		FlxTween.tween(bg1, {alpha: 0.5}, 0.5, {ease: FlxEase.quadOut});
-
-		/*bg = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
-		bg.color = 0xFFea71fd;*/
 		bg2 = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
 		bg2.screenCenter();
 		bg2.antialiasing = ClientPrefs.data.antialiasing;
@@ -61,12 +59,11 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		add(bg2);
 		FlxTween.tween(bg2, {alpha: 0.6}, 0.5, {ease: FlxEase.quadOut});
 
-		// 添加背景方块移动效果
-		var grid:FlxBackdrop = new FlxBackdrop(FlxGridOverlay.createGrid(80, 80, 160, 160, true, 0x33FFFFFF, 0x0));
-		grid.velocity.set(40, 40);
-		grid.alpha = 0;
-		FlxTween.tween(grid, {alpha: 1}, 0.5, {ease: FlxEase.quadOut});
-		add(grid);
+		// 添加背景方块移动效果（加载完成后才显示）
+		_grid = new FlxBackdrop(CoolUtil.getCachedGrid(80, 80, 160, 160, true, 0x33FFFFFF, 0x0));
+		_grid.velocity.set(40, 40);
+		_grid.visible = false;
+		add(_grid);
 
 		// avoids lagspikes while scrolling through menus!
 		grpOptions = new FlxTypedGroup<Alphabet>();
@@ -93,12 +90,36 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		descText.borderSize = 2.4;
 		add(descText);
 
-		for (i in 0...optionsArray.length)
+		// 加载提示文字
+		_loadingText = new FlxText(20, 0, 0, 'Loading...\nPlease wait...', 24);
+		_loadingText.setFormat(Paths.font("vcr.ttf"), 36, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		_loadingText.scrollFactor.set();
+		_loadingText.borderSize = 2;
+		_loadingText.antialiasing = ClientPrefs.data.antialiasing;
+		_loadingText.y = 100;
+		_loadingText.x = FlxG.width - _loadingText.width - 100;
+		add(_loadingText);
+
+		// Initialize keybind manager
+		keybindManager = new KeybindManager();
+
+		addTouchPad('LEFT_FULL', 'A_B_C');
+		addTouchPadCamera();
+
+		// 分帧构建选项，避免单帧创建大量 Alphabet sprite 导致卡顿
+		_optionsBuildIndex = 0;
+		_optionsBuilt = false;
+		if (optionsArray == null) optionsArray = [];
+	}
+
+	private function buildNextOptions():Void
+	{
+		var count:Int = 0;
+		while (_optionsBuildIndex < optionsArray.length && count < _buildPerFrame)
 		{
+			var i:Int = _optionsBuildIndex;
 			var optionText:Alphabet = new Alphabet(220, 260, optionsArray[i].name, false);
 			optionText.isMenuItem = true;
-			/*optionText.forceX = 300;
-			optionText.yMult = 90;*/
 			optionText.targetY = i;
 			grpOptions.add(optionText);
 
@@ -114,7 +135,6 @@ class BaseOptionsMenu extends MusicBeatSubstate
 			{
 				optionText.x -= 80;
 				optionText.startPosition.x -= 80;
-				//optionText.xAdd -= 80;
 				var valueText:AttachedText = new AttachedText('' + optionsArray[i].getValue(), optionText.width + 60);
 				valueText.sprTracker = optionText;
 				valueText.copyAlpha = true;
@@ -125,24 +145,47 @@ class BaseOptionsMenu extends MusicBeatSubstate
 			}
 			else
 			{
-				// BUTTON type doesn't have a value text
 				optionText.x -= 80;
 				optionText.startPosition.x -= 80;
 			}
-			//optionText.snapToPosition(); //Don't ignore me when i ask for not making a fucking pull request to uncomment this line ok
 			if (optionsArray[i].type != BUTTON) {
 				updateTextFrom(optionsArray[i]);
 			}
+
+			_optionsBuildIndex++;
+			count++;
 		}
 
-		changeSelection();
-		reloadCheckboxes();
+		if (_optionsBuildIndex >= optionsArray.length)
+		{
+			_optionsBuilt = true;
+			changeSelection();
+			reloadCheckboxes();
+			onOptionsBuilt();
+		}
+	}
 
-		// Initialize keybind manager
-		keybindManager = new KeybindManager();
+	public function onOptionsBuilt():Void
+	{
+		if (_grid != null)
+		{
+			_grid.visible = true;
+			_grid.alpha = 0;
+			FlxTween.tween(_grid, {alpha: 1}, 0.5, {ease: FlxEase.quadOut});
+		}
 
-		addTouchPad('LEFT_FULL', 'A_B_C');
-		addTouchPadCamera();
+		if (_loadingText != null)
+		{
+			_loadingText.text = LanguageBasic.getPhrase('done', 'Done');
+			FlxTween.tween(_loadingText, {alpha: 0, y: _loadingText.y + 20}, 0.5, {ease: FlxEase.quadIn, onComplete: function(tween:FlxTween) {
+				if (_loadingText != null)
+				{
+					remove(_loadingText);
+					_loadingText.destroy();
+					_loadingText = null;
+				}
+			}});
+		}
 	}
 
 	public function addOption(option:Option) {
@@ -160,6 +203,13 @@ class BaseOptionsMenu extends MusicBeatSubstate
 	var lastMouseClickIndex:Int = -1;
 	override function update(elapsed:Float)
 	{
+		if (!_optionsBuilt)
+		{
+			buildNextOptions();
+			super.update(elapsed);
+			return;
+		}
+
 		super.update(elapsed);
 
 #if !mobile
@@ -468,6 +518,8 @@ class BaseOptionsMenu extends MusicBeatSubstate
 			keybindManager.destroy();
 			keybindManager = null;
 		}
+		if (_loadingText != null)
+			FlxTween.cancelTweensOf(_loadingText);
 		super.destroy();
 	}
 

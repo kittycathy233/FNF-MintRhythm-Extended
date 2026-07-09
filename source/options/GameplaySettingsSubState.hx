@@ -251,7 +251,11 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		presetDependentOptions = [perfectWindowOption, sickWindowOption, goodWindowOption, badWindowOption];
 
 		super();
+	}
 
+	override public function onOptionsBuilt():Void
+	{
+		super.onOptionsBuilt();
 		// 初始化完成后，根据当前预设刷新禁用状态
 		refreshPresetDisabledState();
 	}
