@@ -22,17 +22,16 @@ enum MainMenuColumn {
 
 class MainMenuState extends MusicBeatState
 {
-	public static var psychEngineVersion:String = '1.0.4'; // This is also used for Discord RPC
-	public static var kathyEngineVersion:String = '1.1.0 dev'; // This is also used for Discord RPC (?我说我不想改这个你信吗)
+	public static var psychEngineVersion:String = '1.0.4';
+	public static var kathyEngineVersion:String = '1.1.0 dev';
 	public static var curSelected:Int = 0;
 	public static var curColumn:MainMenuColumn = CENTER;
-	var allowMouse:Bool = true; //Turn this off to block mouse movement in menus
+	var allowMouse:Bool = true;
 
 	var menuItems:FlxTypedGroup<FlxSprite>;
 	var leftItem:FlxSprite;
 	var rightItem:FlxSprite;
 
-	//Centered/Text options
 	var optionShit:Array<String> = [
 		'story_mode',
 		'freeplay',
@@ -49,6 +48,9 @@ class MainMenuState extends MusicBeatState
 	static var showOutdatedWarning:Bool = true;
 	var dropFileHandler:Dynamic = null;
 	private var tipText:FlxText;
+	var selectedSomethin:Bool = false;
+	var timeNotMoving:Float = 0;
+
 	override function create()
 	{
 		super.create();
@@ -59,13 +61,26 @@ class MainMenuState extends MusicBeatState
 		Mods.loadTopMod();
 
 		#if DISCORD_ALLOWED
-		// Updating Discord Rich Presence
 		DiscordClient.changePresence("In the Menus", null);
 		#end
 
 		persistentUpdate = persistentDraw = true;
 
-		var yScroll:Float = 0.25;
+		// Calculate yScroll based on the ACTUAL number of menu items.
+		// In legacy mode, createLegacyMenu() replaces optionShit with a longer
+		// list (story_mode, freeplay, mods, achievements, credits, options),
+		// so we must count those items here — otherwise yScroll is too high
+		// and the background scrolls too much, exposing black edges.
+		var yScroll:Float;
+		if (ClientPrefs.data.legacyMainMenu)
+		{
+			var legacyCount:Int = 4 // story_mode, freeplay, credits, options
+				#if MODS_ALLOWED + 1 #end
+				#if ACHIEVEMENTS_ALLOWED + 1 #end;
+			yScroll = Math.max(0.25 - (0.05 * (legacyCount - 4)), 0.1);
+		}
+		else
+			yScroll = 0.25;
 		var bg:FlxSprite = new FlxSprite(-80).loadGraphic(Paths.image('menuBG'));
 		bg.antialiasing = ClientPrefs.data.antialiasing;
 		bg.scrollFactor.set(0, yScroll);
@@ -90,20 +105,10 @@ class MainMenuState extends MusicBeatState
 		menuItems = new FlxTypedGroup<FlxSprite>();
 		add(menuItems);
 
-		for (num => option in optionShit)
-		{
-			var item:FlxSprite = createMenuItem(option, 0, (num * 140) + 90);
-			item.y += (4 - optionShit.length) * 70; // Offsets for when you have anything other than 4 items
-			item.screenCenter(X);
-		}
-
-		if (leftOption != null)
-			leftItem = createMenuItem(leftOption, 60, 490);
-		if (rightOption != null)
-		{
-			rightItem = createMenuItem(rightOption, FlxG.width - 60, 490);
-			rightItem.x -= rightItem.width;
-		}
+		if (ClientPrefs.data.legacyMainMenu)
+			createLegacyMenu();
+		else
+			createModernMenu();
 
 		var lang:String = ClientPrefs.data.language;
 
@@ -115,17 +120,14 @@ class MainMenuState extends MusicBeatState
 		psychVer.scrollFactor.set();
 		psychVer.setFormat(Paths.font(lang == 'zh_cn' ? 'ResourceHanRoundedCN-Bold.ttf' : "vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(psychVer);
-		var fnfVer:FlxText = new FlxText(12, FlxG.height - 26, 0, 'Friday Night Funkin\' v0.2.8' /*+ Application.current.meta.get('version')*/, 12);
+		var fnfVer:FlxText = new FlxText(12, FlxG.height - 26, 0, 'Friday Night Funkin\' v0.2.8', 12);
 		fnfVer.scrollFactor.set();
 		fnfVer.setFormat(Paths.font(lang == 'zh_cn' ? 'ResourceHanRoundedCN-Bold.ttf' : "vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(fnfVer);
 		
-		// 添加 tips 显示
 		var tipsContent = CoolUtil.tipsShow();
 		if(tipsContent != null && tipsContent.length > 0) {
-			// 先按物理换行拆分
 			var tipsArray = tipsContent.split('\n');
-			// 获取随机行并替换其中的 "\n" 为实际换行符
 			var randomTip = StringTools.replace(
 				tipsArray[FlxG.random.int(0, tipsArray.length - 1)].trim(),
 				"\\n",
@@ -142,9 +144,6 @@ class MainMenuState extends MusicBeatState
 				FlxTextBorderStyle.OUTLINE, 
 				FlxColor.BLACK
 			);
-			// 增加行间距
-			//tipText.lineSpacing = 3;
-			// 自动调整文本框高度
 			tipText.height = tipText.textField.textHeight + 8;
 			add(tipText);
 		}
@@ -152,7 +151,6 @@ class MainMenuState extends MusicBeatState
 		changeItem();
 
 		#if ACHIEVEMENTS_ALLOWED
-		// Unlocks "Freaky on a Friday Night" achievement if it's a Friday and between 18:00 PM and 23:59 PM
 		var leDate = Date.now();
 		if (leDate.getDay() == 5 && leDate.getHours() >= 18)
 			Achievements.unlock('friday_night_play');
@@ -172,14 +170,12 @@ class MainMenuState extends MusicBeatState
 
 		FlxG.camera.follow(camFollow, null, 0.15);
 
-		addTouchPad('NONE', 'E');
+		addTouchPad(ClientPrefs.data.legacyMainMenu ? 'UP_DOWN' : 'NONE', ClientPrefs.data.legacyMainMenu ? 'A_B_E' : 'E');
 
 		#if desktop
-		// 仅在PC平台且启用了导入功能时添加拖放监听
 		if (ClientPrefs.data.enableModsImport) {
 			dropFileHandler = function(path:String) {
 				if (path.toLowerCase().endsWith('.zip')) {
-					// 获取文件名
 					var fileName = path.substring(path.lastIndexOf('/') + 1);
 					handleZipImport(path, fileName);
 				}
@@ -189,24 +185,158 @@ class MainMenuState extends MusicBeatState
 		#end
 	}
 
+	function createModernMenu()
+	{
+		for (num => option in optionShit)
+		{
+			var item:FlxSprite = createMenuItem(option, 0, (num * 140) + 90);
+			item.y += (4 - optionShit.length) * 70;
+			item.screenCenter(X);
+		}
+
+		if (leftOption != null)
+			leftItem = createMenuItem(leftOption, 60, 490);
+		if (rightOption != null)
+		{
+			rightItem = createMenuItem(rightOption, FlxG.width - 60, 490);
+			rightItem.x -= rightItem.width;
+		}
+	}
+
+	function createLegacyMenu()
+	{
+		var fullOptions:Array<String> = [
+			'story_mode',
+			'freeplay',
+			#if MODS_ALLOWED 'mods', #end
+			#if ACHIEVEMENTS_ALLOWED 'achievements', #end
+			'credits',
+			'options'
+		];
+
+		for (i in 0...fullOptions.length)
+		{
+			var option:String = fullOptions[i];
+			var offset:Float = 108 - (Math.max(fullOptions.length, 4) - 4) * 80;
+			var menuItem:FlxSprite = new FlxSprite(0, (i * 140) + offset);
+			menuItem.antialiasing = ClientPrefs.data.antialiasing;
+
+			// Resolve which atlas to load and its animation prefix.
+			// See resolveLegacyAtlas() for the full priority order.
+			var info:{atlas:String, prefix:String} = resolveLegacyAtlas(option);
+			menuItem.frames = Paths.getSparrowAtlas(info.atlas);
+
+			// Old Psych 0.7.3 textures use "basic"/"white", new textures use
+			// "idle"/"selected". Try old-style first, fall back to new-style.
+			addMenuAnim(menuItem, 'idle', info.prefix, 'basic', 'idle');
+			addMenuAnim(menuItem, 'selected', info.prefix, 'white', 'selected');
+
+			menuItem.animation.play('idle');
+			menuItems.add(menuItem);
+			var scr:Float = (fullOptions.length - 4) * 0.135;
+			if (fullOptions.length < 6)
+				scr = 0;
+			menuItem.scrollFactor.set(0, scr);
+			menuItem.updateHitbox();
+			menuItem.screenCenter(X);
+		}
+
+		optionShit = fullOptions;
+	}
+
+	/**
+	 * Resolves which atlas to load for legacy mode and the animation prefix
+	 * (the part of the frame name before the suffix, e.g. "awards" in "awards basic0000").
+	 *
+	 * Priority:
+	 *   1. Mod-provided `mainmenu/menu_$legacyName` (e.g. mod's menu_awards with basic/white)
+	 *   2. Mod-provided `mainmenu/menu_$option`    (e.g. mod's menu_achievements with idle/selected)
+	 *   3. Bundled `mainmenu/legacy/menu_$legacyName` (old Psych 0.7.3 textures)
+	 *   4. Bundled `mainmenu/menu_$option`            (modern textures, last resort)
+	 *
+	 * This ensures most mods — which place textures directly in `mainmenu/` — work
+	 * in legacy mode, while still defaulting to the bundled old-style textures when
+	 * no mod override is present.
+	 */
+	function resolveLegacyAtlas(option:String):{atlas:String, prefix:String}
+	{
+		// Map modern option names to legacy texture names
+		var legacyName:String = switch (option)
+		{
+			case 'achievements': 'awards';
+			default: option;
+		};
+
+		#if MODS_ALLOWED
+		// 1-2. Mod override: if a mod provides textures in mainmenu/, use them.
+		//      Most mods place textures here, not in mainmenu/legacy/.
+		if (modProvidesImage('mainmenu/menu_' + legacyName))
+			return {atlas: 'mainmenu/menu_' + legacyName, prefix: legacyName};
+		if (option != legacyName && modProvidesImage('mainmenu/menu_' + option))
+			return {atlas: 'mainmenu/menu_' + option, prefix: option};
+		#end
+
+		// 3. Bundled legacy textures (or mod-provided mainmenu/legacy/ override)
+		if (Paths.fileExists('images/mainmenu/legacy/menu_' + legacyName + '.png', IMAGE))
+			return {atlas: 'mainmenu/legacy/menu_' + legacyName, prefix: legacyName};
+
+		// 4. Fall back to modern texture name (new-style idle/selected)
+		return {atlas: 'mainmenu/menu_' + option, prefix: option};
+	}
+
+	#if MODS_ALLOWED
+	/**
+	 * Checks whether a mod (global mods, current mod, or global mods folder)
+	 * provides the given image — WITHOUT checking bundled assets.
+	 * Used to give mod-provided `mainmenu/menu_*` textures priority over the
+	 * bundled `mainmenu/legacy/` textures in legacy mode.
+	 */
+	function modProvidesImage(key:String):Bool
+	{
+		var modKey:String = 'images/' + key + '.png';
+		for (mod in Mods.getGlobalMods())
+			if (FileSystem.exists(Paths.mods('$mod/$modKey')))
+				return true;
+		if (Mods.currentModDirectory != null && Mods.currentModDirectory.length > 0)
+			if (FileSystem.exists(Paths.mods(Mods.currentModDirectory + '/' + modKey)))
+				return true;
+		return FileSystem.exists(Paths.mods(modKey));
+	}
+	#end
+
+	/**
+	 * Adds an animation trying `firstSuffix` first, then `fallbackSuffix` if no
+	 * frames matched the prefix. In flixel 5.9.0, addByPrefix does not create
+	 * the animation when zero frames match the prefix, so getByName returns
+	 * null — that's our signal to try the alternative.
+	 *
+	 * Usage:
+	 *   - Legacy mode: addMenuAnim(spr, 'idle', prefix, 'basic', 'idle')
+	 *   - Modern mode: addMenuAnim(spr, 'idle', name, 'idle', 'basic')
+	 */
+	function addMenuAnim(sprite:FlxSprite, animName:String, prefix:String, firstSuffix:String, fallbackSuffix:String):Void
+	{
+		sprite.animation.addByPrefix(animName, prefix + ' ' + firstSuffix, 24);
+		if (sprite.animation.getByName(animName) == null)
+			sprite.animation.addByPrefix(animName, prefix + ' ' + fallbackSuffix, 24);
+	}
+
 	function createMenuItem(name:String, x:Float, y:Float):FlxSprite
 	{
 		var menuItem:FlxSprite = new FlxSprite(x, y);
 		menuItem.frames = Paths.getSparrowAtlas('mainmenu/menu_$name');
-		menuItem.animation.addByPrefix('idle', '$name idle', 24, true);
-		menuItem.animation.addByPrefix('selected', '$name selected', 24, true);
+		// New-style first (idle/selected), fall back to old-style (basic/white)
+		// so mods with old Psych 0.7.3 textures also work in the modern layout.
+		addMenuAnim(menuItem, 'idle', name, 'idle', 'basic');
+		addMenuAnim(menuItem, 'selected', name, 'selected', 'white');
 		menuItem.animation.play('idle');
 		menuItem.updateHitbox();
-		
 		menuItem.antialiasing = ClientPrefs.data.antialiasing;
 		menuItem.scrollFactor.set();
 		menuItems.add(menuItem);
 		return menuItem;
 	}
 
-	var selectedSomethin:Bool = false;
-
-	var timeNotMoving:Float = 0;
 	override function update(elapsed:Float)
 	{
 		if (FlxG.sound.music.volume < 0.8)
@@ -214,111 +344,21 @@ class MainMenuState extends MusicBeatState
 
 		if (!selectedSomethin)
 		{
+			#if desktop
+			if (ClientPrefs.data.legacyMainMenu)
+				updateLegacyInput(elapsed);
+			#end
+
 			if (controls.UI_UP_P)
 				changeItem(-1);
 
 			if (controls.UI_DOWN_P)
 				changeItem(1);
 
-			var allowMouse:Bool = allowMouse;
-			if (allowMouse && ((FlxG.mouse.deltaScreenX != 0 && FlxG.mouse.deltaScreenY != 0) || FlxG.mouse.justPressed)) //FlxG.mouse.deltaScreenX/Y checks is more accurate than FlxG.mouse.justMoved
-			{
-				allowMouse = false;
-				FlxG.mouse.visible = true;
-				timeNotMoving = 0;
+			if (!ClientPrefs.data.legacyMainMenu)
+				updateModernInput(elapsed);
 
-				var selectedItem:FlxSprite;
-				switch(curColumn)
-				{
-					case CENTER:
-						selectedItem = menuItems.members[curSelected];
-					case LEFT:
-						selectedItem = leftItem;
-					case RIGHT:
-						selectedItem = rightItem;
-				}
-
-				if(leftItem != null && FlxG.mouse.overlaps(leftItem))
-				{
-					allowMouse = true;
-					if(selectedItem != leftItem)
-					{
-						curColumn = LEFT;
-						changeItem();
-					}
-				}
-				else if(rightItem != null && FlxG.mouse.overlaps(rightItem))
-				{
-					allowMouse = true;
-					if(selectedItem != rightItem)
-					{
-						curColumn = RIGHT;
-						changeItem();
-					}
-				}
-				else
-				{
-					var dist:Float = -1;
-					var distItem:Int = -1;
-					for (i in 0...optionShit.length)
-					{
-						var memb:FlxSprite = menuItems.members[i];
-						if(FlxG.mouse.overlaps(memb))
-						{
-							var distance:Float = Math.sqrt(Math.pow(memb.getGraphicMidpoint().x - FlxG.mouse.screenX, 2) + Math.pow(memb.getGraphicMidpoint().y - FlxG.mouse.screenY, 2));
-							if (dist < 0 || distance < dist)
-							{
-								dist = distance;
-								distItem = i;
-								allowMouse = true;
-							}
-						}
-					}
-
-					if(distItem != -1 && selectedItem != menuItems.members[distItem])
-					{
-						curColumn = CENTER;
-						curSelected = distItem;
-						changeItem();
-					}
-				}
-			}
-			else
-			{
-				timeNotMoving += elapsed;
-				if(timeNotMoving > 2) FlxG.mouse.visible = false;
-			}
-
-			switch(curColumn)
-			{
-				case CENTER:
-					if(controls.UI_LEFT_P && leftOption != null)
-					{
-						curColumn = LEFT;
-						changeItem();
-					}
-					else if(controls.UI_RIGHT_P && rightOption != null)
-					{
-						curColumn = RIGHT;
-						changeItem();
-					}
-
-				case LEFT:
-					if(controls.UI_RIGHT_P)
-					{
-						curColumn = CENTER;
-						changeItem();
-					}
-
-				case RIGHT:
-					if(controls.UI_LEFT_P)
-					{
-						curColumn = CENTER;
-						changeItem();
-					}
-			}
-
-			if (controls.BACK)
+			if (controls.BACK #if desktop || (FlxG.mouse.justPressedRight) #end)
 			{
 				selectedSomethin = true;
 				FlxG.mouse.visible = false;
@@ -326,7 +366,15 @@ class MainMenuState extends MusicBeatState
 				MusicBeatState.switchState(new TitleState());
 			}
 
-			if (controls.ACCEPT || (FlxG.mouse.overlaps(menuItems, FlxG.camera) && FlxG.mouse.justPressed && allowMouse))
+			var acceptTriggered:Bool = controls.ACCEPT;
+			#if desktop
+			if (!ClientPrefs.data.legacyMainMenu)
+				acceptTriggered = acceptTriggered || (FlxG.mouse.overlaps(menuItems, FlxG.camera) && FlxG.mouse.justPressed);
+			else
+				acceptTriggered = acceptTriggered || FlxG.mouse.justPressed;
+			#end
+
+			if (acceptTriggered)
 			{
 				FlxG.sound.play(Paths.sound('confirmMenu'));
 				selectedSomethin = true;
@@ -337,19 +385,26 @@ class MainMenuState extends MusicBeatState
 
 				var item:FlxSprite;
 				var option:String;
-				switch(curColumn)
+
+				if (!ClientPrefs.data.legacyMainMenu)
 				{
-					case CENTER:
-						option = optionShit[curSelected];
-						item = menuItems.members[curSelected];
-
-					case LEFT:
-						option = leftOption;
-						item = leftItem;
-
-					case RIGHT:
-						option = rightOption;
-						item = rightItem;
+					switch(curColumn)
+					{
+						case CENTER:
+							option = optionShit[curSelected];
+							item = menuItems.members[curSelected];
+						case LEFT:
+							option = leftOption;
+							item = leftItem;
+						case RIGHT:
+							option = rightOption;
+							item = rightItem;
+					}
+				}
+				else
+				{
+					option = optionShit[curSelected];
+					item = menuItems.members[curSelected];
 				}
 
 				FlxFlicker.flicker(item, 1, 0.06, false, false, function(flick:FlxFlicker)
@@ -392,13 +447,14 @@ class MainMenuState extends MusicBeatState
 							item.visible = true;
 					}
 				});
-				
-				for (memb in menuItems)
-				{
-					if(memb == item)
-						continue;
 
-					FlxTween.tween(memb, {alpha: 0}, 0.4, {ease: FlxEase.quadOut});
+				for (i in 0...menuItems.members.length)
+				{
+					if (!ClientPrefs.data.legacyMainMenu && menuItems.members[i] == item)
+						continue;
+					if (ClientPrefs.data.legacyMainMenu && i == curSelected)
+						continue;
+					FlxTween.tween(menuItems.members[i], {alpha: 0}, 0.4, {ease: FlxEase.quadOut});
 				}
 			}
 			else if (controls.justPressed('debug_1') || touchPad.buttonE.justPressed)
@@ -412,11 +468,153 @@ class MainMenuState extends MusicBeatState
 		super.update(elapsed);
 	}
 
-	function changeItem(change:Int = 0)
+	#if desktop
+	/**
+	 * Legacy menu mouse input (desktop only):
+	 *   - Mouse wheel up/down: change selection
+	 *   - Left click anywhere: confirm currently selected item
+	 *   - Right click anywhere: go back (title screen)
+	 */
+	function updateLegacyInput(elapsed:Float):Void
 	{
-		if(change != 0) curColumn = CENTER;
-		curSelected = FlxMath.wrap(curSelected + change, 0, optionShit.length - 1);
+		// Show mouse cursor on any mouse movement / click
+		if (FlxG.mouse.deltaScreenX != 0 || FlxG.mouse.deltaScreenY != 0
+			|| FlxG.mouse.justPressed || FlxG.mouse.justPressedRight
+			|| FlxG.mouse.wheel != 0)
+		{
+			FlxG.mouse.visible = true;
+			timeNotMoving = 0;
+		}
+		else
+		{
+			timeNotMoving += elapsed;
+			if (timeNotMoving > 2)
+				FlxG.mouse.visible = false;
+		}
+
+		// Mouse wheel: scroll selection up/down
+		if (FlxG.mouse.wheel > 0)
+			changeItem(-1);
+		else if (FlxG.mouse.wheel < 0)
+			changeItem(1);
+	}
+	#end
+
+	function updateModernInput(elapsed:Float)
+	{
+		var allowMouse:Bool = allowMouse;
+		if (allowMouse && ((FlxG.mouse.deltaScreenX != 0 && FlxG.mouse.deltaScreenY != 0) || FlxG.mouse.justPressed))
+		{
+			allowMouse = false;
+			FlxG.mouse.visible = true;
+			timeNotMoving = 0;
+
+			var selectedItem:FlxSprite;
+			switch(curColumn)
+			{
+				case CENTER:
+					selectedItem = menuItems.members[curSelected];
+				case LEFT:
+					selectedItem = leftItem;
+				case RIGHT:
+					selectedItem = rightItem;
+			}
+
+			if(leftItem != null && FlxG.mouse.overlaps(leftItem))
+			{
+				allowMouse = true;
+				if(selectedItem != leftItem)
+				{
+					curColumn = LEFT;
+					changeItem();
+				}
+			}
+			else if(rightItem != null && FlxG.mouse.overlaps(rightItem))
+			{
+				allowMouse = true;
+				if(selectedItem != rightItem)
+				{
+					curColumn = RIGHT;
+					changeItem();
+				}
+			}
+			else
+			{
+				var dist:Float = -1;
+				var distItem:Int = -1;
+				for (i in 0...optionShit.length)
+				{
+					var memb:FlxSprite = menuItems.members[i];
+					if(FlxG.mouse.overlaps(memb))
+					{
+						var distance:Float = Math.sqrt(Math.pow(memb.getGraphicMidpoint().x - FlxG.mouse.screenX, 2) + Math.pow(memb.getGraphicMidpoint().y - FlxG.mouse.screenY, 2));
+						if (dist < 0 || distance < dist)
+						{
+							dist = distance;
+							distItem = i;
+							allowMouse = true;
+						}
+					}
+				}
+
+				if(distItem != -1 && selectedItem != menuItems.members[distItem])
+				{
+					curColumn = CENTER;
+					curSelected = distItem;
+					changeItem();
+				}
+			}
+		}
+		else
+		{
+			timeNotMoving += elapsed;
+			if(timeNotMoving > 2) FlxG.mouse.visible = false;
+		}
+
+		switch(curColumn)
+		{
+			case CENTER:
+				if(controls.UI_LEFT_P && leftOption != null)
+				{
+					curColumn = LEFT;
+					changeItem();
+				}
+				else if(controls.UI_RIGHT_P && rightOption != null)
+				{
+					curColumn = RIGHT;
+					changeItem();
+				}
+
+			case LEFT:
+				if(controls.UI_RIGHT_P)
+				{
+					curColumn = CENTER;
+					changeItem();
+				}
+
+			case RIGHT:
+				if(controls.UI_LEFT_P)
+				{
+					curColumn = CENTER;
+					changeItem();
+				}
+		}
+	}
+
+	function changeItem(huh:Int = 0)
+	{
 		FlxG.sound.play(Paths.sound('scrollMenu'));
+
+		if (ClientPrefs.data.legacyMainMenu)
+			changeLegacyItem(huh);
+		else
+			changeModernItem(huh);
+	}
+
+	function changeModernItem(huh:Int = 0)
+	{
+		if(huh != 0) curColumn = CENTER;
+		curSelected = FlxMath.wrap(curSelected + huh, 0, optionShit.length - 1);
 
 		for (item in menuItems)
 		{
@@ -439,18 +637,35 @@ class MainMenuState extends MusicBeatState
 		camFollow.y = selectedItem.getGraphicMidpoint().y;
 	}
 
+	function changeLegacyItem(huh:Int = 0)
+	{
+		menuItems.members[curSelected].animation.play('idle');
+		menuItems.members[curSelected].updateHitbox();
+		menuItems.members[curSelected].screenCenter(X);
+
+		curSelected += huh;
+
+		if (curSelected >= menuItems.length)
+			curSelected = 0;
+		if (curSelected < 0)
+			curSelected = menuItems.length - 1;
+
+		menuItems.members[curSelected].animation.play('selected');
+		menuItems.members[curSelected].centerOffsets();
+		menuItems.members[curSelected].screenCenter(X);
+
+		camFollow.setPosition(menuItems.members[curSelected].getGraphicMidpoint().x,
+			menuItems.members[curSelected].getGraphicMidpoint().y - (menuItems.length > 4 ? menuItems.length * 8 : 0));
+	}
+
 	function handleZipImport(zipPath:String, zipName:String):Void {
-		// 获取文件名，不包含路径
 		var fileName = zipName.substring(zipName.lastIndexOf('/') + 1);
 		MusicBeatState.switchState(new ModsImport(zipPath, fileName));
 	}
 
-
-
 	override function destroy()
 	{
 		#if desktop
-		// 离开主菜单时移除拖拽监听
 		if (dropFileHandler != null) {
 			Application.current.window.onDropFile.remove(dropFileHandler);
 			dropFileHandler = null;

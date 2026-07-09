@@ -240,6 +240,12 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		BOOL);
 	addOption(option);
 
+	var option:Option = new Option("Legacy Main Menu UI",
+		"Use the old Psych Engine v0.7.3 main menu style",
+		'legacyMainMenu',
+		BOOL);
+	addOption(option);
+
 	// Fake OS 伪装设置
 	var option:Option = new Option("Fake OS Mode",
 		"",

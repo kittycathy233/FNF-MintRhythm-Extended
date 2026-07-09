@@ -117,6 +117,7 @@ class CoolUtil
 		var bmp = FlxGridOverlay.createGrid(columns, rows, pWidth, pHeight, useRect, color1, color2);
 		var graphic:FlxGraphic = FlxG.bitmap.add(bmp, false, 'cached_grid_$key');
 		graphic.persist = true;
+		graphic.destroyOnNoUse = false;
 		_gridCache.set(key, graphic);
 		return graphic;
 	}
