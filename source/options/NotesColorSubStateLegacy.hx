@@ -39,7 +39,7 @@ class NotesColorSubStateLegacy extends MusicBeatSubstate
 	var nextAccept:Int = 5;
 
 	var blackBG:FlxSprite;
-	var hsbText:Alphabet;
+	var hsbTexts:Array<Alphabet> = [];
 	var tipTxt:FlxText;
 
 	var posX = 230;
@@ -80,26 +80,32 @@ class NotesColorSubStateLegacy extends MusicBeatSubstate
 				grpNumbers.add(optionText);
 			}
 
-			var note:FlxSprite = new FlxSprite(posX, yPos);
-			note.frames = Paths.getSparrowAtlas(Note.defaultNoteSkin);
-			var animations:Array<String> = ['purple0', 'blue0', 'green0', 'red0'];
-			note.animation.addByPrefix('idle', animations[i]);
-			note.animation.play('idle');
-			note.antialiasing = ClientPrefs.data.antialiasing;
-			note.setGraphicSize(Std.int(note.width * 0.7));
-			note.updateHitbox();
-			grpNotes.add(note);
+		// 用 Note（落下的音符）复用与 PlayState 游玩完全一致皮肤解析（noteSkin 后缀、
+		// HSV 的 hsv/ 目录、RGB/HSV 着色器、模组上下文），保持“落键”外观而非
+		// StrumNote 的受体样式，让编辑器预览与游玩一致。
+		var note:Note = new Note(0, i, null, false, true);
+		note.x = posX;
+		note.y = yPos;
+		note.scale.set(0.7, 0.7);
+		grpNotes.add(note);
 
-			// Use the shared global ColorSwap so edits reflect live in gameplay.
-			var newShader:ColorSwap = Note.initializeGlobalColorSwapShader(i);
-			note.shader = newShader.shader;
-			shaderArray.push(newShader);
+		// HSV 模式：Note 已挂载与游玩同一个全局 ColorSwap（reloadNote 时挂上），
+		// 直接引用即可让 arrowHSV 编辑实时生效；RGB 模式编辑 HSV 无效，用独立
+		// ColorSwap 占位以免 shaderArray 出现空引用。
+		if (note.colorSwap != null) shaderArray.push(note.colorSwap);
+		else shaderArray.push(Note.initializeGlobalColorSwapShader(i));
 		}
 
-		hsbText = new Alphabet(posX + 560, 0, "Hue    Saturation  Brightness", false);
-		hsbText.scaleX = 0.6;
-		hsbText.scaleY = 0.6;
-		add(hsbText);
+		// 三个 H/S/B 列标题，分别对齐到对应的数值列（x 与 grpNumbers 一致），
+		// 避免原先单个居中字符串“Hue    Saturation  Brightness”整体偏移、不对应各列。
+		var hsbLabels:Array<String> = ["Hue", "Saturation", "Brightness"];
+		for (j in 0...3) {
+			var label:Alphabet = new Alphabet(posX + (225 * j) + 250, 0, hsbLabels[j], false);
+			label.scaleX = 0.6;
+			label.scaleY = 0.6;
+			add(label);
+			hsbTexts.push(label);
+		}
 
 		// Tip text
 		var tipX:Float = 20;
@@ -240,7 +246,7 @@ class NotesColorSubStateLegacy extends MusicBeatSubstate
 			if (curSelected == i) {
 				item.alpha = 1;
 				item.scale.set(1, 1);
-				hsbText.y = item.y - 70;
+				for (label in hsbTexts) label.y = item.y - 70;
 				blackBG.y = item.y - 20;
 			}
 		}
