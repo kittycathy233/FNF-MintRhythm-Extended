@@ -68,7 +68,9 @@ class NoteSplash extends FlxSprite
 		config = null;
 		maxAnims = 0;
 
-		if(splash == null)
+		// 空串（如 SONG.splashSkin = ""）与 null 等价，一律回退到默认飞溅，
+		// 否则会被 resolveSkinPath("") 误解析成普通箭头皮肤（defaultNoteSkin）。
+		if(splash == null || splash.length < 1)
 		{
 			splash = getSplashSkinPath(defaultNoteSplash + getSplashSkinPostfix());
 			if (PlayState.SONG != null && PlayState.SONG.splashSkin != null && PlayState.SONG.splashSkin.length > 0) splash = getSplashSkinPath(PlayState.SONG.splashSkin);
@@ -232,7 +234,8 @@ class NoteSplash extends FlxSprite
 		if (!inEditor)
 		{
 			var loadedTexture:String = defaultNoteSplash + getSplashSkinPostfix();
-			if (note != null && note.noteSplashData.texture != null) loadedTexture = note.noteSplashData.texture;
+			// 空串视为未指定，回退到默认/SONG.splashSkin；否则 "" 会被当成有效纹理传入 loadSplash
+			if (note != null && note.noteSplashData.texture != null && note.noteSplashData.texture.length > 0) loadedTexture = note.noteSplashData.texture;
 			else if (PlayState.SONG != null && PlayState.SONG.splashSkin != null && PlayState.SONG.splashSkin.length > 0) loadedTexture = PlayState.SONG.splashSkin;
 
 			if (texture != loadedTexture) loadSplash(loadedTexture);
