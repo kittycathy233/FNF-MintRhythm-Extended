@@ -113,9 +113,15 @@ class CoolUtil
 	{
 		if (_gridCache == null) _gridCache = [];
 		var key:String = '$columns,$rows,$pWidth,$pHeight,$useRect,$color1,$color2';
-		if (_gridCache.exists(key)) return _gridCache.get(key);
+		if (_gridCache.exists(key))
+		{
+			var cached:FlxGraphic = _gridCache.get(key);
+			if (cached.bitmap != null && cached.bitmap.width > 0)
+				return cached;
+			_gridCache.remove(key);
+		}
 		var bmp = FlxGridOverlay.createGrid(columns, rows, pWidth, pHeight, useRect, color1, color2);
-		var graphic:FlxGraphic = FlxG.bitmap.add(bmp, false, 'cached_grid_$key');
+		var graphic:FlxGraphic = FlxG.bitmap.add(bmp, true, 'cached_grid_$key');
 		graphic.persist = true;
 		graphic.destroyOnNoUse = false;
 		_gridCache.set(key, graphic);
