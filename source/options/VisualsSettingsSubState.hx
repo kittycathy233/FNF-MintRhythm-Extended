@@ -11,6 +11,18 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 	var notes:FlxTypedGroup<StrumNote>;
 	var splashes:FlxTypedGroup<NoteSplash>;
 	var noteY:Float = 90;
+
+	// 可选样式面板（聚焦 noteSkins / noteSplashes 时从右侧飞入）
+	var noteSkinList:Array<String> = [];
+	var splashSkinList:Array<String> = [];
+	var skinPanelBG:FlxSprite;
+	var skinPanelLines:Array<FlxText> = [];
+	var panelMode:String = null; // 'noteSkin' / 'splashSkin' / null
+	var panelHiddenX:Float = 0;
+	var panelLineH:Float = 28;
+	var panelPadX:Float = 14;
+	var panelPadY:Float = 12;
+	var panelMargin:Float = 16;
 	public function new()
 	{
 		title = LanguageBasic.getPhrase('visuals_menu', 'Visuals Settings');
@@ -49,6 +61,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 				ClientPrefs.data.noteSkin = ClientPrefs.defaultData.noteSkin;
 
 			noteSkins.insert(0, ClientPrefs.defaultData.noteSkin);
+			noteSkinList = noteSkins;
 			var option:Option = new Option("Note Skins:",
 				Language.get("noteskin_desc"),
 				'noteSkin',
@@ -66,6 +79,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 				ClientPrefs.data.splashSkin = ClientPrefs.defaultData.splashSkin;
 
 			noteSplashes.insert(0, ClientPrefs.defaultData.splashSkin);
+			splashSkinList = noteSplashes;
 			var option:Option = new Option("Note Splashes:",
 				Language.get("notesplash_desc"),
 				'splashSkin',
@@ -278,9 +292,19 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 	addOption(option);
 	option.onChange = onChangeFakeOSMode;
 
-	super();
-	add(notes);
-	add(splashes);
+		super();
+		add(notes);
+		add(splashes);
+
+		// 样式选择面板（半透明黑底 + 右侧飞入）
+		skinPanelBG = new FlxSprite();
+		skinPanelBG.makeGraphic(1, 1, FlxColor.BLACK);
+		skinPanelBG.alpha = 0.5;
+		skinPanelBG.scrollFactor.set();
+		panelHiddenX = FlxG.width + 80;
+		skinPanelBG.x = panelHiddenX;
+		skinPanelBG.y = (FlxG.height - skinPanelBG.height) / 2;
+		add(skinPanelBG); // 加在文本之下
 	}
 
 	var notesShown:Bool = false;
@@ -288,6 +312,8 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 	{
 		super.changeSelection(change);
 		
+		var isSkinMode:Bool = (curOption.variable == 'noteSkin' || curOption.variable == 'splashSkin');
+
 		switch(curOption.variable)
 		{
 			case 'noteSkin', 'splashSkin', 'splashAlpha':
@@ -313,6 +339,142 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 				}
 				notesShown = false;
 		}
+
+		// 样式选择面板：仅在聚焦 noteSkin / splashSkin 时显示
+		if (isSkinMode)
+		{
+			var mode:String = curOption.variable;
+			if (panelMode != mode)
+			{
+				var wasShown:Bool = (panelMode != null);
+				panelMode = mode;
+				rebuildSkinPanel(mode, !wasShown);
+			}
+			showSkinPanel();
+		}
+		else if (panelMode != null)
+		{
+			hideSkinPanel();
+			panelMode = null;
+		}
+	}
+
+	// ---------- 可选样式面板（HSV 标记 + 右侧飞入）----------
+
+	function getNoteSkinFile(skin:String):String
+	{
+		var base:String = 'noteSkins/NOTE_assets';
+		if (skin != ClientPrefs.defaultData.noteSkin)
+			base += '-' + skin.toLowerCase().replace(' ', '_');
+		return base;
+	}
+
+	function getSplashSkinFile(skin:String):String
+	{
+		var base:String = 'noteSplashes/noteSplashes';
+		if (skin != ClientPrefs.defaultData.splashSkin)
+			base += '-' + skin.toLowerCase().replace(' ', '-');
+		return base;
+	}
+
+	// 检测 hsv 目录是否存在与 rgb 样式同名的文件
+	function hasHSVVersion(path:String):Bool
+	{
+		var parts:Array<String> = path.split('/');
+		var filename:String = parts.pop();
+		var folder:String = parts.join('/');
+		return Paths.fileExists('images/$folder/hsv/$filename.png', IMAGE);
+	}
+
+	function getStyleLabel(skin:String, file:String):String
+	{
+		// 当前为 HSV 渲染且存在 hsv 同名文件时，左侧加入 (HSV) 前缀
+		if (ClientPrefs.data.arrowColorMode == 'HSV' && hasHSVVersion(file))
+			return '(HSV) ' + skin;
+		return skin;
+	}
+
+	// 根据当前模式重建面板内容。flyIn=true 时内容先放到屏幕外以便飞入
+	function rebuildSkinPanel(mode:String, flyIn:Bool)
+	{
+		for (line in skinPanelLines)
+		{
+			remove(line);
+			line.destroy();
+		}
+		skinPanelLines = [];
+
+		var list:Array<String> = (mode == 'noteSkin') ? noteSkinList : splashSkinList;
+		var current:String = (mode == 'noteSkin') ? ClientPrefs.data.noteSkin : ClientPrefs.data.splashSkin;
+
+		var maxW:Float = 0;
+		for (skin in list)
+		{
+			var file:String = (mode == 'noteSkin') ? getNoteSkinFile(skin) : getSplashSkinFile(skin);
+			var label:String = getStyleLabel(skin, file);
+			var txt:FlxText = new FlxText(0, 0, 0, label, 22);
+			txt.setFormat(Paths.font("vcr.ttf"), 22, (skin == current) ? FlxColor.YELLOW : FlxColor.WHITE,
+				RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			txt.borderSize = 1.5;
+			txt.scrollFactor.set();
+			skinPanelLines.push(txt);
+			add(txt); // 加在背景之上
+			if (txt.width > maxW) maxW = txt.width;
+		}
+
+		var bgW:Float = maxW + panelPadX * 2;
+		var bgH:Float = list.length * panelLineH + panelPadY * 2;
+		skinPanelBG.makeGraphic(Math.ceil(bgW), Math.ceil(bgH), FlxColor.BLACK);
+		skinPanelBG.alpha = 0.5;
+
+		var targetBGX:Float = FlxG.width - panelMargin - bgW;
+		var targetBGY:Float = (FlxG.height - bgH) / 2;
+		var startX:Float = flyIn ? panelHiddenX : targetBGX;
+
+		skinPanelBG.x = startX;
+		skinPanelBG.y = targetBGY;
+
+		for (i => line in skinPanelLines)
+		{
+			line.x = startX + panelPadX;
+			line.y = targetBGY + panelPadY + i * panelLineH + (panelLineH - line.height) / 2;
+			line.fieldWidth = maxW;
+		}
+	}
+
+	function tweenSkinPanelTo(targetBGX:Float)
+	{
+		FlxTween.cancelTweensOf(skinPanelBG);
+		FlxTween.tween(skinPanelBG, {x: targetBGX}, 0.3, {ease: FlxEase.quartOut});
+		for (line in skinPanelLines)
+		{
+			FlxTween.cancelTweensOf(line);
+			FlxTween.tween(line, {x: targetBGX + panelPadX}, 0.3, {ease: FlxEase.quartOut});
+		}
+	}
+
+	function showSkinPanel()
+	{
+		if (skinPanelLines.length == 0) return;
+		var targetBGX:Float = FlxG.width - panelMargin - skinPanelBG.width;
+		tweenSkinPanelTo(targetBGX);
+	}
+
+	function hideSkinPanel()
+	{
+		tweenSkinPanelTo(panelHiddenX);
+	}
+
+	function refreshSkinPanelHighlight()
+	{
+		if (panelMode == null) return;
+		var current:String = (panelMode == 'noteSkin') ? ClientPrefs.data.noteSkin : ClientPrefs.data.splashSkin;
+		var list:Array<String> = (panelMode == 'noteSkin') ? noteSkinList : splashSkinList;
+		for (i => line in skinPanelLines)
+		{
+			if (i < list.length)
+				line.color = (list[i] == current) ? FlxColor.YELLOW : FlxColor.WHITE;
+		}
 	}
 
 	var changedMusic:Bool = false;
@@ -328,7 +490,6 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 
 	function onChangeArrowColorMode()
 	{
-		// Clear both shader caches so new strums/splashes pick the correct path
 		Note.globalRgbShaders = [];
 		Note.globalColorSwapShaders = [];
 
@@ -359,15 +520,31 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 			note.centerOffsets();
 			note.centerOrigin();
 		});
+		refreshSkinPanelHighlight();
 	}
 
 	function changeNoteSkin(note:StrumNote)
 	{
-		var skin:String = Note.defaultNoteSkin;
-		var customSkin:String = skin + Note.getNoteSkinPostfix();
-		if(Paths.fileExists('images/$customSkin.png', IMAGE)) skin = customSkin;
+		var baseSkin:String = Note.defaultNoteSkin;
+		var postfix:String = Note.getNoteSkinPostfix();
+		var customBase:String = baseSkin + postfix;
 
-		note.texture = skin; //Load texture and anims
+		var customExists:Bool = false;
+		if(ClientPrefs.data.arrowColorMode == 'HSV')
+		{
+			var parts:Array<String> = customBase.split('/');
+			var filename:String = parts.pop();
+			var folder:String = parts.join('/');
+			customExists = Paths.fileExists('images/$folder/hsv/$filename.png', IMAGE) || Paths.fileExists('images/$customBase.png', IMAGE);
+		}
+		else
+		{
+			customExists = Paths.fileExists('images/$customBase.png', IMAGE);
+		}
+
+		var skin:String = customExists ? Note.getNoteSkinPath(customBase) : Note.getNoteSkinPath(baseSkin);
+
+		note.texture = skin;
 		note.reloadNote();
 		note.playAnim('static');
 	}
@@ -379,6 +556,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 			splash.loadSplash(skin);
 
 		playNoteSplashes();
+		refreshSkinPanelHighlight();
 	}
 
 	function playNoteSplashes()

@@ -70,19 +70,23 @@ class NoteSplash extends FlxSprite
 
 		if(splash == null)
 		{
-			splash = defaultNoteSplash + getSplashSkinPostfix();
-			if (PlayState.SONG != null && PlayState.SONG.splashSkin != null && PlayState.SONG.splashSkin.length > 0) splash = PlayState.SONG.splashSkin;
+			splash = getSplashSkinPath(defaultNoteSplash + getSplashSkinPostfix());
+			if (PlayState.SONG != null && PlayState.SONG.splashSkin != null && PlayState.SONG.splashSkin.length > 0) splash = getSplashSkinPath(PlayState.SONG.splashSkin);
+		}
+		else
+		{
+			splash = getSplashSkinPath(splash);
 		}
 
 		texture = splash;
 		frames = Paths.getSparrowAtlas(texture);
 		if (frames == null)
 		{
-			texture = defaultNoteSplash + getSplashSkinPostfix();
+			texture = getSplashSkinPath(defaultNoteSplash + getSplashSkinPostfix());
 			frames = Paths.getSparrowAtlas(texture);
 			if (frames == null)
 			{
-				texture = defaultNoteSplash;
+				texture = getSplashSkinPath(defaultNoteSplash);
 				frames = Paths.getSparrowAtlas(texture);
 			}
 		}
@@ -416,9 +420,15 @@ class NoteSplash extends FlxSprite
 	public static function getSplashSkinPostfix()
 	{
 		var skin:String = '';
-		if (ClientPrefs.data.splashSkin != ClientPrefs.defaultData.splashSkin)
-			skin = '-' + ClientPrefs.data.splashSkin.trim().toLowerCase().replace(' ', '-');
+		var skinName:String = ClientPrefs.data.splashSkin.trim();
+		if (skinName != ClientPrefs.defaultData.splashSkin)
+			skin = '-' + skinName.toLowerCase().replace(' ', '-');
 		return skin;
+	}
+
+	public static function getSplashSkinPath(basePath:String):String
+	{
+		return Note.resolveSkinPath(basePath);
 	}
 
 	public static function createConfig():NoteSplashConfig

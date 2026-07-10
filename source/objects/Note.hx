@@ -458,6 +458,7 @@ class Note extends FlxSprite
 
 	var _lastNoteOffX:Float = 0;
 	static var _lastValidChecked:String; //optimization
+	static var _skinPathCache:Map<String, String> = new Map();
 	public var originalHeight:Float = 6;
 	public var correctionOffset:Float = 0; //dont mess with this
 	public function reloadNote(texture:String = '', postfix:String = '') {
@@ -483,7 +484,30 @@ class Note extends FlxSprite
 		var skinPostfix:String = getNoteSkinPostfix();
 		var customSkin:String = skin + skinPostfix;
 		var path:String = PlayState.isPixelStage ? 'pixelUI/' : '';
-		if(customSkin == _lastValidChecked || Paths.fileExists('images/' + path + customSkin + '.png', IMAGE))
+
+		var customExists:Bool = false;
+		if(PlayState.isPixelStage)
+		{
+			customExists = customSkin == _lastValidChecked || Paths.fileExists('images/' + path + customSkin + '.png', IMAGE);
+		}
+		else
+		{
+			if(customSkin == _lastValidChecked)
+				customExists = true;
+			else if(ClientPrefs.data.arrowColorMode == 'HSV')
+			{
+				var parts:Array<String> = customSkin.split('/');
+				var filename:String = parts.pop();
+				var folder:String = parts.join('/');
+				customExists = Paths.fileExists('images/$folder/hsv/$filename.png', IMAGE) || Paths.fileExists('images/$customSkin.png', IMAGE);
+			}
+			else
+			{
+				customExists = Paths.fileExists('images/$customSkin.png', IMAGE);
+			}
+		}
+
+		if(customExists)
 		{
 			skin = customSkin;
 			_lastValidChecked = customSkin;
@@ -509,7 +533,7 @@ class Note extends FlxSprite
 				offsetX -= _lastNoteOffX;
 			}
 		} else {
-			frames = Paths.getSparrowAtlas(skin);
+			frames = Paths.getSparrowAtlas(getNoteSkinPath(skin));
 			loadNoteAnims();
 			if(!isSustainNote)
 			{
@@ -530,9 +554,65 @@ class Note extends FlxSprite
 	public static function getNoteSkinPostfix()
 	{
 		var skin:String = '';
-		if(ClientPrefs.data.noteSkin != ClientPrefs.defaultData.noteSkin)
-			skin = '-' + ClientPrefs.data.noteSkin.trim().toLowerCase().replace(' ', '_');
+		var skinName:String = ClientPrefs.data.noteSkin.trim();
+		if(skinName != ClientPrefs.defaultData.noteSkin)
+			skin = '-' + skinName.toLowerCase().replace(' ', '_');
 		return skin;
+	}
+
+	/**
+	 * 统一解析皮肤路径，沿用「模组优先于原版、HSV 目录优先于默认目录」的优先级：
+	 *   1) 模组 hsv 目录  mods/(currentMod)/images/<folder>/hsv/<file>
+	 *   2) 模组默认目录  mods/(currentMod)/images/<folder>/<file>
+	 *   3) 原版 hsv 目录  images/<folder>/hsv/<file>
+	 *   4) 原版默认目录  images/<folder>/<file>
+	 * 非 HSV 模式直接返回 basePath，真正加载时 Paths.getSparrowAtlas 自身已优先模组再回退原版。
+	 * 这样可保证 StrumNote / 流动音符 / 飞溅在游玩（含模组）时使用完全一致的一套资源，
+	 * 且不会在模组只提供白底默认箭头时错误回退到原版的 hsv 箭头。
+	**/
+	public static function resolveSkinPath(basePath:String):String
+	{
+		if (basePath == null || basePath.length < 1) basePath = defaultNoteSkin;
+
+		// cache key 必须包含 arrowColorMode：否则 RGB 模式缓存的基底路径会在切到 HSV
+		// 后（新建 PlayState 但 static 缓存仍在）被错误命中，导致永远解析不到 hsv/ 纹理。
+		var cacheKey:String = (Mods.currentModDirectory != null ? Mods.currentModDirectory : '')
+			+ ':' + ClientPrefs.data.arrowColorMode + ':' + basePath;
+		if (_skinPathCache.exists(cacheKey)) return _skinPathCache.get(cacheKey);
+
+		var result:String = basePath;
+		if (ClientPrefs.data.arrowColorMode == 'HSV')
+		{
+			var parts:Array<String> = basePath.split('/');
+			var filename:String = parts.pop();
+			var folder:String = parts.join('/');
+			var hsvRel:String = 'images/$folder/hsv/$filename.png';
+			var baseRel:String = 'images/$basePath.png';
+
+			if (skinFileExists(hsvRel, true))       result = '$folder/hsv/$filename'; // 1) 模组 hsv
+			else if (skinFileExists(baseRel, true)) result = basePath;                // 2) 模组默认
+			else if (skinFileExists(hsvRel, false)) result = '$folder/hsv/$filename'; // 3) 原版 hsv
+		}
+		_skinPathCache.set(cacheKey, result);
+		return result;
+	}
+
+	// modsOnly=true：仅检测当前模组 + 全局模组；false：还会回退检测原版（忽略模组）
+	static function skinFileExists(relPath:String, modsOnly:Bool):Bool
+	{
+		#if MODS_ALLOWED
+		if (Mods.currentModDirectory != null && Mods.currentModDirectory.length > 0
+			&& FileSystem.exists(Paths.mods(Mods.currentModDirectory + '/' + relPath))) return true;
+		for (mod in Mods.getGlobalMods())
+			if (FileSystem.exists(Paths.mods(mod + '/' + relPath))) return true;
+		#end
+		if (modsOnly) return false;
+		return Paths.fileExists(relPath, IMAGE, true); // ignoreMods=true → 仅原版
+	}
+
+	public static function getNoteSkinPath(basePath:String):String
+	{
+		return resolveSkinPath(basePath);
 	}
 
 	function loadNoteAnims() {

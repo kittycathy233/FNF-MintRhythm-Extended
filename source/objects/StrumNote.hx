@@ -65,8 +65,22 @@ class StrumNote extends FlxSprite
 		if(PlayState.SONG != null && PlayState.SONG.arrowSkin != null && PlayState.SONG.arrowSkin.length > 1) skin = PlayState.SONG.arrowSkin;
 		else skin = Note.defaultNoteSkin;
 
+		// 与 Note.reloadNote 一致的皮肤解析：HSV 时优先走 hsv 目录，
+		// 保证 StrumNote 与流动音符使用同一套箭头（而非默认/RGB 纹理）
 		var customSkin:String = skin + Note.getNoteSkinPostfix();
-		if(Paths.fileExists('images/$customSkin.png', IMAGE)) skin = customSkin;
+		var customExists:Bool = false;
+		if(ClientPrefs.data.arrowColorMode == 'HSV')
+		{
+			var parts:Array<String> = customSkin.split('/');
+			var filename:String = parts.pop();
+			var folder:String = parts.join('/');
+			customExists = Paths.fileExists('images/$folder/hsv/$filename.png', IMAGE) || Paths.fileExists('images/$customSkin.png', IMAGE);
+		}
+		else
+			customExists = Paths.fileExists('images/$customSkin.png', IMAGE);
+
+		if(!customExists) customSkin = skin;
+		skin = Note.getNoteSkinPath(customSkin);
 
 		texture = skin; //Load texture and anims
 		scrollFactor.set();
@@ -198,10 +212,10 @@ class StrumNote extends FlxSprite
 			centerOffsets();
 			centerOrigin();
 		}
-		// HSV mode: toggle the sprite's shader directly (null = no shift = original texture,
-		// like the old Psych 0.6.3 "set colorSwap to 0 on static" behavior).
+		// HSV mode: 始终挂载 ColorSwap 着色器（hue=0 时为恒等变换，仍显示箭头本色），
+		// 与流动音符保持一致；修改 arrowHSV 后静态箭头也会同步变色。
 		if(ClientPrefs.data.arrowColorMode == 'HSV' && colorSwap != null) {
-			shader = (animation.curAnim != null && animation.curAnim.name != 'static') ? colorSwap.shader : null;
+			shader = colorSwap.shader;
 		} else if(useRGBShader) {
 			rgbShader.enabled = (animation.curAnim != null && animation.curAnim.name != 'static');
 		}
