@@ -256,24 +256,29 @@ class Note extends FlxSprite
 
 		if(noteData > -1 && noteType != value) {
 			switch(value) {
-				case 'Hurt Note':
-					ignoreNote = mustPress;
-					//reloadNote('HURTNOTE_assets');
-					//this used to change the note texture to HURTNOTE_assets.png,
-					//but i've changed it to something more optimized with the implementation of RGBPalette:
+			case 'Hurt Note':
+				ignoreNote = mustPress;
 
-					if(ClientPrefs.data.arrowColorMode == 'HSV') {
-						// Legacy HSV: override this note with a LOCAL ColorSwap (hue/sat/brt = 0)
-						// so it renders unshifted without polluting the shared global shader.
-						colorSwap = new ColorSwap();
-						colorSwap.hue = 0;
-						colorSwap.saturation = 0;
-						colorSwap.brightness = 0;
-						shader = colorSwap.shader;
-						noteSplashHue = 0;
-						noteSplashSat = 0;
-						noteSplashBrt = 0;
-					} else {
+				if(ClientPrefs.data.arrowColorMode == 'HSV') {
+					// Legacy HSV: override this note with a LOCAL ColorSwap (hue/sat/brt = 0)
+					// so it renders UNSHIFTED (the danger texture's own warning colors),
+					// without polluting the shared global shader.
+					colorSwap = new ColorSwap();
+					colorSwap.hue = 0;
+					colorSwap.saturation = 0;
+					colorSwap.brightness = 0;
+					shader = colorSwap.shader;
+					noteSplashHue = 0;
+					noteSplashSat = 0;
+					noteSplashBrt = 0;
+
+					// 恢复专属危险箭头外观（仅非像素舞台，像素舞台没有对应的 pixelUI 危险贴图）：
+					// 重新加载 noteSkins/hsv/HURTNOTE_assets（模组覆盖优先于原版，resolveSkinPath 已处理）。
+					// 着色器仍是上面的本地 ColorSwap，去色后原样显示该危险贴图自带的警示配色。
+					// 若某模组经 custom_notetypes 给 Hurt Note 指定了其它 texture，下方 applyNoteTypeData 会再次覆盖。
+					if (!PlayState.isPixelStage)
+						reloadNote('noteSkins/HURTNOTE_assets');
+				} else {
 						// note colors
 						rgbShader.r = 0xFF101010;
 						rgbShader.g = 0xFFFF0000;
