@@ -125,6 +125,8 @@
     "charting_changebpm_text": "改变曲目BPM",
     "charting_allvoc_text": "启用人声",
     "charting_disRGB_text": "禁用音符RGB效果",
+    "charting_disRGB_text_hsv": "禁用音符RGB效果（HSV模式已启用）",
+    "arrow_colormode_desc": "RGB = 新调色板颜色；HSV = 旧版Psych v0.6.3色相/饱和度/亮度偏移",
     "charting_playback_text": "播放速度",
 
     "charting_mobile_tips": "上/下 - 移动指挥时间\n左/右 - 切换小节\n右侧上/下 - 减少/增加音符持续时长\n长按Y加速4倍调整\n\nC - 预览谱面\nA - 游玩测试\nX - 停止/继续歌曲\n\n长按H并点击选择音符\nZ - 隐藏操作按钮\nV/D - 缩放\n\nG - 重置播放速度",

@@ -55,6 +55,12 @@ import states.TitleState;
 		[0xFF71E300, 0xFFF6FFE6, 0xFF003100],
 		[0xFFFF884E, 0xFFFFFAF5, 0xFF6C0000]];
 
+	// Arrow color rendering mode: 'RGB' (new palette) or 'HSV' (legacy Psych v0.6.3 hue/sat/brightness shift)
+	public var arrowColorMode:String = 'RGB';
+	// Legacy HSV arrow colors (one [hue, saturation, brightness] per direction, integers).
+	// Range: hue -180..180, saturation/brightness -100..100. All 0 = no shift (texture renders as-is).
+	public var arrowHSV:Array<Array<Int>> = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]];
+
 	public var ghostTapping:Bool = true;
 	public var timeBarType:String = 'Time Left';
 	public var scoreZoom:Bool = true;

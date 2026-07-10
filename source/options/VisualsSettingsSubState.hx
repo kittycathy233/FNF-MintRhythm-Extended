@@ -34,6 +34,14 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		}
 
 		// options
+		var option:Option = new Option("Arrow Color Mode:",
+			Language.get('arrow_colormode_desc'),
+			'arrowColorMode',
+			STRING,
+			['RGB', 'HSV']);
+		addOption(option);
+		option.onChange = onChangeArrowColorMode;
+
 		var noteSkins:Array<String> = Mods.mergeAllTextsNamed('images/noteSkins/list.txt');
 		if(noteSkins.length > 0)
 		{
@@ -318,6 +326,32 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		changedMusic = true;
 	}
 
+	function onChangeArrowColorMode()
+	{
+		// Clear both shader caches so new strums/splashes pick the correct path
+		Note.globalRgbShaders = [];
+		Note.globalColorSwapShaders = [];
+
+		notes.forEachAlive(function(n) n.destroy());
+		notes.clear();
+		splashes.forEachAlive(function(s) s.destroy());
+		splashes.clear();
+
+		for (i in 0...Note.colArray.length)
+		{
+			var note:StrumNote = new StrumNote(370 + (560 / Note.colArray.length) * i, -200, i, 0);
+			changeNoteSkin(note);
+			notes.add(note);
+
+			var splash:NoteSplash = new NoteSplash(0, 0, NoteSplash.defaultNoteSplash + NoteSplash.getSplashSkinPostfix());
+			splash.inEditor = true;
+			splash.babyArrow = note;
+			splash.ID = i;
+			splash.kill();
+			splashes.add(splash);
+		}
+	}
+
 	function onChangeNoteSkin()
 	{
 		notes.forEachAlive(function(note:StrumNote) {
@@ -394,6 +428,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 	{
 		if(changedMusic && !OptionsState.onPlayState) FlxG.sound.playMusic(Paths.music('freakyMenu'), 1, true);
 		Note.globalRgbShaders = [];
+		Note.globalColorSwapShaders = [];
 		super.destroy();
 	}
 

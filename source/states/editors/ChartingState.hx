@@ -4027,7 +4027,9 @@ for (i in 0...GRID_PLAYERS)
 		}
 
 		objY += 35;
-		noRGBCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_disRGB_text'), 100, updateNotesRGB);
+		var rgbTextKey:String = ClientPrefs.data.arrowColorMode == 'HSV' ? 'charting_disRGB_text_hsv' : 'charting_disRGB_text';
+		noRGBCheckBox = new PsychUICheckBox(objX, objY, Language.get(rgbTextKey), 200, updateNotesRGB);
+		if(ClientPrefs.data.arrowColorMode == 'HSV') noRGBCheckBox.alpha = 0.5;
 		
 		objY += 40;
 		noteTextureInputText = new PsychUIInputText(objX, objY, 120, '');
@@ -6461,6 +6463,7 @@ for (i in 0...GRID_PLAYERS)
 	function updateNotesRGB()
 	{
 		PlayState.SONG.disableNoteRGB = noRGBCheckBox.checked;
+		if(ClientPrefs.data.arrowColorMode == 'HSV') return;
 
 		for (note in notes)
 		{

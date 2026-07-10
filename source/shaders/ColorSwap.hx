@@ -1,5 +1,16 @@
 package shaders;
 
+import flixel.system.FlxAssets.FlxShader;
+
+/**
+ * Legacy Psych Engine v0.6.3 HSV color-shift shader.
+ *
+ * Instead of REPLACING the note's RGB channels (like RGBPalette does), this
+ * shader SHIFTS the hue/saturation/brightness of the note texture's original
+ * colors. With hue/sat/brightness all at 0, the texture renders unchanged.
+ *
+ * Ported from Psych Engine 0.6.3 source/ColorSwap.hx.
+**/
 class ColorSwap {
 	public var shader(default, null):ColorSwapShader = new ColorSwapShader();
 	public var hue(default, set):Float = 0;
@@ -28,6 +39,25 @@ class ColorSwap {
 	{
 		shader.uTime.value = [0, 0, 0];
 		shader.awesomeOutline.value = [false];
+	}
+
+	/**
+	 * Copies HSV values from another ColorSwap (mirrors RGBPalette.copyValues).
+	**/
+	public function copyValues(tempShader:ColorSwap)
+	{
+		if (tempShader != null)
+		{
+			hue = tempShader.hue;
+			saturation = tempShader.saturation;
+			brightness = tempShader.brightness;
+		}
+		else
+		{
+			hue = 0;
+			saturation = 0;
+			brightness = 0;
+		}
 	}
 }
 
@@ -121,7 +151,7 @@ class ColorSwapShader extends FlxShader {
 			swagColor[0] = swagColor[0] + uTime[0];
 			swagColor[1] = swagColor[1] + uTime[1];
 			swagColor[2] = swagColor[2] * (1.0 + uTime[2]);
-			
+
 			if(swagColor[1] < 0.0)
 			{
 				swagColor[1] = 0.0;
@@ -141,7 +171,7 @@ class ColorSwapShader extends FlxShader {
 				if (color.a <= 0.5) {
 					float w = size.x / openfl_TextureSize.x;
 					float h = size.y / openfl_TextureSize.y;
-					
+
 					if (flixel_texture2D(bitmap, vec2(openfl_TextureCoordv.x + w, openfl_TextureCoordv.y)).a != 0.
 					|| flixel_texture2D(bitmap, vec2(openfl_TextureCoordv.x - w, openfl_TextureCoordv.y)).a != 0.
 					|| flixel_texture2D(bitmap, vec2(openfl_TextureCoordv.x, openfl_TextureCoordv.y + h)).a != 0.
@@ -150,21 +180,6 @@ class ColorSwapShader extends FlxShader {
 				}
 			}
 			gl_FragColor = color;
-
-			/* 
-			if (color.a > 0.5)
-				gl_FragColor = color;
-			else
-			{
-				float a = flixel_texture2D(bitmap, vec2(openfl_TextureCoordv + offset, openfl_TextureCoordv.y)).a +
-						  flixel_texture2D(bitmap, vec2(openfl_TextureCoordv, openfl_TextureCoordv.y - offset)).a +
-						  flixel_texture2D(bitmap, vec2(openfl_TextureCoordv - offset, openfl_TextureCoordv.y)).a +
-						  flixel_texture2D(bitmap, vec2(openfl_TextureCoordv, openfl_TextureCoordv.y + offset)).a;
-				if (color.a < 1.0 && a > 0.0)
-					gl_FragColor = vec4(0.0, 0.0, 0.0, 0.8);
-				else
-					gl_FragColor = color;
-			} */
 		}')
 	@:glVertexSource('
 		attribute float openfl_Alpha;
@@ -186,7 +201,7 @@ class ColorSwapShader extends FlxShader {
 		attribute vec4 colorMultiplier;
 		attribute vec4 colorOffset;
 		uniform bool hasColorTransform;
-		
+
 		void main(void)
 		{
 			openfl_Alphav = openfl_Alpha;

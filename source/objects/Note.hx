@@ -5,6 +5,7 @@ import backend.NoteTypesConfig;
 
 import shaders.RGBPalette;
 import shaders.RGBPalette.RGBShaderReference;
+import shaders.ColorSwap;
 
 import objects.StrumNote;
 
@@ -110,6 +111,8 @@ class Note extends FlxSprite
 
 	public var rgbShader:RGBShaderReference;
 	public static var globalRgbShaders:Array<RGBPalette> = [];
+	public var colorSwap:ColorSwap;
+	public static var globalColorSwapShaders:Array<ColorSwap> = [];
 	public var inEditor:Bool = false;
 
 	public var animSuffix:String = '';
@@ -134,6 +137,11 @@ class Note extends FlxSprite
 		b: -1,
 		a: ClientPrefs.data.splashAlpha
 	};
+
+	// Legacy HSV splash colors (mirror old Psych 0.6.3). Carried to NoteSplash in HSV mode.
+	public var noteSplashHue:Float = 0;
+	public var noteSplashSat:Float = 0;
+	public var noteSplashBrt:Float = 0;
 
 	public var offsetX:Float = 0;
 	public var offsetY:Float = 0;
@@ -215,9 +223,36 @@ class Note extends FlxSprite
 		}
 	}
 
+	/**
+	 * Legacy HSV path: applies the arrow's hue/saturation/brightness shift from
+	 * ClientPrefs.data.arrowHSV, and mirrors the values onto noteSplashHue/Sat/Brt
+	 * so NoteSplash can pick them up in HSV mode. (Mirror of old Psych 0.6.3.)
+	**/
+	public function defaultHSV()
+	{
+		if (colorSwap == null) return;
+		if (noteData > -1 && noteData < ClientPrefs.data.arrowHSV.length)
+		{
+			var arr:Array<Int> = ClientPrefs.data.arrowHSV[noteData];
+			colorSwap.hue = arr[0] / 360;
+			colorSwap.saturation = arr[1] / 100;
+			colorSwap.brightness = arr[2] / 100;
+		}
+		else
+		{
+			colorSwap.hue = 0;
+			colorSwap.saturation = 0;
+			colorSwap.brightness = 0;
+		}
+		noteSplashHue = colorSwap.hue;
+		noteSplashSat = colorSwap.saturation;
+		noteSplashBrt = colorSwap.brightness;
+	}
+
 	private function set_noteType(value:String):String {
 		noteSplashData.texture = PlayState.SONG != null ? PlayState.SONG.splashSkin : 'noteSplashes/noteSplashes';
-		defaultRGB();
+		if(ClientPrefs.data.arrowColorMode == 'HSV') defaultHSV();
+		else defaultRGB();
 
 		if(noteData > -1 && noteType != value) {
 			switch(value) {
@@ -227,14 +262,27 @@ class Note extends FlxSprite
 					//this used to change the note texture to HURTNOTE_assets.png,
 					//but i've changed it to something more optimized with the implementation of RGBPalette:
 
-					// note colors
-					rgbShader.r = 0xFF101010;
-					rgbShader.g = 0xFFFF0000;
-					rgbShader.b = 0xFF990022;
+					if(ClientPrefs.data.arrowColorMode == 'HSV') {
+						// Legacy HSV: override this note with a LOCAL ColorSwap (hue/sat/brt = 0)
+						// so it renders unshifted without polluting the shared global shader.
+						colorSwap = new ColorSwap();
+						colorSwap.hue = 0;
+						colorSwap.saturation = 0;
+						colorSwap.brightness = 0;
+						shader = colorSwap.shader;
+						noteSplashHue = 0;
+						noteSplashSat = 0;
+						noteSplashBrt = 0;
+					} else {
+						// note colors
+						rgbShader.r = 0xFF101010;
+						rgbShader.g = 0xFFFF0000;
+						rgbShader.b = 0xFF990022;
 
-					// splash data and colors
-					noteSplashData.r = 0xFFFF0000;
-					noteSplashData.g = 0xFF101010;
+						// splash data and colors
+						noteSplashData.r = 0xFFFF0000;
+						noteSplashData.g = 0xFF101010;
+					}
 					noteSplashData.texture = 'noteSplashes/noteSplashes-electric';
 
 					// gameplay data
@@ -285,9 +333,18 @@ class Note extends FlxSprite
 
 		if(noteData > -1)
 		{
+			// RGB shader is always initialized (shared globals are referenced by NoteSplash /
+			// VisualsSettings previews even in HSV mode). Only the sprite's active shader differs.
 			rgbShader = new RGBShaderReference(this, initializeGlobalRGBShader(noteData));
-			if(PlayState.SONG != null && PlayState.SONG.disableNoteRGB) rgbShader.enabled = false;
+			var rgbDisabled:Bool = (PlayState.SONG != null && PlayState.SONG.disableNoteRGB);
+			if(rgbDisabled) rgbShader.enabled = false;
 			texture = '';
+
+			// Legacy HSV path: override the sprite's shader with the shared ColorSwap shader.
+			if(ClientPrefs.data.arrowColorMode == 'HSV') {
+				colorSwap = Note.initializeGlobalColorSwapShader(noteData);
+				shader = rgbDisabled ? null : colorSwap.shader;
+			}
 
 			x += swagWidth * (noteData);
 			if(!isSustainNote && noteData < colArray.length) { //Doing this 'if' check to fix the warnings on Senpai songs
@@ -374,6 +431,29 @@ class Note extends FlxSprite
 			globalRgbShaders[noteData] = newRGB;
 		}
 		return globalRgbShaders[noteData];
+	}
+
+	/**
+	 * Legacy HSV path: creates/caches a shared ColorSwap shader per note direction,
+	 * seeded from ClientPrefs.data.arrowHSV. Mirrors initializeGlobalRGBShader so
+	 * the legacy NotesColorSubState can edit these globals and see live updates.
+	**/
+	public static function initializeGlobalColorSwapShader(noteData:Int):ColorSwap
+	{
+		if(noteData < 0 || noteData >= colArray.length) return new ColorSwap();
+		if(globalColorSwapShaders[noteData] == null)
+		{
+			var cs:ColorSwap = new ColorSwap();
+			if (noteData > -1 && noteData < ClientPrefs.data.arrowHSV.length)
+			{
+				var arr:Array<Int> = ClientPrefs.data.arrowHSV[noteData];
+				cs.hue = arr[0] / 360;
+				cs.saturation = arr[1] / 100;
+				cs.brightness = arr[2] / 100;
+			}
+			globalColorSwapShaders[noteData] = cs;
+		}
+		return globalColorSwapShaders[noteData];
 	}
 
 	var _lastNoteOffX:Float = 0;

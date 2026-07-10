@@ -5,10 +5,12 @@ import backend.animation.PsychAnimationController;
 
 import shaders.RGBPalette;
 import shaders.RGBPalette.RGBShaderReference;
+import shaders.ColorSwap;
 
 class StrumNote extends FlxSprite
 {
 	public var rgbShader:RGBShaderReference;
+	public var colorSwap:ColorSwap;
 	public var resetAnim:Float = 0;
 	public var holdConfirmActive:Bool = false;
 	private var noteData:Int = 0;
@@ -45,6 +47,12 @@ class StrumNote extends FlxSprite
 				rgbShader.g = arr[1];
 				rgbShader.b = arr[2];
 			}
+		}
+
+		// Legacy HSV path: share the per-direction ColorSwap shader. The sprite
+		// starts disabled (null shader = static); playAnim toggles it on/off.
+		if(ClientPrefs.data.arrowColorMode == 'HSV') {
+			colorSwap = Note.initializeGlobalColorSwapShader(leData);
 		}
 
 		noteData = leData;
@@ -190,6 +198,12 @@ class StrumNote extends FlxSprite
 			centerOffsets();
 			centerOrigin();
 		}
-		if(useRGBShader) rgbShader.enabled = (animation.curAnim != null && animation.curAnim.name != 'static');
+		// HSV mode: toggle the sprite's shader directly (null = no shift = original texture,
+		// like the old Psych 0.6.3 "set colorSwap to 0 on static" behavior).
+		if(ClientPrefs.data.arrowColorMode == 'HSV' && colorSwap != null) {
+			shader = (animation.curAnim != null && animation.curAnim.name != 'static') ? colorSwap.shader : null;
+		} else if(useRGBShader) {
+			rgbShader.enabled = (animation.curAnim != null && animation.curAnim.name != 'static');
+		}
 	}
 }

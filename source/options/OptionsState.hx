@@ -88,7 +88,7 @@ class OptionsState extends MusicBeatState
 		}
 
 		var substateMap:Map<String, () -> Void> = [
-			Language.get("note_colors") => () -> openSubState(new options.NotesColorSubState()),
+			Language.get("note_colors") => () -> openSubState(ClientPrefs.data.arrowColorMode == 'HSV' ? new options.NotesColorSubStateLegacy() : new options.NotesColorSubState()),
 			Language.get("controls") => () -> openSubState(new options.ControlsSubState()),
 			Language.get("graphics") => () -> openSubState(new options.GraphicsSettingsSubState()),
 			Language.get("visuals") => () -> openSubState(new options.VisualsSettingsSubState()),

@@ -118,6 +118,8 @@
     "charting_changebpm_text": "Change BPM",
     "charting_allvoc_text": "Allow Vocals",
     "charting_disRGB_text": "Disable Note RGB",
+    "charting_disRGB_text_hsv": "Disable Note RGB (HSV mode active)",
+    "arrow_colormode_desc": "RGB = new palette colors; HSV = legacy Psych v0.6.3 hue/saturation/brightness shift",
     "charting_playback_text": "Playback Rate:",
 
 
