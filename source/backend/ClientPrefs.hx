@@ -105,6 +105,7 @@ import states.TitleState;
 	public var softJudgmentEdge:Bool = false; // 是否在判定窗口边缘启用软边缘插值（避免卡边界时判定跳变）
 	public var safeFrames:Float = 10.0;
 	public var guitarHeroSustains:Bool = true;
+	public var sustainTailFix:String = 'off'; // 长按音符尾条判定优化: 'off'=原版, 'extend'=延伸末段到可见尾部(A), 'earlyHit'=放宽末段提前命中(B), 'both'=两者皆用
 	public var inputSystem:String = 'default'; // 输入判定系统: 'default' (传统) 或 'rhythm' (Rhythm模式，只允许击中最近的音符)
 	public var discordRPC:Bool = true;
 	public var loadingScreen:Bool = true;

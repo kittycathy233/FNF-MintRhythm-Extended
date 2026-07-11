@@ -117,6 +117,14 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		addOption(option);
 
 		var option:Option = new Option(
+			"Hold Note Tail Fix",
+			"长按音符尾条判定优化：修正尾部判定时机，避免按住到可见尾部仍断连。off=原版, extend=延伸末段到可见尾部(A), earlyHit=放宽末段提前命中(B), both=两者皆用",
+			'sustainTailFix',
+			STRING,
+			['off', 'extend', 'earlyHit', 'both']);
+		addOption(option);
+
+		var option:Option = new Option(
 			"Hitsound Volume",
 			Language.get("hitsoundvolume_desc"),
 			'hitsoundVolume',

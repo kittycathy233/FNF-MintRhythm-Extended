@@ -34,6 +34,7 @@ typedef PreloadedChartNote = {
 	var gfNote:Bool;
 	var isSustainNote:Bool;
 	var sustainLength:Float;
+	var earlyHitMult:Float; // 提前命中窗口倍率（供尾条判定优化方案B使用）
 	var parentIndex:Int; // 父音符在预加载数组中的索引
 	var previousNoteIndex:Int; // 前一个音符在预加载数组中的索引
 	var posOffsetX:Float;

@@ -335,6 +335,7 @@ class PlayState extends MusicBeatState
 	public var healthLoss:Float = 1;
 
 	public var guitarHeroSustains:Bool = false;
+	public var sustainTailFixMode:String = 'off'; // 长按音符尾条判定优化方案: 'off'/'extend'/'earlyHit'/'both'
 	public var instakillOnMiss:Bool = false;
 	public var cpuControlled:Bool = false;
 	public var practiceMode:Bool = false;
@@ -534,6 +535,7 @@ class PlayState extends MusicBeatState
 				ghostTapping: ClientPrefs.data.ghostTapping,
 				noReset: ClientPrefs.data.noReset,
 				guitarHeroSustains: ClientPrefs.data.guitarHeroSustains,
+				sustainTailFix: ClientPrefs.data.sustainTailFix,
 				popUpRating: ClientPrefs.data.popUpRating
 			};
 			
@@ -544,6 +546,7 @@ class PlayState extends MusicBeatState
 			if (Reflect.hasField(replayGameplaySettings, 'ghostTapping')) ClientPrefs.data.ghostTapping = replayGameplaySettings.ghostTapping;
 			if (Reflect.hasField(replayGameplaySettings, 'noReset')) ClientPrefs.data.noReset = replayGameplaySettings.noReset;
 			if (Reflect.hasField(replayGameplaySettings, 'guitarHeroSustains')) ClientPrefs.data.guitarHeroSustains = replayGameplaySettings.guitarHeroSustains;
+			if (Reflect.hasField(replayGameplaySettings, 'sustainTailFix')) ClientPrefs.data.sustainTailFix = replayGameplaySettings.sustainTailFix;
 			if (Reflect.hasField(replayGameplaySettings, 'popUpRating')) ClientPrefs.data.popUpRating = replayGameplaySettings.popUpRating;
 			
 			// 应用 GameplayChangersSubstate 设置
@@ -606,6 +609,7 @@ isReplaying = false;
 		practiceMode = ClientPrefs.getGameplaySetting('practice');
 		cpuControlled = ClientPrefs.getGameplaySetting('botplay');
 		guitarHeroSustains = ClientPrefs.data.guitarHeroSustains;
+		sustainTailFixMode = ClientPrefs.data.sustainTailFix;
 
 		// var gameCam:FlxCamera = FlxG.camera;
 		camGame = initPsychCamera();
@@ -2331,6 +2335,21 @@ isReplaying = false;
 								sustainNote.x += FlxG.width / 2 + 25;
 						}
 					}
+
+					// 尾条判定优化：修正最后一个 tail 子音符的判定时机
+					var lastTailNote:Note = swagNote.tail[swagNote.tail.length - 1];
+					var useExtendFix:Bool = (sustainTailFixMode == 'extend' || sustainTailFixMode == 'both');
+					var useEarlyHitFix:Bool = (sustainTailFixMode == 'earlyHit' || sustainTailFixMode == 'both');
+					if(useExtendFix)
+					{
+						// 方案A：把最后一个 tail 的判定点延伸到"可见尾部"结束处（+noteOffset 与 Note 构造保持一致）
+						lastTailNote.strumTime = spawnTime + swagNote.sustainLength + ClientPrefs.data.noteOffset;
+					}
+					if(useEarlyHitFix)
+					{
+						// 方案B：放宽最后一个 tail 的提前命中窗口
+						lastTailNote.earlyHitMult = 1;
+					}
 				}
 
 				if (swagNote.mustPress)
@@ -2404,8 +2423,9 @@ isReplaying = false;
 					noteType: noteType,
 					animSuffix: isAlt ? "-alt" : "",
 					gfNote: (section.gfSection && gottaHitNote == section.mustHitSection),
-					isSustainNote: false,
-					sustainLength: holdLength,
+				isSustainNote: false,
+				sustainLength: holdLength,
+				earlyHitMult: 1,
 					parentIndex: -1,
 					previousNoteIndex: previousNoteIndex,
 					posOffsetX: mainPosOffsetX,
@@ -2453,6 +2473,7 @@ isReplaying = false;
 							gfNote: (section.gfSection && gottaHitNote == section.mustHitSection),
 							isSustainNote: true,
 							sustainLength: 0,
+							earlyHitMult: 0,
 							parentIndex: mainNoteIndex,
 							previousNoteIndex: previousNoteIndex,
 							posOffsetX: susPosOffsetX,
@@ -2466,6 +2487,21 @@ isReplaying = false;
 						
 						unspawnNotesPreloaded.push(susNoteData);
 						previousNoteIndex = unspawnNotesPreloaded.length - 1;
+					}
+
+					// 尾条判定优化：修正最后一个 tail 子音符的判定时机，避免"按住到可见尾部仍断连"
+					var lastTailData:PreloadedChartNote = unspawnNotesPreloaded[unspawnNotesPreloaded.length - 1];
+					var useExtendFix:Bool = (sustainTailFixMode == 'extend' || sustainTailFixMode == 'both');
+					var useEarlyHitFix:Bool = (sustainTailFixMode == 'earlyHit' || sustainTailFixMode == 'both');
+					if(useExtendFix)
+					{
+						// 方案A：把最后一个 tail 的判定点延伸到"可见尾部"结束处，使玩家按住到视觉尾部即可命中
+						lastTailData.strumTime = spawnTime + holdLength;
+					}
+					if(useEarlyHitFix)
+					{
+						// 方案B：放宽最后一个 tail 的提前命中窗口，抵消其判定点比可见尾部早一个 step 的偏移
+						lastTailData.earlyHitMult = 1;
 					}
 				}
 			}
@@ -3048,6 +3084,8 @@ isReplaying = false;
 					note.sustainLength = noteData.sustainLength;
 					note.noteType = noteData.noteType;
 					note.scrollFactor.set();
+					// 应用预加载数据中的提前命中窗口倍率（供尾条判定优化方案B使用）
+					note.earlyHitMult = noteData.earlyHitMult;
 					
 					// 处理 parent 关系
 					if (noteData.isSustainNote && noteData.parentIndex >= 0 && noteData.parentIndex < notesAddedCount) {
@@ -5113,6 +5151,7 @@ isReplaying = false;
 			if (Reflect.hasField(originalGameplaySettings, 'ghostTapping')) ClientPrefs.data.ghostTapping = originalGameplaySettings.ghostTapping;
 			if (Reflect.hasField(originalGameplaySettings, 'noReset')) ClientPrefs.data.noReset = originalGameplaySettings.noReset;
 			if (Reflect.hasField(originalGameplaySettings, 'guitarHeroSustains')) ClientPrefs.data.guitarHeroSustains = originalGameplaySettings.guitarHeroSustains;
+			if (Reflect.hasField(originalGameplaySettings, 'sustainTailFix')) ClientPrefs.data.sustainTailFix = originalGameplaySettings.sustainTailFix;
 			if (Reflect.hasField(originalGameplaySettings, 'popUpRating')) ClientPrefs.data.popUpRating = originalGameplaySettings.popUpRating;
 		}
 		

@@ -389,6 +389,7 @@ class ResultsScreen extends FlxSubState
 							ghostTapping: ClientPrefs.data.ghostTapping,
 							noReset: ClientPrefs.data.noReset,
 							guitarHeroSustains: ClientPrefs.data.guitarHeroSustains,
+							sustainTailFix: ClientPrefs.data.sustainTailFix,
 							popUpRating: ClientPrefs.data.popUpRating,
 
 							// Gameplay changers settings
