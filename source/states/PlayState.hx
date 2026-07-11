@@ -336,6 +336,11 @@ class PlayState extends MusicBeatState
 
 	public var guitarHeroSustains:Bool = false;
 	public var sustainTailFixMode:String = 'off'; // 长按音符尾条判定优化方案: 'off'/'extend'/'earlyHit'/'both'
+	public var holdReleaseInstantMiss:Bool = false; // 特性1: guitarHeroSustains下松手立刻miss
+	public var holdTailJudge:Bool = false; // 特性2: 长条尾部算有效命中(加combo+评级,不加分)
+	public var holdScoreBonus:Bool = false; // 特性3: 长条命中期间持续加分
+	var holdScoreRemainder:Float = 0; // 特性3: 分数小数累加器(songScore为Int,避免每帧取整丢失)
+	public static inline var HOLD_SCORE_BONUS_PER_SECOND:Float = 250.0; // 特性3: 每秒加分(参考原版Funkin Constants.SCORE_HOLD_BONUS_PER_SECOND)
 	public var instakillOnMiss:Bool = false;
 	public var cpuControlled:Bool = false;
 	public var practiceMode:Bool = false;
@@ -536,6 +541,9 @@ class PlayState extends MusicBeatState
 				noReset: ClientPrefs.data.noReset,
 				guitarHeroSustains: ClientPrefs.data.guitarHeroSustains,
 				sustainTailFix: ClientPrefs.data.sustainTailFix,
+				holdReleaseInstantMiss: ClientPrefs.data.holdReleaseInstantMiss,
+				holdTailJudge: ClientPrefs.data.holdTailJudge,
+				holdScoreBonus: ClientPrefs.data.holdScoreBonus,
 				popUpRating: ClientPrefs.data.popUpRating
 			};
 			
@@ -547,6 +555,9 @@ class PlayState extends MusicBeatState
 			if (Reflect.hasField(replayGameplaySettings, 'noReset')) ClientPrefs.data.noReset = replayGameplaySettings.noReset;
 			if (Reflect.hasField(replayGameplaySettings, 'guitarHeroSustains')) ClientPrefs.data.guitarHeroSustains = replayGameplaySettings.guitarHeroSustains;
 			if (Reflect.hasField(replayGameplaySettings, 'sustainTailFix')) ClientPrefs.data.sustainTailFix = replayGameplaySettings.sustainTailFix;
+			if (Reflect.hasField(replayGameplaySettings, 'holdReleaseInstantMiss')) ClientPrefs.data.holdReleaseInstantMiss = replayGameplaySettings.holdReleaseInstantMiss;
+			if (Reflect.hasField(replayGameplaySettings, 'holdTailJudge')) ClientPrefs.data.holdTailJudge = replayGameplaySettings.holdTailJudge;
+			if (Reflect.hasField(replayGameplaySettings, 'holdScoreBonus')) ClientPrefs.data.holdScoreBonus = replayGameplaySettings.holdScoreBonus;
 			if (Reflect.hasField(replayGameplaySettings, 'popUpRating')) ClientPrefs.data.popUpRating = replayGameplaySettings.popUpRating;
 			
 			// 应用 GameplayChangersSubstate 设置
@@ -610,6 +621,9 @@ isReplaying = false;
 		cpuControlled = ClientPrefs.getGameplaySetting('botplay');
 		guitarHeroSustains = ClientPrefs.data.guitarHeroSustains;
 		sustainTailFixMode = ClientPrefs.data.sustainTailFix;
+		holdReleaseInstantMiss = ClientPrefs.data.holdReleaseInstantMiss;
+		holdTailJudge = ClientPrefs.data.holdTailJudge;
+		holdScoreBonus = ClientPrefs.data.holdScoreBonus;
 
 		// var gameCam:FlxCamera = FlxG.camera;
 		camGame = initPsychCamera();
@@ -2729,7 +2743,15 @@ isReplaying = false;
 					if(action.key < NON_NOTE_KEY_OFFSET)
 					{
 						replayHeldKeys[action.key] = false;
-						
+
+						// 特性1：回放中同样在松手时立刻判定 miss，保持与实时游玩一致
+						if(guitarHeroSustains && holdReleaseInstantMiss)
+							tryInstantSustainMiss(action.key);
+
+						// 特性2：回放中同样在松手时判定长条尾部
+						if(guitarHeroSustains && holdTailJudge)
+							tryTailJudgeOnRelease(action.key);
+
 						// 同步虚拟输入状态到Controls，让模组能够检测到按键释放
 						var keyName = keysArray[action.key];
 						Controls.instance.setVirtualKeyState(keyName, false);
@@ -2770,7 +2792,11 @@ isReplaying = false;
 
 						if (canHit && n.isSustainNote) {
 							var released:Bool = !replayHeldKeys[n.noteData];
-							if (!released && n.parent != null && n.parent.wasGoodHit) {
+							// 特性2：回放中同样跳过最后一个尾音的按住自动命中（改在松手时判定）
+							var isLastTail:Bool = (holdTailJudge && guitarHeroSustains && !cpuControlled
+								&& n.parent != null && n.parent.tail.length > 0
+								&& n.parent.tail[n.parent.tail.length - 1] == n);
+							if (!released && n.parent != null && n.parent.wasGoodHit && !isLastTail) {
 								// 持续按下长按音符
 								goodNoteHit(n);
 							}
@@ -3232,6 +3258,9 @@ isReplaying = false;
 					keysCheck();
 				else
 					playerDance();
+
+				// 特性3：长条命中期间持续加分（参考原版Funkin）
+				if(holdScoreBonus) updateHoldScore(elapsed);
 
 				if(notes.length > 0)
 				{
@@ -3857,8 +3886,9 @@ isReplaying = false;
 		Paths.image(uiFolder + 'combo' + uiPostfix);
 	}
 
-	private function popUpScore(note:Note = null):Void
+	private function popUpScore(note:Note = null, scoreGain:Bool = true):Void
 	{
+		// scoreGain=false 时（特性2 长条尾部判定）：显示评级/计入准度，但不加 songScore、不写回放数据
 		// 移除Math.abs()来允许显示负值
 		var noteDiff:Float = note.strumTime - Conductor.songPosition + ClientPrefs.data.ratingOffset;
 
@@ -3907,8 +3937,8 @@ isReplaying = false;
 			if(!note.ratingDisabled)
 			{
 				hitHistory.push([noteDiff, daRating.name, note.strumTime]);			
-				// 记录回放数据（仅在非回放模式下）
-				if(!isReplaying)
+				// 记录回放数据（仅在非回放模式下；特性2 长条尾部判定不写回放，避免污染输入序列）
+				if(!isReplaying && scoreGain)
 				{
 					replayData.push({
 						time: Conductor.songPosition,
@@ -3990,7 +4020,7 @@ isReplaying = false;
 		/*if(!cpuControlled) */
 		if(!cpuControlled || ClientPrefs.data.botplayScore)
 		{
-    		songScore += score;
+    		if(scoreGain) songScore += score; // 特性2：长条尾部命中不加分
     		if(!note.ratingDisabled) 
     		{
         		songHits++;
@@ -4568,6 +4598,14 @@ isReplaying = false;
 			keyPressIndices[key] = -1;
 		}
 
+		// 特性1：guitarHeroSustains 下，长条命中期间松手立刻判定 miss
+		if(guitarHeroSustains && holdReleaseInstantMiss)
+			tryInstantSustainMiss(key);
+
+		// 特性2：在松手时按其释放时机判定长条尾部（加combo+评级, 不加分）
+		if(guitarHeroSustains && holdTailJudge)
+			tryTailJudgeOnRelease(key);
+
 		var spr:StrumNote = playerStrums.members[key];
 		if(spr != null)
 		{
@@ -4576,6 +4614,101 @@ isReplaying = false;
 			spr.holdConfirmActive = false;
 		}
 		callOnScripts('onKeyRelease', [key]);
+	}
+
+	// 特性1：松手立刻判定 miss。找到该列一个"头部已命中、但尚未命中且未过期"的长条尾音，立刻触发 miss。
+	// 若该列所有长条尾音都已命中（长条已完成），则不会误判 miss。
+	private function tryInstantSustainMiss(key:Int):Void
+	{
+		if(!guitarHeroSustains || !holdReleaseInstantMiss) return;
+		if(cpuControlled || endingSong || !startedCountdown || !generatedMusic) return;
+		if(key < 0 || notes.length <= 0) return;
+
+		var target:Note = null;
+		for (n in notes)
+		{
+			if(n == null || !n.isSustainNote || !n.mustPress) continue;
+			if(n.noteData != key) continue;
+			if(n.wasGoodHit || n.tooLate || n.missed || n.ignoreNote || n.blockHit) continue;
+			if(n.parent == null || !n.parent.wasGoodHit) continue; // 头部必须已命中(长条正在进行中)
+			// 选取最早的一个未命中尾音
+			if(target == null || n.strumTime < target.strumTime) target = n;
+		}
+
+		if(target != null)
+			noteMiss(target); // noteMissCommon 会连带把同一长条的其余尾音标记为 missed 并断连
+	}
+
+	// 特性2：在松手(key release)时判定长条尾部。仅 guitarHeroSustains 模式生效。
+	// 找到该列"头部已命中、尾部尚未命中且在可命中窗口内"的长条，按其释放时机给一次有效命中
+	// （加 combo + 显示评级，但不加分）。若松手过晚（尾部已 tooLate）则不判定，由现有 miss 逻辑断连。
+	private function tryTailJudgeOnRelease(key:Int):Void
+	{
+		if(!guitarHeroSustains || !holdTailJudge || cpuControlled) return;
+		if(endingSong || !startedCountdown || !generatedMusic) return;
+		if(key < 0 || notes.length <= 0) return;
+
+		var lastTail:Note = null;
+		for (n in notes)
+		{
+			if(n == null || !n.isSustainNote || !n.mustPress) continue;
+			if(n.noteData != key) continue;
+			if(n.parent == null || !n.parent.wasGoodHit || n.parent.missed) continue;
+			// 取该列当前活跃长条的最后一个尾音
+			if(lastTail == null || n.strumTime > lastTail.strumTime) lastTail = n;
+		}
+
+		// 仅在最后一个尾音尚未命中、且当前处于其可命中窗口内（含 lateWindow）时判定；
+		// 否则视为过晚释放，交由 tooLate/kill 逻辑触发 miss。
+		if(lastTail != null && !lastTail.wasGoodHit && lastTail.canBeHit && !lastTail.tooLate)
+			goodNoteHit(lastTail); // 触发 goodNoteHit 中"尾部有效命中"分支(combo+评级, 不加分)
+	}
+
+
+
+	// 特性3：长条命中期间持续加分（参考原版Funkin：songScore += SCORE_HOLD_BONUS_PER_SECOND * elapsed）
+	// 对每一列，只要该列有"头部已命中、尚未过期"的长条尾音且该列按键被按住，就按时间比例累加分数。
+	private function updateHoldScore(elapsed:Float):Void
+	{
+		if(!holdScoreBonus) return;
+		if(cpuControlled && !ClientPrefs.data.botplayScore) return;
+		if(!generatedMusic || !startedCountdown || inCutscene || endingSong) return;
+		if(notes.length <= 0) return;
+
+		// 每列是否按住（与 keysCheck 保持一致）
+		var held:Array<Bool> = [];
+		for (i in 0...keysArray.length)
+		{
+			if(cpuControlled) held.push(true);
+			else if(isReplaying) held.push(replayHeldKeys[i]);
+			else held.push(controls.pressed(keysArray[i]));
+		}
+
+		// 统计当前正在被有效按住的长条列数（每列只计一次，避免同列多个尾音重复计分）
+		var counted:Array<Bool> = [for (i in 0...keysArray.length) false];
+		var activeCols:Int = 0;
+		for (n in notes)
+		{
+			if(n == null || !n.isSustainNote || !n.mustPress) continue;
+			if(n.tooLate || n.missed || n.ignoreNote) continue;
+			if(n.parent == null || !n.parent.wasGoodHit) continue; // 头部已命中(长条进行中)
+			if(n.noteData < 0 || n.noteData >= counted.length || counted[n.noteData]) continue;
+			if(!held[n.noteData]) continue;
+			counted[n.noteData] = true;
+			activeCols++;
+		}
+
+		if(activeCols > 0)
+		{
+			holdScoreRemainder += HOLD_SCORE_BONUS_PER_SECOND * elapsed * activeCols;
+			if(holdScoreRemainder >= 1)
+			{
+				var add:Int = Std.int(holdScoreRemainder);
+				songScore += add;
+				holdScoreRemainder -= add;
+				updateScoreText();
+			}
+		}
 	}
 
 	public static function getKeyFromEvent(arr:Array<String>, key:FlxKey):Int
@@ -4668,7 +4801,11 @@ isReplaying = false;
 					if (canHit && n.isSustainNote) {
 						var released:Bool = !holdArray[n.noteData];
 
-						if (!released)
+						// 特性2：启用尾部判定时，最后一个尾音不在按住期间自动命中，
+						// 改在松手(keyReleased)时按其释放时机判定；botplay 仍照常完成。
+						if (!released && !(holdTailJudge && guitarHeroSustains && !cpuControlled
+							&& n.parent != null && n.parent.tail.length > 0
+							&& n.parent.tail[n.parent.tail.length - 1] == n))
 							goodNoteHit(n);
 					}
 				}
@@ -5003,6 +5140,14 @@ isReplaying = false;
 				notesHitArray.unshift(Date.now());
 				popUpScore(note);
 			}
+			// 特性2：长条最后一个尾音命中时，算作一个有效命中判定 —— 加 combo + 显示评级，但不加分
+			else if (holdTailJudge && note.parent != null && note.parent.tail.length > 0
+				&& note.parent.tail[note.parent.tail.length - 1] == note)
+			{
+				combo++;
+				notesHitArray.unshift(Date.now());
+				popUpScore(note, false); // scoreGain=false：只显示评级/计入准度，不加 songScore
+			}
 			var gainHealth:Bool = true; // prevent health gain, *if* sustains are treated as a singular note
 			if (guitarHeroSustains && note.isSustainNote) gainHealth = false;
 			if (gainHealth) health += note.hitHealth * healthGain;
@@ -5152,6 +5297,9 @@ isReplaying = false;
 			if (Reflect.hasField(originalGameplaySettings, 'noReset')) ClientPrefs.data.noReset = originalGameplaySettings.noReset;
 			if (Reflect.hasField(originalGameplaySettings, 'guitarHeroSustains')) ClientPrefs.data.guitarHeroSustains = originalGameplaySettings.guitarHeroSustains;
 			if (Reflect.hasField(originalGameplaySettings, 'sustainTailFix')) ClientPrefs.data.sustainTailFix = originalGameplaySettings.sustainTailFix;
+			if (Reflect.hasField(originalGameplaySettings, 'holdReleaseInstantMiss')) ClientPrefs.data.holdReleaseInstantMiss = originalGameplaySettings.holdReleaseInstantMiss;
+			if (Reflect.hasField(originalGameplaySettings, 'holdTailJudge')) ClientPrefs.data.holdTailJudge = originalGameplaySettings.holdTailJudge;
+			if (Reflect.hasField(originalGameplaySettings, 'holdScoreBonus')) ClientPrefs.data.holdScoreBonus = originalGameplaySettings.holdScoreBonus;
 			if (Reflect.hasField(originalGameplaySettings, 'popUpRating')) ClientPrefs.data.popUpRating = originalGameplaySettings.popUpRating;
 		}
 		

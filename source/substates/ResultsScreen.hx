@@ -390,6 +390,9 @@ class ResultsScreen extends FlxSubState
 							noReset: ClientPrefs.data.noReset,
 							guitarHeroSustains: ClientPrefs.data.guitarHeroSustains,
 							sustainTailFix: ClientPrefs.data.sustainTailFix,
+							holdReleaseInstantMiss: ClientPrefs.data.holdReleaseInstantMiss,
+							holdTailJudge: ClientPrefs.data.holdTailJudge,
+							holdScoreBonus: ClientPrefs.data.holdScoreBonus,
 							popUpRating: ClientPrefs.data.popUpRating,
 
 							// Gameplay changers settings

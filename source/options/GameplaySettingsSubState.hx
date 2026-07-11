@@ -125,6 +125,27 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		addOption(option);
 
 		var option:Option = new Option(
+			"Hold Release Instant Miss",
+			"仅在开启 Sustains as One Note 时生效：长条命中期间松开按键会立刻判定 miss（比原版更严格、更即时）。",
+			'holdReleaseInstantMiss',
+			BOOL);
+		addOption(option);
+
+		var option:Option = new Option(
+			"Hold Tail Judgement",
+			"长条尾部也算一个有效命中：命中尾部时增加 combo 并显示评级（但不加分）；若超时未命中照样断连并 miss。",
+			'holdTailJudge',
+			BOOL);
+		addOption(option);
+
+		var option:Option = new Option(
+			"Hold Score Bonus",
+			"长条命中期间持续加分，直到长条结束（参考原版 Funkin，约每秒 250 分）。",
+			'holdScoreBonus',
+			BOOL);
+		addOption(option);
+
+		var option:Option = new Option(
 			"Hitsound Volume",
 			Language.get("hitsoundvolume_desc"),
 			'hitsoundVolume',
