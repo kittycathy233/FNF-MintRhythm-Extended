@@ -205,7 +205,7 @@ class FreeplayState extends MusicBeatState
 		curDifficulty = Math.round(Math.max(0, Difficulty.defaultList.indexOf(lastDifficultyName)));
 
 		scoreText = new FlxText(FlxG.width * 0.7, 5, 0, "", 32);
-		scoreText.setFormat(Paths.font(Language.get('game_font')), 32, FlxColor.WHITE, RIGHT);
+		scoreText.setFormat(Paths.font(Language.get('game_font2')), 32, FlxColor.WHITE, RIGHT);
 
 		diffText = new FlxText(scoreText.x, scoreText.y + scoreText.height, 0, "", 24);
 		diffText.font = scoreText.font;

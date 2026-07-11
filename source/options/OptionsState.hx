@@ -130,7 +130,7 @@ class OptionsState extends MusicBeatState
 		if (controls.mobileC)
 		{
 			var tipText:FlxText = new FlxText(150, FlxG.height - 24, 0, 'Press ' + (FlxG.onMobile ? 'C' : 'CTRL or C') + ' to Go Mobile Controls Menu', 16);
-			tipText.setFormat(Paths.font("ResourceHanRoundedCN-Bold.ttf"), 17, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			tipText.setFormat(Paths.font(Language.get('game_font')), 17, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			tipText.borderSize = 1.25;
 			tipText.scrollFactor.set();
 			tipText.antialiasing = ClientPrefs.data.antialiasing;
@@ -149,7 +149,7 @@ class OptionsState extends MusicBeatState
 		for (num => option in options)
 		{
 			var optionText:FlxText = new FlxText(leftMargin, 0, 0, LanguageBasic.getPhrase('options_$option', option), 48);
-			optionText.setFormat(Paths.font("ResourceHanRoundedCN-Bold.ttf"), 48, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			optionText.setFormat(Paths.font(Language.get('game_font')), 48, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			optionText.borderSize = 2;
 			optionText.antialiasing = ClientPrefs.data.antialiasing;
 			optionText.x = leftMargin;
@@ -158,20 +158,20 @@ class OptionsState extends MusicBeatState
 		}
 
 		selectorLeft = new FlxText(0, 0, 0, ">", 48);
-		selectorLeft.setFormat(Paths.font("ResourceHanRoundedCN-Bold.ttf"), 48, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		selectorLeft.setFormat(Paths.font(Language.get('game_font')), 48, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		selectorLeft.borderSize = 2;
 		selectorLeft.antialiasing = ClientPrefs.data.antialiasing;
 		add(selectorLeft);
 
 		selectorRight = new FlxText(0, 0, 0, "<", 48);
-		selectorRight.setFormat(Paths.font("ResourceHanRoundedCN-Bold.ttf"), 48, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		selectorRight.setFormat(Paths.font(Language.get('game_font')), 48, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		selectorRight.borderSize = 2;
 		selectorRight.antialiasing = ClientPrefs.data.antialiasing;
 		add(selectorRight);
 
 		// 添加描述文本
 		descriptionText = new FlxText(300, FlxG.height - 300, FlxG.width - 400, optionDescriptions[curSelected], 24);
-		descriptionText.setFormat(Paths.font("ResourceHanRoundedCN-Bold.ttf"), 24, FlxColor.WHITE, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		descriptionText.setFormat(Paths.font(Language.get('game_font')), 24, FlxColor.WHITE, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		descriptionText.borderSize = 1;
 		descriptionText.antialiasing = ClientPrefs.data.antialiasing;
 		descriptionText.scrollFactor.set();
@@ -183,7 +183,7 @@ class OptionsState extends MusicBeatState
 			adminButton = new FlxButton(FlxG.width - 220, 20, Language.get("request_admin_button"), onAdminButtonClick);
 			adminButton.setGraphicSize(200, 40);
 			adminButton.updateHitbox();
-			adminButton.label.setFormat(Paths.font("ResourceHanRoundedCN-Bold.ttf"), 16, FlxColor.WHITE, CENTER);
+			adminButton.label.setFormat(Paths.font(Language.get('game_font')), 16, FlxColor.WHITE, CENTER);
 			adminButton.label.fieldWidth = 200;
 			adminButton.label.alignment = CENTER;
 			add(adminButton);

@@ -29,9 +29,9 @@
     "timebar_style_desc": "修改遊戲時間條的視覺樣式",
     "request_admin_desc": "以管理員權限重啟遊戲\n啟用後將彈出 UAC 提示，確認後程式將以管理員權限重新啟動\n視窗標題列將顯示\"(Administrator)\"標識",
     "request_admin_button": "獲取管理員權限",
-    "uitab_font": "SourceHanSansCN-Bold.otf",
-    "charting_infobar": "ResourceHanRoundedCN-Bold.ttf",
-    "game_font": "ResourceHanRoundedCN-Bold.ttf",
+    "uitab_font": "unifont-16.0.02.otf",
+    "charting_infobar": "MisansTC-Regular.ttf",
+    "game_font": "MaoKenShiJinHei-2.ttf",
 
     "charting_mute_text": "Mute",
     "charting_playersound_hit_text": "玩家命中箭頭聲音：",

@@ -112,7 +112,7 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 
 		// 初始化警告文本
 		warningText = new FlxText(0, 50, FlxG.width - 40, "", 24);
-		warningText.setFormat(Paths.font("ResourceHanRoundedCN-Bold.ttf"), 32, FlxColor.YELLOW, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		warningText.setFormat(Paths.font(Language.get('game_font')), 32, FlxColor.YELLOW, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		warningText.visible = false;
 		warningText.alpha = 0.8; // 添加透明度
 		add(warningText); // 确保在最上层

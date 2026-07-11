@@ -110,19 +110,18 @@ class MainMenuState extends MusicBeatState
 		else
 			createModernMenu();
 
-		var lang:String = ClientPrefs.data.language;
 
 		var mrVer:FlxText = new FlxText(12, FlxG.height - 66, 0, 'Kathy Engine v' + kathyEngineVersion, 12);
 		mrVer.scrollFactor.set();
-		mrVer.setFormat(Paths.font(lang == 'zh_cn' ? 'ResourceHanRoundedCN-Bold.ttf' : "vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		mrVer.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(mrVer);
 		var psychVer:FlxText = new FlxText(12, FlxG.height - 46, 0, "Psych Engine v" + psychEngineVersion, 12);
 		psychVer.scrollFactor.set();
-		psychVer.setFormat(Paths.font(lang == 'zh_cn' ? 'ResourceHanRoundedCN-Bold.ttf' : "vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		psychVer.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(psychVer);
 		var fnfVer:FlxText = new FlxText(12, FlxG.height - 26, 0, 'Friday Night Funkin\' v0.2.8', 12);
 		fnfVer.scrollFactor.set();
-		fnfVer.setFormat(Paths.font(lang == 'zh_cn' ? 'ResourceHanRoundedCN-Bold.ttf' : "vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		fnfVer.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(fnfVer);
 		
 		var tipsContent = CoolUtil.tipsShow();
