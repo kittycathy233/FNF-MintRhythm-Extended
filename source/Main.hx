@@ -57,6 +57,10 @@ class Main extends Sprite
 	public static var fpsVar:FPSCounter;
 	public static var gameLogVar:GameLogDisplay;
 
+	/** 强制隐藏 FPS 计数器（如进入制谱器时临时隐藏，不受 showFPS 设置与窗口缩放影响）。
+	 * 设为 false 或调用 updateFPSCounterVisibility 可恢复。 */
+	public static var forceHideFPS:Bool = false;
+
 	public static final platform:String = #if mobile "Phones" #else "PCs" #end;
 
 	#if (cpp && windows && !mobile)
@@ -618,7 +622,7 @@ class Main extends Sprite
 	public static function updateFPSCounterVisibility():Void
 	{
 		if(fpsVar != null) {
-			fpsVar.visible = ClientPrefs.data.showFPS;
+			fpsVar.visible = ClientPrefs.data.showFPS && !forceHideFPS;
 			fpsVar.applySettings();
 		}
 	}

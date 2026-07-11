@@ -8,6 +8,12 @@ import flixel.util.FlxStringUtil;
 import flixel.util.FlxDestroyUtil;
 import flixel.input.keyboard.FlxKey;
 import flixel.tweens.FlxEase;
+import flixel.tweens.FlxTween;
+import flixel.util.FlxTimer;
+import flixel.system.scaleModes.ChartingScaleMode;
+import flixel.system.scaleModes.BaseScaleMode;
+
+import openfl.events.Event;
 
 import lime.utils.Assets;
 import lime.media.AudioBuffer;
@@ -102,6 +108,31 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	public static var GRID_SIZE = 40;
 	public static var TRACK_SPACING = 20; // 轨道之间的间距（半个grid方格）
 	final BACKUP_EXT = '.bkp';
+
+	/**
+	 * 制谱器高清模式开关：进入制谱器时临时将内部渲染分辨率提升到 1080P（仅桌面端生效），
+	 * 退出制谱器后自动还原。设为 false 可关闭该功能。
+	 */
+	public static var ENABLE_HD:Bool = true;
+	private static var _hdPrevScaleMode:BaseScaleMode = null;
+	private static var _hdActive:Bool = false;
+
+	/** 进入制谱器时的窗口尺寸，用于判断窗口缩放幅度 */
+	private var _initialStageW:Int = 0;
+	private var _initialStageH:Int = 0;
+
+	/** 窗口缩放提示相关 UI（仅在桌面端、高清模式生效时启用） */
+	private var _resizeBg:FlxSprite = null;
+	private var _resizeText:FlxText = null;
+	private var _resizeButton:PsychUIButton = null;
+	private var _resizeDismissTimer:FlxTimer = null;
+	private var _resizePromptActive:Bool = false;
+	private var _resizePromptPersistent:Bool = false;
+
+	/** 窗口尺寸变化多少算“明显变化”：宽高差绝对值之和超过该阈值时显示“重载界面”按钮。
+	 * 阈值偏小（如 200）时轻微拖拽也会提示重载；调大（如 400）则只在大改窗口时提示。 */
+	public static var RESIZE_PROMPT_THRESHOLD:Int = 300;
+
 
 	public var quantizations:Array<Int> = [
 		4,
@@ -346,6 +377,29 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 	override function create()
 	{
+		// 进入制谱器时临时隐藏 FPS 计数器（不受 showFPS 设置与窗口缩放影响），退出时还原
+		Main.forceHideFPS = true;
+		if (Main.fpsVar != null) Main.fpsVar.visible = false;
+
+		// 制谱器高清模式：进入时临时把内部渲染分辨率提升到 720P~1080P（移动端允许更宽），
+		// 退出时还原。必须在创建任何相机/UI 之前调用，这样相机与布局都会基于新分辨率生成
+		if (ENABLE_HD)
+		{
+			if (!_hdActive)
+			{
+				_hdPrevScaleMode = FlxG.scaleMode;
+				FlxG.scaleMode = new ChartingScaleMode();
+				FlxG.resizeGame(FlxG.stage.stageWidth, FlxG.stage.stageHeight);
+				_hdActive = true;
+			}
+			// 记录进入时的窗口尺寸，并监听窗口缩放（移动端为旋转触发的 RESIZE）
+			_initialStageW = FlxG.stage.stageWidth;
+			_initialStageH = FlxG.stage.stageHeight;
+			FlxG.stage.addEventListener(Event.RESIZE, onWindowResized);
+		}
+
+
+
 		if(Difficulty.list.length < 1) Difficulty.resetList();
 		_keysPressedBuffer.resize(keysArray.length);
 
@@ -793,6 +847,9 @@ if(_shouldReset) Conductor.songPosition = 0;
 	// 初始化角色显示
 	if(chartEditorSave.data.showCharacters == null) chartEditorSave.data.showCharacters = false;
 	if(chartEditorSave.data.showCharacters) initCharacters();
+
+		// 构建窗口缩放提示 UI（默认隐藏，仅在窗口明显缩放或需要重载时显示）
+		buildResizePromptUI();
 	}
 
 	function initCharacters()
@@ -6684,6 +6741,24 @@ for (i in 0...GRID_PLAYERS)
 
 	override function destroy()
 	{
+		// 退出制谱器时停止窗口缩放监听
+		FlxG.stage.removeEventListener(Event.RESIZE, onWindowResized);
+
+		// 还原 FPS 计数器的可见性（恢复为 showFPS 设置）
+		Main.forceHideFPS = false;
+		Main.updateFPSCounterVisibility();
+
+		// 退出制谱器时还原为原来的缩放模式（destroy 在下一状态 create 之前执行，确保其它界面恢复 1280x720）
+		if (_hdActive)
+		{
+			FlxG.scaleMode = _hdPrevScaleMode;
+			FlxG.resizeGame(FlxG.stage.stageWidth, FlxG.stage.stageHeight);
+			_hdActive = false;
+			_hdPrevScaleMode = null;
+		}
+
+
+
 		Note.globalRgbShaders = [];
 		backend.NoteTypesConfig.clearNoteTypesData();
 
@@ -6693,6 +6768,147 @@ for (i in 0...GRID_PLAYERS)
 		MetaNote.noteTypeTexts = [];
 		fileDialog.destroy();
 		super.destroy();
+	}
+
+	//============================================================
+	// 窗口缩放提示：窗口尺寸变化后，提示用户是否需要重载界面布局
+	//============================================================
+
+	/** 构建窗口缩放提示的 UI（背景、文字、重载按钮），默认全部隐藏 */
+	function buildResizePromptUI()
+	{
+		if (_resizeBg != null) return;
+
+		_resizeBg = new FlxSprite();
+		_resizeBg.makeGraphic(10, 10, 0xFF16162A);
+		_resizeBg.alpha = 0.88;
+		_resizeBg.scrollFactor.set();
+		_resizeBg.cameras = [camUI];
+		add(_resizeBg);
+
+		_resizeText = new FlxText(0, 0, 0, '', 18);
+		_resizeText.setFormat(Paths.font(Language.get('uitab_font')), 18, FlxColor.WHITE, CENTER);
+		_resizeText.scrollFactor.set();
+		_resizeText.cameras = [camUI];
+		add(_resizeText);
+
+		_resizeButton = new PsychUIButton(0, 0, '重载界面', reloadInterface, 140);
+		_resizeButton.cameras = [camUI];
+		add(_resizeButton);
+
+		hideResizePrompt(true);
+	}
+
+	/** 窗口缩放事件回调：根据与进入时窗口尺寸的差距决定提示形式 */
+	function onWindowResized(e:Event):Void
+	{
+		if (!ENABLE_HD || !_hdActive) return;
+
+		var newW:Int = FlxG.stage.stageWidth;
+		var newH:Int = FlxG.stage.stageHeight;
+		var delta:Float = Math.abs(newW - _initialStageW) + Math.abs(newH - _initialStageH);
+
+		// 已经处在“明显变化”提示时，不因后续小幅缩放而降级为仅提示
+		var persistent:Bool = delta > RESIZE_PROMPT_THRESHOLD;
+		if (_resizePromptActive && _resizePromptPersistent) persistent = true;
+
+		showResizePrompt(persistent);
+	}
+
+
+	/** 显示窗口缩放提示。persistent=true 显示“重载界面”按钮并常驻；否则仅短暂提示后飞出 */
+	function showResizePrompt(persistent:Bool):Void
+	{
+		buildResizePromptUI();
+		_resizePromptPersistent = persistent;
+
+		var newW:Int = FlxG.stage.stageWidth;
+		var newH:Int = FlxG.stage.stageHeight;
+
+		var msg:String = persistent
+			? '窗口大小已明显改变（${_initialStageW}x${_initialStageH} → ${newW}x${newH}）\n界面布局可能需要重载才能完全适配。'
+			: '窗口已缩放，画面已自动适配。';
+
+		if (_resizeDismissTimer != null) { _resizeDismissTimer.cancel(); _resizeDismissTimer = null; }
+
+		_resizeBg.visible = _resizeText.visible = _resizeButton.visible = true;
+		_resizeBg.alpha = 0.88;
+		_resizeText.alpha = 1;
+		_resizeButton.alpha = 1;
+
+		_resizeText.text = msg;
+		_resizeText.alignment = CENTER;
+		_resizeText.fieldWidth = 0; // 自动宽度
+
+		var textW:Float = _resizeText.width;
+		var textH:Float = _resizeText.height;
+		var btnW:Float = _resizeButton.width;
+		var btnH:Float = _resizeButton.height;
+		var pad:Float = 18;
+		var bgW:Float = Math.max(textW, persistent ? btnW : 0) + pad * 2;
+		var bgH:Float = textH + pad * 2 + (persistent ? (btnH + 10) : 0);
+
+		_resizeBg.makeGraphic(Math.ceil(bgW), Math.ceil(bgH), 0xFF16162A);
+		_resizeBg.alpha = 0.88;
+		_resizeBg.x = (FlxG.width - bgW) / 2;
+		_resizeBg.y = FlxG.height * 0.10;
+
+		_resizeText.x = _resizeBg.x + (bgW - textW) / 2;
+		_resizeText.y = _resizeBg.y + pad;
+
+		_resizeButton.visible = persistent;
+		_resizeButton.x = (FlxG.width - btnW) / 2;
+		_resizeButton.y = _resizeBg.y + bgH - btnH - pad / 2;
+
+		_resizePromptActive = true;
+
+		if (!persistent)
+		{
+			// 几秒后自动飞出
+			_resizeDismissTimer = new FlxTimer().start(3.0, function(t:FlxTimer) {
+				flyOutResizePrompt();
+			});
+		}
+	}
+
+	/** 让提示向上飞出并淡出，结束后隐藏 */
+	function flyOutResizePrompt():Void
+	{
+		if (!_resizePromptActive) return;
+		_resizePromptActive = false;
+		_resizePromptPersistent = false;
+		if (_resizeDismissTimer != null) { _resizeDismissTimer.cancel(); _resizeDismissTimer = null; }
+
+		var dur:Float = 0.4;
+		FlxTween.tween(_resizeBg, {y: _resizeBg.y - 60, alpha: 0}, dur, {ease: FlxEase.cubeIn});
+		FlxTween.tween(_resizeText, {y: _resizeText.y - 60, alpha: 0}, dur, {ease: FlxEase.cubeIn});
+		FlxTween.tween(_resizeButton, {y: _resizeButton.y - 60, alpha: 0}, dur, {ease: FlxEase.cubeIn, onComplete: function(t:FlxTween) {
+			hideResizePrompt(true);
+		}});
+	}
+
+	/** 隐藏窗口缩放提示。immediate=true 立即隐藏，否则保留当前状态 */
+	function hideResizePrompt(immediate:Bool):Void
+	{
+		_resizePromptActive = false;
+		_resizePromptPersistent = false;
+		if (_resizeDismissTimer != null) { _resizeDismissTimer.cancel(); _resizeDismissTimer = null; }
+		if (_resizeBg == null) return;
+
+		if (immediate)
+		{
+			_resizeBg.visible = false;
+			_resizeText.visible = false;
+			_resizeButton.visible = false;
+			_resizeBg.alpha = _resizeText.alpha = _resizeButton.alpha = 1;
+		}
+	}
+
+	/** 点击“重载界面”按钮：重建制谱器以按新窗口尺寸重新布局 */
+	function reloadInterface():Void
+	{
+		hideResizePrompt(true);
+		MusicBeatState.switchState(new ChartingState());
 	}
 
 	function loadFileList(mainFolder:String, ?optionalList:String = null, ?fileTypes:Array<String> = null)
