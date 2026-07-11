@@ -146,6 +146,25 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		addOption(option);
 
 		var option:Option = new Option(
+			"Hold Tail Leniency",
+			"开启后，长条尾部判定（按释放时机）会额外放宽判定窗口，更易命中。需配合 Hold Tail Judgement 使用。",
+			'holdTailLeniency',
+			BOOL);
+		addOption(option);
+
+		var option:Option = new Option(
+			"Hold Tail Leniency (ms)",
+			"长条尾部判定的宽容毫秒数：各评级窗口与命中窗口上限都会额外放宽该数值（默认20，范围0-50）。",
+			'holdTailLeniencyMs',
+			FLOAT);
+		option.scrollSpeed = 2;
+		option.minValue = 0;
+		option.maxValue = 50;
+		option.changeValue = 1;
+		option.decimals = 0;
+		addOption(option);
+
+		var option:Option = new Option(
 			"Hitsound Volume",
 			Language.get("hitsoundvolume_desc"),
 			'hitsoundVolume',

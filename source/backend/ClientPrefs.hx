@@ -109,6 +109,8 @@ import states.TitleState;
 	public var holdReleaseInstantMiss:Bool = false; // 特性1: 启用guitarHeroSustains时，长条命中期间松手立刻判定miss
 	public var holdTailJudge:Bool = false; // 特性2: 长条尾部算一个有效命中(加combo+显示评级,但不加分;超时未命中照样断连并miss)
 	public var holdScoreBonus:Bool = false; // 特性3: 长条命中期间持续加分直到长条结束(参考原版Funkin)
+	public var holdTailLeniency:Bool = false; // 特性2宽容: 尾条判定(释放时机)是否放宽判定窗口
+	public var holdTailLeniencyMs:Float = 20.0; // 特性2宽容量(ms)，默认20，范围0-50
 	public var inputSystem:String = 'default'; // 输入判定系统: 'default' (传统) 或 'rhythm' (Rhythm模式，只允许击中最近的音符)
 	public var discordRPC:Bool = true;
 	public var loadingScreen:Bool = true;

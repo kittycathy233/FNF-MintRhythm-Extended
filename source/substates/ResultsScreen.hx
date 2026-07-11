@@ -393,6 +393,8 @@ class ResultsScreen extends FlxSubState
 							holdReleaseInstantMiss: ClientPrefs.data.holdReleaseInstantMiss,
 							holdTailJudge: ClientPrefs.data.holdTailJudge,
 							holdScoreBonus: ClientPrefs.data.holdScoreBonus,
+							holdTailLeniency: ClientPrefs.data.holdTailLeniency,
+							holdTailLeniencyMs: ClientPrefs.data.holdTailLeniencyMs,
 							popUpRating: ClientPrefs.data.popUpRating,
 
 							// Gameplay changers settings

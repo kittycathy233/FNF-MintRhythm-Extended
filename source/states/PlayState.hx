@@ -339,6 +339,8 @@ class PlayState extends MusicBeatState
 	public var holdReleaseInstantMiss:Bool = false; // 特性1: guitarHeroSustains下松手立刻miss
 	public var holdTailJudge:Bool = false; // 特性2: 长条尾部算有效命中(加combo+评级,不加分)
 	public var holdScoreBonus:Bool = false; // 特性3: 长条命中期间持续加分
+	public var holdTailLeniency:Bool = false; // 特性2宽容: 是否放宽尾条判定窗口
+	public var holdTailLeniencyMs:Float = 20.0; // 特性2宽容量(ms)
 	var holdScoreRemainder:Float = 0; // 特性3: 分数小数累加器(songScore为Int,避免每帧取整丢失)
 	public static inline var HOLD_SCORE_BONUS_PER_SECOND:Float = 250.0; // 特性3: 每秒加分(参考原版Funkin Constants.SCORE_HOLD_BONUS_PER_SECOND)
 	public var instakillOnMiss:Bool = false;
@@ -544,6 +546,8 @@ class PlayState extends MusicBeatState
 				holdReleaseInstantMiss: ClientPrefs.data.holdReleaseInstantMiss,
 				holdTailJudge: ClientPrefs.data.holdTailJudge,
 				holdScoreBonus: ClientPrefs.data.holdScoreBonus,
+				holdTailLeniency: ClientPrefs.data.holdTailLeniency,
+				holdTailLeniencyMs: ClientPrefs.data.holdTailLeniencyMs,
 				popUpRating: ClientPrefs.data.popUpRating
 			};
 			
@@ -558,6 +562,8 @@ class PlayState extends MusicBeatState
 			if (Reflect.hasField(replayGameplaySettings, 'holdReleaseInstantMiss')) ClientPrefs.data.holdReleaseInstantMiss = replayGameplaySettings.holdReleaseInstantMiss;
 			if (Reflect.hasField(replayGameplaySettings, 'holdTailJudge')) ClientPrefs.data.holdTailJudge = replayGameplaySettings.holdTailJudge;
 			if (Reflect.hasField(replayGameplaySettings, 'holdScoreBonus')) ClientPrefs.data.holdScoreBonus = replayGameplaySettings.holdScoreBonus;
+			if (Reflect.hasField(replayGameplaySettings, 'holdTailLeniency')) ClientPrefs.data.holdTailLeniency = replayGameplaySettings.holdTailLeniency;
+			if (Reflect.hasField(replayGameplaySettings, 'holdTailLeniencyMs')) ClientPrefs.data.holdTailLeniencyMs = replayGameplaySettings.holdTailLeniencyMs;
 			if (Reflect.hasField(replayGameplaySettings, 'popUpRating')) ClientPrefs.data.popUpRating = replayGameplaySettings.popUpRating;
 			
 			// 应用 GameplayChangersSubstate 设置
@@ -624,6 +630,8 @@ isReplaying = false;
 		holdReleaseInstantMiss = ClientPrefs.data.holdReleaseInstantMiss;
 		holdTailJudge = ClientPrefs.data.holdTailJudge;
 		holdScoreBonus = ClientPrefs.data.holdScoreBonus;
+		holdTailLeniency = ClientPrefs.data.holdTailLeniency;
+		holdTailLeniencyMs = ClientPrefs.data.holdTailLeniencyMs;
 
 		// var gameCam:FlxCamera = FlxG.camera;
 		camGame = initPsychCamera();
@@ -3886,7 +3894,7 @@ isReplaying = false;
 		Paths.image(uiFolder + 'combo' + uiPostfix);
 	}
 
-	private function popUpScore(note:Note = null, scoreGain:Bool = true):Void
+	private function popUpScore(note:Note = null, scoreGain:Bool = true, leniencyMs:Float = 0):Void
 	{
 		// scoreGain=false 时（特性2 长条尾部判定）：显示评级/计入准度，但不加 songScore、不写回放数据
 		// 移除Math.abs()来允许显示负值
@@ -3921,6 +3929,12 @@ isReplaying = false;
 		{
 			noteDiff = 0;
 		}
+
+		// 特性2宽容：尾条判定时，把计时误差绝对值削减至多 leniencyMs，等效于把 perfect/sick/good 等
+		// 评级窗口（以及命中窗口）各放宽 leniencyMs。例如 Psych(perfect23/sick45/good90) +20ms → 43/65/110。
+		if(leniencyMs > 0 && noteDiff != 0)
+			noteDiff -= (noteDiff > 0 ? 1 : -1) * Math.min(Math.abs(noteDiff), leniencyMs);
+
 		allNotesMs += noteDiff;
 		
 		averageMs = allNotesMs/songHits;
@@ -3980,6 +3994,9 @@ isReplaying = false;
 					modeLabel = "(REP)";
 				} else if (cpuControlled) {
 					modeLabel = "(BOT)";
+				} else if (!scoreGain) {
+					// 特性2：长条尾部判定（释放时机命中），对应标签
+					modeLabel = "(TAIL)";
 				}
 			}
 			
@@ -4658,10 +4675,19 @@ isReplaying = false;
 			if(lastTail == null || n.strumTime > lastTail.strumTime) lastTail = n;
 		}
 
-		// 仅在最后一个尾音尚未命中、且当前处于其可命中窗口内（含 lateWindow）时判定；
-		// 否则视为过晚释放，交由 tooLate/kill 逻辑触发 miss。
-		if(lastTail != null && !lastTail.wasGoodHit && lastTail.canBeHit && !lastTail.tooLate)
-			goodNoteHit(lastTail); // 触发 goodNoteHit 中"尾部有效命中"分支(combo+评级, 不加分)
+		// 仅在最后一个尾音尚未命中、且当前处于其判定窗口内时判定；
+		// 判定窗口 = [strumTime - len, strumTime + lateWindow + len]，len 为特性2宽容量(ms)。
+		// 超出则视为释放时机不当，交由 tooLate/kill 逻辑触发 miss（按久超时照样断连并加miss）。
+		if(lastTail != null && !lastTail.wasGoodHit)
+		{
+			var lateWindow:Float = Conductor.safeZoneOffset * lastTail.lateHitMult;
+			var len:Float = (holdTailLeniency) ? holdTailLeniencyMs : 0;
+			var lowerBound:Float = lastTail.strumTime - len;                 // 放宽早松手
+			var upperBound:Float = lastTail.strumTime + lateWindow + len;    // 放宽晚松手(含原 lateWindow)
+			var songPos:Float = Conductor.songPosition;
+			if(songPos >= lowerBound && songPos <= upperBound)
+				goodNoteHit(lastTail); // 触发 goodNoteHit 中"尾部有效命中"分支(combo+评级, 不加分)
+		}
 	}
 
 
@@ -5144,9 +5170,10 @@ isReplaying = false;
 			else if (holdTailJudge && note.parent != null && note.parent.tail.length > 0
 				&& note.parent.tail[note.parent.tail.length - 1] == note)
 			{
+				var tailLeniencyMs:Float = (holdTailLeniency) ? holdTailLeniencyMs : 0;
 				combo++;
 				notesHitArray.unshift(Date.now());
-				popUpScore(note, false); // scoreGain=false：只显示评级/计入准度，不加 songScore
+				popUpScore(note, false, tailLeniencyMs); // scoreGain=false：只显示评级/计入准度，不加 songScore
 			}
 			var gainHealth:Bool = true; // prevent health gain, *if* sustains are treated as a singular note
 			if (guitarHeroSustains && note.isSustainNote) gainHealth = false;
@@ -5300,6 +5327,8 @@ isReplaying = false;
 			if (Reflect.hasField(originalGameplaySettings, 'holdReleaseInstantMiss')) ClientPrefs.data.holdReleaseInstantMiss = originalGameplaySettings.holdReleaseInstantMiss;
 			if (Reflect.hasField(originalGameplaySettings, 'holdTailJudge')) ClientPrefs.data.holdTailJudge = originalGameplaySettings.holdTailJudge;
 			if (Reflect.hasField(originalGameplaySettings, 'holdScoreBonus')) ClientPrefs.data.holdScoreBonus = originalGameplaySettings.holdScoreBonus;
+			if (Reflect.hasField(originalGameplaySettings, 'holdTailLeniency')) ClientPrefs.data.holdTailLeniency = originalGameplaySettings.holdTailLeniency;
+			if (Reflect.hasField(originalGameplaySettings, 'holdTailLeniencyMs')) ClientPrefs.data.holdTailLeniencyMs = originalGameplaySettings.holdTailLeniencyMs;
 			if (Reflect.hasField(originalGameplaySettings, 'popUpRating')) ClientPrefs.data.popUpRating = originalGameplaySettings.popUpRating;
 		}
 		
