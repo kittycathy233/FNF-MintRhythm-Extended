@@ -66,20 +66,26 @@ class StrumNote extends FlxSprite
 		else skin = Note.defaultNoteSkin;
 
 		// 与 Note.reloadNote 一致的皮肤解析：HSV 时优先走 hsv 目录，
-		// 保证 StrumNote 与流动音符使用同一套箭头（而非默认/RGB 纹理）
+		// 保证 StrumNote 与流动音符使用同一套箭头（而非默认/RGB 纹理）。
+		// 像素舞台的箭头资源在 pixelUI/ 下，这里的自定义皮肤解析查的是非 pixelUI 路径，
+		// 无意义；且 HSV 目录查找统一交给 resolveSkinPath（已支持 pixelUI/<folder>/hsv），
+		// 故像素场景跳过此处，避免把含 hsv 的路径再次传入 resolveSkinPath 造成双重查找。
 		var customSkin:String = skin + Note.getNoteSkinPostfix();
 		var customExists:Bool = false;
-		if(ClientPrefs.data.arrowColorMode == 'HSV')
+		if (!PlayState.isPixelStage)
 		{
-			var parts:Array<String> = customSkin.split('/');
-			var filename:String = parts.pop();
-			var folder:String = parts.join('/');
-			customExists = Paths.fileExists('images/$folder/hsv/$filename.png', IMAGE) || Paths.fileExists('images/$customSkin.png', IMAGE);
-		}
-		else
-			customExists = Paths.fileExists('images/$customSkin.png', IMAGE);
+			if(ClientPrefs.data.arrowColorMode == 'HSV')
+			{
+				var parts:Array<String> = customSkin.split('/');
+				var filename:String = parts.pop();
+				var folder:String = parts.join('/');
+				customExists = Paths.fileExists('images/$folder/hsv/$filename.png', IMAGE) || Paths.fileExists('images/$customSkin.png', IMAGE);
+			}
+			else
+				customExists = Paths.fileExists('images/$customSkin.png', IMAGE);
 
-		if(!customExists) customSkin = skin;
+			if(!customExists) customSkin = skin;
+		}
 		skin = Note.getNoteSkinPath(customSkin);
 
 		texture = skin; //Load texture and anims

@@ -431,7 +431,9 @@ class NoteSplash extends FlxSprite
 
 	public static function getSplashSkinPath(basePath:String):String
 	{
-		return Note.resolveSkinPath(basePath);
+		// 飞溅贴图共享、不分像素/非像素，故传入 isSplash=true，避免像素舞台被套上
+		// 不存在的 pixelUI/ 前缀而回退到默认（非 hsv）飞溅贴图。
+		return Note.resolveSkinPath(basePath, true);
 	}
 
 	public static function createConfig():NoteSplashConfig

@@ -520,12 +520,23 @@ class Note extends FlxSprite
 		else skinPostfix = '';
 
 		if(PlayState.isPixelStage) {
+			// HSV 模式：优先加载 pixelUI/<folder>/hsv/<file> 的白色像素箭头（供 ColorSwap
+			// 着色），保持 <base>ENDS<postfix> 的像素文件名格式；不存在则回退彩色像素贴图。
+			var pixelSkin:String = skinPixel;
+			if(ClientPrefs.data.arrowColorMode == 'HSV') {
+				var parts:Array<String> = skinPixel.split('/');
+				var filename:String = parts.pop();
+				var folder:String = parts.join('/');
+				var hsvSkin:String = (folder.length > 0 ? folder + '/' : '') + 'hsv/' + filename;
+				var testPath:String = 'images/pixelUI/' + hsvSkin + (isSustainNote ? 'ENDS' : '') + skinPostfix + '.png';
+				if(Paths.fileExists(testPath, IMAGE)) pixelSkin = hsvSkin;
+			}
 			if(isSustainNote) {
-				var graphic = Paths.image('pixelUI/' + skinPixel + 'ENDS' + skinPostfix);
+				var graphic = Paths.image('pixelUI/' + pixelSkin + 'ENDS' + skinPostfix);
 				loadGraphic(graphic, true, Math.floor(graphic.width / 4), Math.floor(graphic.height / 2));
 				originalHeight = graphic.height / 2;
 			} else {
-				var graphic = Paths.image('pixelUI/' + skinPixel + skinPostfix);
+				var graphic = Paths.image('pixelUI/' + pixelSkin + skinPostfix);
 				loadGraphic(graphic, true, Math.floor(graphic.width / 4), Math.floor(graphic.height / 5));
 			}
 			setGraphicSize(Std.int(width * PlayState.daPixelZoom));
@@ -575,14 +586,20 @@ class Note extends FlxSprite
 	 * 这样可保证 StrumNote / 流动音符 / 飞溅在游玩（含模组）时使用完全一致的一套资源，
 	 * 且不会在模组只提供白底默认箭头时错误回退到原版的 hsv 箭头。
 	**/
-	public static function resolveSkinPath(basePath:String):String
+	public static function resolveSkinPath(basePath:String, ?isSplash:Bool = false):String
 	{
 		if (basePath == null || basePath.length < 1) basePath = defaultNoteSkin;
 
-		// cache key 必须包含 arrowColorMode：否则 RGB 模式缓存的基底路径会在切到 HSV
-		// 后（新建 PlayState 但 static 缓存仍在）被错误命中，导致永远解析不到 hsv/ 纹理。
+		// 飞溅贴图是共享资源（不分像素/非像素，像素感由 PixelSplashShader 运行时做出），
+		// 其 hsv 白色变体始终位于 images/<folder>/hsv/，绝不在 pixelUI/ 下，故飞溅
+		// 在像素舞台也不应套用 pixelUI/ 前缀。
+		var pixelPrefixEnabled:Bool = !isSplash && PlayState.isPixelStage;
+
+		// cache key 必须包含 arrowColorMode 与是否像素舞台：否则 RGB/HSV 或
+		// 像素/非像素缓存的基底路径会相互命中，导致永远解析不到正确的 hsv/ 纹理。
 		var cacheKey:String = (Mods.currentModDirectory != null ? Mods.currentModDirectory : '')
-			+ ':' + ClientPrefs.data.arrowColorMode + ':' + basePath;
+			+ ':' + ClientPrefs.data.arrowColorMode + ':'
+			+ (pixelPrefixEnabled ? 'pixel:' : '') + basePath;
 		if (_skinPathCache.exists(cacheKey)) return _skinPathCache.get(cacheKey);
 
 		var result:String = basePath;
@@ -591,8 +608,12 @@ class Note extends FlxSprite
 			var parts:Array<String> = basePath.split('/');
 			var filename:String = parts.pop();
 			var folder:String = parts.join('/');
-			var hsvRel:String = 'images/$folder/hsv/$filename.png';
-			var baseRel:String = 'images/$basePath.png';
+			// 像素舞台的箭头资源位于 pixelUI/ 目录下，故 hsv 白色变体也要在那里查找；
+			// 非像素舞台（或飞溅）则维持原 images/<folder>/hsv/<file> 逻辑。返回的
+			// path 不含 pixelUI/ 前缀，由 StrumNote/Note 的像素分支自行拼接 pixelUI/。
+			var pixelPrefix:String = pixelPrefixEnabled ? 'pixelUI/' : '';
+			var hsvRel:String = 'images/$pixelPrefix$folder/hsv/$filename.png';
+			var baseRel:String = 'images/$pixelPrefix$basePath.png';
 
 			if (skinFileExists(hsvRel, true))       result = '$folder/hsv/$filename'; // 1) 模组 hsv
 			else if (skinFileExists(baseRel, true)) result = basePath;                // 2) 模组默认
