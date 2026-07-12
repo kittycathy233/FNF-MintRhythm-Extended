@@ -37,6 +37,9 @@ class PauseSubState extends MusicBeatSubstate
 		var format2 = new FlxTextFormat(0xFF4000, false, false);
 
 		if(Difficulty.list.length < 2) menuItemsOG.remove('Change Difficulty'); //No need to change difficulty if there is only one!
+		#if mobile
+		if(!ClientPrefs.data.developer) menuItemsOG.remove('Chart Editor'); // 开发者模式关闭时，移动端暂停界面隐藏制谱器入口
+		#end
 		if(PlayState.chartingMode)
 		{
 			menuItemsOG.insert(2, 'Leave Charting Mode');
@@ -345,7 +348,8 @@ class PauseSubState extends MusicBeatSubstate
 					practiceText.visible = PlayState.instance.practiceMode;
 				case "Restart Song":
 					restartSong();
-				case 'Chart Editor':
+			case 'Chart Editor':
+				if (ClientPrefs.data.developer)
 					PlayState.instance.openChartEditor();
 				case "Leave Charting Mode":
 					restartSong();

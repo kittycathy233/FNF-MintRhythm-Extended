@@ -2960,9 +2960,10 @@ isReplaying = false;
 
 		if(!endingSong && !inCutscene && allowDebugKeys)
 		{
-			if (controls.justPressed('debug_1'))
+			// 仅在开发者模式启用时，才允许从游戏中直接进入编辑器界面
+			if (controls.justPressed('debug_1') && ClientPrefs.data.developer)
 				openChartEditor();
-			else if (controls.justPressed('debug_2'))
+			else if (controls.justPressed('debug_2') && ClientPrefs.data.developer)
 				openCharacterEditor();
 			else if (controls.justPressed('debug_3'))
 				eventDebugGroup.visible = !eventDebugGroup.visible;
