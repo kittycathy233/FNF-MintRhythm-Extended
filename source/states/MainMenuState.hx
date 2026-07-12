@@ -77,6 +77,8 @@ class MainMenuState extends MusicBeatState
 			var legacyCount:Int = 4 // story_mode, freeplay, credits, options
 				#if MODS_ALLOWED + 1 #end
 				#if ACHIEVEMENTS_ALLOWED + 1 #end;
+			if (ClientPrefs.data.developer) // + toolbox
+				legacyCount++;
 			yScroll = Math.max(0.25 - (0.05 * (legacyCount - 4)), 0.1);
 		}
 		else
@@ -213,6 +215,10 @@ class MainMenuState extends MusicBeatState
 			'options'
 		];
 
+		// toolbox 入口仅在开发者模式启用时显示
+		if (ClientPrefs.data.developer)
+			fullOptions.push('toolbox');
+
 		for (i in 0...fullOptions.length)
 		{
 			var option:String = fullOptions[i];
@@ -259,25 +265,29 @@ class MainMenuState extends MusicBeatState
 	 */
 	function resolveLegacyAtlas(option:String):{atlas:String, prefix:String}
 	{
-		// Map modern option names to legacy texture names
-		var legacyName:String = switch (option)
+		// Map modern option names to legacy texture {atlas file name, anim prefix}.
+		// Note: 'toolbox' uses atlas file `menu_tool_box` but anim prefix `toolbox`.
+		var mapped:{atlas:String, prefix:String} = switch (option)
 		{
-			case 'achievements': 'awards';
-			default: option;
+			case 'achievements': {atlas: 'awards', prefix: 'awards'};
+			case 'toolbox': {atlas: 'tool_box', prefix: 'toolbox'};
+			default: {atlas: option, prefix: option};
 		};
+		var legacyName:String = mapped.atlas;
+		var prefix:String = mapped.prefix;
 
 		#if MODS_ALLOWED
 		// 1-2. Mod override: if a mod provides textures in mainmenu/, use them.
 		//      Most mods place textures here, not in mainmenu/legacy/.
 		if (modProvidesImage('mainmenu/menu_' + legacyName))
-			return {atlas: 'mainmenu/menu_' + legacyName, prefix: legacyName};
+			return {atlas: 'mainmenu/menu_' + legacyName, prefix: prefix};
 		if (option != legacyName && modProvidesImage('mainmenu/menu_' + option))
 			return {atlas: 'mainmenu/menu_' + option, prefix: option};
 		#end
 
 		// 3. Bundled legacy textures (or mod-provided mainmenu/legacy/ override)
 		if (Paths.fileExists('images/mainmenu/legacy/menu_' + legacyName + '.png', IMAGE))
-			return {atlas: 'mainmenu/legacy/menu_' + legacyName, prefix: legacyName};
+			return {atlas: 'mainmenu/legacy/menu_' + legacyName, prefix: prefix};
 
 		// 4. Fall back to modern texture name (new-style idle/selected)
 		return {atlas: 'mainmenu/menu_' + option, prefix: option};
@@ -425,9 +435,22 @@ class MainMenuState extends MusicBeatState
 							MusicBeatState.switchState(new AchievementsMenuState());
 						#end
 
-						case 'credits':
-							MusicBeatState.switchState(new CreditsState());
-						case 'options':
+					case 'credits':
+						MusicBeatState.switchState(new CreditsState());
+
+					case 'toolbox':
+						// LeatherEngine-style tools hub: aggregate of editors
+						// (chart / character / stage / week / dialogue ...)
+						// 仅在开发者模式下允许进入
+						if (ClientPrefs.data.developer)
+							MusicBeatState.switchState(new MasterEditorMenu());
+						else
+						{
+							selectedSomethin = false;
+							item.visible = true;
+						}
+
+					case 'options':
 							MusicBeatState.switchState(new OptionsState());
 							OptionsState.onPlayState = false;
 							if (PlayState.SONG != null)
@@ -458,9 +481,24 @@ class MainMenuState extends MusicBeatState
 			}
 			else if (controls.justPressed('debug_1') || touchPad.buttonE.justPressed)
 			{
-				selectedSomethin = true;
-				FlxG.mouse.visible = false;
-				MusicBeatState.switchState(new MasterEditorMenu());
+				// 仅在开发者模式启用时，才允许进入编辑器菜单(MasterEditorMenu)
+				if (ClientPrefs.data.developer)
+				{
+					if (ClientPrefs.data.legacyMainMenu)
+					{
+						// legacy 主界面样式下，注释掉按键7(debug_1)进入 MasterEditorMenu 的逻辑
+						// （legacy 样式请改用 toolbox 入口进入编辑器菜单）
+						// selectedSomethin = true;
+						// FlxG.mouse.visible = false;
+						// MusicBeatState.switchState(new MasterEditorMenu());
+					}
+					else
+					{
+						selectedSomethin = true;
+						FlxG.mouse.visible = false;
+						MusicBeatState.switchState(new MasterEditorMenu());
+					}
+				}
 			}
 		}
 

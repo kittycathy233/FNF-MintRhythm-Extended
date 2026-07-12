@@ -179,6 +179,7 @@ import states.TitleState;
 	public var waterMarkPlay:Bool = true; // 水印
 	public var enableGameLog:Bool = false; // 启用游戏内日志显示（按F3切换）
 	public var legacyMainMenu:Bool = false; // 是否使用旧版主菜单UI（Psych Engine v0.7.3原生样式）
+	public var developer:Bool = false; // 开发者模式：启用后可进入编辑器菜单(MasterEditorMenu)，legacy主界面显示toolbox入口
 	public var enableConsoleLog:Bool = #if (debug || mobile) true #else false #end; // 是否在终端/控制台输出日志（debug/移动端默认启用，其余可自定义
 	public var useOptimizedNoteLoading:String = 'AUTO'; // OFF / ON / AUTO — AUTO 根据谱面 NPS 自动选择
 	public var requestAdminPrivilege:Bool = false; // 是否请求管理员权限（Windows专用）

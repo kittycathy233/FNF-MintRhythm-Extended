@@ -36,7 +36,15 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		rpcTitle = 'Extra Gameplay Settings Menu'; //for Discord Rich Presence
 
 		// BOOL 类型设置
-		var option:Option = new Option('Show Extra-Rating',
+
+		// 开发者模式（放在最顶部）：启用后可进入编辑器菜单，legacy 主界面显示 toolbox 入口
+		var option:Option = new Option('Developer Mode',
+			'Enable to access the editor menu (chart/character/stage...). In legacy main menu, shows the toolbox entry.',
+			'developer',
+			BOOL);
+		addOption(option);
+
+		option = new Option('Show Extra-Rating',
 			Language.get("show_exrating_desc"),
 			'exratingDisplay',
 			BOOL);
