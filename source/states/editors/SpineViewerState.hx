@@ -106,6 +106,12 @@ class SpineViewerState extends MusicBeatState
 
 	var skinBtn:PsychUIButton;
 	var loopBtn:PsychUICheckBox;
+	// Background-music toggle. When checked (default) the viewer loops
+	// romantic-smile.ogg with a fade-in as it enters; unchecking stops it.
+	var musicBtn:PsychUICheckBox;
+	// Smooth-zoom responsiveness. Higher = snappier glide. Used via
+	// 1 - exp(-rate * dt) so the feel is frame-rate independent.
+	var zoomSmoothRate:Float = 14;
 	var infoText:FlxText;
 	var hintText:FlxText;
 	// Bottom-left memory readout (shown in place of the hidden FPS counter).
@@ -158,6 +164,10 @@ class SpineViewerState extends MusicBeatState
 
 		buildUI();
 
+		// Enter the viewer with looping background music and a fade-in.
+		startMusic();
+
+
 		fileHandler = new FileDialogHandler();
 
 		addTouchPad('LEFT_FULL', 'A_B_E');
@@ -192,6 +202,12 @@ class SpineViewerState extends MusicBeatState
 			Application.current.window.onDropFile.remove(dropHandler);
 		dropHandler = null;
 		#end
+
+		// Stop the looping background music when leaving the viewer so it does
+		// not bleed into the next state.
+		if (FlxG.sound.music != null)
+			FlxG.sound.music.stop();
+
 		if (fileHandler != null)
 		{
 			fileHandler.destroy();
@@ -268,11 +284,11 @@ class SpineViewerState extends MusicBeatState
 		add(animTitle);
 
 		skinBtn = makeButton(panelX + 8, TOP_BAR_H + 34, PANEL_W - 16, "Skin: —", cycleSkin);
-		loopBtn = new PsychUICheckBox(panelX + 8, TOP_BAR_H + 64, "Loop", Std.int(PANEL_W - 16));
+		loopBtn = new PsychUICheckBox(panelX + 8, TOP_BAR_H + 64, "Loop", 60);
 		loopBtn.onClick = toggleLoop;
 		loopBtn.checked = true;
 		loopBtn.text.font = gameFont;
-		loopBtn.text.size = 14;
+		loopBtn.text.size = 16;
 		// FlxSpriteGroup bakes the group's world x/y into each child ONCE at
 		// add() time (preAdd), so children live in WORLD coordinates. To
 		// re-center the label after swapping the (taller) unifont we must
@@ -287,11 +303,27 @@ class SpineViewerState extends MusicBeatState
 		loopBtn.text.cameras = [uiCam];
 		add(loopBtn);
 
+		// Background music toggle, sits to the right of the Loop checkbox on
+		// the same row. Checked by default: the viewer plays romantic-smile.ogg
+		// on loop (with a fade-in) when it opens; unchecking fades it out.
+		musicBtn = new PsychUICheckBox(panelX + 8 + 100, TOP_BAR_H + 64, "Music", 80);
+		musicBtn.onClick = toggleMusic;
+		musicBtn.checked = true;
+		musicBtn.text.font = gameFont;
+		musicBtn.text.size = 16;
+		musicBtn.text.text = musicBtn.text.text;
+		musicBtn.text.x = musicBtn.x + musicBtn.box.width + 6;
+		musicBtn.text.y = musicBtn.y + (musicBtn.box.height - musicBtn.text.height) / 2;
+		musicBtn.cameras = [uiCam];
+		musicBtn.box.cameras = [uiCam];
+		musicBtn.text.cameras = [uiCam];
+		add(musicBtn);
+
 
 
 		// Per-character RGB tint (0..1). Sliders live on the right panel, so
 		// overlaps(topBar/animPanel) keeps them from grabbing the canvas.
-		var rgbLabel:FlxText = new FlxText(panelX + 8, TOP_BAR_H + 94, PANEL_W - 16, "RGB Tint (active char)", 14);
+		var rgbLabel:FlxText = new FlxText(panelX + 8, TOP_BAR_H + 94, PANEL_W - 16, "RGB Tint (active char)", 16);
 		rgbLabel.setFormat(gameFont, 16, FlxColor.CYAN, LEFT, OUTLINE, FlxColor.BLACK);
 		rgbLabel.cameras = [uiCam];
 		add(rgbLabel);
@@ -342,14 +374,14 @@ class SpineViewerState extends MusicBeatState
 		animTexts = [];
 
 		// --- Bottom info / hint ---
-		infoText = new FlxText(10, FlxG.height - 58, FlxG.width - PANEL_W - 20, "", 14);
+		infoText = new FlxText(10, FlxG.height - 58, FlxG.width - PANEL_W - 20, "", 16);
 		infoText.setFormat(gameFont, 16, FlxColor.LIME, LEFT, OUTLINE, FlxColor.BLACK);
 		infoText.cameras = [uiCam];
 		add(infoText);
 
 		// Bottom-left memory readout (the global FPS counter is hidden here,
 		// so surface RAM usage + peak ourselves). Sits just above infoText.
-		memText = new FlxText(10, FlxG.height - 76, FlxG.width - PANEL_W - 20, "", 12);
+		memText = new FlxText(10, FlxG.height - 76, FlxG.width - PANEL_W - 20, "", 16);
 		memText.setFormat(gameFont, 16, FlxColor.CYAN, LEFT, OUTLINE, FlxColor.BLACK);
 		memText.cameras = [uiCam];
 		memText.y = FlxG.height - memText.height - 8;
@@ -388,7 +420,7 @@ class SpineViewerState extends MusicBeatState
 
 	function makeInput(x:Float, y:Float, w:Int, placeholder:String):PsychUIInputText
 	{
-		var input:PsychUIInputText = new PsychUIInputText(x, y, w, "", 14);
+		var input:PsychUIInputText = new PsychUIInputText(x, y, w, "", 16);
 		// Use the project unifont for the editable text / placeholder.
 		input.textObj.font = Paths.font(UI_FONT);
 		input.cameras = [uiCam];
@@ -776,18 +808,10 @@ class SpineViewerState extends MusicBeatState
 			return;
 		}
 
-		// If this exact atlas+skeleton was already loaded, just switch to it
-		// instead of creating a duplicate (which would look like "the same
-		// character" and make the ◀/▶ buttons appear to do nothing).
-		for (ch in characters)
-		{
-			if (ch.atlasPath == atlasPath && ch.skeletonPath == skeletonPath)
-			{
-				selectChar(ch);
-				showHint("该角色已加载，已切换到它。如需加载不同的角色，请选择其它的 Atlas / 骨架文件。");
-				return;
-			}
-		}
+		// The same atlas+skeleton may be loaded more than once, so several
+		// copies of one character can be shown at once. We therefore no longer
+		// de-duplicate here: every "Add" appends a fresh, independent instance
+		// (offset on screen so the copies don't fully overlap).
 
 		var ch:SpineCharacter = buildCharacter(atlasPath, skeletonPath, null);
 		if (ch == null)
@@ -797,6 +821,17 @@ class SpineViewerState extends MusicBeatState
 		if (ch.animList.length > 0)
 			playAnimation(ch.animList[0]);
 		updateInfo();
+	}
+
+	// Returns true if a character with the given display name already exists in
+	// the list. Used to disambiguate duplicate loads of the same resource so
+	// each copy reads uniquely in the title / preset list.
+	function nameTaken(nm:String):Bool
+	{
+		for (c in characters)
+			if (c.name == nm)
+				return true;
+		return false;
 	}
 
 	/**
@@ -886,6 +921,19 @@ class SpineViewerState extends MusicBeatState
 				nm = nm.substring(0, dot);
 			if (def != null && def.name != null && def.name.length > 0)
 				nm = def.name;
+			// Disambiguate duplicate display names (e.g. loading the same
+			// resource again) by appending " (2)", " (3)", ... so each copy
+			// reads uniquely in the title / preset list. IMPORTANT: test the
+			// *candidate* name `nm`, not the original `base` — `base` stays in
+			// the list forever, so checking it would loop infinitely and freeze
+			// the game on any name collision.
+			var base:String = nm;
+			var copyN:Int = 2;
+			while (nameTaken(nm))
+			{
+				nm = base + " (" + copyN + ")";
+				copyN++;
+			}
 
 			var ch:SpineCharacter = new SpineCharacter(sprite, nm, atlasPath, skeletonPath);
 			for (anim in skeletonData.animations)
@@ -948,12 +996,19 @@ class SpineViewerState extends MusicBeatState
 				}
 			}
 
-			// Recompute the world transform once so the very first rendered
-			// frame already matches the saved pose (avoids a one-frame vertical
-			// flip that would otherwise only correct itself on the next zoom).
-			sprite.skeleton.updateWorldTransform(Physics.update);
+		// Recompute the world transform once so the very first rendered
+		// frame already matches the saved pose (avoids a one-frame vertical
+		// flip that would otherwise only correct itself on the next zoom).
+		sprite.skeleton.updateWorldTransform(Physics.update);
 
-			characters.push(ch);
+		// Seed the smooth-zoom targets with the actual transform so the first
+		// update() lerp has nothing to animate (no surprise snap on load).
+		ch.vMagX = Math.abs(sprite.scaleX);
+		ch.vMagY = Math.abs(sprite.scaleY);
+		ch.vX = sprite.x;
+		ch.vY = sprite.y;
+
+		characters.push(ch);
 			return ch;
 		}
 		catch (e:Dynamic)
@@ -1061,7 +1116,7 @@ class SpineViewerState extends MusicBeatState
 		for (i in 0...activeChar.animList.length)
 		{
 			var name:String = activeChar.animList[i];
-			var txt:FlxText = new FlxText(panelX, animListTop + i * 22, PANEL_W - 16, name, 14);
+			var txt:FlxText = new FlxText(panelX, animListTop + i * 22, PANEL_W - 16, name, 16);
 			txt.setFormat(gameFont, 16, FlxColor.WHITE, LEFT, OUTLINE, FlxColor.BLACK);
 			txt.cameras = [uiCam];
 			add(txt);
@@ -1180,6 +1235,44 @@ class SpineViewerState extends MusicBeatState
 			entry.loop = loopBtn.checked;
 	}
 
+	// --- Background music ------------------------------------------------
+
+	// Start (or restart) the looping background track with a fade-in. Used both
+	// on state entry and when the Music checkbox is (re)checked.
+	function startMusic():Void
+	{
+		if (musicBtn == null || !musicBtn.checked)
+			return;
+		// Stop anything already on the music channel to avoid stacking.
+		if (FlxG.sound.music != null)
+			FlxG.sound.music.stop();
+		// romantic-smile.ogg lives at assets/shared/music/. Volume starts at 0
+		// and ramps to full over ~2s for the requested fade-in.
+		FlxG.sound.playMusic(Paths.music('romantic-smile'), 0, true);
+		FlxG.sound.music.fadeIn(2, 0, 0.4);
+	}
+
+	// Fade the music out and stop it (Music checkbox unchecked).
+	function stopMusic():Void
+	{
+		if (FlxG.sound.music != null)
+		{
+			var m:flixel.sound.FlxSound = FlxG.sound.music;
+			m.fadeOut(0.5, 0, (_) -> m.stop());
+		}
+	}
+
+	// Music checkbox toggle: play (with fade-in) or stop (with fade-out).
+	function toggleMusic():Void
+	{
+		if (musicBtn == null)
+			return;
+		if (musicBtn.checked)
+			startMusic();
+		else
+			stopMusic();
+	}
+
 	// --- Layered animation (Spine tracks) ---------------------------------
 
 	// Pick a lower layer (track index). Layer 0 is the base pose; higher
@@ -1273,10 +1366,19 @@ class SpineViewerState extends MusicBeatState
 		FlxG.camera.scroll.set(0, 0);
 		if (activeChar != null)
 		{
-			activeChar.sprite.scaleX = 1;
-			activeChar.sprite.scaleY = 1;
+			// Reset the scale magnitude to 1, keeping the flip (the sign is
+			// taken from the flipX/flipY booleans and re-applied every frame in
+			// update()). This also fixes the old "Reset wipes the flip" quirk.
+			activeChar.sprite.scaleX = activeChar.sprite.flipX ? -1 : 1;
+			activeChar.sprite.scaleY = activeChar.sprite.flipY ? -1 : 1;
 			activeChar.sprite.x = FlxG.width / 2;
 			activeChar.sprite.y = FlxG.height * 0.55;
+			// Retarget the smooth-zoom goals too, so the sprite doesn't glide
+			// back to its pre-reset pose.
+			activeChar.vMagX = 1;
+			activeChar.vMagY = 1;
+			activeChar.vX = activeChar.sprite.x;
+			activeChar.vY = activeChar.sprite.y;
 			// Reset per-character RGB tint to white, and sync the sliders.
 			activeChar.r = activeChar.g = activeChar.b = 1;
 			var col = activeChar.sprite.skeleton.color;
@@ -1296,35 +1398,29 @@ class SpineViewerState extends MusicBeatState
 		if (c == null)
 			return;
 		var s = c.sprite;
-		// Preserve the flip state through the boolean flags, not the sign of
-		// scaleY. In spine-haxe the flipY setter toggles skeleton.scaleY, but
-		// the scaleY setter overwrites it directly WITHOUT updating flipY —
-		// so tracking the sign of scaleY across zooms will desync and cause
-		// an alternating flip/non-flip on every zoom.
-		var fx:Bool = s.flipX;
-		var fy:Bool = s.flipY;
-
-		var magX0:Float = Math.abs(s.scaleX);
-		var magY0:Float = Math.abs(s.scaleY);
+		// Work in magnitudes only. The flip is kept as the SIGN of the
+		// flipX/flipY booleans and applied separately in update() (see the
+		// smooth-zoom loop), so the lerp never passes through scale = 0
+		// (which would squash the character to a line / make it glitch).
+		var magX0:Float = c.vMagX;
+		var magY0:Float = c.vMagY;
 		var magX1:Float = FlxMath.bound(magX0 * factor, 0.05, 20);
 		var magY1:Float = FlxMath.bound(magY0 * factor, 0.05, 20);
 		var f:Float = magY1 / magY0;
 
-		// W = skeleton-local vertex value currently under the cursor.
-		// Keep W fixed at (sx, sy): x1 = sx - offsetX - f * (sx - x0 - offsetX)
+		// Anchor the zoom on the screen point (sx, sy) using the *target*
+		// position, so successive wheel ticks / button clicks accumulate
+		// correctly while the sprite glides toward the target instead of
+		// snapping. update() lerps the sprite to (vX, vY, vMagX, vMagY).
 		var ox:Float = s.offsetX;
 		var oy:Float = s.offsetY;
-		s.x = sx - ox - f * (sx - s.x - ox);
-		s.y = sy - oy - f * (sy - s.y - oy);
+		c.vX = sx - ox - f * (sx - c.vX - ox);
+		c.vY = sy - oy - f * (sy - c.vY - oy);
 
-		// Reset to a clean positive-scale state, then re-apply flip.
-		s.flipX = false;
-		s.flipY = false;
-		s.scaleX = magX1;
-		s.scaleY = magY1;
-		s.flipX = fx;
-		s.flipY = fy;
-		updateInfo();
+		// Store the (positive) target magnitudes; the flip sign is supplied by
+		// the flipX/flipY booleans when the sprite is actually scaled.
+		c.vMagX = magX1;
+		c.vMagY = magY1;
 	}
 
 	// Zoom the active character IN PLACE: anchor the zoom on the character's
@@ -1573,6 +1669,10 @@ class SpineViewerState extends MusicBeatState
 				// Follow the mouse (character moves the same direction as the drag).
 			dragTarget.sprite.x = dragTarget.dragStartX + dx;
 			dragTarget.sprite.y = dragTarget.dragStartY + dy;
+			// Keep the smooth-zoom target in lock-step with the drag so the
+			// next update() lerp doesn't yank the character back.
+			dragTarget.vX = dragTarget.sprite.x;
+			dragTarget.vY = dragTarget.sprite.y;
 		}
 	}
 	else
@@ -1657,6 +1757,24 @@ class SpineViewerState extends MusicBeatState
 
 		updateCamera(elapsed);
 
+		// Smooth zoom: glide every character's scale/position toward its target
+		// (set by zoomChar) instead of snapping. The exponential factor is
+		// frame-rate independent, so the glide feels the same at any FPS.
+		var zoomK:Float = 1 - Math.exp(-zoomSmoothRate * elapsed);
+		for (c in characters)
+		{
+			var s = c.sprite;
+			// Lerp the magnitude (always positive) and re-apply the flip sign
+			// from the booleans, so the scale can never cross zero and the
+			// character never gets squashed.
+			var magX:Float = FlxMath.lerp(Math.abs(s.scaleX), c.vMagX, zoomK);
+			var magY:Float = FlxMath.lerp(Math.abs(s.scaleY), c.vMagY, zoomK);
+			s.x = FlxMath.lerp(s.x, c.vX, zoomK);
+			s.y = FlxMath.lerp(s.y, c.vY, zoomK);
+			s.scaleX = magX * (s.flipX ? -1 : 1);
+			s.scaleY = magY * (s.flipY ? -1 : 1);
+		}
+
 		updateMemText();
 		updateInfo();
 		super.update(elapsed);
@@ -1677,7 +1795,7 @@ class SpineViewerState extends MusicBeatState
 		var n:Int = characters.length;
 		var idx:Int = activeChar != null ? characters.indexOf(activeChar) : -1;
 		var charInfo:String = activeChar != null ? 'Char: ${activeChar.name} (${idx + 1}/${n})  ' : 'Char: —  ';
-		var zoomPct:Int = activeChar != null ? Math.round(activeChar.sprite.scaleX * 100) : 100;
+		var zoomPct:Int = activeChar != null ? Math.round(Math.abs(activeChar.sprite.scaleX) * 100) : 100;
 		var skin:String = (activeChar != null && activeChar.skinNames.length > 0) ? activeChar.skinNames[activeChar.curSkin] : "—";
 		// Show every active layer as "L<track>:<anim>" (track 0 first), so the
 		// stacked animations are visible at a glance.
@@ -1856,6 +1974,17 @@ private class SpineCharacter
 	// Transient: character position captured when a drag starts.
 	public var dragStartX:Float;
 	public var dragStartY:Float;
+	// Smooth-zoom targets. Each frame update() lerps the sprite's scale and
+	// position toward these so zooming glides instead of snapping. The scale's
+	// Smooth-zoom targets. Each frame update() lerps the sprite's scale
+	// magnitude and position toward these so zooming glides instead of
+	// snapping. The scale is stored as a POSITIVE magnitude; the flip is kept
+	// as the SIGN of the flipX/flipY booleans (applied in update()), which
+	// avoids the lerp ever crossing scale = 0 and squashing the character.
+	public var vMagX:Float = 1;
+	public var vMagY:Float = 1;
+	public var vX:Float = 0;
+	public var vY:Float = 0;
 
 	public function new(sprite:NoCullSkeletonSprite, name:String, atlasPath:String, skeletonPath:String)
 	{
