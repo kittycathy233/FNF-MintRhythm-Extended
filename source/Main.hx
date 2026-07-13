@@ -315,11 +315,11 @@ class Main extends Sprite
 		// shader coords fix
 		FlxG.signals.gameResized.add(function(w, h)
 		{
-			// 更新 fpsLayer 的缩放和偏移（随窗口大小变化）
+			// 更新 fpsLayer / fpsVar 的缩放和偏移（随窗口大小变化）
+			// 注意：统一交给 updateFPSLayer() 管理，不要再单独给 fpsVar 传 ratio 缩放，
+			// 否则 Game 模式下 fpsLayer 已缩放，再加 fpsVar 自身缩放会叠加放大（甚至超出屏幕）。
 			updateFPSLayer();
 			
-			if (fpsVar != null)
-				fpsVar.positionFPS(10, 3, Math.min(w / FlxG.width, h / FlxG.height));
 			if (FlxG.cameras != null)
 			{
 				for (cam in FlxG.cameras.list)
@@ -487,9 +487,20 @@ class Main extends Sprite
 	// 应用回到前台时调用
 	private function onAppActivate(e:Event):Void
 	{
-		if (!isInBackground || !ClientPrefs.data.backgroundVolume)
+		if (!isInBackground)
 			return;
 		isInBackground = false;
+
+		// 切回前台后窗口尺寸/缩放可能变化（状态栏、导航栏、DPI 等），重新同步 FPS 计数器布局。
+		// 延迟一帧，等待 stage 尺寸稳定后再计算，避免用旧尺寸得到错误缩放。
+		haxe.Timer.delay(function()
+		{
+			updateFPSLayer();
+		}, 30);
+
+		// 未开启后台音量功能时，仅重同步 FPS 布局即可，不恢复音量
+		if (!ClientPrefs.data.backgroundVolume)
+			return;
 
 		// 取消正在进行的降低动画（如果存在）
 		if (backgroundVolumeTween != null)
