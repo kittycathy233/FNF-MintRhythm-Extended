@@ -6,15 +6,18 @@ import flixel.FlxG;
 import flixel.group.FlxGroup;
 import flixel.math.FlxMath;
 import flixel.text.FlxText;
-import flixel.ui.FlxButton;
 import flixel.util.FlxColor;
 
 import backend.ui.PsychUIInputText;
+import backend.ui.PsychUIButton;
+import backend.ui.PsychUICheckBox;
 import backend.ui.PsychUISlider;
 import states.editors.content.FileDialogHandler;
 import spineflixel.SpineViewerTextureLoader;
+import mobile.backend.StorageUtil;
 
 import spine.SkeletonData;
+import spine.Physics;
 import spine.SkeletonJson;
 import spine.SkeletonBinary;
 import spine.atlas.TextureAtlas;
@@ -28,6 +31,10 @@ import flixel.graphics.FlxGraphic;
 
 #if desktop
 import lime.app.Application;
+#end
+
+#if cpp
+import cpp.vm.Gc;
 #end
 
 /**
@@ -58,6 +65,11 @@ class SpineViewerState extends MusicBeatState
 	static final INPUT_W:Int = 175;
 	// Y where the animation list begins inside the right panel
 	static final LIST_TOP:Int = TOP_BAR_H + 122;
+
+	// UI font: use the project's unifont so CJK glyphs and symbols render
+	// correctly in the editor chrome (buttons, labels, lists, etc.).
+	static final UI_FONT:String = 'unifont-16.0.02.otf';
+
 
 	var uiCam:FlxCamera;
 
@@ -92,10 +104,15 @@ class SpineViewerState extends MusicBeatState
 	// new canvas drag, so it doesn't grab a character or overwrite the inputs.
 	var awaitingMouseRelease:Bool = false;
 
-	var skinBtn:FlxButton;
-	var loopBtn:FlxButton;
+	var skinBtn:PsychUIButton;
+	var loopBtn:PsychUICheckBox;
 	var infoText:FlxText;
 	var hintText:FlxText;
+	// Bottom-left memory readout (shown in place of the hidden FPS counter).
+	var memText:FlxText;
+	var memPeak:Float = 0;
+	// Shows the currently selected animation layer (Spine track index).
+	var trackLabel:FlxText;
 
 	var dragging:Bool = false;
 	var dragStartMouseX:Float = 0;
@@ -114,6 +131,12 @@ class SpineViewerState extends MusicBeatState
 		// super.create() initializes the psych camera and RESETS FlxG.cameras,
 		// which would destroy any camera added before it. So initialize first.
 		super.create();
+
+		// 进入本 state 时临时隐藏全局 FPS 计数器（不受 showFPS 设置影响），
+		// 退出时还原；左下角改用自建内存信息文本显示内存占用。
+		Main.forceHideFPS = true;
+		if (Main.fpsVar != null)
+			Main.fpsVar.visible = false;
 
 		FlxG.camera.bgColor = 0xFF1a1a24;
 
@@ -174,6 +197,9 @@ class SpineViewerState extends MusicBeatState
 			fileHandler.destroy();
 			fileHandler = null;
 		}
+		// 还原 FPS 计数器的可见性（恢复为 showFPS 设置）。
+		Main.forceHideFPS = false;
+		Main.updateFPSCounterVisibility();
 		characters = [];
 		activeChar = null;
 		super.destroy();
@@ -181,7 +207,8 @@ class SpineViewerState extends MusicBeatState
 
 	function buildUI():Void
 	{
-		var gameFont:String = Paths.font("vcr.ttf");
+		var gameFont:String = Paths.font(UI_FONT);
+
 
 		// Top bar background. We hit-test against this sprite with
 		// FlxG.mouse.overlaps(topBar, uiCam) (mirroring the right-panel check)
@@ -195,26 +222,28 @@ class SpineViewerState extends MusicBeatState
 		var y:Float = 6.0;
 
 		// --- Atlas row ---
-		var atlasBtn:FlxButton = makeButton(10, y, 70, "Atlas", () -> openPicker("atlas"));
+		var atlasBtn:PsychUIButton = makeButton(10, y, 70, "Atlas", () -> openPicker("atlas"));
 		atlasInput = makeInput(85, y, INPUT_W, "path/to/char.atlas");
 
 		// --- Skeleton row (selective: .skel OR .json, user picks either) ---
-		var skelJsonBtn:FlxButton = makeButton(265, y, 80, "Skel/JSON", () -> openPicker("skeleton"));
+		var skelJsonBtn:PsychUIButton = makeButton(265, y, 80, "Skel/JSON", () -> openPicker("skeleton"));
 		skeletonInput = makeInput(350, y, INPUT_W, "path/to/char.skel or .json");
 
 		// --- Action buttons ---
-		var loadBtn:FlxButton = makeButton(545, y, 80, "Add", addCharacter);
-		var delBtn:FlxButton = makeButton(845, y, 90, "Del Char", deleteActiveChar);
-		var resetBtn:FlxButton = makeButton(940, y, 80, "Reset", resetCamera);
-		var zoomOutBtn:FlxButton = makeButton(1025, y, 60, "Zoom-", () -> zoomChar(activeChar, 0.9, FlxG.width / 2, FlxG.height / 2));
-		var zoomInBtn:FlxButton = makeButton(1090, y, 60, "Zoom+", () -> zoomChar(activeChar, 1.1, FlxG.width / 2, FlxG.height / 2));
-		var backBtn:FlxButton = makeButton(FlxG.width - 80, y, 70, "Back", onBack);
+		var loadBtn:PsychUIButton = makeButton(545, y, 80, "Add", addCharacter);
+		var loadPresetBtn:PsychUIButton = makeButton(640, y, 95, "Load", openPresetPicker);
+		var savePresetBtn:PsychUIButton = makeButton(735, y, 95, "Save", savePreset);
+		var delBtn:PsychUIButton = makeButton(845, y, 90, "Del Char", deleteActiveChar);
+		var resetBtn:PsychUIButton = makeButton(940, y, 80, "Reset", resetCamera);
+		var zoomOutBtn:PsychUIButton = makeButton(1025, y, 60, "Zoom-", () -> zoomActive(0.9));
+		var zoomInBtn:PsychUIButton = makeButton(1090, y, 60, "Zoom+", () -> zoomActive(1.1));
+		var backBtn:PsychUIButton = makeButton(FlxG.width - 80, y, 70, "Back", onBack);
 
 		// --- Right panel: animation list ---
 		var panelX:Float = FlxG.width - PANEL_W;
-		// Y where the animation list begins. It sits below the RGB sliders and
-		// the active-character navigation row.
-		animListTop = TOP_BAR_H + 294;
+		// Y where the animation list begins. It sits below the RGB sliders,
+		// the layer stepper and the active-character navigation row.
+		animListTop = TOP_BAR_H + 308;
 
 		// Semi-transparent panel background. The Spine characters live on the
 		// main camera (which renders first), so they always stay behind this
@@ -239,12 +268,31 @@ class SpineViewerState extends MusicBeatState
 		add(animTitle);
 
 		skinBtn = makeButton(panelX + 8, TOP_BAR_H + 34, PANEL_W - 16, "Skin: —", cycleSkin);
-		loopBtn = makeButton(panelX + 8, TOP_BAR_H + 64, PANEL_W - 16, "Loop: ON", toggleLoop);
+		loopBtn = new PsychUICheckBox(panelX + 8, TOP_BAR_H + 64, "Loop", Std.int(PANEL_W - 16));
+		loopBtn.onClick = toggleLoop;
+		loopBtn.checked = true;
+		loopBtn.text.font = gameFont;
+		loopBtn.text.size = 14;
+		// FlxSpriteGroup bakes the group's world x/y into each child ONCE at
+		// add() time (preAdd), so children live in WORLD coordinates. To
+		// re-center the label after swapping the (taller) unifont we must
+		// offset from the group's world position — not from 0, or the text
+		// jumps to the top of the screen. The re-assignment below forces a
+		// height re-measure so the centering uses the new glyph metrics.
+		loopBtn.text.text = loopBtn.text.text;
+		loopBtn.text.x = loopBtn.x + loopBtn.box.width + 6;
+		loopBtn.text.y = loopBtn.y + (loopBtn.box.height - loopBtn.text.height) / 2;
+		loopBtn.cameras = [uiCam];
+		loopBtn.box.cameras = [uiCam];
+		loopBtn.text.cameras = [uiCam];
+		add(loopBtn);
+
+
 
 		// Per-character RGB tint (0..1). Sliders live on the right panel, so
 		// overlaps(topBar/animPanel) keeps them from grabbing the canvas.
 		var rgbLabel:FlxText = new FlxText(panelX + 8, TOP_BAR_H + 94, PANEL_W - 16, "RGB Tint (active char)", 14);
-		rgbLabel.setFormat(gameFont, 14, FlxColor.CYAN, LEFT, OUTLINE, FlxColor.BLACK);
+		rgbLabel.setFormat(gameFont, 16, FlxColor.CYAN, LEFT, OUTLINE, FlxColor.BLACK);
 		rgbLabel.cameras = [uiCam];
 		add(rgbLabel);
 
@@ -256,12 +304,37 @@ class SpineViewerState extends MusicBeatState
 		bSlider.label = "B";
 		for (s in [rSlider, gSlider, bSlider])
 		{
+			// The PsychUISlider picks its own font internally; switch it to the
+			// project unifont for consistency with the rest of the editor.
+			s.labelText.font = gameFont;
+			s.minText.font = gameFont;
+			s.maxText.font = gameFont;
+			s.valueText.font = gameFont;
 			s.cameras = [uiCam];
+			s.labelText.cameras = [uiCam];
+			s.minText.cameras = [uiCam];
+			s.maxText.cameras = [uiCam];
+			s.valueText.cameras = [uiCam];
 			add(s);
 		}
 
+
+		// Layered animation (Spine tracks / "layers"): one character can play
+		// several animations at once by stacking them on separate tracks. The
+		// stepper picks which layer the next clicked animation goes onto;
+		// "Clr" clears that layer, "All" stops every layer.
+		var trackRowY:Float = TOP_BAR_H + 244;
+		makeButton(panelX + 8, trackRowY, 30, "-", decTrack);
+		makeButton(panelX + 8 + 34, trackRowY, 30, "+", incTrack);
+		trackLabel = new FlxText(panelX + 8 + 68, trackRowY + 5, 70, "Layer 0", 16);
+		trackLabel.setFormat(gameFont, 16, FlxColor.LIME, LEFT, OUTLINE, FlxColor.BLACK);
+		trackLabel.cameras = [uiCam];
+		add(trackLabel);
+		makeButton(panelX + 8 + 142, trackRowY, 44, "Clr", clearTrack);
+		makeButton(panelX + 8 + 190, trackRowY, 42, "All", clearAllTracks);
+
 		// Active character navigation
-		var navY:Float = TOP_BAR_H + 262;
+		var navY:Float = TOP_BAR_H + 276;
 		var halfW:Int = Std.int((PANEL_W - 24) / 2);
 		makeButton(panelX + 8, navY, halfW, "◀ Char", () -> cycleActiveChar(-1));
 		makeButton(panelX + 8 + halfW + 8, navY, halfW, "Char ▶", () -> cycleActiveChar(1));
@@ -270,14 +343,23 @@ class SpineViewerState extends MusicBeatState
 
 		// --- Bottom info / hint ---
 		infoText = new FlxText(10, FlxG.height - 58, FlxG.width - PANEL_W - 20, "", 14);
-		infoText.setFormat(gameFont, 14, FlxColor.LIME, LEFT, OUTLINE, FlxColor.BLACK);
+		infoText.setFormat(gameFont, 16, FlxColor.LIME, LEFT, OUTLINE, FlxColor.BLACK);
 		infoText.cameras = [uiCam];
 		add(infoText);
+
+		// Bottom-left memory readout (the global FPS counter is hidden here,
+		// so surface RAM usage + peak ourselves). Sits just above infoText.
+		memText = new FlxText(10, FlxG.height - 76, FlxG.width - PANEL_W - 20, "", 12);
+		memText.setFormat(gameFont, 16, FlxColor.CYAN, LEFT, OUTLINE, FlxColor.BLACK);
+		memText.cameras = [uiCam];
+		memText.y = FlxG.height - memText.height - 8;
+		add(memText);
 
 		hintText = new FlxText(10, TOP_BAR_H + 8, FlxG.width - PANEL_W - 20,
 			"选择 Atlas 与骨架文件（Skel/JSON 二选一，也可直接填写路径），点击 Add 加载角色。\n"
 			+ "可加载多个角色，点击角色选中它，右侧面板独立控制其动画/皮肤。\n"
-			+ "拖拽角色移动；拖空白处平移全部；滚轮 / [ ] 缩放光标下角色；方向键 / WASD 移动当前角色，R 重置。", 16);
+			+ "拖拽角色移动；拖空白处平移全部；滚轮 / [ ] 缩放光标下角色；方向键 / WASD 移动当前角色，R 重置。\n"
+			+ "Save 导出当前选中角色的预设（文件名默认用角色名）；Load 把预设里的单个角色追加进来。", 16);
 		hintText.setFormat(gameFont, 16, FlxColor.WHITE, LEFT, OUTLINE, FlxColor.BLACK);
 		hintText.cameras = [uiCam];
 		add(hintText);
@@ -285,25 +367,39 @@ class SpineViewerState extends MusicBeatState
 		updateInfo();
 	}
 
-	function makeButton(x:Float, y:Float, w:Int, label:String, onClick:Void->Void):FlxButton
+	function makeButton(x:Float, y:Float, w:Int, label:String, onClick:Void->Void):PsychUIButton
 	{
-		var btn:FlxButton = new FlxButton(x, y, label, onClick);
-		btn.setGraphicSize(w, 28);
-		btn.updateHitbox();
-		btn.label.setFormat(Paths.font("vcr.ttf"), 14, FlxColor.WHITE, CENTER);
+		var btn:PsychUIButton = new PsychUIButton(x, y, label, onClick, w, 28);
+		// PsychUIButton defaults to the engine UI font; swap it for the project
+		// unifont so CJK glyphs render correctly. Use a dark-theme style to
+		// match the rest of the editor chrome.
+		btn.text.setFormat(Paths.font(UI_FONT), 16, FlxColor.WHITE, CENTER);
+		btn.normalStyle = {bgColor: 0xFF3a3a4a, textColor: FlxColor.WHITE, bgAlpha: 0.8};
+		btn.hoverStyle = {bgColor: 0xFF5a5a6e, textColor: FlxColor.WHITE, bgAlpha: 0.95};
+		btn.clickStyle = {bgColor: 0xFF20202c, textColor: FlxColor.WHITE, bgAlpha: 1};
 		btn.cameras = [uiCam];
+		btn.bg.cameras = [uiCam];
+		btn.text.cameras = [uiCam];
 		add(btn);
 		return btn;
 	}
 
+
+
 	function makeInput(x:Float, y:Float, w:Int, placeholder:String):PsychUIInputText
 	{
 		var input:PsychUIInputText = new PsychUIInputText(x, y, w, "", 14);
+		// Use the project unifont for the editable text / placeholder.
+		input.textObj.font = Paths.font(UI_FONT);
 		input.cameras = [uiCam];
+		input.bg.cameras = [uiCam];
+		input.behindText.cameras = [uiCam];
+		input.textObj.cameras = [uiCam];
 		input.text = placeholder;
 		add(input);
 		return input;
 	}
+
 
 	// ------------------------------------------------------------------
 	// File picking
@@ -383,6 +479,285 @@ class SpineViewerState extends MusicBeatState
 	}
 
 	// ------------------------------------------------------------------
+	// Preset import / export
+	//
+	// A preset is a JSON snapshot of the whole scene: every character's
+	// atlas/skeleton paths, on-screen position, scale, RGB tint, current
+	// skin, loop flag and playing animation. "Save" exports it; "Load"
+	// clears the current scene and restores exactly what was saved.
+	// ------------------------------------------------------------------
+	function openPresetPicker():Void
+	{
+		if (fileHandler == null)
+			return;
+		if (!fileHandler.completed)
+			fileHandler.completed = true;
+
+		#if (desktop || (js && html5))
+		try
+		{
+			// Mirror openPicker: pass null title + empty filter (a custom
+			// filter was crashing the native dialog), and validate the
+			// extension ourselves in onPresetLoaded().
+			fileHandler.open(null, null, [], onPresetLoaded, null, onPresetLoadError);
+		}
+		catch (e:Dynamic)
+		{
+			fileHandler.completed = true;
+			showHint("无法打开文件选择窗口: " + e + "\n你也可以把预设文件放到可访问目录后手动加载。");
+		}
+		#else
+		// On mobile there is no system file dialog; load the fixed preset file
+		// from the external storage directory instead.
+		#if sys
+		var p:String = StorageUtil.getExternalStorageDirectory() + 'saves/spine_preset.json';
+		if (!sys.FileSystem.exists(p))
+		{
+			showHint("未找到移动端预设文件:\n" + p);
+			return;
+		}
+		loadPresetFromJson(sys.io.File.getContent(p));
+		#else
+		showHint("当前平台不支持预设导入，请使用桌面端。");
+		#end
+		#end
+	}
+
+	function onPresetLoaded():Void
+	{
+		// Block the click that "passes through" when the native dialog closes.
+		inputLockFrames = 12;
+		if (fileHandler == null || fileHandler.path == null)
+			return;
+		var path:String = fileHandler.path.replace('\\', '/');
+		if (!path.toLowerCase().endsWith(".json"))
+		{
+			showHint("请选择 .json 预设文件。");
+			return;
+		}
+		var str:String = fileHandler.data;
+		#if sys
+		if ((str == null || str.length == 0) && sys.FileSystem.exists(path))
+			str = sys.io.File.getContent(path);
+		#end
+		loadPresetFromJson(str);
+	}
+
+	function onPresetLoadError():Void
+	{
+		inputLockFrames = 12;
+	}
+
+	function savePreset():Void
+	{
+		if (activeChar == null)
+		{
+			showHint("请先选中一个角色（点击画布中的角色，或用 ◀/▶ 切换）后再导出预设。");
+			return;
+		}
+		var c = activeChar;
+		// A preset is a single character (its paths, transform, color, skin and
+		// playing animation). The default file name follows the character's
+		// resource name so it is easy to tell presets apart.
+		// Serialize every active layer (track index + animation name), sorted
+		// by track so the order is stable across saves.
+		var layerList:Array<SpineLayerPreset> = [];
+		for (t in c.trackAnims.keys())
+			layerList.push({track: t, anim: c.trackAnims.get(t), loop: trackLooping(c, t)});
+		layerList.sort((a, b) -> a.track - b.track);
+		var def:SpineCharPreset = {
+			version: 1,
+			name: c.name,
+			atlasPath: c.atlasPath,
+			skeletonPath: c.skeletonPath,
+			x: c.sprite.x,
+			y: c.sprite.y,
+			// Store the scale as a magnitude and the flip as a separate flag.
+			// In spine-haxe the flip is implemented by negating skeleton.scaleY,
+			// so we must NOT save the raw (possibly negative) scaleY AND a flip
+			// flag at the same time — that double-applies the flip on import and
+			// produces a spurious vertical flip. The flag re-applies the negation
+			// on load, so the magnitude is what we persist.
+			scaleX: Math.abs(c.sprite.scaleX),
+			scaleY: Math.abs(c.sprite.scaleY),
+			flipX: c.sprite.flipX,
+			flipY: c.sprite.flipY,
+			r: c.r, g: c.g, b: c.b,
+			curSkin: c.curSkin,
+			looping: c.looping,
+			currentAnim: c.currentAnim,
+			// Persist every active layer (track index + animation name).
+			layers: layerList
+		};
+		var json:String = haxe.Json.stringify(def, '\t');
+		var defaultName:String = c.name + '.json';
+
+		#if (desktop || (js && html5))
+		try
+		{
+			if (fileHandler == null)
+				return;
+			if (!fileHandler.completed)
+				fileHandler.completed = true;
+			fileHandler.save(defaultName, json, onPresetSaved, onPresetSaveCancel, onPresetSaveError);
+		}
+		catch (e:Dynamic)
+		{
+			fileHandler.completed = true;
+			showHint("无法打开保存窗口: " + e);
+		}
+		#else
+		// Mobile: write to the external storage directory.
+		#if sys
+		try
+		{
+			StorageUtil.saveContent(defaultName, json, false);
+			showHint("预设已导出到移动存储的 saves/" + defaultName + "。");
+		}
+		catch (e:Dynamic)
+		{
+			showHint("保存失败: " + Std.string(e));
+		}
+		#else
+		showHint("当前平台不支持预设导出，请使用桌面端。");
+		#end
+		#end
+	}
+
+	function onPresetSaved():Void
+	{
+		inputLockFrames = 12;
+		showHint("角色预设已导出：" + (activeChar != null ? activeChar.name : "") + "。");
+	}
+
+	function onPresetSaveCancel():Void
+	{
+		inputLockFrames = 12;
+	}
+
+	function onPresetSaveError():Void
+	{
+		inputLockFrames = 12;
+	}
+
+	// Parse a single character definition (a Dynamic from JSON) into a typed
+	// SpineCharPreset, filling in defaults for any missing fields.
+	function readCharDef(cdef:Dynamic):SpineCharPreset
+	{
+		return {
+			version: Reflect.hasField(cdef, "version") ? Std.int(cdef.version) : 1,
+			name: Reflect.hasField(cdef, "name") ? cdef.name : "",
+			atlasPath: cdef.atlasPath,
+			skeletonPath: cdef.skeletonPath,
+			x: Reflect.hasField(cdef, "x") ? cdef.x : FlxG.width / 2,
+			y: Reflect.hasField(cdef, "y") ? cdef.y : FlxG.height * 0.55,
+			// Use the magnitude of scaleY/scaleX (a buggy older export may have
+			// stored a negative scaleY); the flip is re-applied via flipX/flipY.
+			scaleX: Reflect.hasField(cdef, "scaleX") ? Math.abs(cdef.scaleX) : 1,
+			scaleY: Reflect.hasField(cdef, "scaleY") ? Math.abs(cdef.scaleY) : 1,
+			flipX: Reflect.hasField(cdef, "flipX") ? cdef.flipX : false,
+			flipY: Reflect.hasField(cdef, "flipY") ? cdef.flipY : false,
+			r: Reflect.hasField(cdef, "r") ? cdef.r : 1,
+			g: Reflect.hasField(cdef, "g") ? cdef.g : 1,
+			b: Reflect.hasField(cdef, "b") ? cdef.b : 1,
+			curSkin: Reflect.hasField(cdef, "curSkin") ? Std.int(cdef.curSkin) : 0,
+			looping: Reflect.hasField(cdef, "looping") ? cdef.looping : true,
+			currentAnim: Reflect.hasField(cdef, "currentAnim") ? cdef.currentAnim : "",
+			layers: (Reflect.hasField(cdef, "layers") && cdef.layers != null)
+				? [
+					for (l in cast(cdef.layers, Array<Dynamic>))
+						{
+							track: Std.int(l.track),
+							anim: Std.string(l.anim),
+							loop: Reflect.hasField(l, "loop") ? l.loop : true
+						}
+				]
+				: []
+		};
+	}
+
+	// Parse a preset JSON string and ADD the character(s) it describes to the
+	// current scene (it appends — it never clears existing characters). The
+	// modern format is one SpineCharPreset object; the older whole-scene format
+	// wrapped them in a `characters` array and is still accepted.
+	function loadPresetFromJson(str:String):Void
+	{
+		if (str == null || str.length == 0)
+		{
+			showHint("预设内容为空，无法导入。");
+			return;
+		}
+		var parsed:Dynamic;
+		try
+		{
+			parsed = haxe.Json.parse(str);
+		}
+		catch (e:Dynamic)
+		{
+			showHint("预设文件解析失败: " + e);
+			return;
+		}
+		if (parsed == null)
+		{
+			showHint("预设文件格式不正确。");
+			return;
+		}
+
+		var defs:Array<SpineCharPreset> = [];
+		if (Reflect.hasField(parsed, "characters"))
+		{
+			// Old whole-scene format: import each character it lists.
+			var arr:Array<Dynamic> = parsed.characters;
+			if (arr != null)
+				for (cdef in arr)
+					if (cdef != null)
+						defs.push(readCharDef(cdef));
+		}
+		else if (Reflect.hasField(parsed, "atlasPath") && Reflect.hasField(parsed, "skeletonPath"))
+		{
+			// Single-character format (current).
+			defs.push(readCharDef(parsed));
+		}
+		else
+		{
+			showHint("预设文件格式不正确（缺少角色信息）。");
+			return;
+		}
+
+		if (defs.length == 0)
+		{
+			showHint("预设中没有任何可加载的角色。");
+			return;
+		}
+
+		var loaded:Array<SpineCharacter> = [];
+		for (def in defs)
+		{
+			if (def.atlasPath == null || def.skeletonPath == null)
+				continue;
+			var ch:SpineCharacter = buildCharacter(def.atlasPath, def.skeletonPath, def);
+			if (ch != null)
+				loaded.push(ch);
+		}
+
+		if (loaded.length == 0)
+		{
+			showHint("预设中的角色都加载失败，请检查文件路径是否正确。");
+			updateInfo();
+			return;
+		}
+
+		// Select (and play the animation of) the last character we just added,
+		// so the user immediately sees what was imported.
+		var last:SpineCharacter = loaded[loaded.length - 1];
+		selectChar(last);
+		if (last.currentAnim.length > 0)
+			playAnimation(last.currentAnim);
+		updateInfo();
+		showHint("已导入预设，成功加载 " + loaded.length + " 个角色（已追加到当前场景）。");
+	}
+
+	// ------------------------------------------------------------------
 	// Loading a Spine character (appends to the list)
 	// ------------------------------------------------------------------
 	function addCharacter():Void
@@ -414,6 +789,23 @@ class SpineViewerState extends MusicBeatState
 			}
 		}
 
+		var ch:SpineCharacter = buildCharacter(atlasPath, skeletonPath, null);
+		if (ch == null)
+			return;
+		hintText.visible = false;
+		selectChar(ch);
+		if (ch.animList.length > 0)
+			playAnimation(ch.animList[0]);
+		updateInfo();
+	}
+
+	/**
+	 * Loads a Spine character from disk and adds it to the scene. When `def` is
+	 * provided (preset import) it also restores the saved transform, color, skin
+	 * and animation. Returns the created SpineCharacter, or null on failure.
+	 */
+	function buildCharacter(atlasPath:String, skeletonPath:String, def:SpineCharPreset):SpineCharacter
+	{
 		var lower:String = skeletonPath.toLowerCase();
 		var isBinary:Bool = lower.endsWith(".skel");
 
@@ -423,12 +815,12 @@ class SpineViewerState extends MusicBeatState
 			if (!sys.FileSystem.exists(atlasPath))
 			{
 				showHint("Atlas 文件不存在: " + atlasPath);
-				return;
+				return null;
 			}
 			if (!sys.FileSystem.exists(skeletonPath))
 			{
 				showHint("骨架文件不存在: " + skeletonPath);
-				return;
+				return null;
 			}
 			#end
 
@@ -456,18 +848,33 @@ class SpineViewerState extends MusicBeatState
 
 			var stateData:AnimationStateData = new AnimationStateData(skeletonData);
 			var sprite:NoCullSkeletonSprite = new NoCullSkeletonSprite(skeletonData, stateData);
-			// Place the new character offset from the center so several of them
-			// don't fully overlap; the user can drag them apart afterwards.
-			sprite.x = FlxG.width / 2 + characters.length * 180;
-			sprite.y = FlxG.height * 0.55;
-			sprite.scaleX = 1;
-			sprite.scaleY = 1;
+			if (def != null)
+			{
+				sprite.x = def.x;
+				sprite.y = def.y;
+				sprite.scaleX = def.scaleX;
+				sprite.scaleY = def.scaleY;
+				// Restore the flip AFTER the scale, so its negation stays
+				// consistent with what was on screen when the preset was saved.
+				sprite.flipX = def.flipX;
+				sprite.flipY = def.flipY;
+			}
+			else
+			{
+				// Place the new character offset from the center so several of
+				// them don't fully overlap; the user can drag them apart.
+				sprite.x = FlxG.width / 2 + characters.length * 180;
+				sprite.y = FlxG.height * 0.55;
+				sprite.scaleX = 1;
+				sprite.scaleY = 1;
+			}
 			sprite.antialiasing = ClientPrefs.data.antialiasing;
 			sprite.active = true;
 			sprite.cameras = [FlxG.camera];
 			charGroup.add(sprite);
 
-			// Derive a display name from the skeleton file name.
+			// Derive a display name from the skeleton file name (unless the
+			// preset supplied one).
 			var nm:String = skeletonPath;
 			var slash:Int = nm.lastIndexOf("/");
 			var back:Int = nm.lastIndexOf("\\");
@@ -477,6 +884,8 @@ class SpineViewerState extends MusicBeatState
 			var dot:Int = nm.lastIndexOf(".");
 			if (dot > 0)
 				nm = nm.substring(0, dot);
+			if (def != null && def.name != null && def.name.length > 0)
+				nm = def.name;
 
 			var ch:SpineCharacter = new SpineCharacter(sprite, nm, atlasPath, skeletonPath);
 			for (anim in skeletonData.animations)
@@ -486,18 +895,72 @@ class SpineViewerState extends MusicBeatState
 			ch.curSkin = 0;
 			ch.looping = true;
 			ch.currentAnim = '';
-			characters.push(ch);
 
-			hintText.visible = false;
-			selectChar(ch);
-			if (ch.animList.length > 0)
-				playAnimation(ch.animList[0]);
-			updateInfo();
+			// Restore the saved state from a preset, if any.
+			if (def != null)
+			{
+				ch.r = def.r;
+				ch.g = def.g;
+				ch.b = def.b;
+				var col = sprite.skeleton.color;
+				col.r = def.r;
+				col.g = def.g;
+				col.b = def.b;
+				if (def.curSkin >= 0 && def.curSkin < ch.skinNames.length)
+				{
+					ch.curSkin = def.curSkin;
+					sprite.skeleton.skinName = ch.skinNames[ch.curSkin];
+					sprite.skeleton.setSlotsToSetupPose();
+				}
+				ch.looping = def.looping;
+				// Restore layered animations. Prefer the explicit layers array
+				// (newer presets); fall back to the legacy single currentAnim.
+				var restored:Bool = false;
+				if (def.layers != null && def.layers.length > 0)
+				{
+					for (layer in def.layers)
+					{
+						var anim = sprite.skeleton.data.findAnimation(layer.anim);
+						if (anim != null)
+						{
+							// Per-layer loop: use the saved value, defaulting to
+							// the character's base flag for older presets.
+							var lp:Bool = layer.loop != null ? layer.loop : ch.looping;
+							ch.trackAnims.set(layer.track, layer.anim);
+							ch.trackLoops.set(layer.track, lp);
+							sprite.state.setAnimation(layer.track, anim, lp);
+							if (layer.track == 0)
+								ch.currentAnim = layer.anim;
+							restored = true;
+						}
+					}
+				}
+				if (!restored && def.currentAnim != null && def.currentAnim.length > 0)
+				{
+					var anim = sprite.skeleton.data.findAnimation(def.currentAnim);
+					if (anim != null)
+					{
+						ch.currentAnim = def.currentAnim;
+						ch.trackAnims.set(0, def.currentAnim);
+						ch.trackLoops.set(0, ch.looping);
+						sprite.state.setAnimation(0, anim, ch.looping);
+					}
+				}
+			}
+
+			// Recompute the world transform once so the very first rendered
+			// frame already matches the saved pose (avoids a one-frame vertical
+			// flip that would otherwise only correct itself on the next zoom).
+			sprite.skeleton.updateWorldTransform(Physics.update);
+
+			characters.push(ch);
+			return ch;
 		}
 		catch (e:Dynamic)
 		{
 			showHint("加载失败: " + Std.string(e));
-			trace("SpineViewerState.addCharacter error: " + Std.string(e));
+			trace("SpineViewerState.buildCharacter error: " + Std.string(e));
+			return null;
 		}
 	}
 
@@ -529,9 +992,10 @@ class SpineViewerState extends MusicBeatState
 		applyActiveRGB();
 		buildAnimList();
 		if (skinBtn != null)
-			skinBtn.label.text = c.skinNames.length > 0 ? "Skin: " + c.skinNames[c.curSkin] : "Skin: —";
-		if (loopBtn != null)
-			loopBtn.label.text = c.looping ? "Loop: ON" : "Loop: OFF";
+			skinBtn.label = c.skinNames.length > 0 ? "Skin: " + c.skinNames[c.curSkin] : "Skin: —";
+		refreshAnimHighlights();
+		updateTrackLabel();
+		updateLoopCheckbox();
 		updateInfo();
 	}
 
@@ -592,13 +1056,13 @@ class SpineViewerState extends MusicBeatState
 			return;
 		}
 
-		var gameFont:String = Paths.font("vcr.ttf");
+		var gameFont:String = Paths.font(UI_FONT);
 		var panelX:Float = FlxG.width - PANEL_W + 8;
 		for (i in 0...activeChar.animList.length)
 		{
 			var name:String = activeChar.animList[i];
 			var txt:FlxText = new FlxText(panelX, animListTop + i * 22, PANEL_W - 16, name, 14);
-			txt.setFormat(gameFont, 14, FlxColor.WHITE, LEFT, OUTLINE, FlxColor.BLACK);
+			txt.setFormat(gameFont, 16, FlxColor.WHITE, LEFT, OUTLINE, FlxColor.BLACK);
 			txt.cameras = [uiCam];
 			add(txt);
 			animTexts.push(txt);
@@ -651,17 +1115,38 @@ class SpineViewerState extends MusicBeatState
 		var anim = activeChar.sprite.skeleton.data.findAnimation(name);
 		if (anim == null)
 			return;
-		activeChar.currentAnim = name;
-		activeChar.sprite.state.setAnimation(0, anim, activeChar.looping);
-		// Re-highlight the active animation in the list
-		for (txt in animTexts)
-		{
-			if (txt.text == name)
-				txt.color = FlxColor.YELLOW;
-			else
-				txt.color = FlxColor.WHITE;
-		}
+		// Assign the animation to the currently selected layer (Spine track).
+		// Higher tracks blend on top of lower ones, so a character can play
+		// e.g. a walk cycle on layer 0 and a wave on layer 1 at the same time.
+		var track:Int = activeChar.currentTrack;
+		activeChar.trackAnims.set(track, name);
+		if (track == 0)
+			activeChar.currentAnim = name;
+		// Loop is per-layer: use whatever the Loop checkbox shows for the
+		// current layer (it mirrors this layer's stored flag), and remember it.
+		var loop:Bool = loopBtn != null ? loopBtn.checked : trackLooping(activeChar, track);
+		activeChar.trackLoops.set(track, loop);
+		activeChar.sprite.state.setAnimation(track, anim, loop);
+		refreshAnimHighlights();
+		updateTrackLabel();
 		updateInfo();
+	}
+
+	// The loop flag for a given layer, defaulting to the character's base
+	// `looping` value when that layer has no explicit setting yet.
+	function trackLooping(c:SpineCharacter, track:Int):Bool
+	{
+		if (c.trackLoops.exists(track))
+			return c.trackLoops.get(track);
+		return c.looping;
+	}
+
+	// Sync the Loop checkbox with the currently selected layer's loop flag.
+	function updateLoopCheckbox():Void
+	{
+		if (loopBtn == null || activeChar == null)
+			return;
+		loopBtn.checked = trackLooping(activeChar, activeChar.currentTrack);
 	}
 
 	function cycleSkin():Void
@@ -672,20 +1157,107 @@ class SpineViewerState extends MusicBeatState
 		var name:String = activeChar.skinNames[activeChar.curSkin];
 		activeChar.sprite.skeleton.skinName = name;
 		activeChar.sprite.skeleton.setSlotsToSetupPose();
-		skinBtn.label.text = "Skin: " + name;
+		skinBtn.label = "Skin: " + name;
 	}
 
 	function toggleLoop():Void
 	{
 		if (activeChar == null)
 			return;
-		activeChar.looping = !activeChar.looping;
-		loopBtn.label.text = activeChar.looping ? "Loop: ON" : "Loop: OFF";
-		if (activeChar.currentAnim.length > 0)
+		// PsychUICheckBox already toggled `checked` before invoking onClick, so
+		// just read back the new state instead of flipping it ourselves.
+		// Loop is per-layer: only affect the currently selected layer.
+		var track:Int = activeChar.currentTrack;
+		activeChar.trackLoops.set(track, loopBtn.checked);
+		// Keep the base value in sync with layer 0 so it acts as the default
+		// for any layer that hasn't been touched yet.
+		if (track == 0)
+			activeChar.looping = loopBtn.checked;
+		// Apply live to the animation currently on that layer, if any, without
+		// restarting it.
+		var entry = activeChar.sprite.state.getCurrent(track);
+		if (entry != null)
+			entry.loop = loopBtn.checked;
+	}
+
+	// --- Layered animation (Spine tracks) ---------------------------------
+
+	// Pick a lower layer (track index). Layer 0 is the base pose; higher
+	// layers overlay it. Never goes negative.
+	function decTrack():Void
+	{
+		if (activeChar == null)
+			return;
+		if (activeChar.currentTrack > 0)
+			activeChar.currentTrack--;
+		updateTrackLabel();
+		updateLoopCheckbox();
+	}
+
+	function incTrack():Void
+	{
+		if (activeChar == null)
+			return;
+		if (activeChar.currentTrack < 15)
+			activeChar.currentTrack++;
+		updateTrackLabel();
+		updateLoopCheckbox();
+	}
+
+	// Stop and remove the currently selected layer.
+	function clearTrack():Void
+	{
+		if (activeChar == null)
+			return;
+		activeChar.sprite.state.clearTrack(activeChar.currentTrack);
+		activeChar.trackAnims.remove(activeChar.currentTrack);
+		activeChar.trackLoops.remove(activeChar.currentTrack);
+		if (activeChar.currentTrack == 0)
+			activeChar.currentAnim = "";
+		refreshAnimHighlights();
+		updateTrackLabel();
+		updateLoopCheckbox();
+		updateInfo();
+	}
+
+	// Stop every layer on the active character.
+	function clearAllTracks():Void
+	{
+		if (activeChar == null)
+			return;
+		activeChar.sprite.state.clearTracks();
+		activeChar.trackAnims.clear();
+		activeChar.trackLoops.clear();
+		activeChar.currentAnim = "";
+		refreshAnimHighlights();
+		updateTrackLabel();
+		updateLoopCheckbox();
+		updateInfo();
+	}
+
+	// Reflect the active character's selected layer in the right-panel label.
+	function updateTrackLabel():Void
+	{
+		if (trackLabel == null || activeChar == null)
+			return;
+		trackLabel.text = "Layer " + activeChar.currentTrack;
+	}
+
+	// Re-tint the animation list so every animation that is currently playing
+	// on some layer is highlighted.
+	function refreshAnimHighlights():Void
+	{
+		var active:Map<String, Bool> = new Map();
+		if (activeChar != null)
 		{
-			var anim = activeChar.sprite.skeleton.data.findAnimation(activeChar.currentAnim);
-			if (anim != null)
-				activeChar.sprite.state.setAnimation(0, anim, activeChar.looping);
+			for (a in activeChar.trackAnims)
+				active.set(a, true);
+		}
+		for (txt in animTexts)
+		{
+			var on:Bool = active.exists(txt.text);
+			txt.color = on ? FlxColor.YELLOW : FlxColor.WHITE;
+			txt.borderColor = on ? FlxColor.RED : FlxColor.BLACK;
 		}
 	}
 
@@ -724,9 +1296,19 @@ class SpineViewerState extends MusicBeatState
 		if (c == null)
 			return;
 		var s = c.sprite;
-		var s0:Float = s.scaleX;
-		var s1:Float = FlxMath.bound(s0 * factor, 0.05, 20);
-		var f:Float = s1 / s0;
+		// Preserve the flip state through the boolean flags, not the sign of
+		// scaleY. In spine-haxe the flipY setter toggles skeleton.scaleY, but
+		// the scaleY setter overwrites it directly WITHOUT updating flipY —
+		// so tracking the sign of scaleY across zooms will desync and cause
+		// an alternating flip/non-flip on every zoom.
+		var fx:Bool = s.flipX;
+		var fy:Bool = s.flipY;
+
+		var magX0:Float = Math.abs(s.scaleX);
+		var magY0:Float = Math.abs(s.scaleY);
+		var magX1:Float = FlxMath.bound(magX0 * factor, 0.05, 20);
+		var magY1:Float = FlxMath.bound(magY0 * factor, 0.05, 20);
+		var f:Float = magY1 / magY0;
 
 		// W = skeleton-local vertex value currently under the cursor.
 		// Keep W fixed at (sx, sy): x1 = sx - offsetX - f * (sx - x0 - offsetX)
@@ -734,9 +1316,30 @@ class SpineViewerState extends MusicBeatState
 		var oy:Float = s.offsetY;
 		s.x = sx - ox - f * (sx - s.x - ox);
 		s.y = sy - oy - f * (sy - s.y - oy);
-		s.scaleX = s1;
-		s.scaleY = s1;
+
+		// Reset to a clean positive-scale state, then re-apply flip.
+		s.flipX = false;
+		s.flipY = false;
+		s.scaleX = magX1;
+		s.scaleY = magY1;
+		s.flipX = fx;
+		s.flipY = fy;
 		updateInfo();
+	}
+
+	// Zoom the active character IN PLACE: anchor the zoom on the character's
+	// own position instead of the screen center, so it scales around itself
+	// rather than jumping to keep the screen center fixed. (The mouse wheel
+	// zooms around the cursor — which feels stable because the point under the
+	// cursor stays put — whereas anchoring at the screen center drags any
+	// off-center character toward the middle on every click, looking like a
+	// teleport.)
+	function zoomActive(factor:Float):Void
+	{
+		if (activeChar == null)
+			return;
+		var s = activeChar.sprite;
+		zoomChar(activeChar, factor, s.x + s.offsetX, s.y + s.offsetY);
 	}
 
 	// Topmost character whose *opaque* (alpha != 0) pixel is under the mouse.
@@ -879,6 +1482,21 @@ class SpineViewerState extends MusicBeatState
 		return false;
 	}
 
+	// The animation list only occupies the right panel BELOW the active-
+	// character navigation row (the ◀ Char / Char ▶ buttons, which sit just
+	// above animListTop). Clicks above that line — on the skin/loop/RGB area
+	// or the nav buttons themselves — must never be treated as an animation
+	// pick.
+	function isOverAnimList(px:Float, py:Float):Bool
+	{
+		if (animPanel == null)
+			return false;
+		var px0:Float = animPanel.x;
+		if (px < px0 || px > px0 + PANEL_W)
+			return false;
+		return (py >= animListTop && py <= FlxG.height);
+	}
+
 	function updateCamera(elapsed:Float):Void
 	{
 		// Keyboard pan (skip while typing in an input field) — moves the active char
@@ -893,9 +1511,9 @@ class SpineViewerState extends MusicBeatState
 			if (controls.UI_DOWN || FlxG.keys.pressed.S) s.y += panSpeed;
 
 			if (FlxG.keys.justPressed.MINUS || FlxG.keys.justPressed.LBRACKET)
-				zoomChar(activeChar, 0.9, FlxG.width / 2, FlxG.height / 2);
+				zoomActive(0.9);
 			if (FlxG.keys.justPressed.PLUS || FlxG.keys.justPressed.RBRACKET)
-				zoomChar(activeChar, 1.1, FlxG.width / 2, FlxG.height / 2);
+				zoomActive(1.1);
 			if (FlxG.keys.justPressed.R)
 				resetCamera();
 		}
@@ -908,8 +1526,8 @@ class SpineViewerState extends MusicBeatState
 			if (touchPad.buttonRight.pressed) s.x += panSpeed;
 			if (touchPad.buttonUp.pressed) s.y -= panSpeed;
 			if (touchPad.buttonDown.pressed) s.y += panSpeed;
-			if (touchPad.buttonA.justPressed) zoomChar(activeChar, 1.1, FlxG.width / 2, FlxG.height / 2);
-			if (touchPad.buttonB.justPressed) zoomChar(activeChar, 0.9, FlxG.width / 2, FlxG.height / 2);
+		if (touchPad.buttonA.justPressed) zoomActive(1.1);
+		if (touchPad.buttonB.justPressed) zoomActive(0.9);
 		}
 
 		// Mouse wheel: scroll the animation list when over the right panel,
@@ -1001,13 +1619,20 @@ class SpineViewerState extends MusicBeatState
 			}
 			else if (activeChar != null)
 			{
-				// Clicked on the panel: play the clicked animation entry.
-				for (txt in animTexts)
+				// Only pick an animation when the click lands inside the list
+				// band (below the ◀ Char / Char ▶ buttons). This keeps clicks
+				// on the skin/loop/RGB/nav controls from selecting an animation,
+				// and we also skip entries that are scrolled off (visible=false)
+				// so hidden items can no longer be triggered by a stray overlap.
+				if (isOverAnimList(mx, my))
 				{
-					if (FlxG.mouse.overlaps(txt, uiCam))
+					for (txt in animTexts)
 					{
-						playAnimation(txt.text);
-						break;
+						if (txt.visible && FlxG.mouse.overlaps(txt, uiCam))
+						{
+							playAnimation(txt.text);
+							break;
+						}
 					}
 				}
 			}
@@ -1032,6 +1657,7 @@ class SpineViewerState extends MusicBeatState
 
 		updateCamera(elapsed);
 
+		updateMemText();
 		updateInfo();
 		super.update(elapsed);
 	}
@@ -1053,8 +1679,24 @@ class SpineViewerState extends MusicBeatState
 		var charInfo:String = activeChar != null ? 'Char: ${activeChar.name} (${idx + 1}/${n})  ' : 'Char: —  ';
 		var zoomPct:Int = activeChar != null ? Math.round(activeChar.sprite.scaleX * 100) : 100;
 		var skin:String = (activeChar != null && activeChar.skinNames.length > 0) ? activeChar.skinNames[activeChar.curSkin] : "—";
-		var anim:String = activeChar != null ? activeChar.currentAnim : "";
-		infoText.text = charInfo + 'Zoom: ${zoomPct}%   Anim: ${anim == "" ? "—" : anim}   Skin: ${skin}';
+		// Show every active layer as "L<track>:<anim>" (track 0 first), so the
+		// stacked animations are visible at a glance.
+		var animStr:String = "—";
+		if (activeChar != null)
+		{
+			var keys:Array<Int> = [];
+			for (k in activeChar.trackAnims.keys())
+				keys.push(k);
+			if (keys.length > 0)
+			{
+				keys.sort((a, b) -> a - b);
+				var parts:Array<String> = [];
+				for (k in keys)
+					parts.push("L" + k + ":" + activeChar.trackAnims.get(k));
+				animStr = parts.join("  ");
+			}
+		}
+		infoText.text = charInfo + 'Zoom: ${zoomPct}%   Anim: ${animStr}   Skin: ${skin}';
 	}
 
 	function showHint(msg:String):Void
@@ -1064,6 +1706,50 @@ class SpineViewerState extends MusicBeatState
 			hintText.text = msg;
 			hintText.visible = true;
 		}
+	}
+
+	// Refresh the bottom-left memory readout: current RAM usage plus the peak
+	// seen since entering this state (mirrors the FPS counter's mempeak line).
+	function updateMemText():Void
+	{
+		if (memText == null)
+			return;
+		var bytes:Float = getMemBytes();
+		if (bytes > memPeak)
+			memPeak = bytes;
+		memText.text = 'RAM: ' + flixel.util.FlxStringUtil.formatBytes(bytes)
+			+ '   Peak: ' + flixel.util.FlxStringUtil.formatBytes(memPeak);
+	}
+
+	// Current memory usage in bytes (cpp targets read the GC stats; other
+	// targets fall back to 0 since the runtime doesn't expose it the same way).
+	function getMemBytes():Float
+	{
+		#if cpp
+		try
+		{
+			var v:Dynamic = Gc.memInfo64(Gc.MEM_INFO_USAGE);
+			if (Std.is(v, Float) || Std.is(v, Int))
+			{
+				var m:Float = cast v;
+				if (Math.isFinite(m) && m >= 0)
+					return m;
+			}
+		}
+		catch (e:Dynamic) {}
+		try
+		{
+			var v:Dynamic = Gc.memInfo(Gc.MEM_INFO_USAGE);
+			if (Std.is(v, Float) || Std.is(v, Int))
+			{
+				var m:Float = cast v;
+				if (Math.isFinite(m) && m >= 0)
+					return m;
+			}
+		}
+		catch (e:Dynamic) {}
+		#end
+		return 0;
 	}
 
 	function dirname(p:String):String
@@ -1095,6 +1781,49 @@ class SpineViewerState extends MusicBeatState
 }
 
 /**
+ * A single character's saved state — this IS the preset file (one JSON object).
+ * It is backwards-compatible with the older whole-scene format that wrapped this
+ * in a `characters` array. `flipX`/`flipY` are captured alongside the scale so a
+ * flipped character survives a round-trip (the skeleton's flip works by negating
+ * `scaleY`, so saving only the scale would lose the flip).
+ */
+typedef SpineCharPreset =
+{
+	version:Int,
+	name:String,
+	atlasPath:String,
+	skeletonPath:String,
+	x:Float,
+	y:Float,
+	scaleX:Float,
+	scaleY:Float,
+	flipX:Bool,
+	flipY:Bool,
+	r:Float,
+	g:Float,
+	b:Float,
+	curSkin:Int,
+	looping:Bool,
+	currentAnim:String,
+	// Per-layer animations (track index -> animation name). Empty for
+	// pre-layering presets; restored onto separate Spine tracks on load.
+	layers:Array<SpineLayerPreset>
+}
+
+/**
+ * One stacked animation layer: a Spine AnimationState track index and the
+ * animation name playing on it.
+ */
+typedef SpineLayerPreset =
+{
+	track:Int,
+	anim:String,
+	// Whether this layer's animation loops (per-layer, controlled by the Loop
+	// checkbox). Optional for older presets.
+	?loop:Bool
+}
+
+/**
  * A single Spine character instance and all of its independently-controlled
  * state (animation list, current skin, loop flag, loaded file paths).
  */
@@ -1109,6 +1838,17 @@ private class SpineCharacter
 	public var skinNames:Array<String>;
 	public var curSkin:Int;
 	public var looping:Bool;
+	// Layered playback: a Spine character can stack several animations by
+	// putting each on a separate AnimationState track ("layer"). trackAnims
+	// maps a track index -> the animation name currently playing on that
+	// layer; currentTrack is the layer the next clicked animation goes onto
+	// (selected via the right-panel stepper).
+	public var trackAnims:Map<Int, String> = new Map();
+	public var currentTrack:Int = 0;
+	// Per-layer loop flag (track index -> looping). The Loop checkbox controls
+	// only the currently selected layer, so each stacked animation can loop
+	// (or not) independently. Missing entries fall back to `looping`.
+	public var trackLoops:Map<Int, Bool> = new Map();
 	// Per-character RGB tint (0..1) applied to skeleton.color.
 	public var r:Float = 1;
 	public var g:Float = 1;
@@ -1128,6 +1868,9 @@ private class SpineCharacter
 		this.skinNames = [];
 		this.curSkin = 0;
 		this.looping = true;
+		this.trackAnims = new Map<Int, String>();
+		this.currentTrack = 0;
+		this.trackLoops = new Map<Int, Bool>();
 		this.dragStartX = 0;
 		this.dragStartY = 0;
 	}
