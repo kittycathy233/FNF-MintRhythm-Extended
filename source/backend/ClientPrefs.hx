@@ -192,6 +192,8 @@ import states.TitleState;
 	public var autoResetStrumAnim:Bool = true; // 是否自动恢复箭头默认动画（普通按键和hold note）
 	public var ghostEffect:Bool = true; // 多押时角色的ghost残影效果
 
+	public var playStateAdaptiveWidth:Bool = false; // PlayState宽屏自适应：高度锁定720，宽度960~1680自适应
+
 	// 当模组没有perfect/marvelous贴图时，是否改用sick贴图显示
 	public var fallbackPerfectToSick:Bool = true;
 	public var fallbackEXPerfectToSick:Bool = true;

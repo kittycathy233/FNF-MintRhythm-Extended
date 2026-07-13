@@ -23,7 +23,10 @@ import flixel.animation.FlxAnimationController;
 import lime.utils.Assets;
 import openfl.utils.Assets as OpenFlAssets;
 import openfl.events.KeyboardEvent;
+import openfl.events.Event;
 import haxe.Json;
+import flixel.system.scaleModes.PlayStateScaleMode;
+import flixel.system.scaleModes.BaseScaleMode;
 
 import cutscenes.DialogueBoxPsych;
 
@@ -98,6 +101,16 @@ typedef ReplayData = {
 
 class PlayState extends MusicBeatState
 {
+	/**
+	 * PlayState宽屏自适应模式开关：进入PlayState时临时启用宽屏分辨率（高度锁定720，宽度960~1680自适应），
+	 * 退出PlayState后自动还原。设为 false 可关闭该功能。
+	 * 注意：此开关是全局总开关，即使 ClientPrefs.data.playStateAdaptiveWidth 为 true，
+	 * 此开关关闭也不会生效（用于调试或强制禁用）。
+	 */
+	public static var ENABLE_ADAPTIVE_WIDTH:Bool = true;
+	private static var _psAdaptiveScaleMode:BaseScaleMode = null;
+	private static var _psAdaptiveActive:Bool = false;
+
 	//杂七杂八的新特性
 	var notesHitArray:Array<Date> = [];
 	var nps:Int = 0;
@@ -632,6 +645,19 @@ isReplaying = false;
 		holdScoreBonus = ClientPrefs.data.holdScoreBonus;
 		holdTailLeniency = ClientPrefs.data.holdTailLeniency;
 		holdTailLeniencyMs = ClientPrefs.data.holdTailLeniencyMs;
+
+		// PlayState宽屏自适应模式：根据设置开关临时切换缩放模式，高度锁定720，宽度960~1680自适应
+		// 必须在创建任何相机/UI之前调用
+		if (ENABLE_ADAPTIVE_WIDTH && ClientPrefs.data.playStateAdaptiveWidth)
+		{
+			if (!_psAdaptiveActive)
+			{
+				_psAdaptiveScaleMode = FlxG.scaleMode;
+				FlxG.scaleMode = new PlayStateScaleMode();
+				FlxG.resizeGame(FlxG.stage.stageWidth, FlxG.stage.stageHeight);
+				_psAdaptiveActive = true;
+			}
+		}
 
 		// var gameCam:FlxCamera = FlxG.camera;
 		camGame = initPsychCamera();
@@ -5336,6 +5362,15 @@ isReplaying = false;
 		// 重置回放设置静态变量
 		replayJudgmentSettings = null;
 		replayGameplaySettings = null;
+
+		// 退出PlayState时还原为原来的缩放模式（destroy在下一状态create之前执行，确保后续界面恢复原始分辨率）
+		if (_psAdaptiveActive)
+		{
+			FlxG.scaleMode = _psAdaptiveScaleMode;
+			FlxG.resizeGame(FlxG.stage.stageWidth, FlxG.stage.stageHeight);
+			_psAdaptiveActive = false;
+			_psAdaptiveScaleMode = null;
+		}
 		
 		super.destroy();
 	}

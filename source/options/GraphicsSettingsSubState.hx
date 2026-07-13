@@ -90,6 +90,13 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		// PlayState宽屏自适应
+		var option:Option = new Option('PlayState Adaptive Width',
+			'Allows PlayState to adapt its width to the window (960-1680px), height locked at 720. Better display on wider screens.',
+			'playStateAdaptiveWidth',
+			BOOL);
+		addOption(option);
+
 		// 飞溅数量限制设置
 		var option:Option = new Option('Splash Limit',
 			'Limit the maximum number of simultaneous note splashes. OFF = no limit.',
