@@ -6,6 +6,8 @@ import objects.Character;
 
 import states.MainMenuState;
 import states.FreeplayState;
+import states.StoryPlayerState;
+import states.editors.StoryEditorState;
 
 class MasterEditorMenu extends MusicBeatState
 {
@@ -18,7 +20,9 @@ class MasterEditorMenu extends MusicBeatState
 		'Dialogue Editor',
 		'Dialogue Portrait Editor',
 		'Note Splash Editor',
-		'Spine Viewer'
+		'Spine Viewer (WIP)',
+		'Story Player (WIP)',
+		'Story Editor (WIP)'
 	];
 	private var grpTexts:FlxTypedGroup<Alphabet>;
 	private var directories:Array<String> = [null];
@@ -125,8 +129,12 @@ class MasterEditorMenu extends MusicBeatState
 					LoadingState.loadAndSwitchState(new DialogueCharacterEditorState(), false);
 				case 'Note Splash Editor':
 					MusicBeatState.switchState(new NoteSplashEditorState());
-				case 'Spine Viewer':
+				case 'Spine Viewer (WIP)':
 					MusicBeatState.switchState(new SpineViewerState());
+				case 'Story Player (WIP)':
+					MusicBeatState.switchState(new StoryPlayerState());
+				case 'Story Editor (WIP)':
+					MusicBeatState.switchState(new StoryEditorState());
 			}
 			FlxG.sound.music.volume = 0;
 			FreeplayState.destroyFreeplayVocals();

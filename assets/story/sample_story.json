@@ -1,0 +1,39 @@
+{
+	"background": "#10131f",
+	"music": "",
+	"characters": [
+		{
+			"id": "sensei",
+			"name": "导师",
+			"affiliation": "联邦学生会",
+			"atlasPath": "C:/path/to/your/sensei.atlas",
+			"skeletonPath": "C:/path/to/your/sensei.skel",
+			"x": 0.28,
+			"y": 0.9,
+			"scale": 0.7,
+			"flipX": false,
+			"skin": "default",
+			"defaultAnim": "idle"
+		},
+		{
+			"id": "student",
+			"name": "学生",
+			"affiliation": "对策委员会",
+			"atlasPath": "C:/path/to/your/student.atlas",
+			"skeletonPath": "C:/path/to/your/student.skel",
+			"x": 0.72,
+			"y": 0.9,
+			"scale": 0.7,
+			"flipX": true,
+			"skin": "default",
+			"defaultAnim": "idle"
+		}
+	],
+	"lines": [
+		{ "character": "sensei", "expression": "idle", "name": "导师", "text": "（把这一段替换成你自己的剧情吧。）", "boxState": "normal", "speed": 0.05, "sound": "dialogue" },
+		{ "character": "student", "expression": "happy", "name": "学生", "text": "参考这个 JSON 格式：characters 里填 Spine 的 atlas / skel 路径，lines 里按 id 引用角色并指定表情动画。", "boxState": "normal", "speed": 0.04, "sound": "dialogue" },
+		{ "character": "sensei", "expression": "talk", "name": "导师", "text": "x / y 是屏幕归一化坐标（0~1），表示角色脚底位置；scale 控制大小，flipX 控制朝向。", "boxState": "normal", "speed": 0.05, "sound": "dialogue" },
+		{ "text": "（不填 character 即为旁白，没有人名、所有角色变暗。）", "boxState": "normal", "speed": 0.05, "sound": "dialogue" },
+		{ "character": "student", "expression": "angry", "name": "学生", "text": "boxState 支持 normal / angry，会让气泡切换表情。", "boxState": "angry", "speed": 0.05, "sound": "dialogue" }
+	]
+}
