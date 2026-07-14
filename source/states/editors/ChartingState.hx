@@ -437,6 +437,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 		bg.antialiasing = ClientPrefs.data.antialiasing;
 		bg.scrollFactor.set();
 		add(bg);
+		resizeBg();
 
 		if(chartEditorSave.data.autoSave != null) autoSaveCap = chartEditorSave.data.autoSave;
 		if(chartEditorSave.data.backupLimit != null) backupLimit = chartEditorSave.data.backupLimit;
@@ -773,6 +774,8 @@ if(_shouldReset) Conductor.songPosition = 0;
 		tipText.scrollFactor.set();
 		tipText.borderSize = 1;
 		tipText.active = false;
+		tipText.x = FlxG.width - tipText.width - 20;
+
 		add(tipText);
 
 		tipBg = new FlxSprite().makeGraphic(1, 1, FlxColor.BLACK);
@@ -6800,9 +6803,26 @@ for (i in 0...GRID_PLAYERS)
 	}
 
 	/** 窗口缩放事件回调：根据与进入时窗口尺寸的差距决定提示形式 */
+	/** 让背景铺满整个渲染缓冲区（FlxG.width × FlxG.height）并居中，避免窗口比背景图大时出现黑边 */
+	function resizeBg():Void
+	{
+		if (bg == null) return;
+
+		// 以铺满（cover）方式缩放：取宽高方向上更大的缩放比，保证完全覆盖且不变形
+		var scale:Float = Math.max(FlxG.width / bg.frameWidth, FlxG.height / bg.frameHeight);
+		bg.scale.set(scale, scale);
+		bg.updateHitbox();
+		bg.screenCenter();
+	}
+
 	function onWindowResized(e:Event):Void
 	{
+		// 窗口/内部缓冲尺寸变化时，重新让背景铺满整个渲染缓冲区，避免黑边
+		resizeBg();
+
 		if (!ENABLE_HD || !_hdActive) return;
+
+
 
 		var newW:Int = FlxG.stage.stageWidth;
 		var newH:Int = FlxG.stage.stageHeight;
