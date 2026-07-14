@@ -64,7 +64,11 @@ class PsychUIInputText extends FlxSpriteGroup
 	{
 		super(x, y);
 		this.bg = new FlxSprite().makeGraphic(1, 1, FlxColor.BLACK);
+		this.bg.color = 0xFF000000;
+		this.bg.alpha = 1;
 		this.behindText = new FlxSprite(1, 1).makeGraphic(1, 1, FlxColor.WHITE);
+		this.behindText.color = 0xFFFFFFFF;
+		this.behindText.alpha = 0.7;
 		this.selection = new FlxSprite().makeGraphic(1, 1, FlxColor.WHITE);
 		this.textObj = new FlxText(1, 1, Math.max(1, wid - 2), '', size);
 		this.caret = new FlxSprite().makeGraphic(1, 1, FlxColor.WHITE);
@@ -74,11 +78,12 @@ class PsychUIInputText extends FlxSpriteGroup
 		add(this.textObj);
 		add(this.caret);
 
-		this.textObj.color = FlxColor.BLACK;
+		// 浅色背景下改用深色文字，选区保留主题蓝
+		this.textObj.color = 0xFF1E1E28;
 		this.textObj.textField.selectable = false;
 		this.textObj.textField.wordWrap = false;
 		this.textObj.textField.multiline = false;
-		this.selection.color = FlxColor.BLUE;
+		this.selection.color = 0xFF3B82F6;
 
 		@:bypassAccessor fieldWidth = wid;
 		setGraphicSize(wid + 2, this.textObj.height + 2);
