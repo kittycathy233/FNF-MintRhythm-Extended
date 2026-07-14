@@ -129,6 +129,8 @@
 	<haxelib name="hxdiscord_rpc" if="DISCORD_ALLOWED"/>
 	<haxelib name="flxanimate"/>
 	<haxelib name="spine-haxe"/>
+	<haxelib name="flixel-text-input"/>
+
 	<!--haxelib name="extension-androidtools" if="android"-->
 	<haxelib name="flxgif" version="1.0.3"/>
 	<haxelib name="flxsvg" version="1.1.0"/>

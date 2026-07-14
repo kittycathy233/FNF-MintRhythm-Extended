@@ -13,6 +13,7 @@ haxelib install openfl 9.4.2 --quiet
 haxelib install flixel 5.9.0 --quiet
 haxelib install flixel-addons 4.0.1 --quiet
 haxelib install flixel-tools 1.5.1 --quiet
+haxelib git flixel-text-input https://github.com/kittycathy332/flixel-text-input.git --quiet --skip-dependencies
 haxelib install hscript-iris 1.1.3 --quiet
 haxelib install hscript 2.7.0 --quiet
 haxelib install tjson 1.4.0 --quiet
