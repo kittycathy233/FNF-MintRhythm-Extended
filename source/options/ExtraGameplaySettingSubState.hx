@@ -426,6 +426,13 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		};
 		addOption(option);
 
+		option = new Option('Startup Splash',
+			'Choose the splash screen shown on startup:\nCustom Logo = Kathy engine intro animation;\nFlixel = Flixel built-in splash;\nNone = go straight into the game',
+			'splashMode',
+			STRING,
+			['Kathy', 'Flixel', 'Flixel+', 'None']);
+		addOption(option);
+
 		refreshGameLogDisabledState();
 
 		super();

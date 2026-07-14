@@ -157,6 +157,9 @@ import states.TitleState;
 
 	public var fpsPosition:String = "TOP_LEFT"; // "TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT"
 	public var fpsSpacing:Int = 10;
+
+	// 启动开屏模式: 'Kathy' = 自定义 Logo 开屏, 'Flixel' = Flixel 自带 splash, 'None' = 直接进游戏
+	public var splashMode:String = 'Kathy';
 	public var hudSize:Float = 1.0;
 	public var enableModsImport:Bool = false; // Enable Mods Import in the main menu
 	public var eventDebug:Bool = true;

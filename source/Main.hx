@@ -10,6 +10,8 @@ import openfl.display.StageScaleMode;
 import openfl.display.StageQuality;
 import lime.app.Application;
 import states.TitleState;
+import states.LogoState;
+import states.EnhancedFlixelState;
 import states.FreeplayState;
 #if HSCRIPT_ALLOWED
 import crowplexus.iris.Iris;
@@ -47,9 +49,9 @@ class Main extends Sprite
 	public static final game = {
 		width: 1280, // WINDOW width
 		height: 720, // WINDOW height
-		initialState: TitleState, // initial game state
+		initialState: LogoState, // initial game state (实际在 new FlxGame 时按 splashMode 决定)
 		framerate: 60, // default framerate
-		skipSplash: true, // if the default flixel splash screen should be skipped
+		skipSplash: true, // if the default flixel splash screen should be skipped (实际按 splashMode 决定)
 		startFullscreen: false // if the game should start at fullscreen mode
 	};
 
@@ -230,10 +232,32 @@ class Main extends Sprite
 			ClientPrefs.loadPrefs();
 		});
 		
-		// addChild(new FlxGame(game.width, game.height, #if COPYSTATE_ALLOWED !CopyState.checkExistingFiles() ? CopyState : #end game.initialState, game.framerate, game.framerate, game.skipSplash, game.startFullscreen));
+		// 启动开屏模式: 'Kathy' = 自定义 Logo 开屏, 'Flixel' = Flixel 自带 splash, 'None' = 直接进游戏
+		var splashMode:String = Reflect.field(FlxG.save.data, 'splashMode');
+		if (splashMode == null) splashMode = 'Kathy';
 
-		var game:FlxGame = new FlxGame(game.width, game.height, #if COPYSTATE_ALLOWED !CopyState.checkExistingFiles() ? CopyState : #end game.initialState,
-			#if (flixel < "5.0.0") game.zoom, #end game.framerate, game.framerate, game.skipSplash, game.startFullscreen);
+		var skipSplash:Bool = true;
+		var initialGameState:Class<flixel.FlxState> = LogoState;
+		switch (splashMode)
+		{
+			case 'Flixel':
+				skipSplash = false; // 显示 Flixel 自带 splash，随后进入标题
+				initialGameState = TitleState;
+			case 'None':
+				skipSplash = true; // 不显示任何开屏，直接进入游戏
+				initialGameState = TitleState;
+			case 'Flixel+':
+				skipSplash = true; // 不显示官方 splash，使用增强版风车开屏
+				initialGameState = EnhancedFlixelState;
+			default: // 'Kathy'
+				skipSplash = true;
+				initialGameState = LogoState; // 自定义 Logo 开屏，结束后进入 TitleState
+		}
+
+		// addChild(new FlxGame(game.width, game.height, #if COPYSTATE_ALLOWED !CopyState.checkExistingFiles() ? CopyState : #end initialGameState, game.framerate, game.framerate, skipSplash, game.startFullscreen));
+
+		var game:FlxGame = new FlxGame(game.width, game.height, #if COPYSTATE_ALLOWED !CopyState.checkExistingFiles() ? CopyState : #end initialGameState,
+			#if (flixel < "5.0.0") game.zoom, #end game.framerate, game.framerate, skipSplash, game.startFullscreen);
 		if (ClientPrefs.data.soundTrayStyle == 'Funkin') {
 			@:privateAccess
 			game._customSoundTray = backend.FunkinSoundTray;
