@@ -651,6 +651,12 @@ if(_shouldReset) Conductor.songPosition = 0;
 			var iconStartOffset:Int = (i == 0) ? (GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT) : 0;
 			icon.x = gridLayout.startX + GRID_SIZE * iconStartOffset + (iconStartOffset > 0 ? TRACK_SPACING * 2 : 0) + GRID_SIZE * (GRID_COLUMNS_PER_PLAYER / 2) - icon.width / 2;
 		}
+		// 直接进入制谱器时可能还没有加载任何歌曲，先确保 SONG 已初始化，避免空引用崩溃
+		if(PlayState.SONG == null)
+		{
+			openNewChart();
+		}
+
 		// 设置 mustHitIndicator 的初始位置
 		var initialMustHit:Bool = (PlayState.SONG.notes.length > 0 && PlayState.SONG.notes[0] != null && PlayState.SONG.notes[0].mustHitSection);
 		var initialTargetX:Float = initialMustHit ? (icons[0].x + icons[0].width / 2) : (icons[1].x + icons[1].width / 2);
@@ -712,11 +718,6 @@ if(_shouldReset) Conductor.songPosition = 0;
 		outputTxt.cameras = [camUI];
 		outputTxt.alpha = 0;
 		add(outputTxt);
-
-		if(PlayState.SONG == null) //Atleast try to avoid crashes
-		{
-			openNewChart();
-		}
 
 		updateJsonData();
 		
