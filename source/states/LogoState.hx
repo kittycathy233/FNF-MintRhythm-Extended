@@ -1,5 +1,7 @@
 package states;
 
+import Main;
+import states.CommandLineLaunchState;
 import states.TitleState;
 
 /**
@@ -81,6 +83,17 @@ class LogoState extends MusicBeatState
 		if (finished)
 			return;
 		finished = true;
+
+		// 命令行直启：Logo 结束后进入指定曲目，否则照常进入标题
+		#if MODS_ALLOWED
+		if (Main.commandLineLaunch != null)
+		{
+			CommandLineLaunchState.launchData = Main.commandLineLaunch;
+			MusicBeatState.switchState(new CommandLineLaunchState());
+			return;
+		}
+		#end
+
 		MusicBeatState.switchState(new TitleState());
 	}
 }

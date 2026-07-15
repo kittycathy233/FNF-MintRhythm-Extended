@@ -1,5 +1,6 @@
 package states;
 
+import Main;
 import flixel.FlxState;
 import flixel.FlxSprite;
 import flixel.effects.particles.FlxEmitter;
@@ -281,6 +282,14 @@ class EnhancedFlixelState extends FlxState
 	function switchState():Void
 	{
 		FlxG.camera.bgColor = _cachedBgColor;
+		#if MODS_ALLOWED
+		if (Main.commandLineLaunch != null)
+		{
+			states.CommandLineLaunchState.launchData = Main.commandLineLaunch;
+			FlxG.switchState(new states.CommandLineLaunchState());
+			return;
+		}
+		#end
 		FlxG.switchState(new states.TitleState());
 	}
 

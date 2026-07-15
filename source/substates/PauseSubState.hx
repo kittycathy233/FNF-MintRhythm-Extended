@@ -40,6 +40,13 @@ class PauseSubState extends MusicBeatSubstate
 		#if mobile
 		if(!ClientPrefs.data.developer) menuItemsOG.remove('Chart Editor'); // 开发者模式关闭时，移动端暂停界面隐藏制谱器入口
 		#end
+		if(PlayState.isCommandLineMode)
+		{
+			// 命令行直启：禁用「选项」「退出主界面」与「难度修改」入口
+			menuItemsOG.remove('Options');
+			menuItemsOG.remove('Exit to menu');
+			menuItemsOG.remove('Change Difficulty');
+		}
 		if(PlayState.chartingMode)
 		{
 			menuItemsOG.insert(2, 'Leave Charting Mode');
@@ -93,42 +100,65 @@ class PauseSubState extends MusicBeatSubstate
 		levelDifficulty.updateHitbox();
 		add(levelDifficulty);
 
-		var bpmText:FlxText = new FlxText(20, 15 + 64, 0, 'cur.BPM: ${Conductor.bpm}', 32);
-		bpmText.scrollFactor.set();
-		bpmText.setFormat(Paths.font('vcr.ttf'), 32);
-		bpmText.updateHitbox();
-		add(bpmText);
+		var bpmText:FlxText = null;
+		var speedText:FlxText = null;
+		var formatText:FlxText = null;
+		if (!PlayState.isCommandLineMode)
+		{
+			bpmText = new FlxText(20, 15 + 64, 0, 'cur.BPM: ${Conductor.bpm}', 32);
+			bpmText.scrollFactor.set();
+			bpmText.setFormat(Paths.font('vcr.ttf'), 32);
+			bpmText.updateHitbox();
+			add(bpmText);
+		}
 
-		var speedText:FlxText = new FlxText(20, 15 + 96, 0, '', 32);
-		speedText.scrollFactor.set();
-		speedText.setFormat(Paths.font('vcr.ttf'), 32);
-		speedText.updateHitbox();
-		if (ClientPrefs.getGameplaySetting('scrolltype', 'multiplicative') == 'constant') {
-			speedText.applyMarkup('<y>NOTE SPEED: <y>!${PlayState.instance.songSpeed}x!${PlayState.SONG.speed != PlayState.instance.songSpeed ? '<y> (${PlayState.SONG.speed}x)<y>' : ''}', [
-			new FlxTextFormatMarkerPair(format1, "<y>"),
-			new FlxTextFormatMarkerPair(format2, "!"),
-		]);
-		} else speedText.text = 'NOTE SPEED: ${PlayState.instance.songSpeed}x${PlayState.SONG.speed != PlayState.instance.songSpeed ? ' (${PlayState.SONG.speed}x)' : ''}';
-		add(speedText);
-		var formatText:FlxText = new FlxText(20, 15 + 128, 0, 'CHART FORMAT: ${PlayState.SONG.format}', 32);
-		formatText.scrollFactor.set();
-		formatText.setFormat(Paths.font('vcr.ttf'), 32);
-		formatText.updateHitbox();
-		add(formatText);
+		if (!PlayState.isCommandLineMode)
+		{
+			speedText = new FlxText(20, 15 + 96, 0, '', 32);
+			speedText.scrollFactor.set();
+			speedText.setFormat(Paths.font('vcr.ttf'), 32);
+			speedText.updateHitbox();
+			if (ClientPrefs.getGameplaySetting('scrolltype', 'multiplicative') == 'constant') {
+				speedText.applyMarkup('<y>NOTE SPEED: <y>!${PlayState.instance.songSpeed}x!${PlayState.SONG.speed != PlayState.instance.songSpeed ? '<y> (${PlayState.SONG.speed}x)<y>' : ''}', [
+				new FlxTextFormatMarkerPair(format1, "<y>"),
+				new FlxTextFormatMarkerPair(format2, "!"),
+			]);
+			} else speedText.text = 'NOTE SPEED: ${PlayState.instance.songSpeed}x${PlayState.SONG.speed != PlayState.instance.songSpeed ? ' (${PlayState.SONG.speed}x)' : ''}';
+			add(speedText);
+		}
+		if (!PlayState.isCommandLineMode)
+		{
+			formatText = new FlxText(20, 15 + 128, 0, 'CHART FORMAT: ${PlayState.SONG.format}', 32);
+			formatText.scrollFactor.set();
+			formatText.setFormat(Paths.font('vcr.ttf'), 32);
+			formatText.updateHitbox();
+			add(formatText);
+		}
 
 		//var blueballedTxt:FlxText = new FlxText(20, 15 + 160, 0, LanguageBasic.getPhrase("blueballed", "Blueballed: {1}", [PlayState.deathCounter]), 32);
 		var blueballedTxt:FlxText = new FlxText(20, 15 + 160, 0, 'BLUEBALLLED: ${PlayState.deathCounter}', 32);
 		blueballedTxt.scrollFactor.set();
 		blueballedTxt.setFormat(Paths.font('vcr.ttf'), 32);
-		if (PlayState.SONG.specialInst != null && PlayState.SONG.specialInst.trim().length > 0) blueballedTxt.y += 32;
-		if (PlayState.SONG.specialVocal != null && PlayState.SONG.specialVocal.trim().length > 0) blueballedTxt.y += 32;
+		if (!PlayState.isCommandLineMode && PlayState.SONG.specialInst != null && PlayState.SONG.specialInst.trim().length > 0) blueballedTxt.y += 32;
+		if (!PlayState.isCommandLineMode && PlayState.SONG.specialVocal != null && PlayState.SONG.specialVocal.trim().length > 0) blueballedTxt.y += 32;
 		blueballedTxt.updateHitbox();
 		add(blueballedTxt);
+
+		// 命令行直启：仅保留 SONG / DIFFICULTY / BLUEBALLLED 三行，曲名与难度的值显示为红色
+		if (PlayState.isCommandLineMode)
+		{
+			levelInfo.text = 'SONG: §${PlayState.SONG.song}§';
+			levelInfo.applyMarkup(levelInfo.text, [new FlxTextFormatMarkerPair(new FlxTextFormat(0xFFFF3030), '§')]);
+			levelDifficulty.text = 'DIFFICULTY: §${Difficulty.getString().toUpperCase()}§';
+			levelDifficulty.applyMarkup(levelDifficulty.text, [new FlxTextFormatMarkerPair(new FlxTextFormat(0xFFFF3030), '§')]);
+			// 紧跟在 DIFFICULTY(15+32) 之下，避免与上方信息行之间留空
+			blueballedTxt.y = 15 + 64;
+		}
 
 		var sprcialInstText:FlxText = null;
 		var specialVocalText:FlxText = null;
 		
-		if (PlayState.SONG.specialInst != null && PlayState.SONG.specialInst.trim().length > 0) {
+		if (!PlayState.isCommandLineMode && PlayState.SONG.specialInst != null && PlayState.SONG.specialInst.trim().length > 0) {
 			sprcialInstText = new FlxText(20, 15 + 160, 0, 'Special Inst: ${PlayState.SONG.specialInst}', 32);
 			sprcialInstText.scrollFactor.set();
 			sprcialInstText.setFormat(Paths.font('vcr.ttf'), 32);
@@ -136,7 +166,7 @@ class PauseSubState extends MusicBeatSubstate
 			add(sprcialInstText);
 		}
 		
-		if (PlayState.SONG.specialVocal != null && PlayState.SONG.specialVocal.trim().length > 0) {
+		if (!PlayState.isCommandLineMode && PlayState.SONG.specialVocal != null && PlayState.SONG.specialVocal.trim().length > 0) {
 			specialVocalText = new FlxText(20, 15 + 160, 0, 'Special Vocal: ${PlayState.SONG.specialVocal}', 32);
 			specialVocalText.scrollFactor.set();
 			specialVocalText.setFormat(Paths.font('vcr.ttf'), 32);
@@ -166,17 +196,17 @@ class PauseSubState extends MusicBeatSubstate
 		blueballedTxt.alpha = 0;
 		levelDifficulty.alpha = 0;
 		levelInfo.alpha = 0;
-		bpmText.alpha = 0;
-		speedText.alpha = 0;
-		formatText.alpha = 0;
+		if (bpmText != null) bpmText.alpha = 0;
+		if (speedText != null) speedText.alpha = 0;
+		if (formatText != null) formatText.alpha = 0;
 		if (sprcialInstText != null) sprcialInstText.alpha = 0;
 		if (specialVocalText != null) specialVocalText.alpha = 0;
 
 		levelInfo.x = FlxG.width - (levelInfo.width + 20);
 		levelDifficulty.x = FlxG.width - (levelDifficulty.width + 20);
-		bpmText.x = FlxG.width - (bpmText.width + 20);
-		speedText.x = FlxG.width - (speedText.width + 20);
-		formatText.x = FlxG.width - (formatText.width + 20);
+		if (bpmText != null) bpmText.x = FlxG.width - (bpmText.width + 20);
+		if (speedText != null) speedText.x = FlxG.width - (speedText.width + 20);
+		if (formatText != null) formatText.x = FlxG.width - (formatText.width + 20);
 		blueballedTxt.x = FlxG.width - (blueballedTxt.width + 20);
 		if (specialVocalText != null) specialVocalText.x = FlxG.width - (specialVocalText.width + 20);
 		if (sprcialInstText != null) sprcialInstText.x = FlxG.width - (sprcialInstText.width + 20);
@@ -184,12 +214,12 @@ class PauseSubState extends MusicBeatSubstate
 		FlxTween.tween(bg, {alpha: 0.6}, 0.3, {ease: FlxEase.quartInOut});
 		FlxTween.tween(levelInfo, {alpha: 1, y: 20}, 0.3, {ease: FlxEase.quartInOut, startDelay: 0.1});
 		FlxTween.tween(levelDifficulty, {alpha: 1, y: levelDifficulty.y + 5}, 0.3, {ease: FlxEase.quartInOut, startDelay: 0.2});
-		FlxTween.tween(bpmText, {alpha: 1, y: bpmText.y + 5}, 0.3, {ease: FlxEase.quartInOut, startDelay: 0.3});
-		FlxTween.tween(speedText, {alpha: 1, y: speedText.y + 5}, 0.3, {ease: FlxEase.quartInOut, startDelay: 0.4}); 
-		FlxTween.tween(formatText, {alpha: 1, y: formatText.y + 5}, 0.3, {ease: FlxEase.quartInOut, startDelay: 0.5});
+		if (bpmText != null) FlxTween.tween(bpmText, {alpha: 1, y: bpmText.y + 5}, 0.3, {ease: FlxEase.quartInOut, startDelay: 0.3});
+		if (speedText != null) FlxTween.tween(speedText, {alpha: 1, y: speedText.y + 5}, 0.3, {ease: FlxEase.quartInOut, startDelay: 0.4}); 
+		if (formatText != null) FlxTween.tween(formatText, {alpha: 1, y: formatText.y + 5}, 0.3, {ease: FlxEase.quartInOut, startDelay: 0.5});
 		if (sprcialInstText != null) FlxTween.tween(sprcialInstText, {alpha: 1, y: sprcialInstText.y + 5}, 0.3, {ease: FlxEase.quartInOut, startDelay: 0.6});
 		if (specialVocalText != null) FlxTween.tween(specialVocalText, {alpha: 1, y: specialVocalText.y + 5}, 0.3, {ease: FlxEase.quartInOut, startDelay: 0.7});
-		FlxTween.tween(blueballedTxt, {alpha: 1, y: blueballedTxt.y + 5}, 0.3, {ease: FlxEase.quartInOut, startDelay: 0.8});
+		FlxTween.tween(blueballedTxt, {alpha: 1, y: blueballedTxt.y + 5}, 0.3, {ease: FlxEase.quartInOut, startDelay: PlayState.isCommandLineMode ? 0.3 : 0.8});
 
 		grpMenuShit = new FlxTypedGroup<Alphabet>();
 		add(grpMenuShit);

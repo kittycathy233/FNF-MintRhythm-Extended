@@ -163,24 +163,33 @@ class GameOverSubstate extends MusicBeatSubstate
 			{
 				endBullshit();
 			}
-			else if (controls.BACK)
+		else if (controls.BACK)
+		{
+			if (PlayState.isCommandLineMode)
 			{
+				// 命令行直启：不允许退出到主界面，直接退出游戏
 				#if DISCORD_ALLOWED DiscordClient.resetClientID(); #end
-				FlxG.camera.visible = false;
 				FlxG.sound.music.stop();
-				PlayState.deathCounter = 0;
-				PlayState.seenCutscene = false;
-				PlayState.chartingMode = false;
-	
-				Mods.loadTopMod();
-				if (PlayState.isStoryMode)
-					MusicBeatState.switchState(new StoryMenuState());
-				else
-					MusicBeatState.switchState(new FreeplayState());
-	
-				FlxG.sound.playMusic(Paths.music('freakyMenu'));
-				PlayState.instance.callOnScripts('onGameOverConfirm', [false]);
+				if (FlxG.save != null)
+					FlxG.save.flush();
+				Sys.exit(0);
 			}
+			#if DISCORD_ALLOWED DiscordClient.resetClientID(); #end
+			FlxG.camera.visible = false;
+			FlxG.sound.music.stop();
+			PlayState.deathCounter = 0;
+			PlayState.seenCutscene = false;
+			PlayState.chartingMode = false;
+
+			Mods.loadTopMod();
+			if (PlayState.isStoryMode)
+				MusicBeatState.switchState(new StoryMenuState());
+			else
+				MusicBeatState.switchState(new FreeplayState());
+
+			FlxG.sound.playMusic(Paths.music('freakyMenu'));
+			PlayState.instance.callOnScripts('onGameOverConfirm', [false]);
+		}
 			else if (justPlayedLoop)
 			{
 				switch(PlayState.SONG.stage)

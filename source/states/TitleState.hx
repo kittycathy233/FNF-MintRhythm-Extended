@@ -1,6 +1,8 @@
 package states;
 
+import Main;
 import backend.WeekData;
+import states.CommandLineLaunchState;
 
 import flixel.input.keyboard.FlxKey;
 import flixel.graphics.frames.FlxAtlasFrames;
@@ -71,6 +73,16 @@ class TitleState extends MusicBeatState
 		Paths.clearStoredMemory();
 		super.create();
 		Paths.clearUnusedMemory();
+
+		// 命令行直启（Flixel / None 等直接进入标题的开屏模式）：跳转到指定曲目，跳过标题界面
+		#if MODS_ALLOWED
+		if (Main.commandLineLaunch != null)
+		{
+			CommandLineLaunchState.launchData = Main.commandLineLaunch;
+			MusicBeatState.switchState(new CommandLineLaunchState());
+			return;
+		}
+		#end
 
 		if(!initialized)
 		{

@@ -13,6 +13,7 @@ import states.TitleState;
 import states.LogoState;
 import states.EnhancedFlixelState;
 import states.FreeplayState;
+import states.CommandLineLaunchState;
 #if HSCRIPT_ALLOWED
 import crowplexus.iris.Iris;
 import psychlua.HScript.HScriptInfos;
@@ -62,6 +63,9 @@ class Main extends Sprite
 	/** 强制隐藏 FPS 计数器（如进入制谱器时临时隐藏，不受 showFPS 设置与窗口缩放影响）。
 	 * 设为 false 或调用 updateFPSCounterVisibility 可恢复。 */
 	public static var forceHideFPS:Bool = false;
+
+	/** 命令行直启参数（由 parseCommandLineArgs 填充）；为 null 时走正常启动流程 */
+	public static var commandLineLaunch:CommandLineLaunch = null;
 
 	public static final platform:String = #if mobile "Phones" #else "PCs" #end;
 
@@ -115,6 +119,9 @@ class Main extends Sprite
 		super();
 		// 尽早劫持日志输出，避免 debug 编译以外时污染终端
 		hookConsoleLog();
+
+		// 解析命令行直启参数（--mod / --week / --song / --diff 或位置参数）
+		parseCommandLineArgs();
 
 		#if mobile
 		#if android
@@ -253,6 +260,15 @@ class Main extends Sprite
 				skipSplash = true;
 				initialGameState = LogoState; // 自定义 Logo 开屏，结束后进入 TitleState
 		}
+
+		// 命令行直启：开屏画面仍由上面的 splashMode 决定，这里只预填参数。
+		// 开屏结束后的跳转目标由各个「开屏结束态」(LogoState / TitleState / EnhancedFlixelState) 按 commandLineLaunch 决定。
+		#if MODS_ALLOWED
+		if (commandLineLaunch != null)
+		{
+			CommandLineLaunchState.launchData = commandLineLaunch;
+		}
+		#end
 
 		// addChild(new FlxGame(game.width, game.height, #if COPYSTATE_ALLOWED !CopyState.checkExistingFiles() ? CopyState : #end initialGameState, game.framerate, game.framerate, skipSplash, game.startFullscreen));
 
@@ -741,5 +757,80 @@ class Main extends Sprite
 	function setCustomCursor():Void
 	{
 		FlxG.mouse.load('assets/shared/images/cursor.png');
+	}
+
+	/**
+	 * 解析命令行参数，填充 commandLineLaunch。
+	 * 支持的参数：
+	 *   --mod <模组名>   --week <周名>   --song <曲目名>   --diff <难度>
+	 *   --play "模组|周|曲目|难度"   或位置参数：模组 周 曲目 [难度]
+	 *   --help / -h   打印帮助
+	 */
+	function parseCommandLineArgs():Void
+	{
+		var args:Array<String> = Sys.args();
+		if (args == null || args.length == 0)
+			return;
+
+		var mod:String = null;
+		var week:String = null;
+		var song:String = null;
+		var diff:String = null;
+
+		var i:Int = 0;
+		while (i < args.length)
+		{
+			var a:String = args[i];
+			function nextArg():String
+			{
+				if (i + 1 < args.length)
+					return args[++i];
+				return null;
+			}
+			switch (a.toLowerCase())
+			{
+				case '-mod', '--mod', '/mod':
+					mod = nextArg();
+				case '-week', '--week', '/week':
+					week = nextArg();
+				case '-song', '--song', '/song':
+					song = nextArg();
+				case '-diff', '--diff', '-difficulty', '--difficulty', '/diff':
+					diff = nextArg();
+				case '-play', '--play', '-launch', '--launch':
+					var parts:Array<String> = nextArg().split('|');
+					if (mod == null && parts.length > 0) mod = parts[0];
+					if (week == null && parts.length > 1) week = parts[1];
+					if (song == null && parts.length > 2) song = parts[2];
+					if (diff == null && parts.length > 3) diff = parts[3];
+				case '-h', '--help', '/help', '-?', '/?':
+					printLaunchHelp();
+					return;
+				default:
+					// 位置参数：mod week song [diff]
+					if (mod == null) mod = a;
+					else if (week == null) week = a;
+					else if (song == null) song = a;
+					else if (diff == null) diff = a;
+			}
+			i++;
+		}
+
+		if (song != null && song.trim().length > 0)
+		{
+			commandLineLaunch = {mod: mod, week: week, song: song, difficulty: diff};
+			trace('Command-line launch requested: mod=$mod, week=$week, song=$song, diff=$diff');
+		}
+	}
+
+	function printLaunchHelp():Void
+	{
+		Sys.println('');
+		Sys.println('Kathy Engine - 命令行直启用法:');
+		Sys.println('  KathyEngine.exe --mod "模组名" --week "周名" --song "曲目名" [--diff "难度"]');
+		Sys.println('  KathyEngine.exe --play "模组名|周名|曲目名|难度"');
+		Sys.println('  KathyEngine.exe "模组名" "周名" "曲目名" ["难度"]   (位置参数)');
+		Sys.println('  说明: 未找到目标时会提示并返回 Freeplay。');
+		Sys.println('');
 	}
 }

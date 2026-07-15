@@ -180,7 +180,15 @@ class ResultsScreen extends FlxSubState
 		// contText（偏右下角）
 		contText = createTextField(Math.floor(stageWidth - 520 * scale), Math.floor(stageHeight + 80 * scale), Math.floor(500 * scale), FlxColor.WHITE,
 			Math.floor(32 * scale));
-		contText.text = #if mobile 'Touch Screen to continue.' #else 'Press \'ENTER\' to continue or \'F8\' to recap.' #end;
+		if (PlayState.isCommandLineMode)
+		{
+			// 命令行直启：回车退出游戏，且不支持回看/保存回放
+			contText.text = #if mobile 'Touch Screen to exit.' #else 'Press \'ENTER\' to exit.' #end;
+		}
+		else
+		{
+			contText.text = #if mobile 'Touch Screen to continue.' #else 'Press \'ENTER\' to continue or \'F8\' to recap.' #end;
+		}
 		overlaySprite.addChild(contText);
 
 		// 检查是否有回放数据
@@ -267,6 +275,20 @@ class ResultsScreen extends FlxSubState
 		LoadingState.loadAndSwitchState(new PlayState());
 	}
 
+	// 命令行直启：退出整个游戏
+	private function exitGame():Void
+	{
+		PlayState.instance.canResync = false;
+		PlayState.changedDifficulty = false;
+		if (FlxG.save != null)
+			FlxG.save.flush(); // 落盘（分数等）
+		close();
+		#if DISCORD_ALLOWED
+		DiscordClient.resetClientID();
+		#end
+		Sys.exit(0);
+	}
+
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);
@@ -325,14 +347,18 @@ class ResultsScreen extends FlxSubState
 		// 桌面端：ENTER键继续，R键回放
 		if (FlxG.keys.justPressed.ENTER)
 		{
-			handleContinue();
+			if (PlayState.isCommandLineMode)
+				exitGame(); // 命令行直启：回车退出游戏
+			else
+				handleContinue();
 		}
-		else if (FlxG.keys.justPressed.F8 && canReplay && !replayPressed)
+		else if (FlxG.keys.justPressed.F8 && canReplay && !replayPressed && !PlayState.isCommandLineMode)
 		{
 			replayPressed = true;
 			handleReplay();
 		}
 		else if (FlxG.keys.justPressed.F9
+			&& !PlayState.isCommandLineMode
 			&& PlayState.instance != null
 			&& PlayState.instance.replayData != null
 			&& PlayState.instance.replayData.length > 0
@@ -445,7 +471,10 @@ class ResultsScreen extends FlxSubState
 		// 检测触摸或点击
 		if (FlxG.mouse.justPressed || FlxG.touches.justStarted().length > 0)
 		{
-			handleContinue();
+			if (PlayState.isCommandLineMode)
+				exitGame(); // 命令行直启：触摸退出游戏
+			else
+				handleContinue();
 		}
 		#end
 	}

@@ -24,6 +24,9 @@ package states;
 
 #if COPYSTATE_ALLOWED
 import states.TitleState;
+import states.CommandLineLaunchState;
+import states.EnhancedFlixelState;
+import Main;
 import lime.utils.Assets as LimeAssets;
 import openfl.utils.Assets as OpenFLAssets;
 import openfl.utils.ByteArray;
@@ -62,7 +65,7 @@ class CopyState extends MusicBeatState
 		checkExistingFiles();
 		if (maxLoopTimes <= 0)
 		{
-			MusicBeatState.switchState(new TitleState());
+			gotoNextState();
 			return;
 		}
 
@@ -122,7 +125,7 @@ class CopyState extends MusicBeatState
 
 				FlxG.sound.play(Paths.sound('confirmMenu')).onComplete = () ->
 				{
-					MusicBeatState.switchState(new TitleState());
+					gotoNextState();
 				};
 
 				canUpdate = false;
@@ -225,6 +228,37 @@ class CopyState extends MusicBeatState
 		}
 
 		return file;
+	}
+
+	private function gotoNextState():Void
+	{
+		#if MODS_ALLOWED
+		if (Main.commandLineLaunch != null)
+		{
+			CommandLineLaunchState.launchData = Main.commandLineLaunch;
+		}
+		#end
+
+		// 开屏画面跟随设置中的 splashMode（拷贝前已 loadPrefs）。
+		// 命令行直启时，由对应的开屏结束态(LogoState / TitleState / EnhancedFlixelState)负责跳转进歌。
+		var splashMode:String = ClientPrefs.data.splashMode;
+		switch (splashMode)
+		{
+			case 'Flixel', 'None':
+				// 拷贝流程无法再显示 Flixel 自带 splash，直接进入标题（标题会按命令行参数重定向）
+				#if MODS_ALLOWED
+				if (Main.commandLineLaunch != null)
+				{
+					MusicBeatState.switchState(new CommandLineLaunchState());
+					return;
+				}
+				#end
+				MusicBeatState.switchState(new TitleState());
+			case 'Flixel+':
+				MusicBeatState.switchState(new EnhancedFlixelState());
+			default: // 'Kathy'
+				MusicBeatState.switchState(new LogoState());
+		}
 	}
 
 	public static function checkExistingFiles():Bool

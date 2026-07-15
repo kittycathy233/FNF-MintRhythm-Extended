@@ -285,6 +285,8 @@ class PlayState extends MusicBeatState
 
 	public static var SONG:SwagSong = null;
 	public static var isStoryMode:Bool = false;
+	// 是否由命令行直启进入（用于禁用调试/退出主界面/选项，并改变结算界面行为）
+	public static var isCommandLineMode:Bool = false;
 	public static var storyWeek:Int = 0;
 	public static var storyPlaylist:Array<String> = [];
 	public static var storyDifficulty:Int = 1;
@@ -2984,7 +2986,7 @@ isReplaying = false;
 			}
 		}
 
-		if(!endingSong && !inCutscene && allowDebugKeys)
+		if(!endingSong && !inCutscene && allowDebugKeys && !isCommandLineMode)
 		{
 			// 仅在开发者模式启用时，才允许从游戏中直接进入编辑器界面
 			if (controls.justPressed('debug_1') && ClientPrefs.data.developer)
