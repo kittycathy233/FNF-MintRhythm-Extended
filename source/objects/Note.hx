@@ -551,6 +551,13 @@ class Note extends FlxSprite
 			}
 		} else {
 			frames = Paths.getSparrowAtlas(getNoteSkinPath(skin));
+			// 防护：若解析出的皮肤贴图加载失败（文件缺失/损坏），getSparrowAtlas 会返回 null，
+			// 导致后续 addByPrefix / findByPrefix 崩溃。回退到默认皮肤并告警，避免整局崩溃。
+			if (frames == null)
+			{
+				FlxG.log.warn('Note skin failed to load: "' + getNoteSkinPath(skin) + '", falling back to default "' + defaultNoteSkin + '"');
+				frames = Paths.getSparrowAtlas(defaultNoteSkin);
+			}
 			loadNoteAnims();
 			if(!isSustainNote)
 			{
@@ -671,6 +678,10 @@ class Note extends FlxSprite
 
 	function attemptToAddAnimationByPrefix(name:String, prefix:String, framerate:Float = 24, doLoop:Bool = true)
 	{
+		// 防护：与 flixel 的 addByPrefix 一致，frames 未加载（为 null）时直接跳过，
+		// 否则 findByPrefix 会访问 null.frames 触发 Null Object Reference 崩溃。
+		if (frames == null) return;
+
 		var animFrames = [];
 		@:privateAccess
 		animation.findByPrefix(animFrames, prefix); // adds valid frames to animFrames
