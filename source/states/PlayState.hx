@@ -2290,7 +2290,8 @@ isReplaying = false;
 	 */
 	private function generateSongLegacy(sectionsData:Array<SwagSection>, daBpm:Float, oldNote:Note, ghostNotesCaught:Int):Void {
 		// 使用 Map 做 O(1) 查找替代 O(n) 线性扫描检测 Ghost Note
-		var ghostNoteMap:Map<String, Int> = new Map();
+		// 注意：存"音符引用"而非"数组下标"，否则 remove 后下标失效会越界崩溃
+		var ghostNoteMap:Map<String, Note> = new Map();
 
 		for (section in sectionsData)
 		{
@@ -2314,7 +2315,7 @@ isReplaying = false;
 					var ghostKey:String = '${noteColumn}_${gottaHitNote}_${noteType}_$spawnTime';
 					if (ghostNoteMap.exists(ghostKey))
 					{
-						var evilNote:Note = unspawnNotes[ghostNoteMap.get(ghostKey)];
+						var evilNote:Note = ghostNoteMap.get(ghostKey);
 						if (evilNote.tail.length > 0)
 							for (tail in evilNote.tail)
 							{
@@ -2337,8 +2338,8 @@ isReplaying = false;
 	
 				swagNote.scrollFactor.set();
 				unspawnNotes.push(swagNote);
-				// 注册到 Ghost Note 查找 Map（用于后续检测重复音符）
-				ghostNoteMap.set('${noteColumn}_${gottaHitNote}_${noteType}_$spawnTime', unspawnNotes.length - 1);
+				// 注册到 Ghost Note 查找 Map（用于后续检测重复音符），存引用避免下标失效
+				ghostNoteMap.set('${noteColumn}_${gottaHitNote}_${noteType}_$spawnTime', swagNote);
 
 				var curStepCrochet:Float = 60 / daBpm * 1000 / 4.0;
 				final roundSus:Int = Math.round(swagNote.sustainLength / curStepCrochet);
@@ -3028,7 +3029,11 @@ isReplaying = false;
 				if (timeDiff > 1000 * playbackRate)
 					Conductor.songPosition = Conductor.songPosition + 1000 * FlxMath.signOf(timeDiff);
 			}
+
+			// 线性 BPM 过渡：实时刷新全局 BPM / 节拍，供图标缩放、脚本等使用
+			Conductor.bpm = Conductor.getBPMFromSeconds(Conductor.songPosition).bpm;
 		}
+
 
 		if (startingSong)
 		{
@@ -5635,7 +5640,10 @@ isReplaying = false;
 
         if (SONG.notes[curSection].changeBPM)
         {
-            Conductor.bpm = SONG.notes[curSection].bpm;
+            // 线性 BPM 过渡：用当前实时瞬时 BPM，而不是把全局 BPM 硬设为目标值。
+            // 否则在 ramp 段（尤其是单曲内多个连续 ramp 段）进入瞬间会突跳到 endTime，
+            // 破坏与 update() 中实时插值的平滑一致性（仅当帧/脚本 curBpm 会跳变）。
+            Conductor.bpm = Conductor.getBPMFromSeconds(Conductor.songPosition).bpm;
             setOnScripts('curBpm', Conductor.bpm);
             setOnScripts('crochet', Conductor.crochet);
             setOnScripts('stepCrochet', Conductor.stepCrochet);

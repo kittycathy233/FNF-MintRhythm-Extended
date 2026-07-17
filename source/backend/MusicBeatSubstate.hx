@@ -184,11 +184,10 @@ class MusicBeatSubstate extends FlxSubState
 
 	private function updateCurStep():Void
 	{
-		var lastChange = Conductor.getBPMFromSeconds(Conductor.songPosition);
-
-		var shit = ((Conductor.songPosition - ClientPrefs.data.noteOffset) - lastChange.songTime) / lastChange.stepCrochet;
-		curDecStep = lastChange.stepTime + shit;
-		curStep = lastChange.stepTime + Math.floor(shit);
+		// 改用 Conductor.getStep，自动兼容线性 BPM 过渡（step↔时间不再线性）
+		var time = Conductor.songPosition - ClientPrefs.data.noteOffset;
+		curDecStep = Conductor.getStep(time);
+		curStep = Math.floor(curDecStep);
 	}
 
 	public function stepHit():Void

@@ -1355,10 +1355,11 @@ if(_shouldReset) Conductor.songPosition = 0;
 						if(typeSelected.length < 1) typeSelected = null;
 					}
 
-					var sectionStart:Float = cachedSectionTimes[curSec];
-					var strumTime:Float = Conductor.songPosition - sectionStart;
-					strumTime -= strumTime % (Conductor.stepCrochet * 16 / curQuant);
-					strumTime += sectionStart;
+					// 在“步空间”量化播放头，再转回 ramp 感知的毫秒（与网格一致）
+					var quantSteps:Float = 16 / curQuant;
+					var curStepF:Float = Conductor.getStep(Conductor.songPosition);
+					curStepF = Math.floor(curStepF / quantSteps) * quantSteps;
+					var strumTime:Float = Conductor.getTimeFromStep(curStepF);
 
 					trace('Vortex editor press at time: $strumTime');
 					var deletedNotes:Array<MetaNote> = [];
@@ -1921,15 +1922,16 @@ if(_shouldReset) Conductor.songPosition = 0;
 							{
 								if(note == null) continue;
 		
-								note.chartY += diff;
-								var row:Float = (note.chartY / GRID_SIZE) * curZoom;
-								while(curSecRow + 1 < cachedSectionRow.length && cachedSectionRow[curSecRow] <= row)
-								{
-									curSecRow++;
-								}
-		
-								note.setStrumTime(Math.max(-5000, note.strumTime + (diff * cachedSectionCrochets[curSecRow] / 4) / GRID_SIZE * curZoom));
-								positionNoteYOnTime(note, curSecRow);
+							note.chartY += diff;
+							var row:Float = (note.chartY / GRID_SIZE) * curZoom;
+							while(curSecRow + 1 < cachedSectionRow.length && cachedSectionRow[curSecRow] <= row)
+							{
+								curSecRow++;
+							}
+
+							// ramp 感知：chartY 对应均匀步位置，直接转回毫秒（避免用起点 crochet 在过渡段产生误差）
+							note.setStrumTime(Math.max(-5000, Conductor.getTimeFromStep(row)));
+							positionNoteYOnTime(note, curSecRow);
 								if(note.isEvent) cast (note, EventMetaNote).updateEventText();
 							}
 							movingNotesLastY = dummyArrow.y;
@@ -1999,7 +2001,9 @@ if(_shouldReset) Conductor.songPosition = 0;
 							}
 							else if(!holdingAlt && touch.y >= trackInfo.grid.y && touch.y < trackInfo.grid.y + trackInfo.grid.height) // Add note
 							{
-								var strumTime:Float = (diffY / GRID_SIZE * Conductor.stepCrochet / curZoom) + cachedSectionTimes[curSec];
+								// 触摸 Y（均匀像素）→ 步 → ramp 感知毫秒，放置与显示一致
+								var stepAtMouse:Float = (diffY / (GRID_SIZE * curZoom)) + cachedSectionRow[curSec];
+								var strumTime:Float = Conductor.getTimeFromStep(stepAtMouse);
 								if(noteData >= 0)
 								{
 									trace('Added note at time: $strumTime');
@@ -2270,7 +2274,9 @@ if(_shouldReset) Conductor.songPosition = 0;
 						}
 						else if(!holdingAlt && FlxG.mouse.y >= mouseTrackInfo.grid.y && FlxG.mouse.y < mouseTrackInfo.grid.y + mouseTrackInfo.grid.height) // Add note
 						{
-							var strumTime:Float = (diffY / GRID_SIZE * Conductor.stepCrochet / curZoom) + cachedSectionTimes[curSec];
+							// 鼠标 Y（均匀像素）→ 步 → ramp 感知毫秒，放置与显示一致
+							var stepAtMouse:Float = (diffY / (GRID_SIZE * curZoom)) + cachedSectionRow[curSec];
+							var strumTime:Float = Conductor.getTimeFromStep(stepAtMouse);
 							if(noteData >= 0)
 							{
 								trace('Added note at time: $strumTime');
@@ -2433,10 +2439,8 @@ if(_shouldReset) Conductor.songPosition = 0;
 	}
 
 		// 更新不受noteOffset影响的纯粹歌曲节拍（用于图标缩放）
-		var lastChangePure = Conductor.getBPMFromSeconds(Conductor.songPosition);
-		var shitPure = (Conductor.songPosition - lastChangePure.songTime) / lastChangePure.stepCrochet;
-		var curDecStepPure:Float = lastChangePure.stepTime + shitPure;
-		curStepPure = lastChangePure.stepTime + Math.floor(shitPure);
+		var curDecStepPure:Float = Conductor.getStep(Conductor.songPosition);
+		curStepPure = Math.floor(curDecStepPure);
 		curBeatPure = Math.floor(curStepPure / 4);
 		
 		// 计算纯粹的section（不受noteOffset影响）
@@ -3343,8 +3347,6 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 
 	function _cacheSections()
 	{
-		var time:Float = 0;
-		var row:Int = 0;
 		cachedSectionRow = [];
 		cachedSectionTimes = [];
 		cachedSectionCrochets = [];
@@ -3359,34 +3361,50 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 			return;
 		}
 
-		var bpm:Float = PlayState.SONG.bpm;
-		var reachedLimit:Bool = false;
-		for (secNum => section in PlayState.SONG.notes)
+		// 修正每段的 sectionBeats（与 mapBPMChanges 保持一致）
+		for (section in PlayState.SONG.notes)
 		{
 			var secs:Null<Float> = cast section.sectionBeats;
 			if(secs == null || Math.isNaN(secs) || secs <= 0) section.sectionBeats = 4;
-	
-			if(section.changeBPM) bpm = section.bpm;
-			var beat:Float = Conductor.calculateCrochet(bpm);
-			//trace(secBPM, beat);
-			
-			cachedSectionRow.push(row);
-			cachedSectionTimes.push(time);
-			cachedSectionCrochets.push(beat);
-			cachedSectionBPMs.push(bpm);
+		}
 
-			var lastTime:Float = time;
+		// 先构建支持线性 BPM 过渡的 BPM 映射（与 BPM 无关，只依赖 sectionBeats）
+		Conductor.mapBPMChanges(PlayState.SONG);
+		// 确保全局基础 BPM 复位为歌曲基准（mapBPMChanges 已处理，这里再保险一次，
+		// 避免从 PlayState 返回时遗留的瞬时 BPM 污染 makeDefault 计算的段位置）
+		Conductor.bpm = PlayState.SONG.bpm;
+
+		var bpm:Float = PlayState.SONG.bpm;
+		var reachedLimit:Bool = false;
+		var row:Int = 0;
+		for (secNum => section in PlayState.SONG.notes)
+		{
+			// 进入本段时的 BPM（= 本段起点 BPM），作为该段“编辑用 BPM”，
+			// 这样网格显示、音符放置、Conductor.bpm 三者一致；ramp 段也用起点 BPM，
+			// 跳回前面小节时 Conductor.bpm 能正确回退到之前的 BPM。
+			var startBpm:Float = bpm;
+			if(section.changeBPM && section.bpm != null) bpm = section.bpm;
+
+			cachedSectionRow.push(row);
+			var startTime:Float = Conductor.getTimeFromStep(row);
+			cachedSectionTimes.push(startTime);
+
+			// 用“段起点”的 crochet / BPM，使网格与放置一致（ramp 段起点 BPM 即 startBpm）
+			var seg = Conductor.getBPMFromStep(row);
+			cachedSectionCrochets.push(seg.stepCrochet * 4);
+			cachedSectionBPMs.push(startBpm);
+
 			var rowRound:Int = Math.round(4 * section.sectionBeats);
+			var endTime:Float = Conductor.getTimeFromStep(row + rowRound);
 			row += rowRound;
-			time += beat * (rowRound / 4);
 
 			for (note in section.sectionNotes)
 			{
-				if(secNum > 0 && note[0] < lastTime) note[0] = lastTime;
-				else if(secNum < PlayState.SONG.notes.length && note[0] >= time - 0.000001) note[0] = time - 0.000001;
+				if(secNum > 0 && note[0] < startTime) note[0] = startTime;
+				else if(secNum < PlayState.SONG.notes.length && note[0] >= endTime - 0.000001) note[0] = endTime - 0.000001;
 			}
 
-			if(FlxG.sound.music != null && time >= FlxG.sound.music.length)
+			if(FlxG.sound.music != null && endTime >= FlxG.sound.music.length)
 			{
 				var lastSectionNum:Int = PlayState.SONG.notes.length - 1;
 				if(secNum < lastSectionNum) //Delete extra sections
@@ -3411,12 +3429,11 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		if(FlxG.sound.music != null && !reachedLimit) //Created sections to fill blank space
 		{
 			var lastSection = PlayState.SONG.notes[PlayState.SONG.notes.length-1];
-			var beat:Float = Conductor.calculateCrochet(bpm);
 			var sectionBeats:Float = lastSection != null ? lastSection.sectionBeats : 4;
 			var rowRound:Int = Math.round(4 * sectionBeats);
-			var timeAdd:Float = beat * (rowRound / 4);
 			var mustHitSec:Bool = lastSection != null ? lastSection.mustHitSection : true;
 			var changeBpmSec:Bool = lastSection != null ? lastSection.changeBPM : false;
+			var bpmVal:Float = (lastSection != null && lastSection.bpm != null) ? lastSection.bpm : bpm;
 			var altAnimSec:Bool = lastSection != null ? lastSection.altAnim : false;
 			var gfSec:Bool = lastSection != null ? lastSection.gfSection : false;
 
@@ -3426,21 +3443,22 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 					sectionNotes: [],
 					sectionBeats: sectionBeats,
 					mustHitSection: mustHitSec,
-					bpm: bpm,
+					bpm: bpmVal,
 					changeBPM: changeBpmSec,
 					altAnim: altAnimSec,
 					gfSection: gfSec
 				});
 
-				cachedSectionRow.push(row);
-				cachedSectionTimes.push(time);
-				cachedSectionCrochets.push(beat);
-				cachedSectionBPMs.push(bpm);
+			cachedSectionRow.push(row);
+			cachedSectionTimes.push(Conductor.getTimeFromStep(row));
+			var seg2 = Conductor.getBPMFromStep(row);
+			cachedSectionCrochets.push(seg2.stepCrochet * 4);
+			cachedSectionBPMs.push(bpm); // 用当前运行 BPM（= 进入本段起点 BPM）保持一致
 
+				var endTime:Float = Conductor.getTimeFromStep(row + rowRound);
 				row += rowRound;
-				time += timeAdd;
 
-				if(time >= FlxG.sound.music.length)
+				if(endTime >= FlxG.sound.music.length)
 				{
 					trace('created sections until ${PlayState.SONG.notes.length-1}');
 					reachedLimit = true;
@@ -3448,13 +3466,7 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 			}
 		}
 		cachedSectionRow.push(row);
-		cachedSectionTimes.push(time);
-		
-		// 同步更新 Conductor 的 BPM 变更映射！
-		if(PlayState.SONG != null)
-		{
-			Conductor.mapBPMChanges(PlayState.SONG);
-		}
+		cachedSectionTimes.push(Conductor.getTimeFromStep(row));
 	}
 
 	var showPreviousSection:Bool = true;
@@ -3575,7 +3587,9 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 			gfSectionCheckBox.checked = sec.gfSection;
 			altAnimSectionCheckBox.checked = sec.altAnim;
 			changeBpmCheckBox.checked = sec.changeBPM;
-			changeBpmStepper.value = Conductor.bpm;
+			// changeBPM 段显示“目标 BPM”（编辑用）；其它段显示当前段编辑用 BPM（已随起点 BPM 正确回退）
+			changeBpmStepper.value = (sec.changeBPM && sec.bpm != null) ? sec.bpm : Conductor.bpm;
+			bpmRampStepper.value = (sec.bpmRamp != null) ? sec.bpmRamp : 0;
 			beatsPerSecStepper.value = sec.sectionBeats;
 
 			strumTimeStepper.step = Conductor.stepCrochet;
@@ -3814,9 +3828,9 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 
 	function positionNoteYOnTime(note:MetaNote, section:Int)
 	{
-		var time:Float = note.strumTime - cachedSectionTimes[section];
-		var noteY:Float = (time / cachedSectionCrochets[section]) * GRID_SIZE * 4 * curZoom;
-		noteY += cachedSectionRow[section] * GRID_SIZE * curZoom;
+		// 用 ramp 感知的 getStep 把音符放到其“步位置”对应的均匀网格线上：
+		// 即使某段 BPM 线性过渡，音符依然落在网格上且毫秒正确（不挤到段顶）。
+		var noteY:Float = Conductor.getStep(note.strumTime) * GRID_SIZE * curZoom;
 		noteY = Math.max(noteY, -150);
 		note.y = noteY + (GRID_SIZE/2 - note.height/2);
 		note.chartY = noteY;
@@ -4409,6 +4423,7 @@ for (i in 0...GRID_PLAYERS)
 
 	var changeBpmCheckBox:PsychUICheckBox;
 	var changeBpmStepper:PsychUINumericStepper;
+	var bpmRampStepper:PsychUINumericStepper;
 	var beatsPerSecStepper:PsychUINumericStepper;
 
 	function addSectionTab()
@@ -4528,6 +4543,30 @@ for (i in 0...GRID_PLAYERS)
 				adaptNotesToNewTimes(oldTimes);
 			}
 		};
+
+		objY += 25;
+		var bpmRampLabel = new FlxText(changeBpmStepper.x, objY - 15, 220, 'BPM Ramp (steps)');
+		bpmRampLabel.setFormat(Paths.font(Language.get('uitab_font')), 12);
+		tab_group.add(bpmRampLabel);
+		bpmRampStepper = new PsychUINumericStepper(changeBpmStepper.x, objY, 1, 0, 0, 9999, 0);
+		bpmRampStepper.onValueChange = function()
+		{
+			var sec = getCurChartSection();
+			if(sec != null)
+			{
+				var oldTimes:Array<Float> = cachedSectionTimes.copy();
+				sec.bpmRamp = bpmRampStepper.value;
+				if(bpmRampStepper.value > 0)
+				{
+					sec.changeBPM = true;
+					if(sec.bpm == null) sec.bpm = changeBpmStepper.value;
+				}
+				// 不要在这里调用 _cacheSections()，否则 adaptNotesToNewTimes 内部捕获的"旧映射"会变成新映射
+				adaptNotesToNewTimes(oldTimes);
+				softReloadNotes();
+			}
+		};
+
 
 		beatsPerSecStepper = new PsychUINumericStepper(objX + 150, objY, 1, 4, 1, 16, 2);
 		beatsPerSecStepper.onValueChange = function()
@@ -4661,6 +4700,7 @@ for (i in 0...GRID_PLAYERS)
 		tab_group.add(new FlxText(beatsPerSecStepper.x, beatsPerSecStepper.y - 15, 100, Language.get('charting_beatspersec_text')).setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(changeBpmCheckBox);
 		tab_group.add(changeBpmStepper);
+		tab_group.add(bpmRampStepper);
 		tab_group.add(beatsPerSecStepper);
 		
 		tab_group.add(copyButton);
@@ -6570,81 +6610,94 @@ for (i in 0...GRID_PLAYERS)
 		softReloadNotes();
 	}
 
-	function adaptNotesToNewTimes(oldTimes:Array<Float>)
+function adaptNotesToNewTimes(oldTimes:Array<Float>)
+{
+	undoActions = [];
+	setSongPlaying(false);
+	var gridLerp:Float = FlxMath.bound((scrollY + FlxG.height/2 - opponentGridBg.y) / opponentGridBg.height, 0.000001, 0.999999);
+	notes.sort(PlayState.sortByTime);
+
+	// 捕获"旧"的 BPM 映射（来自上一次 _cacheSections），用于把音符按其网格步位置重新定位，
+	// 这样在线性 BPM 过渡(ramp)下调整 ramp 时，音符的步位置保持不变，不会被线性缩放挤歪/重叠。
+	var oldMap = Conductor.bpmChangeMap.copy();
+
+	_cacheSections(); // 用新的 ramp 配置重建 Conductor 映射与 section 时间
+
+	// 用旧映射求出每个音符的步位置；之后恢复新映射，用积分公式换算到新的毫秒时间
+	var newMap = Conductor.bpmChangeMap;
+	Conductor.bpmChangeMap = oldMap;
+	var oldSteps:Array<Float> = [];
+	for (note in notes)
+		oldSteps.push((note == null || note.strumTime <= 0) ? Math.NaN : Conductor.getStep(note.strumTime));
+	Conductor.bpmChangeMap = newMap;
+
+	var noteSec:Int = 0;
+	var oldNextSectionTime:Float = oldTimes[noteSec + 1];
+	var oldCurSectionTime:Float = oldTimes[noteSec];
+	var nextSectionTime:Float = cachedSectionTimes[noteSec + 1];
+	var curSectionTime:Float = cachedSectionTimes[noteSec];
+
+	for (num => note in notes)
 	{
-		undoActions = [];
-		setSongPlaying(false);
-		var gridLerp:Float = FlxMath.bound((scrollY + FlxG.height/2 - opponentGridBg.y) / opponentGridBg.height, 0.000001, 0.999999);
-		notes.sort(PlayState.sortByTime);
-		_cacheSections();
+		if(note == null || note.strumTime <= 0) continue;
 
-		var noteSec:Int = 0;
-		var oldNextSectionTime:Float = oldTimes[noteSec + 1];
-		var oldCurSectionTime:Float = oldTimes[noteSec];
-		var nextSectionTime:Float = cachedSectionTimes[noteSec + 1];
-		var curSectionTime:Float = cachedSectionTimes[noteSec];
-
-		for (num => note in notes)
+		while(noteSec + 2 < oldTimes.length && oldTimes[noteSec + 1] <= note.strumTime)
 		{
-			if(note == null || note.strumTime <= 0) continue;
+			noteSec++;
+			oldNextSectionTime = oldTimes[noteSec + 1];
+			oldCurSectionTime = oldTimes[noteSec];
+			nextSectionTime = cachedSectionTimes[noteSec + 1];
+			curSectionTime = cachedSectionTimes[noteSec];
 
-			while(noteSec + 2 < oldTimes.length && oldTimes[noteSec + 1] <= note.strumTime)
+			if(noteSec + 1 >= cachedSectionTimes.length)
 			{
-				noteSec++;
-				oldNextSectionTime = oldTimes[noteSec + 1];
-				oldCurSectionTime = oldTimes[noteSec];
-				nextSectionTime = cachedSectionTimes[noteSec + 1];
-				curSectionTime = cachedSectionTimes[noteSec];
-
-				if(noteSec + 1 >= cachedSectionTimes.length)
+				trace('failsafe, cancel early and delete notes after this');
+				var changedSelected:Bool = false;
+				for(i in num...notes.length)
 				{
-					trace('failsafe, cancel early and delete notes after this');
-					var changedSelected:Bool = false;
-					for(i in num...notes.length)
+					var n = notes[num];
+					if(n != null)
 					{
-						var n = notes[num];
-						if(n != null)
+						if(selectedNotes.contains(n))
 						{
-							if(selectedNotes.contains(n))
-							{
-								selectedNotes.remove(n);
-								changedSelected = true;
-							}
-							notes.remove(n);
-							note.destroy();
+							selectedNotes.remove(n);
+							changedSelected = true;
 						}
+						notes.remove(n);
+						note.destroy();
 					}
-					if(changedSelected) onSelectNote();
-					loadSection();
-					return;
 				}
-				//trace('changed section: $noteSec, $oldNextSectionTime, $oldCurSectionTime, $nextSectionTime, $curSectionTime');
+				if(changedSelected) onSelectNote();
+				loadSection();
+				return;
 			}
-
-			var shouldBound:Bool = (note.strumTime >= oldCurSectionTime && note.strumTime < oldNextSectionTime);
-			var strumTime:Float = note.strumTime;
-
-			var ratio:Float = (nextSectionTime - curSectionTime) / (oldNextSectionTime - oldCurSectionTime);
-			var adaptedStrumTime:Float = ((note.strumTime - oldCurSectionTime) * ratio) + curSectionTime;
-			note.setStrumTime(adaptedStrumTime);
-			if(shouldBound)
-				note.setStrumTime(FlxMath.bound(note.strumTime, curSectionTime, nextSectionTime));
-
-			positionNoteYOnTime(note, noteSec);
-			note.updateSustainToStepCrochet(cachedSectionCrochets[noteSec] / 4);
+			//trace('changed section: $noteSec, $oldNextSectionTime, $oldCurSectionTime, $nextSectionTime, $curSectionTime');
 		}
-		
-		for (event in events)
+
+		// 按步位置保持：用旧映射求该音符的步，再用新映射换算新毫秒时间（兼容 ramp）
+		var oldStep:Float = oldSteps[num];
+		if(!Math.isNaN(oldStep))
 		{
-			var secNum:Int = 0;
-			for (time in cachedSectionTimes)
-			{
-				if(time > event.strumTime) break;
-				secNum++;
-			}
-			positionNoteYOnTime(event, secNum);
+			var newMs:Float = Conductor.getTimeFromStep(oldStep);
+			// 仅做轻微夹取，防止浮点误差越界；正常应已落在本段内
+			note.setStrumTime(FlxMath.bound(newMs, curSectionTime, nextSectionTime));
 		}
-		
+
+		positionNoteYOnTime(note, noteSec);
+		note.updateSustainToStepCrochet(cachedSectionCrochets[noteSec] / 4);
+	}
+
+	for (event in events)
+	{
+		var secNum:Int = 0;
+		for (time in cachedSectionTimes)
+		{
+			if(time > event.strumTime) break;
+			secNum++;
+		}
+		positionNoteYOnTime(event, secNum);
+	}
+	
 		var time:Float = FlxMath.remapToRange(gridLerp, 0, 1, cachedSectionTimes[curSec], cachedSectionTimes[curSec + 1]);
 		if(Math.isNaN(time))
 		{

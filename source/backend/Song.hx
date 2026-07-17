@@ -44,6 +44,7 @@ typedef SwagSection =
 	@:optional var gfSection:Bool;
 	@:optional var bpm:Float;
 	@:optional var changeBPM:Bool;
+	@:optional var bpmRamp:Float; // 线性 BPM 过渡持续的步数（0/缺省 = 瞬时跳变，保持旧行为）
 }
 
 class Song
