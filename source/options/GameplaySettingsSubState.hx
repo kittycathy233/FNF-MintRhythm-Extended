@@ -37,6 +37,13 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		addOption(option);
 
 		var option:Option = new Option(
+			"Precise Hit Timing",
+			"毫秒级精确判定：按键瞬间用音频时钟同步判定时间并实时计算判定窗口（替代上一帧缓存的 canBeHit），消除约 1 帧的判定滞后与边界误判。",
+			'preciseHit',
+			BOOL);
+		addOption(option);
+
+		var option:Option = new Option(
 			"Input System",
 			"选择输入判定系统模式\nDefault = 传统模式（按时间升序，最近的优先）\nRhythm = Rhythm模式（只允许击中离判定线最近的音符，其余触发Miss）",
 			'inputSystem',

@@ -4479,15 +4479,25 @@ isReplaying = false;
 		var ret:Dynamic = callOnScripts('onKeyPressPre', [key]);
 		if(ret == LuaUtils.Function_Stop) return;
 
-		// more accurate hit time for the ratings?
-		//判定修改（？）
-		//var lastTime:Float = Conductor.songPosition;
-		//if(Conductor.songPosition >= 0) Conductor.songPosition = FlxG.sound.music.time + Conductor.offset;
+		// 毫秒级精确判定（可在设置中开关 preciseHit）：
+		// 开启时用按键瞬间的音频时钟同步 songPosition 并实时计算判定窗口，消除约1帧的滞后与边界误判；
+		// 关闭时沿用原逻辑（依赖上一帧 update 缓存的 n.canBeHit 与 songPosition）。
+		var preciseHit:Bool = ClientPrefs.data.preciseHit;
+		var lastTime:Float = Conductor.songPosition;
+		if (preciseHit && FlxG.sound.music != null && FlxG.sound.music.playing)
+			Conductor.songPosition = FlxG.sound.music.time + Conductor.offset;
 
-		// obtain notes that the player can hit
 		var plrInputNotes:Array<Note> = notes.members.filter(function(n:Note):Bool {
-			var canHit:Bool = n != null && !strumsBlocked[n.noteData] && n.canBeHit && n.mustPress && !n.tooLate && !n.wasGoodHit && !n.blockHit;
-			return canHit && !n.isSustainNote && n.noteData == key;
+			if (n == null || n.isSustainNote || n.noteData != key) return false;
+			if (strumsBlocked[n.noteData] || !n.mustPress || n.tooLate || n.wasGoodHit || n.blockHit) return false;
+			if (preciseHit)
+			{
+				var timeUntilHit:Float = n.strumTime - Conductor.songPosition;
+				var earlyWindow:Float = Conductor.safeZoneOffset * n.earlyHitMult;
+				var lateWindow:Float = Conductor.safeZoneOffset * n.lateHitMult;
+				return (timeUntilHit > -lateWindow && timeUntilHit < earlyWindow);
+			}
+			return n.canBeHit;
 		});
 
 		// 根据输入系统设置选择排序方式
@@ -4584,9 +4594,8 @@ isReplaying = false;
 		//									- Shadow Mario
 		if(!keysPressed.contains(key)) keysPressed.push(key);
 
-		//more accurate hit time for the ratings? part 2 (Now that the calculations are done, go back to the time it was before for not causing a note stutter)
-		//判定修改（？）
-		//Conductor.songPosition = lastTime;
+	// [毫秒级精确判定] 开启时 songPosition 被临时改为精确值，这里还原为本帧原值，避免影响后续逻辑与音符视觉位置（防抖动）；下一帧 update 会重新从音频时钟同步。
+	if (preciseHit) Conductor.songPosition = lastTime;
 
 		var spr:StrumNote = playerStrums.members[key];
 		if(strumsBlocked[key] != true && spr != null && spr.animation.curAnim.name != 'confirm')

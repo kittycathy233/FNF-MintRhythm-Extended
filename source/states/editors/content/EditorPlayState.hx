@@ -699,14 +699,19 @@ class EditorPlayState extends MusicBeatSubstate
 	{
 		if(key < 0) return;
 
-		// more accurate hit time for the ratings?
+		// 毫秒级精确判定（可在设置中开关 preciseHit）：开启时同步编辑器音频时钟并实时计算判定窗口，关闭时沿用原 n.canBeHit 逻辑。
+		var preciseHit:Bool = ClientPrefs.data.preciseHit;
 		var lastTime:Float = Conductor.songPosition;
-		if(Conductor.songPosition >= 0) Conductor.songPosition = inst.time + Conductor.offset;
+		if (preciseHit && inst != null && inst.playing)
+			Conductor.songPosition = inst.time + Conductor.offset;
 
-		// obtain notes that the player can hit
 		var plrInputNotes:Array<Note> = notes.members.filter(function(n:Note)
-			return n != null && n.canBeHit && n.mustPress && !n.tooLate &&
-			!n.wasGoodHit && !n.blockHit && !n.isSustainNote && n.noteData == key);
+			return n != null && !n.isSustainNote && n.noteData == key &&
+			n.mustPress && !n.tooLate && !n.wasGoodHit && !n.blockHit &&
+			(preciseHit
+				? ((n.strumTime - Conductor.songPosition) > -(Conductor.safeZoneOffset * n.lateHitMult)
+					&& (n.strumTime - Conductor.songPosition) < (Conductor.safeZoneOffset * n.earlyHitMult))
+				: n.canBeHit));
 
 		plrInputNotes.sort(PlayState.sortHitNotes);
 
@@ -734,8 +739,8 @@ class EditorPlayState extends MusicBeatSubstate
 			goodNoteHit(funnyNote);
 		}
 
-		//more accurate hit time for the ratings? part 2 (Now that the calculations are done, go back to the time it was before for not causing a note stutter)
-		Conductor.songPosition = lastTime;
+	// [毫秒级精确判定] 开启时还原 songPosition 为本帧原值，避免影响视觉位置（防抖动）。
+	if (preciseHit) Conductor.songPosition = lastTime;
 
 		var spr:StrumNote = playerStrums.members[key];
 		if(spr != null && spr.animation.curAnim.name != 'confirm')
