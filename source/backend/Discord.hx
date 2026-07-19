@@ -21,13 +21,13 @@ class DiscordClient
 
 	public static function check()
 	{
-		if(ClientPrefs.data.discordRPC) initialize();
+		if(ClientPrefs.data.discordRPC && !Network.isNetworkingDisabled()) initialize();
 		else if(isInitialized) shutdown();
 	}
-	
+
 	public static function prepare()
 	{
-		if (!isInitialized && ClientPrefs.data.discordRPC)
+		if (!isInitialized && ClientPrefs.data.discordRPC && !Network.isNetworkingDisabled())
 			initialize();
 
 		Application.current.window.onClose.add(function() {

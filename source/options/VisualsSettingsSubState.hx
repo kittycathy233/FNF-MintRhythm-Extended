@@ -210,13 +210,20 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 		#end
 
-		#if DISCORD_ALLOWED
-		var option:Option = new Option("Discord Rich Presence",
-			Language.get("discordrpc_desc"),
-			'discordRPC',
-			BOOL);
-		addOption(option);
-		#end
+	#if DISCORD_ALLOWED
+	var option:Option = new Option("Discord Rich Presence",
+		Language.get("discordrpc_desc"),
+		'discordRPC',
+		BOOL);
+	addOption(option);
+	#end
+
+	var option:Option = new Option("Disable Networking",
+		"Blocks all internet usage at once: update checks, tip fetches, external links and Discord RPC.",
+		'disableNetworking',
+		BOOL);
+	addOption(option);
+
 
 		var option:Option = new Option("Combo Stacking",
 		Language.get("combostacking_desc"),

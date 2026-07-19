@@ -71,6 +71,7 @@ import states.TitleState;
 	public var hitsound:String = 'none';
 	public var pauseMusic:String = 'Tea Time';
 	public var checkForUpdates:Bool = true;
+	public var disableNetworking:Bool = false; // 全局联网开关：true 时拦截所有联网行为
 	public var comboStacking:Bool = true;
 	public var gameplaySettings:Map<String, Dynamic> = [
 		'scrollspeed' => 1.0,

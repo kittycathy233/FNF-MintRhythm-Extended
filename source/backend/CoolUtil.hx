@@ -21,23 +21,19 @@ class CoolUtil
 		var version:String = states.MainMenuState.kathyEngineVersion.trim();
 		if(ClientPrefs.data.checkForUpdates) {
 			trace('checking for updates...');
-			var http = new haxe.Http(url);
-			http.onData = function (data:String)
-			{
-				var newVersion:String = data.split('\n')[0].trim();
-				trace('version online: $newVersion, your version: $version');
-				if(newVersion != version) {
-					trace('versions arent matching! please update');
-					version = newVersion;
-					http.onData = null;
-					http.onError = null;
-					http = null;
-				}
-			}
-			http.onError = function (error) {
-				trace('error: $error');
-			}
-			http.request();
+			Network.httpGet(url,
+				function (data:String)
+				{
+					var newVersion:String = data.split('\n')[0].trim();
+					trace('version online: $newVersion, your version: $version');
+					if(newVersion != version) {
+						trace('versions arent matching! please update');
+						version = newVersion;
+					}
+				},
+				function (error) {
+					trace('error: $error');
+				});
 		}
 		return version;
 	}
@@ -45,26 +41,22 @@ class CoolUtil
 	public static function tipsShow(url:String = null, forceReload:Bool = false):String {
 		if (!forceReload && cachedTips != null)
 			return cachedTips;
-			
+
 		if (url == null || url.length == 0)
 			url = "https://raw.gitmirror.com/kittycathy233/FNF-Kathy-Things/main/engine/menu/tips/zh_cn.txt";
-		
+
 		var tipContent:String = "";
 		trace('searching for tips...');
-		var http = new haxe.Http(url);
-		http.onData = function (data:String)
-		{
-			tipContent = data.trim();
-			cachedTips = tipContent; // 缓存结果
-			http.onData = null;
-			http.onError = null;
-			http = null;
-		}
-		http.onError = function (error) {
-			trace('error: $error');
-		}
-		http.request();
-		
+		Network.httpGet(url,
+			function (data:String)
+			{
+				tipContent = data.trim();
+				cachedTips = tipContent; // 缓存结果
+			},
+			function (error) {
+				trace('error: $error');
+			});
+
 		return tipContent;
 	}
 
@@ -213,11 +205,7 @@ class CoolUtil
 	}
 
 	inline public static function browserLoad(site:String) {
-		#if linux
-		Sys.command('/usr/bin/xdg-open', [site]);
-		#else
-		FlxG.openURL(site);
-		#end
+		Network.openURL(site);
 	}
 
 	inline public static function openFolder(folder:String, absolute:Bool = false) {
