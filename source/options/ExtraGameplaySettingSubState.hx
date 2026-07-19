@@ -282,7 +282,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			Language.get("loading_style_desc"),
 			'customFadeStyle',
 			STRING,
-			['V-Slice', 'NovaFlare Move', 'NovaFlare Alpha', 'Blue Archive', 'BA_Schale_Glow']);
+			['None', 'V-Slice', 'NovaFlare Move', 'NovaFlare Alpha', 'Blue Archive', 'BA_Schale_Glow']);
 		var loadingStyleOption = addOption(option);
 		
 		option = new Option('Blue Archive Language',

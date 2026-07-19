@@ -65,7 +65,7 @@ class CustomFadeTransition extends FlxSubState {
 		reloadingStateType = null;
 		
 		// 兼容性检查：确保 customFadeStyle 是有效的值
-		var validStyles:Array<String> = ['V-Slice', 'NovaFlare Move', 'NovaFlare Alpha', 'Blue Archive', 'BA_Schale_Glow'];
+		var validStyles:Array<String> = ['None', 'V-Slice', 'NovaFlare Move', 'NovaFlare Alpha', 'Blue Archive', 'BA_Schale_Glow'];
 		if (!validStyles.contains(ClientPrefs.data.customFadeStyle)) {
 			ClientPrefs.data.customFadeStyle = 'V-Slice';
 		}
@@ -429,6 +429,8 @@ class CustomFadeTransition extends FlxSubState {
                     ease: FlxEase.quartIn
                 });
             }
+        } else if (ClientPrefs.data.customFadeStyle == 'None') {
+            // 无转场效果：不渲染任何视觉元素
         } else {
             //原版
             transGradient = FlxGradient.createGradientFlxSprite(1, height, (isTransIn ? [0x0, FlxColor.BLACK] : [FlxColor.BLACK, 0x0]));
@@ -534,6 +536,11 @@ class CustomFadeTransition extends FlxSubState {
                 if (finishCallback != null) finishCallback();
                 finishCallback = null;
             }*/
+        } else if (ClientPrefs.data.customFadeStyle == 'None') {
+            // 无转场效果：立即触发回调（切换状态）并关闭，不渲染任何视觉元素
+            if (finishCallback != null) finishCallback();
+            finishCallback = null;
+            close();
         }
     }
 }
