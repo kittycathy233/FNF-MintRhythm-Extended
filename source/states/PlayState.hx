@@ -1171,11 +1171,14 @@ isReplaying = false;
 		watermarkText.visible = !ClientPrefs.data.hideHud;
 		if (ClientPrefs.data.waterMarkPlay)	uiGroup.add(watermarkText);
 
-		// 使用新的 RatingCounter 模块
-		ratingCounterModule = new objects.RatingCounter(6, 0, ratingsData);
-		ratingCounterModule.updatePosition();
-		ratingCounterModule.setVisible(!ClientPrefs.data.hideHud);
-		ratingCounterModule.addToGroup(uiGroup);
+		// 使用新的 RatingCounter 模块（仅当开启评分计数器时创建，避免禁用后左侧依旧显示文本）
+		if (ClientPrefs.data.ratCounter)
+		{
+			ratingCounterModule = new objects.RatingCounter(6, 0, ratingsData);
+			ratingCounterModule.updatePosition();
+			ratingCounterModule.setVisible(!ClientPrefs.data.hideHud);
+			ratingCounterModule.addToGroup(uiGroup);
+		}
 
 		uiGroup.cameras = [camHUD];
 		noteGroup.cameras = [camHUD];

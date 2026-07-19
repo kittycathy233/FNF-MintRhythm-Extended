@@ -308,6 +308,12 @@ class RatingCounter extends FlxBasic
 				var b:Int = Std.int(fromColor.blue + (toColor.blue - fromColor.blue) * progress);
 				// 保持透明度为FF（完全不透明）
 				target.color = FlxColor.fromRGB(r, g, b, 0xFF);
+			},
+			onComplete: function(tw:FlxTween):Void
+			{
+				// 动画结束时强制把颜色精确设回目标色（白色），避免收尾帧精度问题或
+				// tween 被中途取消后颜色停留在中间值而未能归白
+				target.color = toColor;
 			}
 		});
 	}
