@@ -397,6 +397,12 @@ class PlayState extends MusicBeatState
 	public static var daPixelZoom:Float = 6;
 	private var singAnimations:Array<String> = ['singLEFT', 'singDOWN', 'singUP', 'singRIGHT'];
 
+	// 多键：当前 mania（= 键数 - 1）与每键缩放；4 键时 strumScale == 1（保持原布局）。
+	public static var strumScale:Float = 1;
+	public var curMania:Int = 3;
+	private var startArrowSkin:String = null;
+	private var startSplashSkin:String = null;
+
 	public var inCutscene:Bool = false;
 	public var skipCountdown:Bool = false;
 	var songLength:Float = 0;
@@ -1615,6 +1621,7 @@ isReplaying = false;
 			if (skipCountdown || startOnTime > 0) skipArrowStartTween = true;
 
 			canPause = true;
+			applyMania(SONG.mania);
 			generateStaticArrows(0);
 			generateStaticArrows(1);
 			for (i in 0...playerStrums.length) {
@@ -2301,17 +2308,22 @@ isReplaying = false;
 			if (section.changeBPM != null && section.changeBPM && section.bpm != null && daBpm != section.bpm)
 				daBpm = section.bpm;
 
+			// 小节级 mania：该小节的音符按小节自身键数取模（4 键小节与全局一致）
+			var sectMania:Int = (section.mania != null) ? backend.ExtraKeysHandler.instance.clampMania(section.mania) : curMania;
+			var sectCols:Int = sectMania + 1;
+
 			for (i in 0...section.sectionNotes.length)
 			{
 				final songNotes: Array<Dynamic> = section.sectionNotes[i];
 				var spawnTime: Float = songNotes[0];
-				var noteColumn: Int = Std.int(songNotes[1] % totalColumns);
+				var rawColumn:Int = Std.int(songNotes[1]);
+				var noteColumn: Int = rawColumn % sectCols;
 				var holdLength: Float = songNotes[2];
 				var noteType: String = !Std.isOfType(songNotes[3], String) ? Note.defaultNoteTypes[songNotes[3]] : songNotes[3];
 				if (Math.isNaN(holdLength))
 					holdLength = 0.0;
 
-				var gottaHitNote:Bool = (songNotes[1] < totalColumns);
+				var gottaHitNote:Bool = (rawColumn < sectCols);
 
 				if (i != 0) {
 					// CLEAR ANY POSSIBLE GHOST NOTES — O(1) Map查找替代 O(n) 线性扫描
@@ -2331,13 +2343,17 @@ isReplaying = false;
 					}
 				}
 
-				var swagNote:Note = new Note(spawnTime, noteColumn, oldNote);
-				var isAlt: Bool = section.altAnim && !gottaHitNote;
-				swagNote.gfNote = (section.gfSection && gottaHitNote == section.mustHitSection);
-				swagNote.animSuffix = isAlt ? "-alt" : "";
-				swagNote.mustPress = gottaHitNote;
-				swagNote.sustainLength = holdLength;
-				swagNote.noteType = noteType;
+			var swagNote:Note = new Note(spawnTime, noteColumn, oldNote);
+			// 存储原始谱面列号，供 Change Mania 时按当前 mania 重映射 noteData（4 键下等于 noteColumn）
+			swagNote.noteColumnRaw = Std.int(songNotes[1]);
+			swagNote.noteData = noteColumn;
+
+			var isAlt: Bool = section.altAnim && !gottaHitNote;
+			swagNote.gfNote = (section.gfSection && gottaHitNote == section.mustHitSection);
+			swagNote.animSuffix = isAlt ? "-alt" : "";
+			swagNote.mustPress = gottaHitNote;
+			swagNote.sustainLength = holdLength;
+			swagNote.noteType = noteType;
 	
 				swagNote.scrollFactor.set();
 				unspawnNotes.push(swagNote);
@@ -2352,11 +2368,13 @@ isReplaying = false;
 					{
 						oldNote = unspawnNotes[Std.int(unspawnNotes.length - 1)];
 
-						var sustainNote:Note = new Note(spawnTime + (curStepCrochet * susNote), noteColumn, oldNote, true);
-						sustainNote.animSuffix = swagNote.animSuffix;
-						sustainNote.mustPress = swagNote.mustPress;
-						sustainNote.gfNote = swagNote.gfNote;
-						sustainNote.noteType = swagNote.noteType;
+					var sustainNote:Note = new Note(spawnTime + (curStepCrochet * susNote), noteColumn, oldNote, true);
+					sustainNote.animSuffix = swagNote.animSuffix;
+					sustainNote.mustPress = swagNote.mustPress;
+					sustainNote.gfNote = swagNote.gfNote;
+					sustainNote.noteType = swagNote.noteType;
+					sustainNote.noteColumnRaw = swagNote.noteColumnRaw;
+					sustainNote.noteData = swagNote.noteData;
 						sustainNote.scrollFactor.set();
 						sustainNote.parent = swagNote;
 						unspawnNotes.push(sustainNote);
@@ -2443,17 +2461,22 @@ isReplaying = false;
 			if (section.changeBPM != null && section.changeBPM && section.bpm != null && daBpm != section.bpm)
 				daBpm = section.bpm;
 
+			// 小节级 mania：该小节的音符按小节自身键数取模
+			var sectMania:Int = (section.mania != null) ? backend.ExtraKeysHandler.instance.clampMania(section.mania) : curMania;
+			var sectCols:Int = sectMania + 1;
+
 			for (i in 0...section.sectionNotes.length)
 			{
 				final songNotes: Array<Dynamic> = section.sectionNotes[i];
 				var spawnTime: Float = songNotes[0];
-				var noteColumn: Int = Std.int(songNotes[1] % totalColumns);
+				var rawColumn:Int = Std.int(songNotes[1]);
+				var noteColumn: Int = rawColumn % sectCols;
 				var holdLength: Float = songNotes[2];
 				var noteType: String = !Std.isOfType(songNotes[3], String) ? Note.defaultNoteTypes[songNotes[3]] : songNotes[3];
 				if (Math.isNaN(holdLength))
 					holdLength = 0.0;
 
-				var gottaHitNote:Bool = (songNotes[1] < totalColumns);
+				var gottaHitNote:Bool = (rawColumn < sectCols);
 
 				// 处理主音符位置偏移
 				var mainPosOffsetX:Float = 0;
@@ -2470,10 +2493,11 @@ isReplaying = false;
 				var mainNoteIndex:Int = unspawnNotesPreloaded.length;
 				var isAlt: Bool = section.altAnim && !gottaHitNote;
 				
-				var mainNoteData:PreloadedChartNote = {
-					strumTime: spawnTime,
-					noteData: noteColumn,
-					mustPress: gottaHitNote,
+			var mainNoteData:PreloadedChartNote = {
+				strumTime: spawnTime,
+				noteData: noteColumn,
+				rawColumn: Std.int(songNotes[1]),
+				mustPress: gottaHitNote,
 					noteType: noteType,
 					animSuffix: isAlt ? "-alt" : "",
 					gfNote: (section.gfSection && gottaHitNote == section.mustHitSection),
@@ -2518,10 +2542,11 @@ isReplaying = false;
 								susPosOffsetX += FlxG.width / 2 + 25;
 						}
 						
-						var susNoteData:PreloadedChartNote = {
-							strumTime: susSpawnTime,
-							noteData: noteColumn,
-							mustPress: gottaHitNote,
+					var susNoteData:PreloadedChartNote = {
+						strumTime: susSpawnTime,
+						noteData: noteColumn,
+						rawColumn: Std.int(songNotes[1]),
+						mustPress: gottaHitNote,
 							noteType: noteType,
 							animSuffix: isAlt ? "-alt" : "",
 							gfNote: (section.gfSection && gottaHitNote == section.mustHitSection),
@@ -2591,56 +2616,207 @@ isReplaying = false;
 	}
 
 	public var skipArrowStartTween:Bool = false; //for lua
-	private function generateStaticArrows(player:Int):Void
-{
-    var strumLineX:Float = ClientPrefs.data.middleScroll ? STRUM_X_MIDDLESCROLL : STRUM_X;
-    var strumLineY:Float = ClientPrefs.data.downScroll ? (FlxG.height - 150) : 50;
-    
-    // 应用传统音符位置偏移
-    var legacyOffset:Float = ClientPrefs.data.legacynotepos ? 50 : 0;
-    
-    for (i in 0...4)
-    {
-        // FlxG.log.add(i);
-        var targetAlpha:Float = 1;
-        if (player < 1)
-        {
-            if(!ClientPrefs.data.opponentStrums) targetAlpha = 0;
-            else if(ClientPrefs.data.middleScroll) targetAlpha = 0.35;
-        }
+	private function generateStaticArrows(player:Int, ?instant:Bool = false):Void
+	{
+		var strumLineX:Float = ClientPrefs.data.middleScroll ? STRUM_X_MIDDLESCROLL : STRUM_X;
+		var strumLineY:Float = ClientPrefs.data.downScroll ? (FlxG.height - 150) : 50;
 
-        var babyArrow:StrumNote = new StrumNote(strumLineX, strumLineY, i, player);
-        babyArrow.downScroll = ClientPrefs.data.downScroll;
+		// 应用传统音符位置偏移
+		var legacyOffset:Float = ClientPrefs.data.legacynotepos ? 50 : 0;
 
-        // 应用传统音符位置偏移
-        babyArrow.x -= legacyOffset;
+		// 标准 4 键：保留旧引擎原始布局，确保 100% 向后兼容。
+		if (totalColumns == 4)
+		{
+			for (i in 0...4)
+			{
+				var targetAlpha:Float = 1;
+				if (player < 1)
+				{
+					if(!ClientPrefs.data.opponentStrums) targetAlpha = 0;
+					else if(ClientPrefs.data.middleScroll) targetAlpha = 0.35;
+				}
 
-        if (!isStoryMode && !skipArrowStartTween)
-        {
-            //babyArrow.y -= 10;
-            babyArrow.alpha = 0;
-            FlxTween.tween(babyArrow, {/*y: babyArrow.y + 10,*/ alpha: targetAlpha}, 1, {ease: FlxEase.circOut, startDelay: 0.5 + (0.2 * i)});
-        }
-        else babyArrow.alpha = targetAlpha;
+				var babyArrow:StrumNote = new StrumNote(strumLineX, strumLineY, i, player);
+				babyArrow.downScroll = ClientPrefs.data.downScroll;
 
-        if (player == 1)
-            playerStrums.add(babyArrow);
-        else
-        {
-            if(ClientPrefs.data.middleScroll)
-            {
-                babyArrow.x += 310;
-                if(i > 1) { //Up and Right
-                    babyArrow.x += FlxG.width / 2 + 25;
-                }
-            }
-            opponentStrums.add(babyArrow);
-        }
+				babyArrow.x -= legacyOffset;
 
-        strumLineNotes.add(babyArrow);
-        babyArrow.playerPosition();
-    }
-}
+				if (!instant && !isStoryMode && !skipArrowStartTween)
+				{
+					babyArrow.alpha = 0;
+					FlxTween.tween(babyArrow, {alpha: targetAlpha}, 1, {ease: FlxEase.circOut, startDelay: 0.5 + (0.2 * i)});
+				}
+				else babyArrow.alpha = targetAlpha;
+
+				if (player == 1)
+					playerStrums.add(babyArrow);
+				else
+				{
+					if(ClientPrefs.data.middleScroll)
+					{
+						babyArrow.x += 310;
+						if(i > 1) {
+							babyArrow.x += FlxG.width / 2 + 25;
+						}
+					}
+					opponentStrums.add(babyArrow);
+				}
+
+				strumLineNotes.add(babyArrow);
+				babyArrow.playerPosition();
+			}
+			return;
+		}
+
+		// 多键：居中分布 + 按 strumScale 缩放，防止溢出屏幕。
+		var spacing:Float = Note.swagWidth * strumScale;
+		var groupWidth:Float = (totalColumns - 1) * spacing;
+		var centerX:Float = ClientPrefs.data.middleScroll ? (FlxG.width * 0.5) : (player == 1 ? (FlxG.width * 0.75) : (FlxG.width * 0.25));
+
+		for (i in 0...totalColumns)
+		{
+			var targetAlpha:Float = 1;
+			if (player < 1)
+			{
+				if(!ClientPrefs.data.opponentStrums) targetAlpha = 0;
+				else if(ClientPrefs.data.middleScroll) targetAlpha = 0.35;
+			}
+
+			var babyArrow:StrumNote = new StrumNote(strumLineX, strumLineY, i, player);
+			babyArrow.downScroll = ClientPrefs.data.downScroll;
+
+			if (!instant && !isStoryMode && !skipArrowStartTween)
+			{
+				babyArrow.alpha = 0;
+				FlxTween.tween(babyArrow, {alpha: targetAlpha}, 1, {ease: FlxEase.circOut, startDelay: 0.5 + (0.2 * i)});
+			}
+			else babyArrow.alpha = targetAlpha;
+
+			if (!PlayState.isPixelStage && strumScale != 1) babyArrow.scale.scale(strumScale);
+
+			if (player == 1)
+				playerStrums.add(babyArrow);
+			else
+				opponentStrums.add(babyArrow);
+
+			strumLineNotes.add(babyArrow);
+			babyArrow.x = (centerX - groupWidth / 2) - legacyOffset + spacing * i;
+		}
+	}
+
+	/** 应用某 mania 的多键配置：键数、缩放、配色前缀、sing 动画、键位 action。 */
+	public function applyMania(mania:Int):Void
+	{
+		var ek = backend.ExtraKeysHandler.instance;
+		mania = ek.clampMania(mania);
+
+		if (startArrowSkin == null)
+		{
+			startArrowSkin = PlayState.SONG.arrowSkin;
+			startSplashSkin = PlayState.SONG.splashSkin;
+		}
+
+		curMania = mania;
+		totalColumns = mania + 1;
+		strumScale = computeStrumScale(mania);
+
+		// 多键（>4）强制使用 ek 皮肤（含 rombus/circle）；4 键保持原皮肤。
+		// 注意：皮肤 key 必须带 noteSkins/ 前缀与具体 atlas 名，否则 getSparrowAtlas
+		// 会去 images/ek.png 找不到而抛异常卡死。飞溅无 ek 专属资源，沿用歌曲默认。
+		if (mania == 3)
+		{
+			PlayState.SONG.arrowSkin = startArrowSkin;
+			PlayState.SONG.splashSkin = startSplashSkin;
+		}
+		else
+		{
+			PlayState.SONG.arrowSkin = 'noteSkins/ek/NOTE_assets';
+			// splashSkin 保持歌曲默认：飞溅为共享白色纹理，按音符颜色着色即可。
+		}
+
+		// colArray：noteData -> 颜色前缀（purple/blue/green/red/rombus/circle）
+		var newCol:Array<String> = [];
+		for (i in 0...totalColumns)
+		{
+			var style:Int = ek.styleOf(mania, i);
+			newCol[i] = PlayState.isPixelStage ? (['purple', 'blue', 'green', 'red'][i % 4]) : ek.colorPrefixOf(style);
+		}
+		Note.colArray = newCol;
+
+		// sing 动画映射
+		singAnimations = [];
+		for (i in 0...totalColumns)
+		{
+			var style:Int = ek.styleOf(mania, i);
+			singAnimations[i] = 'sing' + ek.singOf(style);
+		}
+
+		// 动态键位 action 名
+		keysArray = buildKeysArray(mania);
+	}
+
+	public function buildKeysArray(mania:Int):Array<String>
+	{
+		if (mania == 3) return ['note_left', 'note_down', 'note_up', 'note_right'];
+		var arr:Array<String> = [];
+		for (i in 0...(mania + 1)) arr.push('extrakey_${mania}_$i');
+		return arr;
+	}
+
+	private function computeStrumScale(mania:Int):Float
+	{
+		var ek = backend.ExtraKeysHandler.instance;
+		var keyCount:Int = mania + 1;
+		var jsonScale:Float = ek.scaleFor(mania);
+		var groupSpan:Float = (keyCount - 1) * Note.swagWidth;
+		var avail:Float = ClientPrefs.data.middleScroll ? (FlxG.width - 120) : (FlxG.width * 0.5 - 80);
+		var scale:Float = Math.min(jsonScale, avail / groupSpan);
+		return Math.max(scale, 0.3);
+	}
+
+	/** Change Mania：重建箭头与键位（小节属性或事件触发）。 */
+	public function changeMania(mania:Int):Void
+	{
+		mania = backend.ExtraKeysHandler.instance.clampMania(mania);
+		if (mania == curMania) return;
+		applyMania(mania);
+
+		strumLineNotes.clear();
+		opponentStrums.clear();
+		playerStrums.clear();
+
+		generateStaticArrows(0, true);
+		generateStaticArrows(1, true);
+
+		remapNotesForMania();
+
+		for (i in 0...playerStrums.length)
+		{
+			setOnScripts('defaultPlayerStrumX' + i, playerStrums.members[i].x);
+			setOnScripts('defaultPlayerStrumY' + i, playerStrums.members[i].y);
+		}
+	}
+
+	/** Change Mania 时按当前 mania 重映射已有音符的列号；列号超出新键数的音符会由 followStrumNote 隐藏。 */
+	private function remapNotesForMania():Void
+	{
+		var tc:Int = curMania + 1;
+		var remapNote = function(note:Note):Void
+		{
+			note.noteData = note.noteColumnRaw % tc;
+			note.mustPress = note.noteColumnRaw < tc;
+			note.updateManiaStyle(); // 轻量刷新配色/帧，避免 reloadNote 反复解析 atlas 卡死
+		};
+		for (note in unspawnNotes)
+		{
+			if (Std.isOfType(note, Note)) remapNote(cast note);
+			// 优化路径的 PreloadedChartNote 在实例化时会用 rawColumn 与当前 totalColumns 重算 noteData
+		}
+		for (note in notes)
+		{
+			if (Std.isOfType(note, Note)) remapNote(cast note);
+		}
+	}
 
 	override function openSubState(SubState:FlxSubState)
 	{
@@ -3141,16 +3317,19 @@ isReplaying = false;
 					}
 					
 					// 创建 Note 对象，完全按照传统模式！
+					// noteData 按当前 mania 重映射（兼容 Change Mania），4 键下等价于原值
+					var remappedData:Int = noteData.rawColumn % totalColumns;
 					var note:Note = null;
 					if (noteData.isSustainNote) {
-						note = new Note(noteData.strumTime, noteData.noteData, oldNote, true);
+						note = new Note(noteData.strumTime, remappedData, oldNote, true);
 					} else {
-						note = new Note(noteData.strumTime, noteData.noteData, oldNote, false);
+						note = new Note(noteData.strumTime, remappedData, oldNote, false);
 					}
 					
 					// 设置基本属性
 					note.animSuffix = noteData.animSuffix;
-					note.mustPress = noteData.mustPress;
+					note.mustPress = noteData.rawColumn < totalColumns;
+					note.noteColumnRaw = noteData.rawColumn;
 					note.gfNote = noteData.gfNote;
 					note.sustainLength = noteData.sustainLength;
 					note.noteType = noteData.noteType;
@@ -3321,8 +3500,14 @@ isReplaying = false;
 							var strumGroup:FlxTypedGroup<StrumNote> = playerStrums;
 							if(!daNote.mustPress) strumGroup = opponentStrums;
 
-							var strum:StrumNote = strumGroup.members[daNote.noteData];
-							daNote.followStrumNote(strum, fakeCrochet, songSpeed / playbackRate);
+						var strum:StrumNote = strumGroup.members[daNote.noteData];
+						if (strum == null)
+						{
+							// Change Mania 后键数减少：该轨已无对应箭头，隐藏音符避免报错。
+							daNote.visible = false;
+							continue;
+						}
+						daNote.followStrumNote(strum, fakeCrochet, songSpeed / playbackRate);
 
 							if(daNote.mustPress)
 							{
@@ -4810,9 +4995,13 @@ isReplaying = false;
 	private function onButtonPress(button:TouchButton):Void
 	{
 		if (button.IDs.filter(id -> id.toString().startsWith("EXTRA")).length > 0)
-			return;
+			return; // 非音符的 EXTRA 按钮（如暂停）不触发音符
 
 		var buttonCode:Int = (button.IDs[0].toString().startsWith('NOTE')) ? button.IDs[0] : button.IDs[1];
+		// 多键额外音符 NOTE_4..NOTE_8 -> 音符索引 4..8
+		var note4:Int = mobile.input.MobileInputID.NOTE_4;
+		if (buttonCode >= note4)
+			buttonCode = 4 + (buttonCode - note4);
 		callOnScripts('onButtonPressPre', [buttonCode]);
 		if (button.justPressed) keyPressed(buttonCode);
 		callOnScripts('onButtonPress', [buttonCode]);
@@ -4824,6 +5013,10 @@ isReplaying = false;
 			return;
 
 		var buttonCode:Int = (button.IDs[0].toString().startsWith('NOTE')) ? button.IDs[0] : button.IDs[1];
+		// 多键额外音符 NOTE_4..NOTE_8 -> 音符索引 4..8
+		var note4:Int = mobile.input.MobileInputID.NOTE_4;
+		if (buttonCode >= note4)
+			buttonCode = 4 + (buttonCode - note4);
 		callOnScripts('onButtonReleasePre', [buttonCode]);
 		if(buttonCode > -1) keyReleased(buttonCode);
 		callOnScripts('onButtonRelease', [buttonCode]);
@@ -5660,6 +5853,14 @@ isReplaying = false;
             setOnScripts('crochet', Conductor.crochet);
             setOnScripts('stepCrochet', Conductor.stepCrochet);
         }
+
+        // 小节级 Change Mania（可勾选，类似 change BPM）：
+        // 仅当该小节显式勾选 changeMania 时才按小节自身键数重建箭头与键位；
+        // 否则保持当前 mania，使 Change Mania 事件（或上一小节的设置）得以延续，
+        // 不会在下一小节被强制回落到歌曲默认键数。
+        if (SONG.notes[curSection].changeMania == true && SONG.notes[curSection].mania != null)
+            changeMania(backend.ExtraKeysHandler.instance.clampMania(SONG.notes[curSection].mania));
+
         setOnScripts('mustHitSection', SONG.notes[curSection].mustHitSection);
         setOnScripts('altAnim', SONG.notes[curSection].altAnim);
         setOnScripts('gfSection', SONG.notes[curSection].gfSection);

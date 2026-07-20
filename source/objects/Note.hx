@@ -2,6 +2,7 @@ package objects;
 
 import backend.animation.PsychAnimationController;
 import backend.NoteTypesConfig;
+import backend.ExtraKeysHandler;
 
 import shaders.RGBPalette;
 import shaders.RGBPalette.RGBShaderReference;
@@ -10,6 +11,7 @@ import shaders.ColorSwap;
 import objects.StrumNote;
 
 import flixel.math.FlxRect;
+import flixel.graphics.frames.FlxAtlasFrames;
 
 using StringTools;
 
@@ -28,6 +30,7 @@ typedef EventNote = {
 typedef PreloadedChartNote = {
 	var strumTime:Float;
 	var noteData:Int;
+	var rawColumn:Int; // 原始谱面列号，未取模，供 Change Mania 时重映射
 	var mustPress:Bool;
 	var noteType:String;
 	var animSuffix:String;
@@ -80,6 +83,8 @@ class Note extends FlxSprite
 
 	public var strumTime:Float = 0;
 	public var noteData:Int = 0;
+	/** 原始谱面列号（未经 % 取模），用于 Change Mania 时重映射 noteData。4 键下等于 noteData。 */
+	public var noteColumnRaw:Int = 0;
 
 	public var mustPress:Bool = false;
 	public var canBeHit:Bool = false;
@@ -125,6 +130,19 @@ class Note extends FlxSprite
 	public static var SUSTAIN_SIZE:Int = 44;
 	public static var swagWidth:Float = 160 * 0.7;
 	public static var colArray:Array<String> = ['purple', 'blue', 'green', 'red'];
+
+	/**
+	 * 把 noteData 映射到样式索引（style，0..8）。
+	 * 4 键（非像素）时 style == noteData，行为与旧引擎一致；多键时查 extrakeys.json。
+	 * 像素舞台只支持四向，强制 style = noteData % 4。
+	 */
+	public static function styleIndex(noteData:Int):Int
+	{
+		if (PlayState.SONG == null || PlayState.isPixelStage) return noteData % 4;
+		// 使用当前活动 mania（可能由小节/事件 Change Mania 改变），而非 SONG 级默认
+		var mania:Int = (PlayState.instance != null) ? PlayState.instance.curMania : PlayState.SONG.mania;
+		return ExtraKeysHandler.instance.styleOf(mania, noteData);
+	}
 	public static var defaultNoteSkin(default, never):String = 'noteSkins/NOTE_assets';
 
 	public var noteSplashData:NoteSplashData = {
@@ -207,8 +225,9 @@ class Note extends FlxSprite
 
 	public function defaultRGB()
 	{
-		var arr:Array<FlxColor> = ClientPrefs.data.arrowRGB[noteData];
-		if(PlayState.isPixelStage) arr = ClientPrefs.data.arrowRGBPixel[noteData];
+		var style:Int = styleIndex(noteData);
+		var arr:Array<FlxColor> = ClientPrefs.data.arrowRGB[style];
+		if(PlayState.isPixelStage) arr = ClientPrefs.data.arrowRGBPixel[style];
 
 		if (arr != null && noteData > -1 && noteData <= arr.length)
 		{
@@ -232,9 +251,10 @@ class Note extends FlxSprite
 	public function defaultHSV()
 	{
 		if (colorSwap == null) return;
-		if (noteData > -1 && noteData < ClientPrefs.data.arrowHSV.length)
+		var style:Int = styleIndex(noteData);
+		if (style > -1 && style < ClientPrefs.data.arrowHSV.length)
 		{
-			var arr:Array<Int> = ClientPrefs.data.arrowHSV[noteData];
+			var arr:Array<Int> = ClientPrefs.data.arrowHSV[style];
 			colorSwap.hue = arr[0] / 360;
 			colorSwap.saturation = arr[1] / 100;
 			colorSwap.brightness = arr[2] / 100;
@@ -341,14 +361,14 @@ class Note extends FlxSprite
 		{
 			// RGB shader is always initialized (shared globals are referenced by NoteSplash /
 			// VisualsSettings previews even in HSV mode). Only the sprite's active shader differs.
-			rgbShader = new RGBShaderReference(this, initializeGlobalRGBShader(noteData));
+			rgbShader = new RGBShaderReference(this, initializeGlobalRGBShader(styleIndex(noteData)));
 			var rgbDisabled:Bool = (PlayState.SONG != null && PlayState.SONG.disableNoteRGB);
 			if(rgbDisabled) rgbShader.enabled = false;
 			texture = '';
 
 			// Legacy HSV path: override the sprite's shader with the shared ColorSwap shader.
 			if(ClientPrefs.data.arrowColorMode == 'HSV') {
-				colorSwap = Note.initializeGlobalColorSwapShader(noteData);
+				colorSwap = Note.initializeGlobalColorSwapShader(styleIndex(noteData));
 				shader = rgbDisabled ? null : colorSwap.shader;
 			}
 
@@ -414,14 +434,14 @@ class Note extends FlxSprite
 		x += offsetX;
 	}
 
-	public static function initializeGlobalRGBShader(noteData:Int)
+	public static function initializeGlobalRGBShader(index:Int)
 	{
-		if(globalRgbShaders[noteData] == null)
+		if(globalRgbShaders[index] == null)
 		{
 			var newRGB:RGBPalette = new RGBPalette();
-			var arr:Array<FlxColor> = (!PlayState.isPixelStage) ? ClientPrefs.data.arrowRGB[noteData] : ClientPrefs.data.arrowRGBPixel[noteData];
+			var arr:Array<FlxColor> = (!PlayState.isPixelStage) ? ClientPrefs.data.arrowRGB[index] : ClientPrefs.data.arrowRGBPixel[index];
 			
-			if (arr != null && noteData > -1 && noteData <= arr.length)
+			if (arr != null && arr.length >= 3)
 			{
 				newRGB.r = arr[0];
 				newRGB.g = arr[1];
@@ -434,9 +454,9 @@ class Note extends FlxSprite
 				newRGB.b = 0xFF0000FF;
 			}
 			
-			globalRgbShaders[noteData] = newRGB;
+			globalRgbShaders[index] = newRGB;
 		}
-		return globalRgbShaders[noteData];
+		return globalRgbShaders[index];
 	}
 
 	/**
@@ -444,27 +464,38 @@ class Note extends FlxSprite
 	 * seeded from ClientPrefs.data.arrowHSV. Mirrors initializeGlobalRGBShader so
 	 * the legacy NotesColorSubState can edit these globals and see live updates.
 	**/
-	public static function initializeGlobalColorSwapShader(noteData:Int):ColorSwap
+	public static function initializeGlobalColorSwapShader(index:Int):ColorSwap
 	{
-		if(noteData < 0 || noteData >= colArray.length) return new ColorSwap();
-		if(globalColorSwapShaders[noteData] == null)
+		if(index < 0 || index >= ClientPrefs.data.arrowHSV.length) return new ColorSwap();
+		if(globalColorSwapShaders[index] == null)
 		{
 			var cs:ColorSwap = new ColorSwap();
-			if (noteData > -1 && noteData < ClientPrefs.data.arrowHSV.length)
+			if (index > -1 && index < ClientPrefs.data.arrowHSV.length)
 			{
-				var arr:Array<Int> = ClientPrefs.data.arrowHSV[noteData];
+				var arr:Array<Int> = ClientPrefs.data.arrowHSV[index];
 				cs.hue = arr[0] / 360;
 				cs.saturation = arr[1] / 100;
 				cs.brightness = arr[2] / 100;
 			}
-			globalColorSwapShaders[noteData] = cs;
+			globalColorSwapShaders[index] = cs;
 		}
-		return globalColorSwapShaders[noteData];
+		return globalColorSwapShaders[index];
 	}
 
 	var _lastNoteOffX:Float = 0;
 	static var _lastValidChecked:String; //optimization
 	static var _skinPathCache:Map<String, String> = new Map();
+	// 按皮肤 key 缓存 Sparrow atlas 帧数据：Change Mania 重映射时会对大量音符调用
+	// reloadNote，若不缓存则每颗音符都重新解析 XML，大谱面会卡死。缓存后同一皮肤
+	// 仅解析一次，重映射只重建每颗音符的动画帧（廉价）。
+	static var _atlasCache:Map<String, FlxAtlasFrames> = new Map();
+	static function getCachedSparrowAtlas(key:String):FlxAtlasFrames
+	{
+		if (_atlasCache.exists(key)) return _atlasCache.get(key);
+		var atlas:FlxAtlasFrames = Paths.getSparrowAtlas(key);
+		if (atlas != null) _atlasCache.set(key, atlas);
+		return atlas;
+	}
 	public var originalHeight:Float = 6;
 	public var correctionOffset:Float = 0; //dont mess with this
 	public function reloadNote(texture:String = '', postfix:String = '') {
@@ -550,13 +581,13 @@ class Note extends FlxSprite
 				offsetX -= _lastNoteOffX;
 			}
 		} else {
-			frames = Paths.getSparrowAtlas(getNoteSkinPath(skin));
+			frames = getCachedSparrowAtlas(getNoteSkinPath(skin));
 			// 防护：若解析出的皮肤贴图加载失败（文件缺失/损坏），getSparrowAtlas 会返回 null，
 			// 导致后续 addByPrefix / findByPrefix 崩溃。回退到默认皮肤并告警，避免整局崩溃。
 			if (frames == null)
 			{
 				FlxG.log.warn('Note skin failed to load: "' + getNoteSkinPath(skin) + '", falling back to default "' + defaultNoteSkin + '"');
-				frames = Paths.getSparrowAtlas(defaultNoteSkin);
+				frames = getCachedSparrowAtlas(defaultNoteSkin);
 			}
 			loadNoteAnims();
 			if(!isSustainNote)
@@ -573,6 +604,29 @@ class Note extends FlxSprite
 
 		if(animName != null)
 			animation.play(animName, true);
+	}
+
+	/**
+	 * Change Mania 重映射后刷新音符：重新从当前皮肤加载帧（atlas 已按皮肤缓存，不会
+	 * 重复解析），并按当前 styleIndex 刷新配色。必须重加载帧，否则音符仍使用旧皮肤的
+	 * atlas，而新颜色前缀（rombus/circle 等）在旧 atlas 中不存在，会导致长条/音符显示异常。
+	 */
+	public function updateManiaStyle():Void
+	{
+		if (noteData <= -1) return;
+		var animName:String = (animation.curAnim != null) ? animation.curAnim.name : null;
+		reloadNote(); // 从当前皮肤重新加载帧（保留当前动画名），atlas 已缓存故廉价
+		// 配色随当前 styleIndex 刷新（reloadNote 不会更新 rgbShader 着色）
+		var idx:Int = styleIndex(noteData);
+		rgbShader = new RGBShaderReference(this, initializeGlobalRGBShader(idx));
+		var rgbDisabled:Bool = (PlayState.SONG != null && PlayState.SONG.disableNoteRGB);
+		if (rgbDisabled) rgbShader.enabled = false;
+		if (ClientPrefs.data.arrowColorMode == 'HSV')
+		{
+			colorSwap = Note.initializeGlobalColorSwapShader(idx);
+			shader = rgbDisabled ? null : colorSwap.shader;
+		}
+		if (animName != null) animation.play(animName, true);
 	}
 
 	public static function getNoteSkinPostfix()
@@ -653,16 +707,28 @@ class Note extends FlxSprite
 		if (colArray[noteData] == null)
 			return;
 
+		var name:String = colArray[noteData];
+		// 若皮肤缺少该颜色帧（如多键 rombus/circle 在非 ek 皮肤中不存在），回退到 green（上音符）帧；
+		// 动画名仍用原 name，保证构造函数 / MetaNote 的 play 能命中（普通长条/上动画）。
+		var framePrefix:String = hasNoteFrame(name) ? name : 'green';
+
 		if (isSustainNote)
 		{
 			attemptToAddAnimationByPrefix('purpleholdend', 'pruple end hold', 24, true); // this fixes some retarded typo from the original note .FLA
-			animation.addByPrefix(colArray[noteData] + 'holdend', colArray[noteData] + ' hold end', 24, true);
-			animation.addByPrefix(colArray[noteData] + 'hold', colArray[noteData] + ' hold piece', 24, true);
+			animation.addByPrefix(name + 'holdend', framePrefix + ' hold end', 24, true);
+			animation.addByPrefix(name + 'hold', framePrefix + ' hold piece', 24, true);
 		}
-		else animation.addByPrefix(colArray[noteData] + 'Scroll', colArray[noteData] + '0');
+		else animation.addByPrefix(name + 'Scroll', framePrefix + '0');
 
 		setGraphicSize(Std.int(width * 0.7));
+		if (!PlayState.isPixelStage && PlayState.strumScale != 1) scale.scale(PlayState.strumScale);
 		updateHitbox();
+	}
+
+	// 判断当前皮肤图集中是否存在名为 `name + '0000'` 的帧（用于缺失动画的回退判断）
+	function hasNoteFrame(name:String):Bool
+	{
+		return frames != null && frames.getByName(name + '0000') != null;
 	}
 
 	function loadPixelNoteAnims() {

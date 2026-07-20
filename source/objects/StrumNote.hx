@@ -32,14 +32,14 @@ class StrumNote extends FlxSprite
 	public function new(x:Float, y:Float, leData:Int, player:Int) {
 		animation = new PsychAnimationController(this);
 
-		rgbShader = new RGBShaderReference(this, Note.initializeGlobalRGBShader(leData));
+		rgbShader = new RGBShaderReference(this, Note.initializeGlobalRGBShader(Note.styleIndex(leData)));
 		rgbShader.enabled = false;
 		if(PlayState.SONG != null && PlayState.SONG.disableNoteRGB) useRGBShader = false;
 		
-		var arr:Array<FlxColor> = ClientPrefs.data.arrowRGB[leData];
-		if(PlayState.isPixelStage) arr = ClientPrefs.data.arrowRGBPixel[leData];
+		var arr:Array<FlxColor> = ClientPrefs.data.arrowRGB[Note.styleIndex(leData)];
+		if(PlayState.isPixelStage) arr = ClientPrefs.data.arrowRGBPixel[Note.styleIndex(leData)];
 		
-		if(leData <= arr.length)
+		if(arr != null && arr.length >= 3)
 		{
 			@:bypassAccessor
 			{
@@ -52,7 +52,7 @@ class StrumNote extends FlxSprite
 		// Legacy HSV path: share the per-direction ColorSwap shader. The sprite
 		// starts disabled (null shader = static); playAnim toggles it on/off.
 		if(ClientPrefs.data.arrowColorMode == 'HSV') {
-			colorSwap = Note.initializeGlobalColorSwapShader(leData);
+			colorSwap = Note.initializeGlobalColorSwapShader(Note.styleIndex(leData));
 		}
 
 		noteData = leData;
@@ -143,25 +143,20 @@ class StrumNote extends FlxSprite
 			antialiasing = ClientPrefs.data.antialiasing;
 			setGraphicSize(Std.int(width * 0.7));
 
-			switch (Math.abs(noteData) % 4)
-			{
-				case 0:
-					animation.addByPrefix('static', 'arrowLEFT');
-					animation.addByPrefix('pressed', 'left press', 24, false);
-					animation.addByPrefix('confirm', 'left confirm', 24, false);
-				case 1:
-					animation.addByPrefix('static', 'arrowDOWN');
-					animation.addByPrefix('pressed', 'down press', 24, false);
-					animation.addByPrefix('confirm', 'down confirm', 24, false);
-				case 2:
-					animation.addByPrefix('static', 'arrowUP');
-					animation.addByPrefix('pressed', 'up press', 24, false);
-					animation.addByPrefix('confirm', 'up confirm', 24, false);
-				case 3:
-					animation.addByPrefix('static', 'arrowRIGHT');
-					animation.addByPrefix('pressed', 'right press', 24, false);
-					animation.addByPrefix('confirm', 'right confirm', 24, false);
-			}
+			// 多键：按 style 索引决定 strum 前缀（LEFT/DOWN/UP/RIGHT/ROMBUS/CIRCLE）。
+			// 若当前皮肤缺少对应箭头帧，则回退到标准 UP 箭头，避免空帧（普通 strumnote）。
+			var style:Int = Note.styleIndex(noteData);
+			var strumName:String = backend.ExtraKeysHandler.instance.strumOf(style);
+			if (!hasFrame('arrow' + strumName)) strumName = 'UP';
+
+			var pressName:String = strumName.toLowerCase() + ' press';
+			if (!hasFrame(pressName)) pressName = 'up press';
+			var confirmName:String = strumName.toLowerCase() + ' confirm';
+			if (!hasFrame(confirmName)) confirmName = 'up confirm';
+
+			animation.addByPrefix('static', 'arrow' + strumName, 24, false);
+			animation.addByPrefix('pressed', pressName, 24, false);
+			animation.addByPrefix('confirm', confirmName, 24, false);
 		}
 		updateHitbox();
 
@@ -169,6 +164,12 @@ class StrumNote extends FlxSprite
 		{
 			playAnim(lastAnim, true);
 		}
+	}
+
+	// 判断皮肤图集中是否存在名为 `name + '0000'` 的帧（用于缺失动画的回退判断）
+	function hasFrame(name:String):Bool
+	{
+		return frames != null && frames.getByName(name + '0000') != null;
 	}
 
 	public function playerPosition()

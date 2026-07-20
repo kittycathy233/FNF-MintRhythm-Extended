@@ -295,8 +295,8 @@ class NoteSplash extends FlxSprite
 							{
 								if (i > 2) break;
 
-								var arr:Array<FlxColor> = ClientPrefs.data.arrowRGB[noteData % Note.colArray.length];
-								if (PlayState.isPixelStage) arr = ClientPrefs.data.arrowRGBPixel[noteData % Note.colArray.length];
+							var arr:Array<FlxColor> = ClientPrefs.data.arrowRGB[Note.styleIndex(noteData)];
+							if (PlayState.isPixelStage) arr = ClientPrefs.data.arrowRGBPixel[Note.styleIndex(noteData)];
 
 								var rgb = colors[i];
 								if (rgb == null)

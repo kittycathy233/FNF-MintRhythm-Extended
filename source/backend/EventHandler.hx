@@ -273,6 +273,16 @@ class EventHandler
                 }
                 playState.reloadHealthBarColors();
 
+            case 'Change Mania':
+                // Value 1: 键数 (1-9)，Value 2: 预留。
+                // 进入事件即按目标键数重建箭头与键位，兼容旧谱的事件形式 Change Mania。
+                if (value1 != null && value1.trim().length > 0)
+                {
+                    var keyCount:Int = Std.parseInt(value1);
+                    if (!Math.isNaN(keyCount))
+                        playState.changeMania(ExtraKeysHandler.instance.clampMania(keyCount - 1));
+                }
+
             case 'Change Scroll Speed':
                 if (playState.songSpeedType != "constant")
                 {

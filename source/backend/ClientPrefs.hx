@@ -361,6 +361,85 @@ class ClientPrefs {
 		FlxG.log.add("Settings saved!");
 	}
 
+	/**
+	 * 多键初始化：把 arrowRGB/arrowRGBPixel/arrowHSV 扩展到 9 项（style 0..8），
+	 * 并注册所有 mania 的额外键位 action。
+	 * style 0..3 沿用用户已保存/默认的四向配色（向后兼容），style 4..8 取自 extrakeys.json。
+	 */
+	public static function initMultiKey():Void
+	{
+		expandArrowColors();
+		registerExtraKeyBinds();
+	}
+
+	private static function expandArrowColors():Void
+	{
+		if (data == null) return;
+		var ek = ExtraKeysHandler.instance;
+		var max:Int = ek.data.maxKeys;
+
+		function ensure(list:Array<Array<FlxColor>>, pixel:Bool):Array<Array<FlxColor>>
+		{
+			var out:Array<Array<FlxColor>> = (list == null) ? [] : list.copy();
+			for (s in 0...max)
+			{
+				if (s >= out.length || out[s] == null)
+				{
+					// 缺失的样式（多键额外样式 4..8）：从 extrakeys.json 取配色。
+					var c:Array<Int> = pixel ? ek.rgbPixelOf(s) : ek.rgbOf(s);
+					var col:FlxColor = FlxColor.fromRGB(c[0], c[1], c[2]);
+					out[s] = [col, col, col];
+				}
+				else if (out[s].length < 3)
+				{
+					// 已有的单元素默认配色：保留原色，补齐为 3 元素（向后兼容四向默认色）。
+					var cc:FlxColor = out[s][0];
+					out[s] = [cc, cc, cc];
+				}
+			}
+			return out;
+		}
+
+		data.arrowRGB = ensure(data.arrowRGB, false);
+		data.arrowRGBPixel = ensure(data.arrowRGBPixel, true);
+
+		var hsvOut:Array<Array<Int>> = (data.arrowHSV == null) ? [] : data.arrowHSV.copy();
+		for (s in 0...max)
+		{
+			if (s >= hsvOut.length || hsvOut[s] == null || hsvOut[s].length < 3)
+			{
+				var h:Array<Int> = ek.hsvOf(s);
+				hsvOut[s] = [h[0], h[1], h[2]];
+			}
+		}
+		data.arrowHSV = hsvOut;
+	}
+
+	/** 注册 extrakey_${mania}_${i} 动作到 keyBinds/gamepadBinds/mobileBinds（已存在则不覆盖）。 */
+	public static function registerExtraKeyBinds():Void
+	{
+		var ek = ExtraKeysHandler.instance;
+		for (mania in 0...(ek.data.maxKeys))
+		{
+			var binds:Array<Array<Int>> = ek.keybindsFor(mania);
+			for (i in 0...binds.length)
+			{
+				var action:String = 'extrakey_${mania}_$i';
+				if (!keyBinds.exists(action))
+					keyBinds.set(action, binds[i].map(function(code:Int) return cast(code, FlxKey)));
+
+				if (!gamepadBinds.exists(action))
+				{
+					var code:Int = (binds[i].length > 0) ? binds[i][0] : 0;
+					gamepadBinds.set(action, [cast(code, FlxGamepadInputID)]);
+				}
+
+				if (!mobileBinds.exists(action))
+					mobileBinds.set(action, [NONE]); // 默认无触屏按钮；由移动端动态按键补充
+			}
+		}
+	}
+
 	public static function loadPrefs() {
 		#if ACHIEVEMENTS_ALLOWED Achievements.load(); #end
 
@@ -453,6 +532,11 @@ class ClientPrefs {
 		}
 
 		#if DISCORD_ALLOWED DiscordClient.check(); #end
+
+		// 多键：扩展 arrowRGB/arrowRGBPixel/arrowHSV 到 9 项（style 0..8），
+		// 并注册额外键位 action。必须在下面的 controls 合并之前执行，
+		// 否则保存的多键重绑不会被加载。
+		initMultiKey();
 
 		// controls on a separate save file
 		var save:FlxSave = new FlxSave();

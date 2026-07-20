@@ -97,7 +97,8 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		['Change Opponent Scroll Speed', "same as Change Scroll Speed, but only for Opponent"],
 		['Change Player Scroll Speed', "same as Change Scroll Speed, but only for Player"],
 		['Toggle IconBop', "Enable or disable icon bopping.\nValue 1: on/off/true/false/0/1 (default: on)"],
-		['Add IconBop', "Make the health icons bop once immediately."]
+		['Add IconBop', "Make the health icons bop once immediately."],
+		['Change Mania', "Change Mania（动态键数）。\nValue 1: 键数 (1-9)，进入事件即按目标键数重建箭头与键位\nValue 2: 预留（暂未使用）"]
 	];
 	
 	public static var keysArray:Array<FlxKey> = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]; //Used for Vortex Editor
@@ -289,6 +290,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	// Grid轨道颜色覆盖层
 	var playerTrackOverlay:FlxSprite; // 玩家轨道（蓝色）
 	var opponentTrackOverlay:FlxSprite; // 对手轨道（红色）
+	var _rebuildingGrids:Bool = false; // 防止 createGrids 递归调用 loadSection 的守护标志
 	var eventTrackOverlay:FlxSprite; // Event轨道（黄色）
 
 	var iconbopTween:FlxTween;
@@ -544,68 +546,12 @@ if(_shouldReset) Conductor.songPosition = 0;
 		var startY:Float = FlxG.height/2;
 		vortexIndicator.visible = strumLineNotes.visible = strumLineNotes.active = vortexEnabled;
 
-		// 新布局：strumLineNotes显示在对手和玩家轨道区域
-		// noteData 0-3（原玩家）→ UI列8-11（玩家）
-		// noteData 4-7（原对手）→ UI列0-3（对手）
-		for (i in 0...Std.int(GRID_PLAYERS * GRID_COLUMNS_PER_PLAYER))
-		{
-			var noteData:Int = i % GRID_COLUMNS_PER_PLAYER;
-			var isPlayer:Bool = i < 4; // 前4个是玩家（noteData 0-3），后4个是对手（noteData 0-3）
-			var uiColumn:Int = isPlayer ? (noteData + 8) : noteData; // 玩家→8-11，对手→0-3
-
-			// 根据逻辑列号计算额外的间距偏移
-			var spacingOffset:Float = 0;
-			if (uiColumn >= GRID_COLUMNS_PER_PLAYER)
-			{
-				spacingOffset += TRACK_SPACING; // Event轨道后的间距
-			}
-			if (uiColumn >= GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT)
-			{
-				spacingOffset += TRACK_SPACING; // 玩家轨道前的间距
-			}
-
-			var note:StrumNote = new StrumNote(gridLayout.startX + (GRID_SIZE * uiColumn) + spacingOffset, startY, noteData, 0);
-			note.scrollFactor.set();
-			note.playAnim('static');
-			note.alpha = 0.4;
-
-			note.updateHitbox();
-			if(note.width > note.height)
-				note.setGraphicSize(GRID_SIZE);
-			else
-				note.setGraphicSize(0, GRID_SIZE);
-
-			note.updateHitbox();
-			note.x += GRID_SIZE/2 - note.width/2;
-			note.y += GRID_SIZE/2 - note.height/2;
-			strumLineNotes.add(note);
-		}
+		// 漩涡编辑器静态箭头：数量随当前小节 mania 动态变化（9 键时显示 9 列箭头）
+		rebuildStrumLineNotes();
 
 
-		// 为Grid格子添加颜色滤镜（新布局：对手(0-3) → Event(4-7) → 玩家(8-11)）
-		if(opponentGridBg != null)
-		{
-			// 对手轨道列（0-3）添加红色调
-			for (i in 0...GRID_COLUMNS_PER_PLAYER)
-			{
-				opponentGridBg.stripe.color = 0xFFFF4488; // 红色
-			}
-
-			// Event轨道列（4-7）添加黄色调
-			if(SHOW_EVENT_COLUMN)
-			{
-				for (i in GRID_COLUMNS_PER_PLAYER...(GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT))
-				{
-					eventGridBg.stripe.color = 0xFFFFFF44; // 黄色
-				}
-			}
-
-			// 玩家轨道列（8-11）添加蓝色调
-			for (i in (GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT)...(GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT + GRID_COLUMNS_PER_PLAYER))
-			{
-				playerGridBg.stripe.color = 0xFF4488FF; // 蓝色
-			}
-		}
+		// 为Grid格子添加颜色滤镜（新布局：对手 → Event → 玩家）
+		applyGridStripeColors();
 
 
 
@@ -778,6 +724,18 @@ if(_shouldReset) Conductor.songPosition = 0;
 		tipText.x = FlxG.width - tipText.width - 20;
 
 		add(tipText);
+
+		// 制谱器版本（左下角固定显示）
+		var versionText:FlxText = new FlxText(15, FlxG.height - 30, 280, 'v1.0.1-beta', 16);
+		versionText.cameras = [camUI];
+		versionText.setFormat(Paths.font("unifont-16.0.02.otf"), 16, FlxColor.WHITE, LEFT);
+		versionText.borderColor = FlxColor.BLACK;
+		versionText.borderSize = 1;
+		versionText.scrollFactor.set();
+		versionText.active = false;
+		versionText.y = FlxG.height - versionText.height - 20;
+		versionText.x = 10;
+		add(versionText);
 
 		tipBg = new FlxSprite().makeGraphic(1, 1, FlxColor.BLACK);
 		tipBg.cameras = [camUI];
@@ -2905,27 +2863,30 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 				insert(getFirstNull(), nextEventGridBg);
 				insert(getFirstNull(), eventGridBg);
 			}
-			insert(getFirstNull(), prevPlayerGridBg);
-			insert(getFirstNull(), nextPlayerGridBg);
-			insert(getFirstNull(), playerGridBg);
-			loadSection();
-		}
-		else
-		{
-			add(prevOpponentGridBg);
-			add(nextOpponentGridBg);
-			add(opponentGridBg);
-			if(SHOW_EVENT_COLUMN)
-			{
-				add(prevEventGridBg);
-				add(nextEventGridBg);
-				add(eventGridBg);
-			}
-			add(prevPlayerGridBg);
-			add(nextPlayerGridBg);
-			add(playerGridBg);
-		}
+		insert(getFirstNull(), prevPlayerGridBg);
+		insert(getFirstNull(), nextPlayerGridBg);
+		insert(getFirstNull(), playerGridBg);
+		// 网格重建期间（applySectionColumns 调用）不递归触发 loadSection，避免死循环
+		if(!_rebuildingGrids) loadSection();
 	}
+	else
+	{
+		add(prevOpponentGridBg);
+		add(nextOpponentGridBg);
+		add(opponentGridBg);
+		if(SHOW_EVENT_COLUMN)
+		{
+			add(prevEventGridBg);
+			add(nextEventGridBg);
+			add(eventGridBg);
+		}
+		add(prevPlayerGridBg);
+		add(nextPlayerGridBg);
+		add(playerGridBg);
+	}
+	// 新创建/重建后统一着色条纹（原 create() 内的内联着色逻辑已迁移至此）
+	applyGridStripeColors();
+}
 
 	// 根据UI列获取对应的网格
 	function getGridByUIColumn(uiColumn:Int):ChartingGridSprite
@@ -2961,6 +2922,117 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 			playerX: startX + opponentWidth + eventWidth + TRACK_SPACING * (SHOW_EVENT_COLUMN ? 2 : 1),
 			totalWidth: totalWidth
 		};
+	}
+
+	// 取某小节的 mania（小节勾选 Change Mania 且有值则用小节值，否则用歌曲默认）
+	public static function getSectionMania(secNum:Int):Int
+	{
+		var ek = backend.ExtraKeysHandler.instance;
+		var notes = PlayState.SONG != null ? PlayState.SONG.notes : null;
+		if (notes == null || secNum < 0 || secNum >= notes.length) return ek.clampMania(PlayState.SONG != null ? PlayState.SONG.mania : 3);
+		var sec = notes[secNum];
+		var mania = (sec != null && sec.changeMania && sec.mania != null) ? sec.mania : PlayState.SONG.mania;
+		return ek.clampMania(mania);
+	}
+
+	// 某小节的轨道列数（= mania + 1）
+	public static function getSectionColumns(secNum:Int):Int
+	{
+		return getSectionMania(secNum) + 1;
+	}
+
+	// 根据当前小节 mania 同步：Note.colArray（颜色前缀）、网格列数、网格与箭头、轨道色块。
+	// 仅当列数变化时重建网格，避免每次切换小节都重建（开销大）。
+	function applySectionColumns(secNum:Int):Void
+	{
+		var cols = getSectionColumns(secNum);
+		var ek = backend.ExtraKeysHandler.instance;
+		var mania = getSectionMania(secNum);
+
+		// 重建 Note.colArray：音符颜色前缀按当前 mania 的 style 解析
+		var newCol:Array<String> = [];
+		for (i in 0...cols)
+		{
+			var style:Int = ek.styleOf(mania, i);
+			newCol[i] = PlayState.isPixelStage ? (['purple', 'blue', 'green', 'red'][i % 4]) : ek.colorPrefixOf(style);
+		}
+		Note.colArray = newCol;
+
+		if (cols != GRID_COLUMNS_PER_PLAYER)
+		{
+			GRID_COLUMNS_PER_PLAYER = cols;
+			_rebuildingGrids = true;
+			createGrids(); // 内部因 _rebuildingGrids 守护而不会递归调用 loadSection
+			rebuildStrumLineNotes();
+			resizeTrackOverlays();
+			applyGridStripeColors();
+			_rebuildingGrids = false;
+		}
+	}
+
+	// 重建漩涡编辑器的静态箭头（数量跟随当前 GRID_COLUMNS_PER_PLAYER）
+	function rebuildStrumLineNotes():Void
+	{
+		for (note in strumLineNotes) note.destroy();
+		strumLineNotes.clear();
+		var gridLayout = getGridLayout();
+
+		var cols:Int = GRID_COLUMNS_PER_PLAYER;
+		var total:Int = GRID_PLAYERS * cols;
+		var startY:Float = FlxG.height / 2;
+		for (i in 0...total)
+		{
+			var noteData:Int = i % cols;
+			var isPlayer:Bool = i < cols; // 前 cols 个为玩家，后 cols 个为对手
+			var uiColumn:Int = isPlayer ? (noteData + GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT) : noteData;
+
+			var spacingOffset:Float = 0;
+			if (uiColumn >= GRID_COLUMNS_PER_PLAYER) spacingOffset += TRACK_SPACING;
+			if (uiColumn >= GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT) spacingOffset += TRACK_SPACING;
+
+			var note:StrumNote = new StrumNote(gridLayout.startX + (GRID_SIZE * uiColumn) + spacingOffset, startY, noteData, 0);
+			note.scrollFactor.set();
+			note.playAnim('static');
+			note.alpha = 0.4;
+
+			note.updateHitbox();
+			if(note.width > note.height)
+				note.setGraphicSize(GRID_SIZE);
+			else
+				note.setGraphicSize(0, GRID_SIZE);
+
+			note.updateHitbox();
+			note.x += GRID_SIZE/2 - note.width/2;
+			note.y += GRID_SIZE/2 - note.height/2;
+			strumLineNotes.add(note);
+		}
+	}
+
+	// 网格列数变化时，按新的列数重新生成轨道底色块的宽度
+	function resizeTrackOverlays():Void
+	{
+		if (playerTrackOverlay == null || opponentGridBg == null) return;
+		var gridHeight:Float = opponentGridBg.height;
+		var extraHeight:Int = 500;
+		opponentTrackOverlay.makeGraphic(GRID_SIZE * GRID_COLUMNS_PER_PLAYER, Std.int(gridHeight) + extraHeight, 0xFFCC88FF);
+		opponentTrackOverlay.alpha = 0.15;
+		playerTrackOverlay.makeGraphic(GRID_SIZE * GRID_COLUMNS_PER_PLAYER, Std.int(gridHeight) + extraHeight, 0xFF88CCFF);
+		playerTrackOverlay.alpha = 0.15;
+	}
+
+	// 为三块网格（对手 / Event / 玩家）重新着色条纹
+	function applyGridStripeColors():Void
+	{
+		if (opponentGridBg == null) return;
+		for (i in 0...GRID_COLUMNS_PER_PLAYER)
+			opponentGridBg.stripe.color = 0xFFFF4488; // 对手：红色
+		if (SHOW_EVENT_COLUMN)
+		{
+			for (i in GRID_COLUMNS_PER_PLAYER...(GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT))
+				eventGridBg.stripe.color = 0xFFFFFF44; // Event：黄色
+		}
+		for (i in (GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT)...(GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT + GRID_COLUMNS_PER_PLAYER))
+			playerGridBg.stripe.color = 0xFF4488FF; // 玩家：蓝色
 	}
 
 	// 获取指定位置的轨道信息和网格
@@ -3185,6 +3257,9 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 
 	function reloadNotes()
 	{
+		// 在创建音符前先按当前小节 mania 重建颜色前缀与网格列数，
+		// 否则多键音符会因 colArray 长度不足而拿不到正确的颜色前缀。
+		applySectionColumns(curSec);
 		selectedNotes = [];
 		for (note in notes) if(note != null) note.destroy();
 		for (event in events) if(event != null) event.destroy();
@@ -3477,6 +3552,8 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 	{
 		if(sec != null) curSec = sec;
 		curSec = Std.int(FlxMath.bound(curSec, 0, PlayState.SONG.notes.length-1));
+		// 同步当前小节的 mania（列数 / 颜色前缀 / 网格），列数变化时才重建网格
+		applySectionColumns(curSec);
 		Conductor.bpm = cachedSectionBPMs[curSec];
 
 		var hei:Float = 0;
@@ -3586,11 +3663,14 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 			mustHitCheckBox.checked = sec.mustHitSection;
 			gfSectionCheckBox.checked = sec.gfSection;
 			altAnimSectionCheckBox.checked = sec.altAnim;
-			changeBpmCheckBox.checked = sec.changeBPM;
-			// changeBPM 段显示“目标 BPM”（编辑用）；其它段显示当前段编辑用 BPM（已随起点 BPM 正确回退）
-			changeBpmStepper.value = (sec.changeBPM && sec.bpm != null) ? sec.bpm : Conductor.bpm;
-			bpmRampStepper.value = (sec.bpmRamp != null) ? sec.bpmRamp : 0;
-			beatsPerSecStepper.value = sec.sectionBeats;
+		changeBpmCheckBox.checked = sec.changeBPM;
+		// changeBPM 段显示“目标 BPM”（编辑用）；其它段显示当前段编辑用 BPM（已随起点 BPM 正确回退）
+		changeBpmStepper.value = (sec.changeBPM && sec.bpm != null) ? sec.bpm : Conductor.bpm;
+		bpmRampStepper.value = (sec.bpmRamp != null) ? sec.bpmRamp : 0;
+		beatsPerSecStepper.value = sec.sectionBeats;
+		// 小节级 Change Mania：仅当勾选时才强制小节键数；否则显示歌曲默认键数供编辑
+		changeManiaCheckBox.checked = sec.changeMania;
+		maniaStepper.value = (sec.changeMania && sec.mania != null) ? sec.mania : backend.ExtraKeysHandler.instance.clampMania(PlayState.SONG.mania);
 
 			strumTimeStepper.step = Conductor.stepCrochet;
 			susLengthStepper.step = cachedSectionCrochets[curSec] / 4 / 2;
@@ -3746,35 +3826,35 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 
 	function uiColumnToNoteData(uiColumn:Int):Int
 	{
-		// 新布局：对手(0-3) → Event(4-7) → 玩家(8-11)
-		if (uiColumn < 4)
+		// 动态列数布局：对手(0..cols-1) → Event(cols..cols+EVENT-1) → 玩家(cols+EVENT..2cols+EVENT-1)
+		if (uiColumn < GRID_COLUMNS_PER_PLAYER)
 		{
-			return uiColumn + 4; // 对手轨道（noteData 4-7）
+			return uiColumn + GRID_COLUMNS_PER_PLAYER; // 对手轨道（noteData cols..2cols-1）
 		}
-		else if (uiColumn < 8 && SHOW_EVENT_COLUMN)
+		else if (uiColumn < GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT && SHOW_EVENT_COLUMN)
 		{
 			return -1; // Event轨道（noteData -1，通过eventTrackIndex区分）
 		}
 		else
 		{
-			return uiColumn - 8; // 玩家轨道（noteData 0-3）
+			return uiColumn - (GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT); // 玩家轨道（noteData 0..cols-1）
 		}
 	}
 
 	function noteDataToUIColumn(noteData:Int):Int
 	{
-		// 新布局：对手(0-3) → Event(4-7) → 玩家(8-11)
-		if (noteData >= 4 && noteData < 8)
+		// 动态列数布局：对手(0..cols-1) → Event → 玩家(0..cols-1)
+		if (noteData >= GRID_COLUMNS_PER_PLAYER)
 		{
-			return noteData - 4; // 对手轨道（UI列0-3）
+			return noteData - GRID_COLUMNS_PER_PLAYER; // 对手轨道（UI列0..cols-1）
 		}
 		else if (noteData < 0 && SHOW_EVENT_COLUMN)
 		{
-			return GRID_COLUMNS_PER_PLAYER; // Event轨道（UI列4-7，这里返回起始位置，具体位置由eventTrackIndex决定）
+			return GRID_COLUMNS_PER_PLAYER; // Event轨道（返回起始位置，具体位置由eventTrackIndex决定）
 		}
 		else
 		{
-			return noteData + GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT; // 玩家轨道（UI列8-11）
+			return noteData + GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT; // 玩家轨道
 		}
 	}
 
@@ -3794,19 +3874,16 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 			return;
 		}
 
-		// 普通note的轨道布局：对手(0-3) → Event(4-7) → 玩家(8-11)
-		// noteData映射：
-		// 4-7（对手）→ UI列0-3
-		// 0-3（玩家）→ UI列8-11
+		// 普通note的轨道布局：对手(0..cols-1) → Event → 玩家(0..cols-1)
 		var uiColumn:Int = 0;
-		if (data >= 4)
+		if (data >= GRID_COLUMNS_PER_PLAYER)
 		{
-			// 对手轨道（noteData 4-7）
-			uiColumn = data - 4;
+			// 对手轨道（noteData cols..2cols-1）
+			uiColumn = data - GRID_COLUMNS_PER_PLAYER;
 		}
 		else
 		{
-			// 玩家轨道（noteData 0-3）
+			// 玩家轨道（noteData 0..cols-1）
 			uiColumn = data + GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT;
 		}
 
@@ -4423,8 +4500,10 @@ for (i in 0...GRID_PLAYERS)
 
 	var changeBpmCheckBox:PsychUICheckBox;
 	var changeBpmStepper:PsychUINumericStepper;
+	var changeManiaCheckBox:PsychUICheckBox;
 	var bpmRampStepper:PsychUINumericStepper;
 	var beatsPerSecStepper:PsychUINumericStepper;
+	var maniaStepper:PsychUINumericStepper;
 
 	function addSectionTab()
 	{
@@ -4567,6 +4646,43 @@ for (i in 0...GRID_PLAYERS)
 			}
 		};
 
+		var ek = backend.ExtraKeysHandler.instance;
+		objY += 25;
+		// 小节级 Change Mania（可勾选，类似 change BPM）：勾选后进入该小节即按小节键数重建。
+		changeManiaCheckBox = new PsychUICheckBox(changeBpmStepper.x, objY, 'Change Mania', 80, function()
+		{
+			var sec = getCurChartSection();
+			if(sec != null)
+			{
+			sec.changeMania = changeManiaCheckBox.checked;
+			if(sec.changeMania && !Reflect.hasField(sec, 'mania')) sec.mania = Std.int(maniaStepper.value);
+			// 勾选/取消会影响该小节使用的键数，需同步网格列数
+			applySectionColumns(curSec);
+			softReloadNotes();
+			}
+		});
+
+		objY += 25;
+		var maniaLabel = new FlxText(changeBpmStepper.x, objY - 15, 220, 'Mania (Keys: ' + (ek.minKeys) + '-' + (ek.maxKeys) + ')');
+		maniaLabel.setFormat(Paths.font(Language.get('uitab_font')), 12);
+		tab_group.add(maniaLabel);
+		// 小节级 Change Mania：键数 = mania + 1，默认 4 键（mania 3）
+		maniaStepper = new PsychUINumericStepper(changeBpmStepper.x, objY, 1, ek.clampMania(3), ek.minKeys - 1, ek.maxKeys - 1, 0);
+		maniaStepper.onValueChange = function()
+		{
+			var sec = getCurChartSection();
+			if(sec != null)
+			{
+			sec.mania = ek.clampMania(Std.int(maniaStepper.value));
+			// 调整键数即视为勾选 Change Mania（与 changeBpm 一致：改值自动勾选）
+			sec.changeMania = true;
+			changeManiaCheckBox.checked = true;
+			// 键数变化会触发网格重建（列数改变）并刷新音符
+			applySectionColumns(curSec);
+			softReloadNotes();
+			}
+		};
+
 
 		beatsPerSecStepper = new PsychUINumericStepper(objX + 150, objY, 1, 4, 1, 16, 2);
 		beatsPerSecStepper.onValueChange = function()
@@ -4700,7 +4816,9 @@ for (i in 0...GRID_PLAYERS)
 		tab_group.add(new FlxText(beatsPerSecStepper.x, beatsPerSecStepper.y - 15, 100, Language.get('charting_beatspersec_text')).setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(changeBpmCheckBox);
 		tab_group.add(changeBpmStepper);
+		tab_group.add(changeManiaCheckBox);
 		tab_group.add(bpmRampStepper);
+		tab_group.add(maniaStepper);
 		tab_group.add(beatsPerSecStepper);
 		
 		tab_group.add(copyButton);

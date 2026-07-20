@@ -107,6 +107,38 @@ class Hitbox extends MobileInputManager implements IMobileControls
 		updateTrackedButtons();
 
 		instance = this;
+
+		// 多键：按 mania 动态生成额外的触屏音符按钮（整行均分布局）。
+		// 4 键时行为与原来完全一致；>4 键时重建为 keyCount 个按钮。
+		var ek = backend.ExtraKeysHandler.instance;
+		var maniaInt:Int = (states.PlayState.SONG != null) ? ek.clampMania(states.PlayState.SONG.mania) : 3;
+		var keyCount:Int = maniaInt + 1;
+		if (keyCount > 4)
+		{
+			clear();
+			var colW:Int = Std.int(FlxG.width / keyCount);
+			var colors:Array<Int> = [0xFFC24B99, 0xFF00FFFF, 0xFF12FA05, 0xFFF9393F, 0xFFF2A65A, 0xFF9B59B6, 0xFF1ABC9C, 0xFFE67E22, 0xFF3498DB];
+			var baseIDs:Array<Array<MobileInputID>> = [
+				[MobileInputID.HITBOX_LEFT, MobileInputID.NOTE_LEFT],
+				[MobileInputID.HITBOX_DOWN, MobileInputID.NOTE_DOWN],
+				[MobileInputID.HITBOX_UP, MobileInputID.NOTE_UP],
+				[MobileInputID.HITBOX_RIGHT, MobileInputID.NOTE_RIGHT]
+			];
+			var created:Array<TouchButton> = [];
+			for (i in 0...keyCount)
+			{
+				var ids:Array<MobileInputID> = (i < 4) ? baseIDs[i] : [cast(MobileInputID.NOTE_4 + (i - 4))];
+				var btn:TouchButton = createHint(i * colW, 0, colW, FlxG.height, colors[i]);
+				btn.IDs = ids;
+				add(btn);
+				created.push(btn);
+			}
+			buttonLeft = created[0];
+			buttonDown = created[1];
+			buttonUp = created[2];
+			buttonRight = created[3];
+			updateTrackedButtons();
+		}
 	}
 
 	/**
