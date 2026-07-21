@@ -491,7 +491,18 @@ class Note extends FlxSprite
 	static var _atlasCache:Map<String, FlxAtlasFrames> = new Map();
 	static function getCachedSparrowAtlas(key:String):FlxAtlasFrames
 	{
-		if (_atlasCache.exists(key)) return _atlasCache.get(key);
+		if (_atlasCache.exists(key))
+		{
+			var cached:FlxAtlasFrames = _atlasCache.get(key);
+			// 校验缓存是否仍然有效：切歌 / 清理内存时（clearStoredMemory、clearUnusedMemory）
+			// 底层 FlxGraphic 会被销毁——bitmap 置空并从 FlxG.bitmap 缓存中移除。此时旧的
+			// FlxAtlasFrames 仍指向这张已销毁的贴图，继续复用会让音符渲染成空白（“看不到滚动箭头纹理”）。
+			// 一旦发现失效就丢弃并重新解析，从根本上避免这个问题，同时保留正常情况下的缓存收益。
+			if (cached != null && cached.parent != null && cached.parent.bitmap != null
+				&& FlxG.bitmap.get(cached.parent.key) == cached.parent)
+				return cached;
+			_atlasCache.remove(key);
+		}
 		var atlas:FlxAtlasFrames = Paths.getSparrowAtlas(key);
 		if (atlas != null) _atlasCache.set(key, atlas);
 		return atlas;

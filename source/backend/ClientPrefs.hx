@@ -63,6 +63,28 @@ import states.TitleState;
 
 	public var ghostTapping:Bool = true;
 	public var preciseHit:Bool = true; // 毫秒级精确判定：按键瞬间用音频时钟同步 songPosition，并实时计算判定窗口（替代上一帧缓存的 canBeHit）
+
+	// ===== 低延迟 / 性能模式 =====
+	// 自动重同步：弱机卡顿时，引擎会检测音频与逻辑不同步并跳回正确位置。关闭后不会“倒带”，改由玩家手动校准。
+	public var autoResync:Bool = true;
+	// 提前剔除已错过音符的渲染：已错过且离开屏幕（或到达极晚阈值）的音符不再参与绘制，降低 SPAM 谱渲染负担。
+	public var hideMissedNotes:Bool = true;
+	// 低延迟模式：关闭自动重同步 + 强制开启已错过音符剔除，追求最低输入延迟与最稳帧率。
+	// 同时会强制开启「过期音符即时结算」与「关闭逐音符脚本」，构成一套完整的低负担组合。
+	public var lowLatency:Bool = false;
+
+	// ===== 高密度谱面（SPAM）性能优化 =====
+	// 每帧生成预算：单帧内最多新建多少个音符精灵，0 = 不限制（保持原行为）。
+	// 卡顿恢复后积压的大量音符不会在同一帧被一次性创建成几百个精灵（避免“死亡螺旋”），
+	// 而是分摊到随后的若干帧生成；音符只是延后一两帧出现，绝不会丢失。
+	public var maxNotesPerFrame:Int = 0;
+	// 过期音符即时结算：生成时若某音符早已越过 noteKillOffset（正常也必定判 miss），
+	// 直接结算而不加入渲染组、不参与逐帧绘制与物理。复用既有阈值，判定语义零偏差。
+	public var instantResolveExpired:Bool = true;
+	// 关闭逐音符脚本回调：跳过 onSpawnNote / goodNoteHit(Pre) / noteMiss / opponentNoteHit(Pre)
+	// 的 Lua/HScript 调用。密集谱下这些逐音符调用开销巨大。⚠ 会使依赖这些回调的 modchart 失效，默认关闭。
+	public var disableNoteLua:Bool = false;
+
 	public var timeBarType:String = 'Time Left';
 	public var scoreZoom:Bool = true;
 	public var noReset:Bool = false;

@@ -181,6 +181,49 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			trace("Fixed timestep changed to: " + FlxG.fixedTimestep);
 		};
 
+		// ===== 低延迟 / 性能模式 =====
+		option = new Option('Auto Song Resync',
+			'On weak devices, the engine jumps the song back when audio/logic desyncs. Turn OFF to avoid sudden rewinds and rely on manual calibration.',
+			'autoResync',
+			BOOL);
+		addOption(option);
+
+		option = new Option('Hide Missed Notes (Cull)',
+			'Stop drawing notes that were already missed and scrolled off-screen (or became extremely late). Lowers render load in SPAM charts. Misses are still counted normally.',
+			'hideMissedNotes',
+			BOOL);
+		addOption(option);
+
+		option = new Option('Low-Latency Mode',
+			'Turns OFF auto resync (no rewinds), forces missed-note culling, instant-resolve of expired notes AND disables per-note scripts. Lowest input latency / steadiest framerate at the cost of possible drift and modchart callbacks.',
+			'lowLatency',
+			BOOL);
+		addOption(option);
+
+		// ===== 高密度谱面（SPAM）性能优化 =====
+		option = new Option('Instant-Resolve Expired Notes',
+			'Notes already past the miss window are settled immediately instead of being drawn for a few frames. Prevents lag-spiral avalanches in SPAM charts. Same threshold as the normal miss kill, so judgement is unaffected.',
+			'instantResolveExpired',
+			BOOL);
+		addOption(option);
+
+		option = new Option('Disable Per-Note Scripts',
+			'Skip Lua/HScript callbacks (onSpawnNote / goodNoteHit / noteMiss / opponentNoteHit) for every single note. Big boost in dense charts. WARNING: breaks modcharts that rely on these callbacks.',
+			'disableNoteLua',
+			BOOL);
+		addOption(option);
+
+		option = new Option('Max Notes Spawned / Frame',
+			'Cap how many note sprites can be created in a single frame (0 = unlimited). After a lag spike the backlog is spread over several frames instead of spawning hundreds at once. Notes are never dropped, only delayed a frame or two.',
+			'maxNotesPerFrame',
+			INT);
+		option.scrollSpeed = 60;
+		option.minValue = 0;
+		option.maxValue = 300;
+		option.changeValue = 5;
+		option.decimals = 0;
+		addOption(option);
+
 		option = new Option('Background Volume Level',
 			Language.get("bgvol_level_desc"),
 			'backgroundVolumeLevel',

@@ -253,6 +253,18 @@ class PlayState extends MusicBeatState
 	public var songSpeedType:String = "multiplicative";
 	public var noteKillOffset:Float = 350;
 
+	// 低延迟 / 已错过音符剔除相关
+	// 有效自动重同步：用户开启 autoResync 且未启用低延迟模式时为真
+	private inline function effectiveAutoResync():Bool return ClientPrefs.data.autoResync && !ClientPrefs.data.lowLatency;
+	// 有效已错过音符剔除：用户开启 hideMissedNotes 或启用低延迟模式时为真
+	private inline function effectiveHideMissed():Bool return ClientPrefs.data.hideMissedNotes || ClientPrefs.data.lowLatency;
+	// 有效过期即时结算：用户开启 instantResolveExpired 或启用低延迟模式时为真
+	private inline function effectiveInstantResolve():Bool return ClientPrefs.data.instantResolveExpired || ClientPrefs.data.lowLatency;
+	// 有效关闭逐音符脚本：用户开启 disableNoteLua 或启用低延迟模式时为真
+	private inline function effectiveDisableNoteLua():Bool return ClientPrefs.data.disableNoteLua || ClientPrefs.data.lowLatency;
+	// 本帧已新建的音符精灵计数（用于 maxNotesPerFrame 每帧生成预算），每帧生成前清零
+	private var notesSpawnedThisFrame:Int = 0;
+
 	public var playbackRate(default, set):Float = 1;
 
 	public var eventsPushed(get, never):Array<String>;
@@ -3294,6 +3306,9 @@ isReplaying = false;
 		}
 		doDeathCheck();
 
+		// 每帧生成预算计数清零（maxNotesPerFrame）
+		notesSpawnedThisFrame = 0;
+
 		if (useOptimizedLoading)
 		{
 			// 优化模式
@@ -3309,12 +3324,31 @@ isReplaying = false;
 					
 					// 我们先假设 multSpeed 为 1！
 					if (noteData.strumTime - Conductor.songPosition >= time) break;
-					
-					// 获取前一个音符（如果已生成）
-					var oldNote:Note = null;
-					if(noteData.previousNoteIndex >= 0 && noteData.previousNoteIndex < notesAddedCount) {
-						oldNote = spawnedNotes[noteData.previousNoteIndex];
-					}
+
+					// #4 过期即时结算判定：非 sustain 且已越过 noteKillOffset 的音符稍后直接结算，不入渲染组。
+					// 优化模式下仍需构建对象以维持 sustain 的 parent/tail 引用链，故保留构建、仅省去入组与逐帧开销。
+					var instantExpire:Bool = effectiveInstantResolve() && !noteData.isSustainNote
+						&& (Conductor.songPosition - noteData.strumTime > noteKillOffset);
+
+				// #2 每帧生成预算：仅约束需要正常显示的音符；过期音符不受预算限制以便快速清空积压。
+				// sustain 段落必须一次性构建完，避免预算打断同一长按、导致后续子段引用到已销毁的 head 而崩溃。
+				if (!instantExpire && !noteData.isSustainNote && ClientPrefs.data.maxNotesPerFrame > 0
+					&& notesSpawnedThisFrame >= ClientPrefs.data.maxNotesPerFrame)
+					break;
+
+				// 安全读取已生成音符：spawnedNotes 中的对象可能因命中/错过而被 invalidateNote 销毁
+				// （destroy 后 animation 被置空）。若直接引用，后续音符在构造时访问已销毁的 prevNote 就会崩溃。
+				// 故读取时校验其是否仍存活，已失效的（animation 为 null）当作 null 处理。
+				var oldNote:Note = null;
+				if(noteData.previousNoteIndex >= 0 && noteData.previousNoteIndex < notesAddedCount) {
+					var p:Note = spawnedNotes[noteData.previousNoteIndex];
+					if (p != null && p.animation != null) oldNote = p;
+				}
+				var parentNote:Note = null;
+				if(noteData.parentIndex >= 0 && noteData.parentIndex < notesAddedCount) {
+					var p:Note = spawnedNotes[noteData.parentIndex];
+					if (p != null && p.animation != null) parentNote = p;
+				}
 					
 					// 创建 Note 对象，完全按照传统模式！
 					// noteData 按当前 mania 重映射（兼容 Change Mania），4 键下等价于原值
@@ -3337,18 +3371,17 @@ isReplaying = false;
 					// 应用预加载数据中的提前命中窗口倍率（供尾条判定优化方案B使用）
 					note.earlyHitMult = noteData.earlyHitMult;
 					
-					// 处理 parent 关系
-					if (noteData.isSustainNote && noteData.parentIndex >= 0 && noteData.parentIndex < notesAddedCount) {
-						note.parent = spawnedNotes[noteData.parentIndex];
-						note.parent.tail.push(note);
+				// 处理 parent 关系
+				if (noteData.isSustainNote && parentNote != null) {
+					note.parent = parentNote;
+					note.parent.tail.push(note);
+				}
+				
+				// 处理 correctionOffset
+				if (noteData.isSustainNote) {
+					if (parentNote != null) {
+						note.correctionOffset = parentNote.height / 2;
 					}
-					
-					// 处理 correctionOffset
-					if (noteData.isSustainNote) {
-						if (noteData.parentIndex >= 0 && noteData.parentIndex < notesAddedCount) {
-							var swagNote:Note = spawnedNotes[noteData.parentIndex];
-							note.correctionOffset = swagNote.height / 2;
-						}
 						
 						// 处理 oldNote 的 scale 调整
 						if (oldNote != null && oldNote.isSustainNote && noteData.needsOldNoteScaleAdjust) {
@@ -3374,6 +3407,18 @@ isReplaying = false;
 					
 					// 保存到跟踪数组
 					spawnedNotes[notesAddedCount] = note;
+
+					// #4 过期即时结算：越过 noteKillOffset 的音符按 sick 结算（对手方直接跳过），
+					// 不加入任何渲染组、不逐帧绘制，也不产生视觉开销（详见 instantResolveAsSick）
+					if (instantExpire)
+					{
+						note.spawned = true;
+						note.active = note.visible = false;
+						if (note.mustPress && !note.ignoreNote && !endingSong)
+							instantResolveAsSick(note);
+						notesAddedCount++;
+						continue;
+					}
 					
 					// 生成音符，根据 holdNoteBehind 设置调整添加顺序
 					if (ClientPrefs.data.holdNoteBehind) {
@@ -3392,10 +3437,14 @@ isReplaying = false;
 					}
 					note.spawned = true;
 					
-					// 调用回调
-					callOnLuas('onSpawnNote', [notes.members.indexOf(note), note.noteData, note.noteType, note.isSustainNote, note.strumTime]);
-					callOnHScript('onSpawnNote', [note]);
-					
+					// 调用回调（关闭逐音符脚本时跳过）
+					if (!effectiveDisableNoteLua())
+					{
+						callOnLuas('onSpawnNote', [notes.members.indexOf(note), note.noteData, note.noteType, note.isSustainNote, note.strumTime]);
+						callOnHScript('onSpawnNote', [note]);
+					}
+
+					notesSpawnedThisFrame++;
 					notesAddedCount++;
 				}
 			}
@@ -3412,6 +3461,24 @@ isReplaying = false;
 				while (unspawnNotes.length > 0 && unspawnNotes[0].strumTime - Conductor.songPosition < time)
 				{
 					var dunceNote:Note = unspawnNotes[0];
+
+					// #4 过期即时结算：非 sustain、无 sustain 子节点且已越过 noteKillOffset 的音符直接结算，不入渲染组
+					if (effectiveInstantResolve() && !dunceNote.isSustainNote && dunceNote.tail.length == 0
+						&& (Conductor.songPosition - dunceNote.strumTime > noteKillOffset))
+					{
+						if (dunceNote.mustPress && !dunceNote.ignoreNote && !endingSong)
+							instantResolveAsSick(dunceNote);
+						dunceNote.active = dunceNote.visible = false;
+						dunceNote.kill();
+						unspawnNotes.splice(0, 1);
+						continue;
+					}
+
+					// #2 每帧生成预算：达到上限则本帧停止生成，剩余音符延后到下一帧（音符不会丢失）
+					if (ClientPrefs.data.maxNotesPerFrame > 0
+						&& notesSpawnedThisFrame >= ClientPrefs.data.maxNotesPerFrame)
+						break;
+
 					// 根据 holdNoteBehind 设置调整添加顺序
 					if (ClientPrefs.data.holdNoteBehind) {
 						if (dunceNote.isSustainNote) {
@@ -3429,9 +3496,14 @@ isReplaying = false;
 					}
 					dunceNote.spawned = true;
 
-					callOnLuas('onSpawnNote', [notes.members.indexOf(dunceNote), dunceNote.noteData, dunceNote.noteType, dunceNote.isSustainNote, dunceNote.strumTime]);
-					callOnHScript('onSpawnNote', [dunceNote]);
+					// 调用回调（关闭逐音符脚本时跳过）
+					if (!effectiveDisableNoteLua())
+					{
+						callOnLuas('onSpawnNote', [notes.members.indexOf(dunceNote), dunceNote.noteData, dunceNote.noteType, dunceNote.isSustainNote, dunceNote.strumTime]);
+						callOnHScript('onSpawnNote', [dunceNote]);
+					}
 
+					notesSpawnedThisFrame++;
 					var index:Int = unspawnNotes.indexOf(dunceNote);
 					unspawnNotes.splice(index, 1);
 				}
@@ -3532,6 +3604,19 @@ isReplaying = false;
 
 								daNote.active = daNote.visible = false;
 								invalidateNote(daNote);
+							}
+							// 提前剔除已错过音符的渲染（低延迟/性能模式）：
+							// 已错过且离开屏幕（或逼近 kill 阈值）的音符提前隐藏，减少 SPAM 谱下大量“死音符”的绘制负担。
+							// 注意仍保留其在 notes 组内，错过判定/漏击仍由上面的 kill 逻辑在 noteKillOffset 处统一处理。
+							else if (effectiveHideMissed() && daNote.tooLate && !daNote.ignoreNote && (daNote.active || daNote.visible))
+							{
+								var offscreen:Bool = (
+									daNote.y > FlxG.height || daNote.y + daNote.height < 0 ||
+									daNote.x > FlxG.width || daNote.x + daNote.width < 0
+								);
+								var extremelyLate:Bool = (Conductor.songPosition - daNote.strumTime > noteKillOffset * 0.9);
+								if (offscreen || extremelyLate)
+									daNote.active = daNote.visible = false;
 							}
 							if(daNote.exists) i++;
 						}
@@ -5113,8 +5198,11 @@ isReplaying = false;
 
 		noteMissCommon(daNote.noteData, daNote);
 		stagesFunc(function(stage:BaseStage) stage.noteMiss(daNote));
-		var result:Dynamic = callOnLuas('noteMiss', [notes.members.indexOf(daNote), daNote.noteData, daNote.noteType, daNote.isSustainNote]);
-		if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript('noteMiss', [daNote]);
+		if (!effectiveDisableNoteLua())
+		{
+			var result:Dynamic = callOnLuas('noteMiss', [notes.members.indexOf(daNote), daNote.noteData, daNote.noteType, daNote.isSustainNote]);
+			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript('noteMiss', [daNote]);
+		}
 	}
 
 	function noteMissPress(direction:Int = 1):Void //You pressed a key when there was no notes to press for this key
@@ -5210,8 +5298,12 @@ isReplaying = false;
 
 	function opponentNoteHit(note:Note):Void
 	{
-		var result:Dynamic = callOnLuas('opponentNoteHitPre', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
-		if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) result = callOnHScript('opponentNoteHitPre', [note]);
+		var result:Dynamic = LuaUtils.Function_Continue;
+		if (!effectiveDisableNoteLua())
+		{
+			result = callOnLuas('opponentNoteHitPre', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
+			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) result = callOnHScript('opponentNoteHitPre', [note]);
+		}
 
 		if(result == LuaUtils.Function_Stop) return;
 
@@ -5268,8 +5360,11 @@ isReplaying = false;
 		note.hitByOpponent = true;
 		
 		stagesFunc(function(stage:BaseStage) stage.opponentNoteHit(note));
-		var result:Dynamic = callOnLuas('opponentNoteHit', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
-		if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript('opponentNoteHit', [note]);
+		if (!effectiveDisableNoteLua())
+		{
+			var result:Dynamic = callOnLuas('opponentNoteHit', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
+			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript('opponentNoteHit', [note]);
+		}
 
 		if (!note.isSustainNote) invalidateNote(note);
 	}
@@ -5283,8 +5378,12 @@ isReplaying = false;
 		var leData:Int = Math.round(Math.abs(note.noteData));
 		var leType:String = note.noteType;
 
-		var result:Dynamic = callOnLuas('goodNoteHitPre', [notes.members.indexOf(note), leData, leType, isSus]);
-		if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) result = callOnHScript('goodNoteHitPre', [note]);
+		var result:Dynamic = LuaUtils.Function_Continue;
+		if (!effectiveDisableNoteLua())
+		{
+			result = callOnLuas('goodNoteHitPre', [notes.members.indexOf(note), leData, leType, isSus]);
+			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) result = callOnHScript('goodNoteHitPre', [note]);
+		}
 
 		if(result == LuaUtils.Function_Stop) return;
 
@@ -5439,8 +5538,11 @@ isReplaying = false;
 		}
 
 		stagesFunc(function(stage:BaseStage) stage.goodNoteHit(note));
-		var result:Dynamic = callOnLuas('goodNoteHit', [notes.members.indexOf(note), leData, leType, isSus]);
-		if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript('goodNoteHit', [note]);
+		if (!effectiveDisableNoteLua())
+		{
+			var result:Dynamic = callOnLuas('goodNoteHit', [notes.members.indexOf(note), leData, leType, isSus]);
+			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript('goodNoteHit', [note]);
+		}
 		if(!note.isSustainNote) invalidateNote(note);
 	}
 
@@ -5451,6 +5553,49 @@ isReplaying = false;
 		normalNotes.remove(note, true);
 		holdNotes.remove(note, true);
 		note.destroy();
+	}
+
+	// 过期即时结算的“判为 sick”版本：把已越过 noteKillOffset 的音符按最高评级 sick 结算，而非判 miss。
+	// 即使 rmPerfect（禁用 perfect）开启也始终强制为 sick——因为 sick 在 ratingsData 中一定存在，而 perfect 不一定。
+	// 这样在性能兜底时不会误扣血 / 断连击 / 掉准度。
+	// 为不抵消本功能的性能收益，这里只做轻量计分（连击 / 分数 / 血量 / 准度计数），
+	// 不生成任何视觉对象（评级贴图、连击数、角色动画、splash 等），也不写入回放（避免污染输入序列）。
+	public function instantResolveAsSick(note:Note):Void
+	{
+		if (note.wasGoodHit || note.ignoreNote) return;
+		note.wasGoodHit = true;
+
+		// 找到 sick 评级（无论 rmPerfect 是否禁用 perfect，都强制取 sick）
+		var sickRating:Rating = null;
+		for (r in ratingsData) if (r.name == 'sick') { sickRating = r; break; }
+		if (sickRating == null) sickRating = ratingsData[0];
+
+		if (!note.isSustainNote)
+		{
+			combo++;
+			notesHitArray.unshift(Date.now());
+		}
+		// 特性2：长条尾音命中同样计入一次有效命中（连击 + 准度），但不加分
+		else if (holdTailJudge && note.parent != null && note.parent.tail.length > 0
+			&& note.parent.tail[note.parent.tail.length - 1] == note)
+		{
+			combo++;
+			notesHitArray.unshift(Date.now());
+		}
+
+		var gainHealth:Bool = true;
+		if (guitarHeroSustains && note.isSustainNote) gainHealth = false;
+		if (gainHealth) health += note.hitHealth * healthGain;
+
+		// 复用 popUpScore 的计分核心（sick 评级），但不生成任何视觉对象、不写回放
+		totalNotesHit += sickRating.ratingMod;
+		note.ratingMod = sickRating.ratingMod;
+		sickRating.hits++;
+		note.rating = sickRating.name;
+		songScore += sickRating.score;
+		songHits++;
+		totalPlayed++;
+		RecalculateRating(false);
 	}
 
 	public function spawnNoteSplashOnNote(note:Note) {
@@ -6364,7 +6509,7 @@ isReplaying = false;
 		if (endingSong || paused || shutdownThread)
 			return;
 
-		if (requiresSyncing)
+		if (requiresSyncing && effectiveAutoResync())
 		{
 			requiresSyncing = false;
 			setSongTime(lastCorrectSongPos);
@@ -6382,12 +6527,16 @@ isReplaying = false;
 				if (requiresSyncing)
 					continue;
 
-				if (gameFroze)
-				{
-					lastCorrectSongPos = Conductor.songPosition;
-					requiresSyncing = true;
-					continue;
-				}
+					if (gameFroze)
+					{
+						// 仅当有效自动重同步开启时才标记需要跳回，否则看门狗仅做空轮询（低延迟模式/autoResync 关闭时不“倒带”）
+						if (effectiveAutoResync())
+						{
+							lastCorrectSongPos = Conductor.songPosition;
+							requiresSyncing = true;
+						}
+						continue;
+					}
 				gameFroze = true;
 
 				Sys.sleep(0.25);
