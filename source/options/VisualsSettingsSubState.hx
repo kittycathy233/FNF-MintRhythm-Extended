@@ -106,6 +106,12 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 			'hideHud',
 			BOOL);
 		addOption(option);
+
+		var option:Option = new Option("3-State Icons (Normal/Lose/Win)",
+			"Enables 3-state health icons: Normal / Lose / Win.\nThe icon image should be a wide rectangle with the three states laid out left-to-right (Normal, Lose, Win). You can also use a 450x150 sheet of 3 square icons. When disabled, the classic 2-state square icons are used.",
+			'threeIcons',
+			BOOL);
+		addOption(option);
 		
 		var option:Option = new Option("Time Bar:",
 			Language.get("timebar_desc"),

@@ -6,6 +6,8 @@ class HealthIcon extends FlxSprite
 	private var isPlayer:Bool = false;
 	private var char:String = '';
 	public var startSize:Float = 1;
+	public var framesCount:Int = 1; // 当前图标实际包含的状态帧数量
+
 
 	public function new(char:String = 'face', isPlayer:Bool = false, ?allowGPU:Bool = true)
 	{
@@ -29,18 +31,26 @@ class HealthIcon extends FlxSprite
 			var name:String = 'icons/' + char;
 			if(!Paths.fileExists('images/' + name + '.png', IMAGE)) name = 'icons/icon-' + char; //Older versions of psych engine's support
 			if(!Paths.fileExists('images/' + name + '.png', IMAGE)) name = 'icons/icon-face'; //Prevents crash from missing icon
-			
+
 			var graphic = Paths.image(name, allowGPU);
-			var iSize:Float = Math.round(graphic.width / graphic.height);
-			loadGraphic(graphic, true, Math.floor(graphic.width / iSize), Math.floor(graphic.height));
-			iconOffsets[0] = (width - 150) / iSize;
-			iconOffsets[1] = (height - 150) / iSize;
+
+			// 自适应切分：按 宽/高 推算图标数量，每个图标视为正方形。
+			// 这样 2:1（双态）、3:1（三态）等任意数量的图标条都能正确切分，避免把 2:1 误切成三份。
+			var iSize:Int = Math.round(graphic.width / graphic.height);
+			var frameW:Int = Math.floor(graphic.width / iSize);
+			var frameH:Int = Math.floor(graphic.height);
+
+			loadGraphic(graphic, true, frameW, frameH);
+			// 在 150x150 参考框内居中，兼容宽矩形与方形图标
+			iconOffsets[0] = (width - 150) / 2;
+			iconOffsets[1] = (height - 150) / 2;
 			startSize = scale.x;
 			updateHitbox();
 
 			animation.add(char, [for(i in 0...frames.frames.length) i], 0, false, isPlayer);
 			animation.play(char);
 			this.char = char;
+			framesCount = frames.frames.length;
 
 			if(char.endsWith('-pixel'))
 				antialiasing = false;
@@ -48,6 +58,26 @@ class HealthIcon extends FlxSprite
 				antialiasing = ClientPrefs.data.antialiasing;
 		}
 	}
+
+	/**
+	 * 设置图标状态：'normal'（正常）、'lose'（输）、'win'（赢）
+	 * 帧索引：0 = 正常，1 = 输，2 = 赢（仅当图标实际包含对应帧时生效，否则自动回退，保证兼容）
+	 */
+	public function setIconState(state:String)
+	{
+		if (animation.curAnim == null || framesCount <= 0) return;
+		var f:Int = 0;
+		switch (state)
+		{
+			case 'lose': f = (framesCount > 1) ? 1 : 0;
+			case 'win':  f = (framesCount > 2) ? 2 : 0; // 无独立赢帧时回退到正常帧(0)，而不是输帧(1)
+			default:     f = 0;
+		}
+		if (f > framesCount - 1) f = framesCount - 1;
+		if (f < 0) f = 0;
+		animation.curAnim.curFrame = f;
+	}
+
 
 	public var autoAdjustOffset:Bool = true;
 	override function updateHitbox()

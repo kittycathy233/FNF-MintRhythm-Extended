@@ -32,6 +32,7 @@ import states.TitleState;
 	public var autoPause:Bool = false;
 	public var gcOnResume:Bool = true;
 	public var antialiasing:Bool = true;
+	public var threeIcons:Bool = false; // 三态图标（正常 / 输 / 赢）：开启后图标图片按宽矩形横向均分为 3 个状态
 	public var noteSkin:String = 'Default';
 	public var splashSkin:String = 'Psych';
 	public var splashAlpha:Float = 0.6;

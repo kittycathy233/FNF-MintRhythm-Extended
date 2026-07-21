@@ -3785,8 +3785,12 @@ isReplaying = false;
 		var newPercent:Null<Float> = FlxMath.remapToRange(FlxMath.bound(healthBar.valueFunction(), healthBar.bounds.min, healthBar.bounds.max), healthBar.bounds.min, healthBar.bounds.max, 0, 100);
 		healthBar.percent = (newPercent != null ? newPercent : 0);
 
-		iconP1.animation.curAnim.curFrame = (healthBar.percent < 20) ? 1 : 0; //If health is under 20%, change player icon to frame 1 (losing icon), otherwise, frame 0 (normal)
-		iconP2.animation.curAnim.curFrame = (healthBar.percent > 80) ? 1 : 0; //If health is over 80%, change opponent icon to frame 1 (losing icon), otherwise, frame 0 (normal)
+		// 三态图标：0=正常 1=输 2=赢（win 仅在开启 threeIcons 时生效；自动兼容仅含 0/1 帧的经典图标）
+		// 赢与输的判定区间正相反，且玩家(iconP1)/对手(iconP2)两侧都生效
+		var p1State:String = (healthBar.percent < 20) ? 'lose' : ((ClientPrefs.data.threeIcons && healthBar.percent > 80) ? 'win' : 'normal');
+		var p2State:String = (healthBar.percent > 80) ? 'lose' : ((ClientPrefs.data.threeIcons && healthBar.percent < 20) ? 'win' : 'normal');
+		iconP1.setIconState(p1State);
+		iconP2.setIconState(p2State);
 		return health;
 	}
 
