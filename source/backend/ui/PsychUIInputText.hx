@@ -60,14 +60,18 @@ class PsychUIInputText extends FlxSpriteGroup
 
 	public var selectedFormat:FlxTextFormat = new FlxTextFormat(FlxColor.WHITE);
 
-	public function new(x:Float = 0, y:Float = 0, wid:Int = 100, ?text:String = '', size:Int = 8)
+	public function new(x:Float = 0, y:Float = 0, wid:Int = 100, ?text:String = '', size:Int = 8, ?font:String, ?darkStyle:Bool = false)
 	{
 		super(x, y);
+		// 深色样式：内底深色 + 浅色文字；浅色样式：内底白色 + 深色文字
+		var behindColor:Int = darkStyle ? 0xFF202024 : 0xFFFFFFFF;
+		var textColor:Int = darkStyle ? 0xFFFFFFFF : 0xFF1E1E28;
+
 		this.bg = new FlxSprite().makeGraphic(1, 1, FlxColor.BLACK);
 		this.bg.color = 0xFF000000;
 		this.bg.alpha = 1;
 		this.behindText = new FlxSprite(1, 1).makeGraphic(1, 1, FlxColor.WHITE);
-		this.behindText.color = 0xFFFFFFFF;
+		this.behindText.color = behindColor;
 		this.behindText.alpha = 0.7;
 		this.selection = new FlxSprite().makeGraphic(1, 1, FlxColor.WHITE);
 		this.textObj = new FlxText(1, 1, Math.max(1, wid - 2), '', size);
@@ -79,11 +83,15 @@ class PsychUIInputText extends FlxSpriteGroup
 		add(this.caret);
 
 		// 浅色背景下改用深色文字，选区保留主题蓝
-		this.textObj.color = 0xFF1E1E28;
+		this.textObj.color = textColor;
 		this.textObj.textField.selectable = false;
 		this.textObj.textField.wordWrap = false;
 		this.textObj.textField.multiline = false;
 		this.selection.color = 0xFF3B82F6;
+
+		// 可选自定义字体（如 unifont，用于支持 CJK / 特殊字形）
+		if (font != null && font.length > 0)
+			this.textObj.setFormat(font, size, textColor);
 
 		@:bypassAccessor fieldWidth = wid;
 		setGraphicSize(wid + 2, this.textObj.height + 2);
