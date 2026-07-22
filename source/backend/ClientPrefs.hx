@@ -222,6 +222,8 @@ import states.TitleState;
 
 	public var playStateAdaptiveWidth:Bool = false; // PlayState宽屏自适应：高度锁定720，宽度960~1680自适应
 
+	public var chartEditorFollowWindow:Bool = false; // 制谱器分辨率是否跟随窗口：true=跟随窗口(720p~1080p自适应)，false=使用游戏默认固定分辨率1280x720
+
 	// 当模组没有perfect/marvelous贴图时，是否改用sick贴图显示
 	public var fallbackPerfectToSick:Bool = true;
 	public var fallbackEXPerfectToSick:Bool = true;

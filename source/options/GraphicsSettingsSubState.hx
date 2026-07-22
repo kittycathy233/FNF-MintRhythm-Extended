@@ -97,6 +97,13 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		// 制谱器分辨率跟随窗口
+		var option:Option = new Option('Chart Editor Follow Window',
+			'When ON, the Chart Editor resolution follows the window size (720p~1080p adaptive). When OFF, it uses the game default fixed resolution (1280x720).',
+			'chartEditorFollowWindow',
+			BOOL);
+		addOption(option);
+
 		// 飞溅数量限制设置
 		var option:Option = new Option('Splash Limit',
 			'Limit the maximum number of simultaneous note splashes. OFF = no limit.',

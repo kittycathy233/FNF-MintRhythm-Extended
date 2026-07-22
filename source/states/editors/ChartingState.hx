@@ -107,7 +107,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	public static var GRID_COLUMNS_PER_PLAYER = 4;
 	public static var GRID_PLAYERS = 2;
 	public static var GRID_SIZE = 40;
-	public static var TRACK_SPACING = 20; // 轨道之间的间距（半个grid方格）
+	public static var TRACK_SPACING = 0; // 轨道间距（0=取消对手/事件/玩家三组之间的间距，使12条轨道连续排布）
 	final BACKUP_EXT = '.bkp';
 
 	/**
@@ -385,7 +385,8 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 
 		// 制谱器高清模式：进入时临时把内部渲染分辨率提升到 720P~1080P（移动端允许更宽），
 		// 退出时还原。必须在创建任何相机/UI 之前调用，这样相机与布局都会基于新分辨率生成
-		if (ENABLE_HD)
+		// 是否启用由设置项 chartEditorFollowWindow 控制：开启则跟随窗口，关闭则使用游戏默认1280x720
+		if (ENABLE_HD && ClientPrefs.data.chartEditorFollowWindow)
 		{
 			if (!_hdActive)
 			{
@@ -728,12 +729,12 @@ if(_shouldReset) Conductor.songPosition = 0;
 		// 制谱器版本（左下角固定显示）
 		var versionText:FlxText = new FlxText(15, FlxG.height - 30, 280, 'v1.0.1-beta', 16);
 		versionText.cameras = [camUI];
-		versionText.setFormat(Paths.font("unifont-16.0.02.otf"), 16, FlxColor.WHITE, LEFT);
+		versionText.setFormat(Paths.font("unifont-16.0.02.otf"), 20, FlxColor.WHITE, LEFT);
 		versionText.borderColor = FlxColor.BLACK;
 		versionText.borderSize = 1;
 		versionText.scrollFactor.set();
 		versionText.active = false;
-		versionText.y = FlxG.height - versionText.height - 20;
+		versionText.y = FlxG.height - versionText.height - 10;
 		versionText.x = 10;
 		add(versionText);
 
