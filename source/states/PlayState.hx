@@ -4841,7 +4841,9 @@ isReplaying = false;
 					// if the note has a 0ms distance (is on top of the current note), kill it
 					if (Math.abs(doubleNote.strumTime - funnyNote.strumTime) < 1.0)
 						invalidateNote(doubleNote);
-					else if (doubleNote.strumTime < funnyNote.strumTime)
+					// 仅在两者优先级相同时才按时间替换，避免用低优先级音符（如危险箭头 Hurt Note）
+					// 顶替掉已由排序选出的普通箭头，从而导致普通箭头与危险箭头相邻时误命中危险箭头
+					else if (doubleNote.strumTime < funnyNote.strumTime && doubleNote.lowPriority == funnyNote.lowPriority)
 					{
 						// replace the note if its ahead of time (or at least ensure "doubleNote" is ahead)
 						funnyNote = doubleNote;
