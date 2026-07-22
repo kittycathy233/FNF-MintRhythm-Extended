@@ -11,9 +11,11 @@ import options.GameplayChangersSubstate;
 import substates.ResetScoreSubState;
 import flixel.math.FlxMath;
 import flixel.util.FlxDestroyUtil;
+import flixel.tweens.FlxTween;
 import flixel.graphics.FlxGraphic;
 import openfl.utils.Assets;
 import haxe.Json;
+import backend.ui.PsychUIInputText;
 #if FEATURE_FILESYSTEM
 import sys.FileSystem;
 import sys.io.File;
@@ -42,6 +44,15 @@ class FreeplayState extends MusicBeatState
 	}
 
 	var songs:Array<SongMetadata> = [];
+	var songsFull:Array<SongMetadata> = []; // 全部曲目（筛选前的完整列表）
+	var searchTxt:PsychUIInputText;
+	var searchLabel:FlxText;
+	var searchContainer:FlxSpriteGroup; // 搜索框容器（整体飞入/飞出）
+	var searchVisible:Bool = true; // 搜索框当前是否飞入（可见）
+	var searchTween:FlxTween = null; // 飞入/飞出补间，支持中途打断
+	private static final SEARCH_BOX_W:Int = 400;
+	private static final SEARCH_Y_SHOWN:Float = 0;
+	private static final SEARCH_Y_HIDDEN:Float = -60;
 
 	var selector:FlxText;
 
@@ -166,34 +177,16 @@ class FreeplayState extends MusicBeatState
 
 		grpSongs = new FlxTypedGroup<Alphabet>();
 		add(grpSongs);
-		
+
 		grpIcons = new FlxTypedGroup<HealthIcon>();
 		add(grpIcons);
 
 		// 初始化图标数组和加载状态数组
 		iconArray = new Array<HealthIcon>();
 		iconLoadStatus = new Array<Bool>();
-		
-		for (i in 0...songs.length)
-		{
-			var songText:Alphabet = new Alphabet(90, 320, songs[i].songName, true);
-			songText.targetY = i;
-			grpSongs.add(songText);
 
-			songText.scaleX = Math.min(1, 980 / songText.width);
-			songText.snapToPosition();
-
-			// 初始化图标占位符，但暂不创建（延迟加载）
-			iconArray.push(null);
-			iconLoadStatus.push(false);
-
-			// too laggy with a lot of songs, so i had to recode the logic for it
-			songText.visible = songText.active = songText.isMenuItem = false;
-
-			// songText.x += 40;
-			// DONT PUT X IN THE FIRST PARAMETER OF new ALPHABET() !!
-			// songText.screenCenter(X);
-		}
+		songs = songsFull;
+		reloadSongList();
 		WeekData.setDirectoryFromWeek();
 
 		if (curSelected >= songs.length)
@@ -264,6 +257,43 @@ class FreeplayState extends MusicBeatState
 		add(bpmTextBG);
 		add(bpmText);
 
+		// 搜索 / 筛选（顶部居中，TAB 控制飞入/飞出）
+		searchContainer = new FlxSpriteGroup();
+		searchContainer.y = SEARCH_Y_SHOWN;
+
+		// "SONGFILTER" 字样：放在文本框左侧、全大写、使用 unifont
+		searchLabel = new FlxText(0, 0, 0, 'SONGFILTER', 16);
+		searchLabel.setFormat(Paths.font("unifont-16.0.02.otf"), 24, FlxColor.WHITE);
+		// 重新赋值文本以按新字体重算宽度（setFormat 不会自动更新 width）
+		searchLabel.text = 'SONGFILTER: ';
+
+		// 根据标签实测宽度自动偏移输入框，兼容不同文本长度
+		var labelGap:Int = 8;
+		var boxX:Float = searchLabel.width + labelGap;
+
+		searchTxt = new PsychUIInputText(boxX, 0, SEARCH_BOX_W, '', 24, Paths.font("unifont-16.0.02.otf"), true);
+		searchTxt.name = 'freeplay_search';
+		searchTxt.maxLength = 32;
+		// 标签在垂直方向上与输入框居中对齐
+		searchLabel.y = (searchTxt.height - searchLabel.height) / 2;
+		searchTxt.onChange = function(oldTxt:String, newTxt:String)
+		{
+			// 去除可能由 TAB 误输入的制表符，避免筛选异常
+			if (newTxt.indexOf("\t") >= 0)
+			{
+				searchTxt.text = newTxt.split("\t").join("");
+				return;
+			}
+			applyFilter(newTxt);
+		};
+
+		// 整个容器靠右上角，右边缘无外边距（标签 + 间距 + 输入框）
+		searchContainer.x = FlxG.width - (boxX + SEARCH_BOX_W);
+
+		searchContainer.add(searchLabel);
+		searchContainer.add(searchTxt);
+		add(searchContainer);
+
 		changeSelection();
 		updateTexts();
 
@@ -271,6 +301,12 @@ class FreeplayState extends MusicBeatState
 		preloadReplayIndex();
 
 		addTouchPad('LEFT_FULL', 'A_B_C_X_Y_Z');
+
+		// 桌面端：进入 Freeplay 时显示鼠标（方便点击搜索框等），手柄模式下隐藏
+		#if desktop
+		FlxG.mouse.visible = !controls.controllerMode;
+		#end
+
 		super.create();
 	}
 
@@ -286,7 +322,7 @@ class FreeplayState extends MusicBeatState
 
 	public function addSong(songName:String, weekNum:Int, songCharacter:String, color:Int)
 	{
-		songs.push(new SongMetadata(songName, weekNum, songCharacter, color));
+		songsFull.push(new SongMetadata(songName, weekNum, songCharacter, color));
 	}
 
 	function weekIsLocked(name:String):Bool
@@ -297,6 +333,103 @@ class FreeplayState extends MusicBeatState
 			&& (!StoryMenuState.weekCompleted.exists(leWeek.weekBefore) || !StoryMenuState.weekCompleted.get(leWeek.weekBefore)));
 	}
 
+	/**
+	 * 重建歌曲显示列表（grpSongs / grpIcons / 图标状态数组）。
+	 * 在初始创建以及筛选条件变化时调用。
+	 */
+	private function reloadSongList():Void
+	{
+		grpSongs.clear();
+		grpIcons.clear();
+		iconArray = new Array<HealthIcon>();
+		iconLoadStatus = new Array<Bool>();
+
+		for (i in 0...songs.length)
+		{
+			var songText:Alphabet = new Alphabet(90, 320, songs[i].songName, true);
+			songText.targetY = i;
+			grpSongs.add(songText);
+
+			songText.scaleX = Math.min(1, 980 / songText.width);
+			songText.snapToPosition();
+
+			// 初始化图标占位符，但暂不创建（延迟加载）
+			iconArray.push(null);
+			iconLoadStatus.push(false);
+
+			// too laggy with a lot of songs, so i had to recode the logic for it
+			songText.visible = songText.active = songText.isMenuItem = false;
+		}
+		_lastVisibles = [];
+	}
+
+	/**
+	 * 根据搜索框内容筛选曲目。
+	 * @param filterStr 搜索关键字（大小写不敏感，支持空格）
+	 */
+	private function applyFilter(filterStr:String):Void
+	{
+		// 按空格分词，每个非空词都需出现在曲名中（多词 AND 搜索）。
+		// 这样单独输入空格（或首尾空格）不会让列表变空，也自然支持带空格的曲名。
+		var f:String = filterStr.toLowerCase().trim();
+		var tokens:Array<String> = f.split(" ");
+
+		if (tokens.length == 1 && tokens[0].length == 0)
+		{
+			songs = songsFull;
+		}
+		else
+		{
+			songs = songsFull.filter(function(s:SongMetadata):Bool
+			{
+				var name:String = s.songName.toLowerCase();
+				for (token in tokens)
+				{
+					if (token.length > 0 && name.indexOf(token) == -1)
+						return false;
+				}
+				return true;
+			});
+		}
+
+		reloadSongList();
+
+		if (curSelected >= songs.length)
+			curSelected = 0;
+		lerpSelected = curSelected;
+
+		if (songs.length > 0)
+		{
+			changeSelection();
+		}
+		else
+		{
+			intendedScore = 0;
+			intendedRating = 0;
+			scoreText.text = '';
+			diffText.text = '';
+		}
+	}
+
+	/**
+	 * TAB 键切换搜索框飞入 / 飞出。
+	 * 若动画进行中再次按下，会取消当前补间并从当前位置反向播放（支持打断）。
+	 */
+	private function toggleSearchBox():Void
+	{
+		searchVisible = !searchVisible;
+
+		if (searchTween != null)
+			searchTween.cancel();
+
+		// 飞出时若仍处于输入焦点，则取消焦点，避免继续向隐藏的框输入
+		if (!searchVisible && PsychUIInputText.focusOn == searchTxt)
+			PsychUIInputText.focusOn = null;
+
+		searchTween = FlxTween.tween(searchContainer, {y: searchVisible ? SEARCH_Y_SHOWN : SEARCH_Y_HIDDEN}, 0.3,
+			{ease: flixel.tweens.FlxEase.quadOut, onComplete: function(_) searchTween = null});
+	}
+
 	var instPlaying:Int = -1;
 
 	public static var vocals:FlxSound = null;
@@ -305,11 +438,27 @@ class FreeplayState extends MusicBeatState
 	var holdTime:Float = 0;
 
 	var stopMusicPlay:Bool = false;
+	var lastTypingTick:Int = -99999; // 上次处于搜索输入状态的帧时间
 
 	override function update(elapsed:Float)
 	{
 		if (WeekData.weeksList.length < 1)
 			return;
+
+		// 是否正在搜索框中输入（避免空格/方向键等被 freeplay 逻辑拦截）
+		var typingSearch:Bool = (searchTxt != null && PsychUIInputText.focusOn == searchTxt);
+		if (typingSearch)
+			lastTypingTick = FlxG.game.ticks;
+
+		// 桌面端：未在播放预览音乐时恢复鼠标显示（播放时由 SPACE 分支隐藏）
+		#if desktop
+		if (!player.playingMusic && !controls.controllerMode && !FlxG.mouse.visible)
+			FlxG.mouse.visible = true;
+		#end
+
+		// 未在播放预览时恢复搜索框显示状态（遵循 TAB 的 searchVisible）
+		if (!player.playingMusic && searchContainer.visible != searchVisible)
+			searchContainer.visible = searchVisible;
 
 		if (FlxG.sound.music.volume < 0.7)
 			FlxG.sound.music.volume += 0.5 * elapsed;
@@ -410,7 +559,7 @@ class FreeplayState extends MusicBeatState
 		if ((FlxG.keys.pressed.SHIFT || touchPad.buttonZ.pressed) && !player.playingMusic)
 			shiftMult = 3;
 
-		if (!player.playingMusic)
+		if (!player.playingMusic && !typingSearch && songs.length > 0)
 		{
 			// scoreText.text = LanguageBasic.getPhrase('personal_best', 'PERSONAL BEST: {1} ({2}%)', [lerpScore, ratingSplit.join('.')]);
 			scoreText.text = '${Language.get('score_best_desc')} ${lerpScore} (${ratingSplit.join('.')}%)';
@@ -458,12 +607,12 @@ class FreeplayState extends MusicBeatState
 				}
 			}
 
-			if (controls.UI_LEFT_P)
+			if (controls.UI_LEFT_P && !typingSearch)
 			{
 				changeDiff(-1);
 				_updateSongLastDifficulty();
 			}
-			else if (controls.UI_RIGHT_P)
+			else if (controls.UI_RIGHT_P && !typingSearch)
 			{
 				changeDiff(1);
 				_updateSongLastDifficulty();
@@ -472,7 +621,14 @@ class FreeplayState extends MusicBeatState
 
 		if (controls.BACK)
 		{
-			if (player.playingMusic)
+			var wasTyping:Bool = typingSearch || (FlxG.game.ticks - lastTypingTick) < 250;
+			if (wasTyping)
+			{
+				// 搜索框聚焦时：仅 ESC 取消焦点；BACKSPACE 交给输入框删除字符，二者均不返回主菜单
+				if (FlxG.keys.justPressed.ESCAPE && PsychUIInputText.focusOn != null)
+					PsychUIInputText.focusOn = null;
+			}
+			else if (player.playingMusic)
 			{
 				FlxG.sound.music.stop();
 				destroyFreeplayVocals();
@@ -509,7 +665,7 @@ class FreeplayState extends MusicBeatState
 			openSubState(new GameplayChangersSubstate());
 			removeTouchPad();
 		}
-		else if (FlxG.keys.justPressed.SPACE || touchPad.buttonX.justPressed)
+		else if ((FlxG.keys.justPressed.SPACE || touchPad.buttonX.justPressed) && !typingSearch && songs.length > 0)
 		{
 			if (instPlaying != curSelected && !player.playingMusic)
 			{
@@ -621,10 +777,18 @@ class FreeplayState extends MusicBeatState
 				FlxG.sound.music.pause();
 				instPlaying = curSelected;
 
-				player.playingMusic = true;
-				player.curTime = 0;
-				player.switchPlayMusic();
-				player.pauseOrResume(true);
+			player.playingMusic = true;
+			player.curTime = 0;
+			player.switchPlayMusic();
+			player.pauseOrResume(true);
+
+			// 桌面端：空格播放预览时隐藏鼠标
+			#if desktop
+			FlxG.mouse.visible = false;
+			#end
+
+			// 播放预览时一并隐藏搜索框（标签 + 输入框）
+			searchContainer.visible = false;
 
 				// 重置BPM检测，并显示初始BPM
 				lastBPM = -1;
@@ -641,7 +805,7 @@ class FreeplayState extends MusicBeatState
 				player.pauseOrResume(!player.playing);
 			}
 		}
-		else if (controls.ACCEPT && !player.playingMusic)
+		else if (controls.ACCEPT && !player.playingMusic && !typingSearch && songs.length > 0)
 		{
 			persistentUpdate = false;
 			
@@ -698,6 +862,10 @@ class FreeplayState extends MusicBeatState
 			{
 				Paths.freeGraphicsFromMemory();
 			}
+			// 桌面端：开始游玩时隐藏鼠标
+			#if desktop
+			FlxG.mouse.visible = false;
+			#end
 			LoadingState.prepareToSong();
 			LoadingState.loadAndSwitchState(new PlayState());
 			#if !SHOW_LOADING_SCREEN FlxG.sound.music.stop(); #end
@@ -708,7 +876,7 @@ class FreeplayState extends MusicBeatState
 			DiscordClient.loadModRPC();
 			#end
 		}
-		else if ((controls.RESET || touchPad.buttonY.justPressed) && !player.playingMusic)
+		else if ((controls.RESET || touchPad.buttonY.justPressed) && !player.playingMusic && !typingSearch && songs.length > 0)
 		{
 			persistentUpdate = false;
 			openSubState(new ResetScoreSubState(songs[curSelected].songName, curDifficulty, songs[curSelected].songCharacter));
@@ -719,7 +887,7 @@ class FreeplayState extends MusicBeatState
 		// Replay loading entry point: F7 loads latest saved replay (if exists)
 		#if FEATURE_FILESYSTEM
 		// 只在按下F7时扫描回放文件，而不是每帧都扫描
-		if (FlxG.keys.justPressed.F7 && !player.playingMusic)
+		if (FlxG.keys.justPressed.F7 && !player.playingMusic && songs.length > 0)
 		{
 			var moddirLoad:String = (Mods.currentModDirectory != null && Mods.currentModDirectory.length > 0) ? Mods.currentModDirectory : 'global';
 			var replayFolderLoad:String = Paths.mods(moddirLoad + '/replay');
@@ -852,6 +1020,10 @@ class FreeplayState extends MusicBeatState
 
 						PlayState.isStoryMode = false;
 						PlayState.storyDifficulty = curDifficulty;
+						// 桌面端：开始游玩（回放）时隐藏鼠标
+						#if desktop
+						FlxG.mouse.visible = false;
+						#end
 						LoadingState.prepareToSong();
 						LoadingState.loadAndSwitchState(new PlayState());
 						}
@@ -872,6 +1044,10 @@ class FreeplayState extends MusicBeatState
 			}
 		}
 		#end
+
+		// TAB 切换搜索框飞入 / 飞出（支持动画中途打断）
+		if (FlxG.keys.justPressed.TAB)
+			toggleSearchBox();
 
 		updateTexts(elapsed);
 		super.update(elapsed);
@@ -910,6 +1086,8 @@ class FreeplayState extends MusicBeatState
 	{
 		if (player.playingMusic)
 			return;
+		if (songs.length == 0)
+			return;
 
 		curDifficulty = FlxMath.wrap(curDifficulty + change, 0, Difficulty.list.length - 1);
 		#if !switch
@@ -935,6 +1113,8 @@ class FreeplayState extends MusicBeatState
 	function changeSelection(change:Int = 0, playSound:Bool = true)
 	{
 		if (player.playingMusic)
+			return;
+		if (songs.length == 0)
 			return;
 
 		curSelected = FlxMath.wrap(curSelected + change, 0, songs.length - 1);
@@ -1084,6 +1264,8 @@ class FreeplayState extends MusicBeatState
 
 	private function updateReplayBottomText(?forceUpdate:Bool = false):Void
 	{
+		if (songs.length == 0)
+			return;
 		#if FEATURE_FILESYSTEM
 		// 限制回放文本更新频率，避免每帧都更新（UI更新开销）
 		// 但切换曲目/难度时强制更新（forceUpdate = true）
@@ -1160,9 +1342,16 @@ class FreeplayState extends MusicBeatState
 
 	private function positionHighscore()
 	{
+		// 高分面板放置在右上角筛选器下方；
+		// searchTxt 可能在 MusicPlayer 初始化时尚未创建，此时退化为顶部定位
+		var topY:Float = (searchTxt != null) ? (SEARCH_Y_SHOWN + searchTxt.height + 6) : 10;
+		scoreText.y = topY;
+		diffText.y = scoreText.y + scoreText.height + 2;
+
 		scoreText.x = FlxG.width - scoreText.width - 6;
 		scoreBG.scale.x = FlxG.width - scoreText.x + 6;
 		scoreBG.x = FlxG.width - (scoreBG.scale.x / 2);
+		scoreBG.y = scoreText.y - 6;
 		diffText.x = Std.int(scoreBG.x + (scoreBG.width / 2));
 		diffText.x -= diffText.width / 2;
 	}
