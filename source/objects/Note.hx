@@ -119,6 +119,14 @@ class Note extends FlxSprite
 	public static var globalRgbShaders:Array<RGBPalette> = [];
 	public var colorSwap:ColorSwap;
 	public static var globalColorSwapShaders:Array<ColorSwap> = [];
+
+	/**
+	 * 皮肤版本号：每次 Change Mania 改变当前皮肤（如切到 ek 皮肤）时自增。
+	 * 音符通过 lastSkinVersion 记录自己加载时的版本，仅在版本不匹配时（即皮肤已变）
+	 * 才重新加载帧，从而避免对“尚未出现的音符”做无谓的 reloadNote 卡死整局。
+	 */
+	public static var noteSkinVersion:Int = 0;
+	public var lastSkinVersion:Int = -1;
 	public var inEditor:Bool = false;
 
 	public var animSuffix:String = '';
@@ -432,6 +440,9 @@ class Note extends FlxSprite
 			centerOrigin();
 		}
 		x += offsetX;
+
+		// 记录加载时的皮肤版本，供 Change Mania 后懒加载判定
+		lastSkinVersion = noteSkinVersion;
 	}
 
 	public static function initializeGlobalRGBShader(index:Int)
@@ -638,6 +649,21 @@ class Note extends FlxSprite
 			shader = rgbDisabled ? null : colorSwap.shader;
 		}
 		if (animName != null) animation.play(animName, true);
+	}
+
+	/**
+	 * Change Mania 后按需要在“当前皮肤版本”下重载音符帧：
+	 * 仅当皮肤版本已变化（lastSkinVersion != noteSkinVersion）时才真正 reloadNote，
+	 * 否则直接跳过。这样未出现的音符不会在切换瞬间被批量 reload（那是卡死的根源），
+	 * 而是在它们真正 spawn 时各加载一次，开销被均摊到逐帧生成预算中。
+	 */
+	public function ensureCurrentSkin():Void
+	{
+		if (lastSkinVersion != noteSkinVersion)
+		{
+			updateManiaStyle();
+			lastSkinVersion = noteSkinVersion;
+		}
 	}
 
 	public static function getNoteSkinPostfix()

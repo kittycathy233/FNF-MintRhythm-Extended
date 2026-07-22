@@ -2732,26 +2732,28 @@ isReplaying = false;
 		totalColumns = mania + 1;
 		strumScale = computeStrumScale(mania);
 
-		// 多键（>4）强制使用 ek 皮肤（含 rombus/circle）；4 键保持原皮肤。
+		// 基础键数（minKeys）沿用歌曲自身皮肤；其余键数（多键）使用 extrakeys.json 的 skin。
 		// 注意：皮肤 key 必须带 noteSkins/ 前缀与具体 atlas 名，否则 getSparrowAtlas
 		// 会去 images/ek.png 找不到而抛异常卡死。飞溅无 ek 专属资源，沿用歌曲默认。
-		if (mania == 3)
+		var isBaseKeys:Bool = (mania == ek.minKeys - 1);
+		if (isBaseKeys)
 		{
 			PlayState.SONG.arrowSkin = startArrowSkin;
-			PlayState.SONG.splashSkin = startSplashSkin;
 		}
 		else
 		{
-			PlayState.SONG.arrowSkin = 'noteSkins/ek/NOTE_assets';
-			// splashSkin 保持歌曲默认：飞溅为共享白色纹理，按音符颜色着色即可。
+			PlayState.SONG.arrowSkin = ek.skinPath();
 		}
+		// 飞溅始终沿用歌曲默认：飞溅为共享白色纹理，按音符颜色着色即可。
+		PlayState.SONG.splashSkin = startSplashSkin;
 
 		// colArray：noteData -> 颜色前缀（purple/blue/green/red/rombus/circle）
+		// 完全取自 extrakeys.json 的 animations[].rgb，像素台也跟随配置。
 		var newCol:Array<String> = [];
 		for (i in 0...totalColumns)
 		{
 			var style:Int = ek.styleOf(mania, i);
-			newCol[i] = PlayState.isPixelStage ? (['purple', 'blue', 'green', 'red'][i % 4]) : ek.colorPrefixOf(style);
+			newCol[i] = ek.colorPrefixOf(style);
 		}
 		Note.colArray = newCol;
 
@@ -2769,7 +2771,8 @@ isReplaying = false;
 
 	public function buildKeysArray(mania:Int):Array<String>
 	{
-		if (mania == 3) return ['note_left', 'note_down', 'note_up', 'note_right'];
+		var ek = backend.ExtraKeysHandler.instance;
+		if (mania == ek.minKeys - 1) return ['note_left', 'note_down', 'note_up', 'note_right'];
 		var arr:Array<String> = [];
 		for (i in 0...(mania + 1)) arr.push('extrakey_${mania}_$i');
 		return arr;
@@ -2792,6 +2795,10 @@ isReplaying = false;
 		mania = backend.ExtraKeysHandler.instance.clampMania(mania);
 		if (mania == curMania) return;
 		applyMania(mania);
+
+		// 皮肤已切换，递增版本号。音符仅在 spawn 或已在屏时按版本懒加载，
+		// 避免对 unspawnNotes 里整首谱面的音符做批量 reloadNote（卡死根源）。
+		Note.noteSkinVersion++;
 
 		strumLineNotes.clear();
 		opponentStrums.clear();
@@ -2817,16 +2824,22 @@ isReplaying = false;
 		{
 			note.noteData = note.noteColumnRaw % tc;
 			note.mustPress = note.noteColumnRaw < tc;
-			note.updateManiaStyle(); // 轻量刷新配色/帧，避免 reloadNote 反复解析 atlas 卡死
 		};
+		// 尚未出现的音符（unspawnNotes）只重映射列号，不在此处 reloadNote：
+		// 它们会在 spawn 时按当前皮肤版本懒加载一次，避免对整首谱面批量重载导致卡死。
 		for (note in unspawnNotes)
 		{
 			if (Std.isOfType(note, Note)) remapNote(cast note);
 			// 优化路径的 PreloadedChartNote 在实例化时会用 rawColumn 与当前 totalColumns 重算 noteData
 		}
+		// 已在屏幕上的音符立即按新皮肤版本刷新（数量有限，不会卡顿）
 		for (note in notes)
 		{
-			if (Std.isOfType(note, Note)) remapNote(cast note);
+			if (Std.isOfType(note, Note))
+			{
+				remapNote(cast note);
+				cast(note, Note).ensureCurrentSkin();
+			}
 		}
 	}
 
@@ -3435,6 +3448,7 @@ isReplaying = false;
 						// 保持原来的行为
 						notes.insert(0, note);
 					}
+					note.ensureCurrentSkin(); // Change Mania 后按当前皮肤懒加载一次
 					note.spawned = true;
 					
 					// 调用回调（关闭逐音符脚本时跳过）
@@ -3488,13 +3502,16 @@ isReplaying = false;
 							// 如果是普通 note，添加到 normalNotes 组
 							normalNotes.insert(0, dunceNote);
 						}
-						// 同时也添加到主 notes 组，保持 modchart 兼容性
-						notes.insert(0, dunceNote);
-					} else {
-						// 保持原来的行为
-						notes.insert(0, dunceNote);
-					}
-					dunceNote.spawned = true;
+					// 同时也添加到主 notes 组，保持 modchart 兼容性
+					notes.insert(0, dunceNote);
+				} else {
+					// 保持原来的行为
+					notes.insert(0, dunceNote);
+				}
+				dunceNote.ensureCurrentSkin(); // Change Mania 后按当前皮肤懒加载一次
+				dunceNote.spawned = true;
+
+
 
 					// 调用回调（关闭逐音符脚本时跳过）
 					if (!effectiveDisableNoteLua())

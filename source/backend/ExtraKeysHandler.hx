@@ -130,6 +130,13 @@ class ExtraKeysHandler
 		return data.keybinds[mania];
 	}
 
+	/** 多键统一皮肤 atlas key；未配置或 data 为空时回落到 ek 皮肤，保证不崩溃。 */
+	public function skinPath():String
+	{
+		if (data != null && data.skin != null && data.skin.length > 0) return data.skin;
+		return 'noteSkins/ek/NOTE_assets';
+	}
+
 	public function scaleFor(mania:Int):Float
 	{
 		mania = clampMania(mania);
@@ -149,6 +156,7 @@ class ExtraKeysHandler
 		return {
 			minKeys: 4,
 			maxKeys: 4,
+			skin: 'noteSkins/ek/NOTE_assets',
 			keys: [{notes: [0, 1, 2, 3]}],
 			animations: [
 				{strum: 'LEFT', rgb: 'purple', hsv: 'A', sing: 'LEFT', pixel: 0},
@@ -184,6 +192,8 @@ typedef ExtraKeysData =
 {
 	var minKeys:Int;
 	var maxKeys:Int;
+	/** 多键（非基础键数）统一使用的音符皮肤 atlas key（如 noteSkins/ek/NOTE_assets）。基础键数仍沿用歌曲自身 arrowSkin。 */
+	var ?skin:String;
 	var keys:Array<EKManiaEntry>;
 	var animations:Array<EKAnimation>;
 	var colors:Array<Array<Int>>;

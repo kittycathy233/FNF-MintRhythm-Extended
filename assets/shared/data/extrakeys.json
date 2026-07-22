@@ -1,6 +1,7 @@
 {
     "minKeys": 4,
     "maxKeys": 9,
+    "skin": "noteSkins/ek/NOTE_assets",
     "keys": [
         { "notes": [0, 1, 2, 3] },
         { "notes": [0, 1, 2, 3] },
