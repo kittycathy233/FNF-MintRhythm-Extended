@@ -2949,12 +2949,12 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		var ek = backend.ExtraKeysHandler.instance;
 		var mania = getSectionMania(secNum);
 
-		// 重建 Note.colArray：音符颜色前缀按当前 mania 的 style 解析
+		// 重建 Note.colArray：音符颜色前缀按当前 mania 的 style 解析（完全取自 extrakeys.json）
 		var newCol:Array<String> = [];
 		for (i in 0...cols)
 		{
 			var style:Int = ek.styleOf(mania, i);
-			newCol[i] = PlayState.isPixelStage ? (['purple', 'blue', 'green', 'red'][i % 4]) : ek.colorPrefixOf(style);
+			newCol[i] = ek.colorPrefixOf(style);
 		}
 		Note.colArray = newCol;
 
@@ -3314,9 +3314,14 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		if(secNum == null) secNum = curSec;
 		var section = PlayState.SONG.notes[secNum];
 
+		// 关键修复：用音符所属小节（secNum）的列数解码 note[1]，而不是当前显示小节（curSec）
+		// 对应的全局 GRID_COLUMNS_PER_PLAYER。否则在多键谱面里，当“当前小节 mania”与
+		// “音符所在小节 mania”不同（例如 re-enter 制谱器后停在 4 键的 0 号小节、却要解码
+		// 6 键小节里的音符）时，玩家侧音符会被 % / < 判定错，跑到对手侧（本次 bug 根源）。
+		var cols:Int = getSectionColumns(secNum);
 		var daStrumTime:Float = note[0];
-		var daNoteData:Int = Std.int(note[1] % GRID_COLUMNS_PER_PLAYER);
-		var gottaHitNote:Bool = (note[1] < GRID_COLUMNS_PER_PLAYER);
+		var daNoteData:Int = Std.int(note[1] % cols);
+		var gottaHitNote:Bool = (note[1] < cols);
 
 		var swagNote:MetaNote = new MetaNote(daStrumTime, daNoteData, note);
 		swagNote.mustPress = gottaHitNote;
@@ -3335,7 +3340,7 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 
 		swagNote.updateHitbox();
 		swagNote.active = false;
-		positionNoteXByData(swagNote);
+		positionNoteXByData(swagNote, null, cols);
 		positionNoteYOnTime(swagNote, secNum);
 		return swagNote;
 	}
@@ -3754,6 +3759,10 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 			if(note != null && curSecFilter(note))
 			{
 				if(!firstNote) sectionFirstNoteID = num;
+				// 当前小节的音符按当前网格重新定位 X：LEGACY 模式下音符在 reload 时（curSec=0）
+				// 就已创建并定位，导航到其它 mania 的小节后不会重新定位，会残留错误 X；
+				// 此处用当前小节列数重算，保证多键谱面导航后音符列号正确对齐。
+				positionNoteXByData(note);
 				curRenderedNotes.add(note);
 				note.alpha = (note.strumTime >= Conductor.songPosition) ? 1 : 0.6;
 				if(note.hasSustain) note.updateSustainToZoom(cachedSectionCrochets[curSec] / 4, curZoom);
@@ -3858,9 +3867,12 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		}
 	}
 
-	function positionNoteXByData(note:MetaNote, ?data:Null<Int> = null)
+	function positionNoteXByData(note:MetaNote, ?data:Null<Int> = null, ?cols:Null<Int> = null)
 	{
 		if(data == null) data = note.songData[1];
+		// cols：音符所属小节的列数。默认回落到全局（当前小节）列数，保持既有调用行为；
+		// createNote 会显式传入音符所在小节的列数，避免多键谱面跨 mania 小节时列号错位。
+		if(cols == null) cols = GRID_COLUMNS_PER_PLAYER;
 		var gridLayout = getGridLayout();
 
 		var noteX:Float = gridLayout.startX + (GRID_SIZE - note.width) / 2;
@@ -3876,24 +3888,24 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 
 		// 普通note的轨道布局：对手(0..cols-1) → Event → 玩家(0..cols-1)
 		var uiColumn:Int = 0;
-		if (data >= GRID_COLUMNS_PER_PLAYER)
+		if (data >= cols)
 		{
 			// 对手轨道（noteData cols..2cols-1）
-			uiColumn = data - GRID_COLUMNS_PER_PLAYER;
+			uiColumn = data - cols;
 		}
 		else
 		{
 			// 玩家轨道（noteData 0..cols-1）
-			uiColumn = data + GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT;
+			uiColumn = data + cols + EVENT_TRACK_COUNT;
 		}
 
 		// 根据逻辑列号计算额外的间距偏移
 		var spacingOffset:Float = 0;
-		if (uiColumn >= GRID_COLUMNS_PER_PLAYER)
+		if (uiColumn >= cols)
 		{
 			spacingOffset += TRACK_SPACING; // Event轨道后的间距
 		}
-		if (uiColumn >= GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT)
+		if (uiColumn >= cols + EVENT_TRACK_COUNT)
 		{
 			spacingOffset += TRACK_SPACING; // 玩家轨道前的间距
 		}
