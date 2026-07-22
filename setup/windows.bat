@@ -4,6 +4,11 @@ cd ..
 echo Installing dependencies...
 echo This might take a few moments depending on your internet speed.
 haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp v4.3.148 --quiet
+REM hxcpp git 源码版需要重新编译命令行工具（hxcpp.n），否则构建时会卡在交互提示
+for /f "delims=" %%p in ('haxelib config') do set "HAXELIB_PATH=%%p"
+pushd "%HAXELIB_PATH%hxcpp\git\tools\hxcpp"
+haxe compile.hxml
+popd
 haxelib git lime https://github.com/kittycathy233/lime --quiet
 haxelib install openfl 9.4.2 --quiet --skip-dependencies
 haxelib install flixel 5.9.0 --quiet --skip-dependencies
