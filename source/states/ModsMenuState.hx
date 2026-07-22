@@ -851,7 +851,10 @@ class ModsMenuState extends MusicBeatState
 
 		var path:String = #if android StorageUtil.getExternalStorageDirectory() + #else Sys.getCwd() + #end 'modsList.txt';
 		File.saveContent(path, fileStr);
+		CoolUtil.invalidateCoolTextFileCache(path);
+		Mods.invalidateDirectoriesCache();
 		Mods.parseList();
+		Mods.pushGlobalMods();
 		Mods.loadTopMod();
 	}
 }
