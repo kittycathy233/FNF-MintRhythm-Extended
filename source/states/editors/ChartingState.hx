@@ -1137,6 +1137,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 	var autoSaveTime:Float = 0;
 	var autoSaveCap:Int = 2; //in minutes
 	var backupLimit:Int = 10;
+	var chartDataDirty:Bool = false;
 
 	var lastBeatHit:Int = 0;
 	var songBeatNoOffset:Int = 0; // 不受noteOffset影响的纯粹歌曲节拍
@@ -1158,73 +1159,81 @@ if(_shouldReset) Conductor.songPosition = 0;
 			//#if debug if(FlxG.keys.justPressed.J) autoSaveTime += 20/60.0; #end
 			if(autoSaveTime >= autoSaveCap #if debug || FlxG.keys.justPressed.NUMPADMULTIPLY #end)
 			{
-				FlxTween.cancelTweensOf(autoSaveIcon);
 				autoSaveTime = 0;
-				autoSaveIcon.alpha = 0;
-				updateChartData();
-				var chartName:String = 'unknown';
-				if(Song.chartPath != null)
+				if(!chartDataDirty)
 				{
-					chartName = Song.chartPath.replace('\\', '/');
-					chartName = chartName.substring(chartName.lastIndexOf('/')+1, chartName.lastIndexOf('.'));
+					#if debug trace('[AutoSave] Skipped: no changes since last save.'); #end
 				}
-				chartName += DateTools.format(Date.now(), '_%Y-%m-%d_%H-%M-%S');
-				var songCopy:SwagSong = Reflect.copy(PlayState.SONG);
-				Reflect.setField(songCopy, '__original_path', Song.chartPath);
-				var dataToSave:String = haxe.Json.stringify(songCopy);
-				//trace(chartName, dataToSave);
-				if(!FileSystem.isDirectory('backups')) FileSystem.createDirectory('backups');
-				File.saveContent('backups/$chartName.$BACKUP_EXT', dataToSave);
-
-				if(backupLimit > 0)
+				else
 				{
-					var files:Array<String> = Paths.readDirectory('backups/').filter((file:String) -> file.endsWith('.$BACKUP_EXT'));
-					if(files.length > backupLimit)
+					FlxTween.cancelTweensOf(autoSaveIcon);
+					autoSaveIcon.alpha = 0;
+					updateChartData();
+					var chartName:String = 'unknown';
+					if(Song.chartPath != null)
 					{
-						var incorrect:Array<String> = [];
-						var map:Map<String, Float> = [];
-						for(file in files)
+						chartName = Song.chartPath.replace('\\', '/');
+						chartName = chartName.substring(chartName.lastIndexOf('/')+1, chartName.lastIndexOf('.'));
+					}
+					chartName += DateTools.format(Date.now(), '_%Y-%m-%d_%H-%M-%S');
+					var songCopy:SwagSong = Reflect.copy(PlayState.SONG);
+					Reflect.setField(songCopy, '__original_path', Song.chartPath);
+					var dataToSave:String = haxe.Json.stringify(songCopy);
+					//trace(chartName, dataToSave);
+					if(!FileSystem.isDirectory('backups')) FileSystem.createDirectory('backups');
+					File.saveContent('backups/$chartName.$BACKUP_EXT', dataToSave);
+
+					if(backupLimit > 0)
+					{
+						var files:Array<String> = Paths.readDirectory('backups/').filter((file:String) -> file.endsWith('.$BACKUP_EXT'));
+						if(files.length > backupLimit)
 						{
-							var split:Array<String> = file.split('_');
-							if(split.length > 2) //is properly formatted
+							var incorrect:Array<String> = [];
+							var map:Map<String, Float> = [];
+							for(file in files)
 							{
+								var split:Array<String> = file.split('_');
+								if(split.length > 2) //is properly formatted
+								{
+									try
+									{
+										var timeStr:String = split[split.length-1].replace('-', ':');
+										timeStr = timeStr.substr(0, timeStr.indexOf('.'));
+
+										var fileJoin:String = split[split.length-2] + ' ' + timeStr;
+										var date:Date = Date.fromString(fileJoin);
+										//trace(fileJoin, date.getTime());
+										map.set(file, date.getTime());
+									}
+									catch(e:Exception)
+									{
+										incorrect.push(file);
+									}
+								}
+								else incorrect.push(file);
+							}
+
+							if(incorrect.length > 0) files = files.filter((file:String) -> !incorrect.contains(file));
+							files.sort(function(a:String, b:String) return map.get(a) > map.get(b) ? 1 : -1);
+
+							while(files.length > backupLimit)
+							{
+								var file = files.shift();
+								//trace('removed $file');
 								try
 								{
-									var timeStr:String = split[split.length-1].replace('-', ':');
-									timeStr = timeStr.substr(0, timeStr.indexOf('.'));
-
-									var fileJoin:String = split[split.length-2] + ' ' + timeStr;
-									var date:Date = Date.fromString(fileJoin);
-									//trace(fileJoin, date.getTime());
-									map.set(file, date.getTime());
+									FileSystem.deleteFile('backups/$file');
 								}
-								catch(e:Exception)
-								{
-									incorrect.push(file);
-								}
+								catch(e:Exception) {}
 							}
-							else incorrect.push(file);
-						}
-
-						if(incorrect.length > 0) files = files.filter((file:String) -> !incorrect.contains(file));
-						files.sort(function(a:String, b:String) return map.get(a) > map.get(b) ? 1 : -1);
-
-						while(files.length > backupLimit)
-						{
-							var file = files.shift();
-							//trace('removed $file');
-							try
-							{
-								FileSystem.deleteFile('backups/$file');
-							}
-							catch(e:Exception) {}
 						}
 					}
-				}
 
-				FlxTween.tween(autoSaveIcon, {alpha: 1}, 0.5, {onComplete: function(_)
-					FlxTween.tween(autoSaveIcon, {alpha: 0}, 0.5, {startDelay: 2})
-				});
+					chartDataDirty = false;
+					FlxTween.tween(autoSaveIcon, {alpha: 1}, 0.5, {onComplete: function(_)
+						FlxTween.tween(autoSaveIcon, {alpha: 0}, 0.5, {startDelay: 2})
+					});
+				}
 			}
 		}
 
@@ -4293,6 +4302,7 @@ for (i in 0...GRID_PLAYERS)
 				event.events[Std.int(FlxMath.bound(curEventSelected, 0, event.events.length - 1))][0] = eventName;
 				event.updateEventText();
 			}
+			chartDataDirty = true;
 		});
 
 		function genericEventButton(func:EventMetaNote->Void)
@@ -4323,6 +4333,7 @@ for (i in 0...GRID_PLAYERS)
 						event.events.remove(selectedEvent);
 						event.updateEventText();
 						curEventSelected--;
+						chartDataDirty = true;
 					}
 					else showOutput('No event is selected when you deleted it?? Weird.', true);
 				}
@@ -4342,6 +4353,7 @@ for (i in 0...GRID_PLAYERS)
 				event.events.push([eventsList[Std.int(Math.max(eventDropDown.selectedIndex, 0))][0], value1InputText.text, value2InputText.text, value3InputText.text, value4InputText.text]);
 				event.updateEventText();
 				curEventSelected++;
+				chartDataDirty = true;
 			});
 		}, 20);
 		var leftButton:PsychUIButton = new PsychUIButton(objX2 + 80, objY, '<', function()
@@ -4379,6 +4391,7 @@ for (i in 0...GRID_PLAYERS)
 				event.events[Std.int(FlxMath.bound(curEventSelected, 0, event.events.length - 1))][n] = str;
 				event.updateEventText();
 			}
+			chartDataDirty = true;
 		}
 
 		objY += 70;
@@ -4447,6 +4460,7 @@ for (i in 0...GRID_PLAYERS)
 				}
 				else if(selectedNotes.length == 1) selectedNotes[0].setSustainLength(susLengthStepper.value, Conductor.stepCrochet, curZoom);
 				susLengthLastVal = susLengthStepper.value;
+				chartDataDirty = true;
 			}
 		};
 
@@ -4470,6 +4484,7 @@ for (i in 0...GRID_PLAYERS)
 				}
 			}
 			softReloadNotes();
+			chartDataDirty = true;
 		};
 		
 		objY += 40;
@@ -4497,6 +4512,7 @@ for (i in 0...GRID_PLAYERS)
 			}
 			selectedNotes = newSelected;
 			softReloadNotes();
+			chartDataDirty = true;
 		}, 150);
 		
 		tab_group.add(new FlxText(susLengthStepper.x, susLengthStepper.y - 15, 80, Language.get('charting_sustainlength_text')).setFormat(Paths.font(Language.get('uitab_font'))));
@@ -4595,17 +4611,20 @@ for (i in 0...GRID_PLAYERS)
 			var sec = getCurChartSection();
 			if(sec != null) sec.mustHitSection = mustHitCheckBox.checked;
 			updateHeads(true);
+			chartDataDirty = true;
 		});
 		gfSectionCheckBox = new PsychUICheckBox(objX + 100, objY, Language.get('charting_gfsec_text'), 70, function()
 		{
 			var sec = getCurChartSection();
 			if(sec != null) sec.gfSection = gfSectionCheckBox.checked;
 			updateHeads(true);
+			chartDataDirty = true;
 		});
 		altAnimSectionCheckBox = new PsychUICheckBox(objX + 200, objY, Language.get('charting_altanim_text'), 70, function()
 		{
 			var sec = getCurChartSection();
 			if(sec != null) sec.altAnim = altAnimSectionCheckBox.checked;
+			chartDataDirty = true;
 		});
 
 		objY += 40;
@@ -4617,24 +4636,26 @@ for (i in 0...GRID_PLAYERS)
 				var oldTimes:Array<Float> = cachedSectionTimes.copy();
 				sec.changeBPM = changeBpmCheckBox.checked;
 				if(!Reflect.hasField(sec, 'bpm')) sec.bpm = changeBpmStepper.value;
-				adaptNotesToNewTimes(oldTimes);
-			}
-		});
+			adaptNotesToNewTimes(oldTimes);
+			chartDataDirty = true;
+		}
+	});
 
-		objY += 25;
-		changeBpmStepper = new PsychUINumericStepper(objX, objY, 1, 0, 1, 10000, 3);
-		changeBpmStepper.onValueChange = function()
+	objY += 25;
+	changeBpmStepper = new PsychUINumericStepper(objX, objY, 1, 0, 1, 10000, 3);
+	changeBpmStepper.onValueChange = function()
+	{
+		var sec = getCurChartSection();
+		if(sec != null)
 		{
-			var sec = getCurChartSection();
-			if(sec != null)
-			{
-				var oldTimes:Array<Float> = cachedSectionTimes.copy();
-				sec.bpm = changeBpmStepper.value;
-				sec.changeBPM = true;
-				changeBpmCheckBox.checked = true;
-				adaptNotesToNewTimes(oldTimes);
-			}
-		};
+			var oldTimes:Array<Float> = cachedSectionTimes.copy();
+			sec.bpm = changeBpmStepper.value;
+			sec.changeBPM = true;
+			changeBpmCheckBox.checked = true;
+			adaptNotesToNewTimes(oldTimes);
+			chartDataDirty = true;
+		}
+	};
 
 		objY += 25;
 		var bpmRampLabel = new FlxText(changeBpmStepper.x, objY - 15, 220, 'BPM Ramp (steps)');
@@ -4656,6 +4677,7 @@ for (i in 0...GRID_PLAYERS)
 				// 不要在这里调用 _cacheSections()，否则 adaptNotesToNewTimes 内部捕获的"旧映射"会变成新映射
 				adaptNotesToNewTimes(oldTimes);
 				softReloadNotes();
+				chartDataDirty = true;
 			}
 		};
 
@@ -4672,6 +4694,7 @@ for (i in 0...GRID_PLAYERS)
 			// 勾选/取消会影响该小节使用的键数，需同步网格列数
 			applySectionColumns(curSec);
 			softReloadNotes();
+			chartDataDirty = true;
 			}
 		});
 
@@ -4693,6 +4716,7 @@ for (i in 0...GRID_PLAYERS)
 			// 键数变化会触发网格重建（列数改变）并刷新音符
 			applySectionColumns(curSec);
 			softReloadNotes();
+			chartDataDirty = true;
 			}
 		};
 
@@ -4707,6 +4731,7 @@ for (i in 0...GRID_PLAYERS)
 				var oldTimes:Array<Float> = cachedSectionTimes.copy();
 				sec.sectionBeats = beatsPerSecStepper.value;
 				adaptNotesToNewTimes(oldTimes);
+				chartDataDirty = true;
 			}
 		};
 
@@ -4730,6 +4755,7 @@ for (i in 0...GRID_PLAYERS)
 				selectedNotes.remove(note);
 			}
 			softReloadNotes(true);
+			chartDataDirty = true;
 		});
 		clearButton.normalStyle.bgColor = FlxColor.RED;
 		clearButton.normalStyle.textColor = FlxColor.WHITE;
@@ -4767,6 +4793,7 @@ for (i in 0...GRID_PLAYERS)
 				}
 			}
 			softReloadNotes(true);
+			chartDataDirty = true;
 		});
 		var duetSectionButton:PsychUIButton = new PsychUIButton(objX + 100, objY, Language.get('charting_duetsec_button'), function()
 		{
@@ -4820,6 +4847,7 @@ for (i in 0...GRID_PLAYERS)
 				positionNoteXByData(note);
 			}
 			softReloadNotes(true);
+			chartDataDirty = true;
 		});
 
 		tab_group.add(mustHitCheckBox);
@@ -6656,6 +6684,7 @@ for (i in 0...GRID_PLAYERS)
 	function saveChart(canQuickSave:Bool = true)
 	{
 		updateChartData();
+		chartDataDirty = false;
 		var chartData:String = PsychJsonPrinter.print(PlayState.SONG, ['sectionNotes', 'events']);
 		if(canQuickSave && Song.chartPath != null)
 		{
@@ -7211,6 +7240,7 @@ function adaptNotesToNewTimes(oldTimes:Array<Float>)
 		if(currentUndo > 0) undoActions = undoActions.slice(currentUndo);
 		currentUndo = 0;
 		undoActions.insert(0, {action: action, data: data});
+		if(action != SELECT_NOTE) chartDataDirty = true;
 		while(undoActions.length > 15)
 		{
 			var lastAction:UndoStruct = undoActions.pop();
@@ -7259,6 +7289,7 @@ function adaptNotesToNewTimes(oldTimes:Array<Float>)
 				onSelectNote();
 		}
 		showOutput('Undo #${currentUndo+1}: ${action.action}');
+		if(action.action != SELECT_NOTE) chartDataDirty = true;
 		FlxG.sound.play(Paths.sound('scrollMenu'), 0.4);
 		currentUndo++;
 	}
@@ -7292,6 +7323,7 @@ function adaptNotesToNewTimes(oldTimes:Array<Float>)
 				onSelectNote();
 		}
 		showOutput('Redo #${currentUndo+1}: ${action.action}');
+		if(action.action != SELECT_NOTE) chartDataDirty = true;
 		FlxG.sound.play(Paths.sound('scrollMenu'), 0.4);
 	}
 
