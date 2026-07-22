@@ -91,7 +91,7 @@ class KathySoundTray extends FlxSoundTray
 		dtf.align = TextFormatAlign.LEFT;
 		_label.defaultTextFormat = dtf;
 		addChild(_label);
-		_label.text = 'VOLUME';
+		_label.text = 'MASTER';
 		_label.x = 40;
 		_label.y = 5;
 
@@ -310,7 +310,7 @@ class KathySoundTray extends FlxSoundTray
 		updateVolumeIcon(volume);
 		
 		var percentage = Math.round(volume * 100);
-		_label.text = 'VOLUME';
+		_label.text = 'MASTER';
 
 		if (isMuted)
 		{
