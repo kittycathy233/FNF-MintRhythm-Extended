@@ -4274,7 +4274,7 @@ isReplaying = false;
 		{
 			ratingCounterModule.triggerHitAnimation(daRating.name);
 		}
-		if(!cpuControlled || ClientPrefs.data.botplayScore)
+		if(!cpuControlled)
 		{
 			if(!note.ratingDisabled)
 			{
