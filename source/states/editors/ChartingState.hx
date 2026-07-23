@@ -902,7 +902,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 		if(char == null || !char.visible) return;
 
 		var animToPlay:String = singAnimations[Std.int(Math.abs(Math.min(singAnimations.length-1, noteData)))];
-		if(char.animation.exists(animToPlay))
+		if(char.animation.exists(animToPlay) || (char.isAnimateAtlas && char.atlas.anim.getByName(animToPlay) != null))
 		{
 			char.playAnim(animToPlay, true);
 			char.holdTimer = 0;
