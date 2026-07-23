@@ -577,11 +577,12 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 
 	function refreshHealthOverflowState()
 	{
-		var overflowActive:Bool = ClientPrefs.data.smoothHP && ClientPrefs.data.healthOverflow;
-		if (healthOverflowOption != null)
-		{
-			healthOverflowOption.disabled = !overflowActive;
-			if (!overflowActive && ClientPrefs.data.healthOverflow)
+	var smoothHPActive:Bool = ClientPrefs.data.smoothHP;
+	var overflowActive:Bool = smoothHPActive && ClientPrefs.data.healthOverflow;
+	if (healthOverflowOption != null)
+	{
+		healthOverflowOption.disabled = !smoothHPActive;
+		if (!smoothHPActive && ClientPrefs.data.healthOverflow)
 			{
 				// 丝滑血条关闭时强制关闭超满血，回到原生血量上限
 				ClientPrefs.data.healthOverflow = false;
