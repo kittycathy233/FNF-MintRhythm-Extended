@@ -1475,20 +1475,30 @@ if(_shouldReset) Conductor.songPosition = 0;
 		}
 
 		// 角色拖动逻辑
+		// 兼容 FlxAnimate 图集角色：其本体 Character 没有帧尺寸，点击检测需针对内部的 atlas 子精灵
+		var charOverlapsMouse = function(char:Character):Bool
+		{
+			if(char == null || !char.visible) return false;
+			#if flxanimate
+			if(char.isAnimateAtlas && char.atlas != null) return FlxG.mouse.overlaps(char.atlas, camChart);
+			#end
+			return FlxG.mouse.overlaps(char, camChart);
+		};
+
 		if(chartEditorSave.data.allowDragCharacters && PsychUIInputText.focusOn == null && !ignoreClickForThisFrame)
 		{
 			// 检测鼠标左键按下
 			if(FlxG.mouse.justPressed)
 			{
 				// 检查是否点击到角色
-				if(dad != null && dad.visible && FlxG.mouse.overlaps(dad, camChart))
+				if(charOverlapsMouse(dad))
 				{
 					isDraggingCharacter = true;
 					draggedCharacter = dad;
 					dragOffsetX = FlxG.mouse.getWorldPosition(camChart).x - dad.x;
 					dragOffsetY = FlxG.mouse.getWorldPosition(camChart).y - dad.y;
 				}
-				else if(boyfriend != null && boyfriend.visible && FlxG.mouse.overlaps(boyfriend, camChart))
+				else if(charOverlapsMouse(boyfriend))
 				{
 					isDraggingCharacter = true;
 					draggedCharacter = boyfriend;
