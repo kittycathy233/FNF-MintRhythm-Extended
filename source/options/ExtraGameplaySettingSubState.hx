@@ -28,6 +28,9 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 	var healthOverflowDrainOption:Option = null;
 	var healthOverflowDrainOptionIndex:Int = -1;
 
+	var smoothHPSpeedOption:Option = null;
+	var smoothHPSpeedOptionIndex:Int = -1;
+
 	var biggerInfoTextOption:Option = null;
 	var biggerInfoTextOptionIndex:Int = -1;
 	var timebarStyleOption:Option = null;
@@ -145,6 +148,19 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		option.decimals = 1;
 		healthOverflowDrainOption = addOption(option);
 		healthOverflowDrainOptionIndex = optionsArray.length - 1;
+
+		option = new Option('Smooth HP Speed',
+			'How tightly the health bar eases to the real health. Higher = snappier (less lag). Requires Smooth HP Bar.',
+			'smoothHPSpeed',
+			FLOAT);
+		option.displayFormat = '%v';
+		option.scrollSpeed = 2;
+		option.minValue = 1;
+		option.maxValue = 30;
+		option.changeValue = 1;
+		option.decimals = 1;
+		smoothHPSpeedOption = addOption(option);
+		smoothHPSpeedOptionIndex = optionsArray.length - 1;
 
 		option = new Option('CPU Strums',
 			Language.get("cpu_strums_desc"),
@@ -573,6 +589,8 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		}
 		if (healthOverflowDrainOption != null)
 			healthOverflowDrainOption.disabled = !overflowActive;
+		if (smoothHPSpeedOption != null)
+			smoothHPSpeedOption.disabled = !ClientPrefs.data.smoothHP;
 	}
 
 	override function changeSelection(change:Int = 0)

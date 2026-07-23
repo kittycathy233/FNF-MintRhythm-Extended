@@ -465,6 +465,10 @@ class PlayState extends MusicBeatState
 	// 添加一个变量用于平滑血条
 	private var smoothHealth:Float = 1;
 
+	// 血条平滑/溢出回落系数（PlayState 公有变量，脚本与游玩中可直接修改本实例）
+	public var smoothHPSpeed:Float = 10; // 正常血条追平速度，越大越跟手（可在设置里配默认值）
+	public var healthOverflowDrain:Float = 20; // 超满血回落速度，越大回落越快（可在设置里配默认值）
+
 	public var audioAnalyzer:SpectralAnalyzer;
 
 	public function initAnalyzer(barCount:Int, maxDelta:Float = 0.01, peakHold:Int = 30) {
@@ -486,6 +490,10 @@ class PlayState extends MusicBeatState
 
 	override public function create()
 	{
+		// 从设置读取血条平滑/溢出回落系数的默认值（游玩中脚本仍可直接覆盖本实例变量）
+		smoothHPSpeed = ClientPrefs.data.smoothHPSpeed;
+		healthOverflowDrain = ClientPrefs.data.healthOverflowDrain;
+
 		//trace('Playback Rate: ' + playbackRate);
 		_lastLoadedModDirectory = Mods.currentModDirectory;
 
@@ -3217,10 +3225,10 @@ isReplaying = false;
 			else if (allowOverflow && health > healthBar.bounds.max)
 			{
 				// 超满血：用 lerp 平滑过渡回 2（缓出，越接近 2 越慢），最终落回干净的 2.00
-				var k:Float = ClientPrefs.data.healthOverflowDrain; // 回落速度系数（可在设置中调整）
+				var k:Float = healthOverflowDrain; // 回落速度系数（PlayState 公有变量，可运行时修改）
 				var t:Float = Math.min(1, elapsed * k);
 				health = FlxMath.lerp(health, healthBar.bounds.max, t);
-				if (health - healthBar.bounds.max <= 0.01)
+				if (health - healthBar.bounds.max <= 0.005)
 					health = healthBar.bounds.max; // 接近 2 时直接锁定为 2.00
 				else
 					health = FlxMath.roundDecimal(health, 2);
@@ -3230,7 +3238,7 @@ isReplaying = false;
 		// 平滑血条逻辑
 		if (ClientPrefs.data.smoothHP)
 		{
-			smoothHealth += (health - smoothHealth) * elapsed * 10; // 平滑过渡
+			smoothHealth += (health - smoothHealth) * elapsed * smoothHPSpeed; // 平滑过渡（系数可在设置中调整）
 			healthBar.percent = FlxMath.remapToRange(smoothHealth, healthBar.bounds.min, healthBar.bounds.max, 0, 100);
 		}
 		else
