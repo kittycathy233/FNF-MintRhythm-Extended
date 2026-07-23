@@ -3238,7 +3238,9 @@ isReplaying = false;
 		// 平滑血条逻辑
 		if (ClientPrefs.data.smoothHP)
 		{
-			smoothHealth += (health - smoothHealth) * elapsed * smoothHPSpeed; // 平滑过渡（系数可在设置中调整）
+			smoothHealth += (health - smoothHealth) * elapsed * smoothHPSpeed;
+			if (Math.abs(smoothHealth - health) < 0.005)
+				smoothHealth = health;
 			healthBar.percent = FlxMath.remapToRange(smoothHealth, healthBar.bounds.min, healthBar.bounds.max, 0, 100);
 		}
 		else
@@ -3732,7 +3734,6 @@ isReplaying = false;
 				var rate:Float;
 				var targetScale:Float;
 				if (ClientPrefs.data.iconbopstyle == "Leather") {
-					// Leather 风格使用帧率无关的算法，与 LeatherEngine 原版一致
 					rate = 0.1 / ((Main.game != null ? Main.game.framerate : 60) / 60) * playbackRate;
 					targetScale = iconP1.startSize;
 				} else {
@@ -3744,7 +3745,9 @@ isReplaying = false;
 				iconP2.scale.x = FlxMath.lerp(iconP2.scale.x, targetScale, rate);
 				iconP2.scale.y = FlxMath.lerp(iconP2.scale.y, targetScale, rate);
 
-				// 添加边界限制和碰撞箱更新
+				if (Math.abs(iconP1.scale.x - targetScale) < 0.001) iconP1.scale.set(targetScale, targetScale);
+				if (Math.abs(iconP2.scale.x - targetScale) < 0.001) iconP2.scale.set(targetScale, targetScale);
+
 				iconP1.scale.x = FlxMath.bound(iconP1.scale.x, Math.NEGATIVE_INFINITY, ICON_BOUND);
 				iconP1.scale.y = FlxMath.bound(iconP1.scale.y, Math.NEGATIVE_INFINITY, ICON_BOUND);
 				iconP2.scale.x = FlxMath.bound(iconP2.scale.x, Math.NEGATIVE_INFINITY, ICON_BOUND);
@@ -3758,7 +3761,9 @@ isReplaying = false;
 				mult = FlxMath.lerp(1, iconP2.scale.x, Math.exp(-elapsed * speedMultiplier * playbackRate));
 				iconP2.scale.set(mult, mult);
 
-				// 添加边界限制
+				if (Math.abs(iconP1.scale.x - 1) < 0.001) iconP1.scale.set(1, 1);
+				if (Math.abs(iconP2.scale.x - 1) < 0.001) iconP2.scale.set(1, 1);
+
 				iconP1.scale.x = FlxMath.bound(iconP1.scale.x, Math.NEGATIVE_INFINITY, ICON_BOUND);
 				iconP1.scale.y = FlxMath.bound(iconP1.scale.y, Math.NEGATIVE_INFINITY, ICON_BOUND);
 				iconP2.scale.x = FlxMath.bound(iconP2.scale.x, Math.NEGATIVE_INFINITY, ICON_BOUND);
@@ -3795,10 +3800,11 @@ isReplaying = false;
 			// 超满血溢出移动：血量超过满值时，让小图标向血条右端外溢出（需丝滑血条 + 超满设置）
 			if (ClientPrefs.data.smoothHP && ClientPrefs.data.healthOverflow)
 			{
-				var overflow:Float = FlxMath.bound(smoothHealth - healthBar.bounds.max, 0, 1);
-				if (overflow > 0)
+				var overflow:Float = smoothHealth - healthBar.bounds.max;
+				if (overflow > 0.001)
 				{
-					var overshoot:Float = overflow * 40; // 最大溢出位移（像素）
+					overflow = FlxMath.bound(overflow, 0, 1);
+					var overshoot:Float = overflow * 40;
 					iconP1.x += overshoot;
 					iconP2.x += overshoot * 0.5;
 				}
