@@ -169,6 +169,8 @@ import states.TitleState;
 	public var randomIndex :Int = 32;
 
 	public var smoothHP:Bool = true;
+	public var healthOverflow:Bool = false; // 超满血：需配合 smoothHP；开启后血量可超过 100%，并让小图标向血条外溢出移动
+	public var healthOverflowDrain:Float = 20; // 超满血回落速度系数（lerp），越大回落越快
 	public var forceSingleSplashAnim:Bool = false;
 	public var volumeTheme:String = "Psych";
 	public var cpuStrums: Bool = true;

@@ -22,6 +22,12 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 	var ratingFallStyleOption:Option = null;
 	var ratingFallStyleOptionIndex:Int = -1;
 
+	var healthOverflowOption:Option = null;
+	var healthOverflowOptionIndex:Int = -1;
+
+	var healthOverflowDrainOption:Option = null;
+	var healthOverflowDrainOptionIndex:Int = -1;
+
 	var biggerInfoTextOption:Option = null;
 	var biggerInfoTextOptionIndex:Int = -1;
 	var timebarStyleOption:Option = null;
@@ -112,11 +118,33 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
-		option = new Option('smooth HP Bar',
+		var smoothHPOption:Option = new Option('smooth HP Bar',
 			Language.get("smooth_hpbar_desc"),
 			'smoothHP',
 			BOOL);
-		addOption(option);
+		smoothHPOption.onChange = refreshHealthOverflowState;
+		addOption(smoothHPOption);
+
+		option = new Option('Health Overflow Icons',
+			'Requires Smooth HP Bar. Lets health exceed 100% on dense charts and pushes the health icons past the bar edges.',
+			'healthOverflow',
+			BOOL);
+		healthOverflowOption = addOption(option);
+		healthOverflowOptionIndex = optionsArray.length - 1;
+		healthOverflowOption.onChange = refreshHealthOverflowState;
+
+		option = new Option('Overflow Return Speed',
+			'How fast the overfilled health eases back to 100%. Higher = quicker. Requires Smooth HP Bar + Health Overflow Icons.',
+			'healthOverflowDrain',
+			FLOAT);
+		option.displayFormat = '%v';
+		option.scrollSpeed = 2;
+		option.minValue = 2;
+		option.maxValue = 50;
+		option.changeValue = 0.5;
+		option.decimals = 1;
+		healthOverflowDrainOption = addOption(option);
+		healthOverflowDrainOptionIndex = optionsArray.length - 1;
 
 		option = new Option('CPU Strums',
 			Language.get("cpu_strums_desc"),
@@ -477,6 +505,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		addOption(option);
 
 		refreshGameLogDisabledState();
+		refreshHealthOverflowState();
 
 		super();
 	}
@@ -530,6 +559,22 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		}
 	}
 
+	function refreshHealthOverflowState()
+	{
+		var overflowActive:Bool = ClientPrefs.data.smoothHP && ClientPrefs.data.healthOverflow;
+		if (healthOverflowOption != null)
+		{
+			healthOverflowOption.disabled = !overflowActive;
+			if (!overflowActive && ClientPrefs.data.healthOverflow)
+			{
+				// 丝滑血条关闭时强制关闭超满血，回到原生血量上限
+				ClientPrefs.data.healthOverflow = false;
+			}
+		}
+		if (healthOverflowDrainOption != null)
+			healthOverflowDrainOption.disabled = !overflowActive;
+	}
+
 	override function changeSelection(change:Int = 0)
 	{
 		var newSelection = FlxMath.wrap(curSelected + change, 0, optionsArray.length - 1);
@@ -576,6 +621,18 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			} else {
 				newSelection--;
 			}
+			newSelection = FlxMath.wrap(newSelection, 0, optionsArray.length - 1);
+		}
+
+		// 如果要选择的是 Health Overflow Icons 选项，但丝滑血条未开启，则跳过它
+		if (!ClientPrefs.data.smoothHP && healthOverflowOptionIndex != -1 && newSelection == healthOverflowOptionIndex) {
+			if (change > 0) newSelection++; else newSelection--;
+			newSelection = FlxMath.wrap(newSelection, 0, optionsArray.length - 1);
+		}
+
+		// 如果要选择的是 Overflow Return Speed 选项，但超满血未开启，则跳过它
+		if (!ClientPrefs.data.healthOverflow && healthOverflowDrainOptionIndex != -1 && newSelection == healthOverflowDrainOptionIndex) {
+			if (change > 0) newSelection++; else newSelection--;
 			newSelection = FlxMath.wrap(newSelection, 0, optionsArray.length - 1);
 		}
 		

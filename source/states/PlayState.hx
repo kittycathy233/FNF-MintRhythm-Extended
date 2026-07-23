@@ -3206,8 +3206,26 @@ isReplaying = false;
 
 		}
 
-		if (healthBar.bounds.max != null && health > healthBar.bounds.max)
-			health = healthBar.bounds.max;
+		var allowOverflow:Bool = ClientPrefs.data.smoothHP && ClientPrefs.data.healthOverflow;
+		if (healthBar.bounds.max != null)
+		{
+			if (!allowOverflow && health > healthBar.bounds.max)
+			{
+				// 未开启超满血：压回原生上限 2
+				health = healthBar.bounds.max;
+			}
+			else if (allowOverflow && health > healthBar.bounds.max)
+			{
+				// 超满血：用 lerp 平滑过渡回 2（缓出，越接近 2 越慢），最终落回干净的 2.00
+				var k:Float = ClientPrefs.data.healthOverflowDrain; // 回落速度系数（可在设置中调整）
+				var t:Float = Math.min(1, elapsed * k);
+				health = FlxMath.lerp(health, healthBar.bounds.max, t);
+				if (health - healthBar.bounds.max <= 0.01)
+					health = healthBar.bounds.max; // 接近 2 时直接锁定为 2.00
+				else
+					health = FlxMath.roundDecimal(health, 2);
+			}
+		}
 
 		// 平滑血条逻辑
 		if (ClientPrefs.data.smoothHP)
@@ -3765,6 +3783,18 @@ isReplaying = false;
 
 			iconP1.x = healthBar.barCenter + (150 * iconP1.scale.x - 150)/2 - iconOffset;
 			iconP2.x = healthBar.barCenter - (150 * iconP2.scale.x)/2 - iconOffset*2;
+
+			// 超满血溢出移动：血量超过满值时，让小图标向血条右端外溢出（需丝滑血条 + 超满设置）
+			if (ClientPrefs.data.smoothHP && ClientPrefs.data.healthOverflow)
+			{
+				var overflow:Float = FlxMath.bound(smoothHealth - healthBar.bounds.max, 0, 1);
+				if (overflow > 0)
+				{
+					var overshoot:Float = overflow * 40; // 最大溢出位移（像素）
+					iconP1.x += overshoot;
+					iconP2.x += overshoot * 0.5;
+				}
+			}
 			/*iconP1.y = iconP1InitialY;
 			iconP2.y = iconP2InitialY;*/
 			if (ClientPrefs.data.iconbopstyle == "Kade" || ClientPrefs.data.iconbopstyle == "VSlice(Old)") {
