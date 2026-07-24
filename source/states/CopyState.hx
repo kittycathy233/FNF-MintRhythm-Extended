@@ -232,6 +232,11 @@ class CopyState extends MusicBeatState
 
 	private function gotoNextState():Void
 	{
+		// 移动端此处是初始状态，且早于 postGameStart，故需先（同步）加载一次完整设置，
+		// 否则 ClientPrefs.data.splashMode 仍是默认值 'Kathy'，导致设置里的启动画面失效。
+		// 此处作为 FlxState 的回调运行，FlxG.sound / Controls.instance 均已就绪，loadPrefs 安全。
+		ClientPrefs.loadPrefs();
+
 		#if MODS_ALLOWED
 		if (Main.commandLineLaunch != null)
 		{
@@ -239,7 +244,7 @@ class CopyState extends MusicBeatState
 		}
 		#end
 
-		// 开屏画面跟随设置中的 splashMode（拷贝前已 loadPrefs）。
+		// 开屏画面跟随设置中的 splashMode（上面已 loadPrefs 加载最新值）。
 		// 命令行直启时，由对应的开屏结束态(LogoState / TitleState / EnhancedFlixelState)负责跳转进歌。
 		var splashMode:String = ClientPrefs.data.splashMode;
 		switch (splashMode)

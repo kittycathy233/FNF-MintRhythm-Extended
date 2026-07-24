@@ -233,13 +233,16 @@ class Main extends Sprite
 		});
 		#end
 		
-		// 2. 在游戏启动后再加载完整的设置（此时 FlxG 已完全初始化）
+		// 2. 游戏启动后再加载完整设置（此时 FlxG 已完全初始化，loadPrefs 内的
+		//    FlxG.sound / Controls.instance 均可用）。注意：不能在 Main.new() 内同步调用
+		//    loadPrefs()，否则此刻 FlxG.sound 等为 null 会崩溃。
 		FlxG.signals.postGameStart.addOnce(() ->
 		{
 			ClientPrefs.loadPrefs();
 		});
-		
+
 		// 启动开屏模式: 'Kathy' = 自定义 Logo 开屏, 'Flixel' = Flixel 自带 splash, 'None' = 直接进游戏
+		// 此时尚未 loadPrefs，直接读取已 bind 的 FlxG.save.data（桌面走此分支，移动端走 CopyState 分支）
 		var splashMode:String = Reflect.field(FlxG.save.data, 'splashMode');
 		if (splashMode == null) splashMode = 'Kathy';
 

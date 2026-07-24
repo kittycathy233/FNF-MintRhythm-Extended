@@ -279,6 +279,22 @@ class EnhancedFlixelState extends FlxState
 		FlxTween.tween(label, {alpha: 0}, 0.7, {ease: FlxEase.quadIn, onComplete: (_) -> switchState()});
 	}
 
+	// 跳过（用户输入触发）：用相机级淡黑让画面整体变暗。
+	// 相机特效绘制在所有精灵之上（含后续迸发的火花/粒子），且完全不触碰任何底层 tween，
+	// 因此既保证「整体变暗且置于游戏最顶层」，又不会出现「动效被打乱」的情况。
+	function skipToDark():Void
+	{
+		if (skipping)
+			return;
+		skipping = true;
+
+		// 注意：完成时【不要】在此 stopFX() 清掉黑屏——onComplete 在 cameras.update() 内触发，
+		// 而当前步的绘制仍由旧开屏状态负责；若此刻清黑，旧画面会在无黑遮罩下被画一帧（即「闪一下」）。
+		// 保持黑屏，仅请求切换状态；flixel 在切状态时会对相机 reset()（销毁旧相机、新建干净相机），
+		// 黑屏特效随之清除，不会带入下一个状态，也不会有闪屏。
+		FlxG.camera.fade(FlxColor.BLACK, 0.45, false, () -> switchState());
+	}
+
 	function switchState():Void
 	{
 		FlxG.camera.bgColor = _cachedBgColor;
@@ -309,8 +325,10 @@ class EnhancedFlixelState extends FlxState
 		}
 
 		// 任意按键 / 鼠标 / 触屏 可跳过
+		// 注意：不再直接调用 outro()（那会操底层花瓣 tween，导致其与原「砸入」/回弹 tween 打架、动效被打乱），
+		// 而是用相机级淡黑让画面整体变暗，底层 tween 照常运行，达到「跳过」效果
 		if (!skipping && (FlxG.keys.firstJustPressed() != -1 || FlxG.mouse.justPressed))
-			outro();
+			skipToDark();
 	}
 
 	override public function onResize(Width:Int, Height:Int):Void
