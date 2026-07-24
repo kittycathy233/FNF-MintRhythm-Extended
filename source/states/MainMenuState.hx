@@ -3,6 +3,8 @@ package states;
 import flixel.FlxObject;
 import flixel.effects.FlxFlicker;
 import flixel.ui.FlxButton;
+import flixel.input.touch.FlxTouch;
+import mobile.backend.TouchUtil;
 import lime.app.Application;
 import states.editors.MasterEditorMenu;
 import options.OptionsState;
@@ -375,13 +377,17 @@ class MainMenuState extends MusicBeatState
 				MusicBeatState.switchState(new TitleState());
 			}
 
-			var acceptTriggered:Bool = controls.ACCEPT;
-			#if desktop
-			if (!ClientPrefs.data.legacyMainMenu)
-				acceptTriggered = acceptTriggered || (FlxG.mouse.overlaps(menuItems, FlxG.camera) && FlxG.mouse.justPressed);
-			else
-				acceptTriggered = acceptTriggered || FlxG.mouse.justPressed;
-			#end
+		var acceptTriggered:Bool = controls.ACCEPT;
+		#if desktop
+		if (!ClientPrefs.data.legacyMainMenu)
+			acceptTriggered = acceptTriggered || (FlxG.mouse.overlaps(menuItems, FlxG.camera) && FlxG.mouse.justPressed);
+		else
+			acceptTriggered = acceptTriggered || FlxG.mouse.justPressed;
+		#else
+		// 移动端：新版样式下，直接点击菜单项也能触发进入
+		if (!ClientPrefs.data.legacyMainMenu)
+			acceptTriggered = acceptTriggered || (touchOverlapsMenu() && TouchUtil.justPressed);
+		#end
 
 			if (acceptTriggered)
 			{
@@ -540,10 +546,29 @@ class MainMenuState extends MusicBeatState
 	function updateModernInput(elapsed:Float)
 	{
 		var allowMouse:Bool = allowMouse;
-		if (allowMouse && ((FlxG.mouse.deltaScreenX != 0 && FlxG.mouse.deltaScreenY != 0) || FlxG.mouse.justPressed))
+
+		// 同时支持鼠标与触摸（移动端无鼠标，使用 TouchUtil）
+		var pointerMoved:Bool = false;
+		var pointerJustPressed:Bool = false;
+
+		#if FLX_MOUSE
+		if (FlxG.mouse.justPressed)
+			pointerJustPressed = true;
+		if (FlxG.mouse.deltaScreenX != 0 || FlxG.mouse.deltaScreenY != 0)
+			pointerMoved = true;
+		#end
+		if (TouchUtil.justPressed)
+		{
+			pointerJustPressed = true;
+			pointerMoved = true;
+		}
+
+		if (allowMouse && (pointerMoved || pointerJustPressed))
 		{
 			allowMouse = false;
+			#if FLX_MOUSE
 			FlxG.mouse.visible = true;
+			#end
 			timeNotMoving = 0;
 
 			var selectedItem:FlxSprite;
@@ -557,7 +582,7 @@ class MainMenuState extends MusicBeatState
 					selectedItem = rightItem;
 			}
 
-			if(leftItem != null && FlxG.mouse.overlaps(leftItem))
+			if(leftItem != null && pointerOverlaps(leftItem))
 			{
 				allowMouse = true;
 				if(selectedItem != leftItem)
@@ -566,7 +591,7 @@ class MainMenuState extends MusicBeatState
 					changeItem();
 				}
 			}
-			else if(rightItem != null && FlxG.mouse.overlaps(rightItem))
+			else if(rightItem != null && pointerOverlaps(rightItem))
 			{
 				allowMouse = true;
 				if(selectedItem != rightItem)
@@ -579,12 +604,14 @@ class MainMenuState extends MusicBeatState
 			{
 				var dist:Float = -1;
 				var distItem:Int = -1;
+				var px:Float = getPointerX();
+				var py:Float = getPointerY();
 				for (i in 0...optionShit.length)
 				{
 					var memb:FlxSprite = menuItems.members[i];
-					if(FlxG.mouse.overlaps(memb))
+					if(pointerOverlaps(memb))
 					{
-						var distance:Float = Math.sqrt(Math.pow(memb.getGraphicMidpoint().x - FlxG.mouse.screenX, 2) + Math.pow(memb.getGraphicMidpoint().y - FlxG.mouse.screenY, 2));
+						var distance:Float = Math.sqrt(Math.pow(memb.getGraphicMidpoint().x - px, 2) + Math.pow(memb.getGraphicMidpoint().y - py, 2));
 						if (dist < 0 || distance < dist)
 						{
 							dist = distance;
@@ -605,7 +632,9 @@ class MainMenuState extends MusicBeatState
 		else
 		{
 			timeNotMoving += elapsed;
+			#if FLX_MOUSE
 			if(timeNotMoving > 2) FlxG.mouse.visible = false;
+			#end
 		}
 
 		switch(curColumn)
@@ -637,6 +666,61 @@ class MainMenuState extends MusicBeatState
 				}
 		}
 	}
+
+	/**
+	 * 当前指针（鼠标优先，无鼠标时取触摸点）的横坐标
+	 */
+	function getPointerX():Float
+	{
+		#if FLX_MOUSE
+		if (!TouchUtil.justPressed && !TouchUtil.pressed)
+			return FlxG.mouse.screenX;
+		#end
+		var t:FlxTouch = TouchUtil.touch;
+		return t != null ? t.x : 0;
+	}
+
+	/**
+	 * 当前指针（鼠标优先，无鼠标时取触摸点）的纵坐标
+	 */
+	function getPointerY():Float
+	{
+		#if FLX_MOUSE
+		if (!TouchUtil.justPressed && !TouchUtil.pressed)
+			return FlxG.mouse.screenY;
+		#end
+		var t:FlxTouch = TouchUtil.touch;
+		return t != null ? t.y : 0;
+	}
+
+	/**
+	 * 当前指针（鼠标或触摸）是否与对象重叠
+	 */
+	function pointerOverlaps(obj:FlxSprite):Bool
+	{
+		#if FLX_MOUSE
+		if (FlxG.mouse.overlaps(obj))
+			return true;
+		#end
+		return TouchUtil.overlaps(obj, FlxG.camera);
+	}
+
+	#if !desktop
+	/**
+	 * 移动端：判断是否有触摸点落在新版主菜单的某个可选 UI 上（左侧 / 右侧 / 中间项）
+	 */
+	function touchOverlapsMenu():Bool
+	{
+		if (leftItem != null && TouchUtil.overlaps(leftItem, FlxG.camera))
+			return true;
+		if (rightItem != null && TouchUtil.overlaps(rightItem, FlxG.camera))
+			return true;
+		for (memb in menuItems.members)
+			if (TouchUtil.overlaps(memb, FlxG.camera))
+				return true;
+		return false;
+	}
+	#end
 
 	function changeItem(huh:Int = 0)
 	{
