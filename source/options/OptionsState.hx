@@ -14,6 +14,7 @@ class OptionsState extends MusicBeatState
 		Language.get("note_colors"),
 		Language.get("controls"),
 		Language.get("adjust_delay_combo"),
+		Language.get("adjust_rating_offset"),
 		Language.get("graphics"),
 		Language.get("visuals"),
 		Language.get("gameplay")
@@ -27,6 +28,7 @@ class OptionsState extends MusicBeatState
 		Language.get("note_colors_desc"),
 		Language.get("controls_desc"),
 		Language.get("adjust_delay_combo_desc"),
+		Language.get("adjust_rating_offset_desc"),
 		Language.get("graphics_desc"),
 		Language.get("visuals_desc"),
 		Language.get("gameplay_desc")
@@ -37,6 +39,7 @@ class OptionsState extends MusicBeatState
 	
 	private var grpOptions:FlxTypedGroup<FlxText>;
 	private static var curSelected:Int = 0;
+	private static var lastOptionsSelection:Int = 0; // 记住主设置菜单上次选中的项（仅本次会话）
 	public static var menuBG:FlxSprite;
 	public static var onPlayState:Bool = false;
 
@@ -80,7 +83,7 @@ class OptionsState extends MusicBeatState
 	function openSelectedSubstate(label:String) {
 		_inSubState = true; // 标记进入子状态，阻止主界面UI操作
 
-		if (label != Language.get("adjust_delay_combo") && label != Language.get("extra_options")) {
+		if (label != Language.get("adjust_delay_combo") && label != Language.get("adjust_rating_offset") && label != Language.get("extra_options")) {
 			removeTouchPad();
 			persistentUpdate = false;
 		} else if (label == Language.get("extra_options")) {
@@ -98,6 +101,7 @@ class OptionsState extends MusicBeatState
 				openSubState(new options.ExtraGameplaySettingSubState());
 			},
 			Language.get("adjust_delay_combo") => () -> MusicBeatState.switchState(new options.NoteOffsetState()),
+			Language.get("adjust_rating_offset") => () -> MusicBeatState.switchState(new options.RatingOffsetState()),
 			Language.get("mobile_options") => () -> openSubState(new mobile.options.MobileOptionsSubState())
 		];
 		
@@ -206,8 +210,8 @@ class OptionsState extends MusicBeatState
 		super.create();
 		FlxG.mouse.visible = true;
 
-		// 默认选中中间项
-		curSelected = Std.int(options.length / 2);
+		// 记住上次选中的项（仅本次游戏会话内有效，超出范围则回退到中间项）
+		curSelected = Std.int(Math.max(0, Math.min(options.length - 1, lastOptionsSelection)));
 		changeSelection(0); // 刷新高亮和描述
 	}
 
@@ -380,6 +384,12 @@ class OptionsState extends MusicBeatState
 	function changeSelection(change:Int = 0)
 	{
 		curSelected = FlxMath.wrap(curSelected + change, 0, options.length - 1);
+
+		// 记住当前选中项，下次进入主设置界面时恢复（仅本次会话，重启游戏后重置）
+		if (change != 0)
+		{
+			lastOptionsSelection = curSelected;
+		}
 
 		for (i in 0...grpOptions.length)
 		{

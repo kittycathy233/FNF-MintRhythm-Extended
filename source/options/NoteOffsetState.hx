@@ -563,6 +563,9 @@ class NoteOffsetState extends MusicBeatState
 		lastBeatHit = curBeat;
 	}
 
+	// NOTE: the repositioned objects (rating, comboNums, theEXrating) are Sprite IMAGES
+	// (e.g. 'perfect'/'sick' graphics and 'num0'..'num9' digits), NOT text. comboOffset[] stores
+	// their on-screen pixel offsets.
 	function repositionCombo()
 	{
 		rating.screenCenter();
