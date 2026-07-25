@@ -225,6 +225,33 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			trace("Fixed timestep changed to: " + FlxG.fixedTimestep);
 		};
 
+		// ===== 渲染质量（StageQuality） =====
+		option = new Option('Stage Quality',
+			'Vector/text rendering quality (StageQuality). Lower = faster on mobile but blurrier text. Applies live; a restart re-renders everything for sure.',
+			'stageQuality',
+			STRING,
+			['LOW', 'MEDIUM', 'HIGH', 'BEST']);
+		option.onChange = function() {
+			FlxG.stage.quality = ClientPrefs.getStageQuality();
+		};
+		addOption(option);
+
+		// ===== rating/combo 精灵对象池 =====
+		option = new Option('Combo Sprite Pooling',
+			'Reuse rating/combo/number sprites instead of creating & destroying them on every hit. ON = smoother (less GC / less hit-stutter). Turn OFF for maximum compatibility if a mod misbehaves with recycled combo sprites.',
+			'comboSpritePooling',
+			BOOL);
+		addOption(option);
+
+		option = new Option('Combo Sprite Pool Size',
+			'Max number of sprites in the pool. 0 = unlimited (grow as needed). >0 = rotating mode (reuse oldest when full). Higher = more memory, lower = more recycling overhead. Typical value: 16-64.',
+			'comboSpritePoolSize',
+			INT);
+		option.minValue = 0;
+		option.maxValue = 128;
+		option.changeValue = 8;
+		addOption(option);
+
 		// ===== 低延迟 / 性能模式 =====
 		option = new Option('Auto Song Resync',
 			'On weak devices, the engine jumps the song back when audio/logic desyncs. Turn OFF to avoid sudden rewinds and rely on manual calibration.',

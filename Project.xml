@@ -45,13 +45,13 @@
 	<!-- ____________________________ Window Settings ___________________________ -->
 
 	<!--These window settings apply to all targets-->
-	<window width="1280" height="720" fps="60" background="#000000" hardware="true" vsync="false" allow-high-dpi="true" antialiasing="4" />
+	<window width="1280" height="720" fps="60" background="#000000" hardware="true" vsync="false" />
 
 	<!--HTML5-specific-->
 	<window if="html5" resizable="true" />
 
 	<!--Desktop-specific-->
-	<window if="desktop" orientation="landscape" fullscreen="false" resizable="true" vsync="false"/>
+	<window if="desktop" orientation="landscape" fullscreen="false" resizable="true" vsync="false" antialiasing="2" allow-high-dpi="true"/>
 
 	<!--Mobile-specific-->
 	<window if="mobile" orientation="landscape" fullscreen="true" resizable="false" allow-shaders="true" require-shaders="true" />
@@ -117,7 +117,7 @@
 
 	<!-- 核心库 -->
 	<haxelib name="flixel" version="5.9.0"/>
-	<haxelib name="openfl" version="9.4.2"/>
+	<haxelib name="openfl"version="9.4.2"/>
 	<haxelib name="flixel-addons" version="4.0.1"/>
 	<haxelib name="tjson" version="1.4.0"/>
 

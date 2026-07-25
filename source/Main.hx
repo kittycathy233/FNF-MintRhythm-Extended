@@ -305,7 +305,7 @@ class Main extends Sprite
 		updateFPSLayer();
 		Lib.current.stage.align = "tl";
 		Lib.current.stage.scaleMode = StageScaleMode.SHOW_ALL;
-		Lib.current.stage.quality = StageQuality.BEST;
+		Lib.current.stage.quality = ClientPrefs.getStageQuality();
 
 		// 创建游戏日志显示
 		gameLogVar = new GameLogDisplay();

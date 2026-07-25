@@ -879,6 +879,7 @@ isReplaying = false;
 
 		uiGroup = new FlxSpriteGroup();
 		comboGroup = new FlxSpriteGroup();
+		comboSpritePool = new FlxTypedGroup<FlxSprite>(ClientPrefs.data.comboSpritePoolSize);
 		noteGroup = new FlxTypedGroup<FlxBasic>();
 		add(comboGroup);
 		add(uiGroup);
@@ -4221,6 +4222,52 @@ isReplaying = false;
 
 	// Stores Ratings and Combo Sprites in a group
 	public var comboGroup:FlxSpriteGroup;
+
+	// rating/combo/数字 精灵的对象池：避免每次命中都 new/destroy，减少 GC 停顿与命中卡顿。
+	// 该池只用于对象复用管理，不加入 state（不参与 update/draw），实际显示仍通过 comboGroup。
+	var comboSpritePool:FlxTypedGroup<FlxSprite>;
+
+	// 取出一个干净的 rating/combo 精灵：
+	//  - comboSpritePooling=true  → 从对象池 recycle（复用，省 GC / 减命中卡顿）
+	//  - comboSpritePooling=false → 传统 new（不入池），行为与旧引擎/模组完全一致（最大兼容性）
+	// 无论走哪条，都会重置所有可能残留的状态后再返回。
+	function recycleComboSprite():FlxSprite
+	{
+		var spr:FlxSprite;
+		if (ClientPrefs.data.comboSpritePooling)
+		{
+			if (comboSpritePool == null) comboSpritePool = new FlxTypedGroup<FlxSprite>(ClientPrefs.data.comboSpritePoolSize);
+			spr = comboSpritePool.recycle(FlxSprite);
+		}
+		else
+		{
+			spr = new FlxSprite();
+		}
+		FlxTween.cancelTweensOf(spr);
+		spr.velocity.set(0, 0);
+		spr.acceleration.set(0, 0);
+		spr.angle = 0;
+		spr.alpha = 1;
+		spr.scale.set(1, 1);
+		spr.offset.set(0, 0);
+		spr.loadGraphic(null);
+		return spr;
+	}
+
+	// 用完一个 rating/combo 精灵：先从 comboGroup 移除；再按“对象归属”决定回收方式——
+	//  - 属于对象池   → kill()，供后续 recycle 复用
+	//  - 非池(new 出来)→ destroy()，即时释放
+	// 以对象归属（而非当前开关状态）判断，保证歌曲中途切换开关也不会误销毁池对象或泄漏。
+	function killComboSprite(spr:FlxSprite):Void
+	{
+		if (spr == null) return;
+		FlxTween.cancelTweensOf(spr);
+		if (comboGroup != null && comboGroup.members.indexOf(spr) != -1) comboGroup.remove(spr, true);
+		if (comboSpritePool != null && comboSpritePool.members.indexOf(spr) != -1)
+			spr.kill();
+		else
+			spr.destroy();
+	}
 	// Stores HUD Objects in a Group
 	public var uiGroup:FlxSpriteGroup;
 	// Stores Note Objects in a Group
@@ -4342,12 +4389,11 @@ isReplaying = false;
 
 		if (!ClientPrefs.data.comboStacking && comboGroup.members.length > 0)
 		{
-			for (spr in comboGroup)
+			// 遍历成员副本，避免边遍历边移除导致跳过元素；kill 回收进对象池而非 destroy，供后续复用。
+			for (spr in comboGroup.members.copy())
 			{
 				if(spr == null) continue;
-
-				comboGroup.remove(spr);
-				spr.destroy();
+				killComboSprite(spr);
 			}
 		}
 
@@ -4392,8 +4438,6 @@ isReplaying = false;
 		}
 
 		var placement:Float = FlxG.width * 0.35;
-		var rating:FlxSprite = new FlxSprite();
-		var theEXrating:FlxSprite = new FlxSprite();
 		var score:Int = 350;
 
 		// 复用上方已计算的 daRating（避免重复调用 judgeNote）
@@ -4431,6 +4475,8 @@ isReplaying = false;
 
 		if (ClientPrefs.data.popUpRating)
 		{
+			var rating:FlxSprite = recycleComboSprite();
+			var theEXrating:FlxSprite = recycleComboSprite();
 			var ratingImageToUse:String = daRating.image;
 			
 			// 如果是 perfect，检查模组是否有 marvelous 或 perfect 贴图
@@ -4480,7 +4526,8 @@ isReplaying = false;
 			theEXrating.angle = 0;
 
 	
-			var comboSpr:FlxSprite = new FlxSprite().loadGraphic(Paths.image(uiFolder + 'combo' + uiPostfix));
+			var comboSpr:FlxSprite = recycleComboSprite();
+			comboSpr.loadGraphic(Paths.image(uiFolder + 'combo' + uiPostfix));
 			comboSpr.screenCenter();
 			comboSpr.x = placement;
 			//comboSpr.acceleration.y = FlxG.random.int(200, 300) * playbackRate * playbackRate;
@@ -4641,7 +4688,8 @@ isReplaying = false;
 			var separatedScore:String = Std.string(combo).lpad('0', 3);
 			for (i in 0...separatedScore.length)
 			{
-				var numScore:FlxSprite = new FlxSprite().loadGraphic(Paths.image(uiFolder + 'num' + Std.parseInt(separatedScore.charAt(i)) + uiPostfix));
+				var numScore:FlxSprite = recycleComboSprite();
+				numScore.loadGraphic(Paths.image(uiFolder + 'num' + Std.parseInt(separatedScore.charAt(i)) + uiPostfix));
 				numScore.screenCenter();
 				numScore.x = placement + (43 * daLoop) - 70 + ClientPrefs.data.comboOffset[2];
 				numScore.y += 80 - ClientPrefs.data.comboOffset[3] + 110;
@@ -4705,7 +4753,7 @@ isReplaying = false;
 				FlxTween.tween(numScore, {alpha: 0}, 0.2 / playbackRate, {
 					onComplete: function(tween:FlxTween)
 					{
-						numScore.destroy();
+						killComboSprite(numScore);
 					},
 					startDelay: numScoreFadeDelay
 				});
@@ -4733,16 +4781,14 @@ isReplaying = false;
 			FlxTween.tween(rating, {alpha: 0}, 0.2 / playbackRate, {
 				onComplete: function(tween:FlxTween)
 				{
-					FlxTween.cancelTweensOf(rating);
-					rating.destroy();
+					killComboSprite(rating);
 				},
 				startDelay: ratingFadeDelay
 			});
 			FlxTween.tween(theEXrating, {alpha: 0}, 0.2 / playbackRate, {
 				onComplete: function(tween:FlxTween)
 				{
-					FlxTween.cancelTweensOf(theEXrating);
-					theEXrating.destroy();
+					killComboSprite(theEXrating);
 				},
 				startDelay: exRatingFadeDelay
 			});
@@ -4750,8 +4796,7 @@ isReplaying = false;
 			FlxTween.tween(comboSpr, {alpha: 0}, 0.2 / playbackRate, {
 				onComplete: function(tween:FlxTween)
 				{
-					FlxTween.cancelTweensOf(comboSpr);
-					comboSpr.destroy();
+					killComboSprite(comboSpr);
 				},
 				startDelay: comboFadeDelay
 			});
@@ -5690,6 +5735,17 @@ isReplaying = false;
 	}
 
 	override function destroy() {
+		if (comboSpritePool != null)
+		{
+			for (spr in comboSpritePool.members.copy())
+			{
+				if (comboGroup != null && comboGroup.members.indexOf(spr) != -1)
+					comboGroup.remove(spr, true);
+			}
+			comboSpritePool.destroy();
+			comboSpritePool = null;
+		}
+
 		if (psychlua.CustomSubstate.instance != null)
 		{
 			closeSubState();

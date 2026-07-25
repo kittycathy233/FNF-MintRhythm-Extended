@@ -5,6 +5,7 @@ import flixel.input.keyboard.FlxKey;
 import flixel.input.gamepad.FlxGamepadInputID;
 
 import states.TitleState;
+import openfl.display.StageQuality;
 
 // Add a variable here and it will get automatically saved
 @:structInit class SaveVariables {
@@ -43,6 +44,9 @@ import states.TitleState;
 	public var cacheOnGPU:Bool = #if !switch false #else true #end; // GPU Caching made by Raltyro
 	public var framerate:Int = 60;
 	public var camZooms:Bool = true;
+	public var stageQuality:String = 'MEDIUM'; // 矢量/文本渲染质量(StageQuality)：LOW/MEDIUM/HIGH/BEST，移动端建议 MEDIUM 及以下
+	public var comboSpritePooling:Bool = true; // rating/combo/数字 精灵对象池：true=复用(省GC、减命中卡顿)，false=回退传统 new/destroy(最大兼容性)
+	public var comboSpritePoolSize:Int = 32; // 对象池容量上限（0=无限增长模式，>0=循环复用模式），推荐值16-64
 	public var hideHud:Bool = false;
 	public var noteOffset:Int = 0;
 	public var arrowRGB:Array<Array<FlxColor>> = [
@@ -276,6 +280,21 @@ import states.TitleState;
 class ClientPrefs {
 	public static var data:SaveVariables = {};
 	public static var defaultData:SaveVariables = {}
+
+	/**
+	 * 把 stageQuality 字符串映射成 openfl.display.StageQuality。
+	 * 供 Main 启动与设置界面实时切换使用。
+	 */
+	public static function getStageQuality():StageQuality
+	{
+		return switch (data.stageQuality)
+		{
+			case 'LOW': StageQuality.LOW;
+			case 'HIGH': StageQuality.HIGH;
+			case 'BEST': StageQuality.BEST;
+			default: StageQuality.MEDIUM;
+		}
+	}
 
 	//Every key has two binds, add your key bind down here and then add your control on options/ControlsSubState.hx and Controls.hx
 	public static var keyBinds:Map<String, Array<FlxKey>> = [

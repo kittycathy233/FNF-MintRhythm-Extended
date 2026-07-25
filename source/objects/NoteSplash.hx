@@ -65,9 +65,7 @@ class NoteSplash extends FlxSprite
 	public var maxAnims(default, set):Int = 0;
 	public function loadSplash(?splash:String)
 	{
-		config = null;
-		maxAnims = 0;
-
+		// 先解析目标皮肤的最终路径（此时不要清空 config，早退时需要保留已加载的动画）。
 		// 空串（如 SONG.splashSkin = ""）与 null 等价，一律回退到默认飞溅，
 		// 否则会被 resolveSkinPath("") 误解析成普通箭头皮肤（defaultNoteSkin）。
 		if(splash == null || splash.length < 1)
@@ -79,6 +77,16 @@ class NoteSplash extends FlxSprite
 		{
 			splash = getSplashSkinPath(splash);
 		}
+
+		// 单曲内同一皮肤只需检测/构建一次：目标路径与当前已加载一致且已有有效 config，
+		// 直接跳过后续的 getSparrowAtlas / checkForAnim 探测 / clearAnimations+addByPrefix 重建。
+		// spawnSplashNote 每次命中都会调用本方法（因 texture 存的是解析后路径、传入的是原始名，
+		// 二者常不相等），这里的早退可消除每次命中飞溅时的重复解析与动画重建开销。
+		if (!inEditor && config != null && texture == splash)
+			return;
+
+		config = null;
+		maxAnims = 0;
 
 		texture = splash;
 		frames = Paths.getSparrowAtlas(texture);
