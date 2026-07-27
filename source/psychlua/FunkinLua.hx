@@ -160,6 +160,7 @@ class FunkinLua {
 			set('instakillOnMiss', game.instakillOnMiss);
 			set('botPlay', game.cpuControlled);
 			set('practice', game.practiceMode);
+			set('opponentPlay', PlayState.opponentPlay);
 	
 			for (i in 0...4) {
 				set('defaultPlayerStrumX' + i, 0);
@@ -706,6 +707,11 @@ class FunkinLua {
 		Lua_helper.add_callback(lua, "setHealth", function(value:Float = 1) game.health = value);
 		Lua_helper.add_callback(lua, "addHealth", function(value:Float = 0) game.health += value);
 		Lua_helper.add_callback(lua, "getHealth", function() return game.health);
+
+		Lua_helper.add_callback(lua, "isPlayerNote", function(noteIndex:Int):Bool {
+			var note:Note = game.notes.members[noteIndex];
+			return note != null && game.isPlayerNote(note);
+		});
 
 		//Identical functions
 		Lua_helper.add_callback(lua, "FlxColor", function(color:String) return FlxColor.fromString(color));

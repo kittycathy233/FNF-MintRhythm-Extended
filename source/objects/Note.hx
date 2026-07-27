@@ -801,14 +801,8 @@ class Note extends FlxSprite
 		var lateWindow:Float = Conductor.safeZoneOffset * lateHitMult;
 		var timeUntilHit:Float = (strumTime - Conductor.songPosition);
 
-		if (mustPress)
-		{
-			canBeHit = (timeUntilHit > -lateWindow && timeUntilHit < earlyWindow);
-
-			if (strumTime < Conductor.songPosition - lateWindow && !wasGoodHit)
-				tooLate = true;
-		}
-		else
+		// opponentPlay：自动命中逻辑绑定到真正的 CPU 控制侧，而非死板的 !mustPress
+		if (mustPress == PlayState.opponentPlay)
 		{
 			canBeHit = (timeUntilHit > -lateWindow && timeUntilHit < earlyWindow);
 
@@ -817,6 +811,13 @@ class Note extends FlxSprite
 				if(!isSustainNote || (prevNote.wasGoodHit && !ignoreNote))
 					wasGoodHit = true;
 			}
+
+			if (strumTime < Conductor.songPosition - lateWindow && !wasGoodHit)
+				tooLate = true;
+		}
+		else
+		{
+			canBeHit = (timeUntilHit > -lateWindow && timeUntilHit < earlyWindow);
 
 			if (strumTime < Conductor.songPosition - lateWindow && !wasGoodHit)
 				tooLate = true;

@@ -806,6 +806,7 @@ isReplaying = false;
 			gfGroup.add(gf);
 		}
 
+		opponentPlay = ClientPrefs.getGameplaySetting('opponentplay', false);
 		dad = new Character(0, 0, SONG.player2);
 		startCharacterPos(dad, true);
 		dadGroup.add(dad);
@@ -813,6 +814,15 @@ isReplaying = false;
 		boyfriend = new Character(0, 0, SONG.player1, true);
 		startCharacterPos(boyfriend);
 		boyfriendGroup.add(boyfriend);
+
+		if (opponentPlay)
+		{
+			// 交换"唱歌动画自动回位"行为：受控角色(dad)按玩家规则回位（配合 playerDance），
+			// 自动演奏侧(boyfriend)按 CPU 规则自动回位，避免卡在 sing 姿势。
+			// isPlayer 的 flipX 在构造时已应用完毕，此处修改只影响回位逻辑。
+			dad.isPlayer = true;
+			boyfriend.isPlayer = false;
+		}
 		
 		if(stageData.objects != null && stageData.objects.length > 0)
 		{
@@ -1060,7 +1070,10 @@ isReplaying = false;
 
 		healthBar = new Bar(0, healthBarY, 'healthBar', function() return health, 0, 2);
 		healthBar.screenCenter(X);
-		healthBar.leftToRight = false;
+		// 普通模式：leftToRight=false，玩家(bf 在右)命中使右侧颜色向左扩张，维持原本逻辑。
+		// opponentPlay：玩家改为控制左侧 dad，血条改为“由左到右、从低到高”填充（leftToRight=true），
+		// 此时 dad 在左、bf 在右且位置不变，命中时左侧 dad 颜色向右扩张，方向符合“血量低→高 左→右”过渡。
+		healthBar.leftToRight = opponentPlay;
 		healthBar.scrollFactor.set();
 		healthBar.visible = !ClientPrefs.data.hideHud;
 		healthBar.alpha = ClientPrefs.data.healthBarAlpha;
@@ -1386,6 +1399,7 @@ isReplaying = false;
 	#end
 
 	public function reloadHealthBarColors() {
+		// 不改变左右颜色顺序：左侧始终是 dad、右侧始终是 bf（opponentPlay 仅改填充方向，不动图标/颜色位置）。
 		healthBar.setColors(FlxColor.fromRGB(dad.healthColorArray[0], dad.healthColorArray[1], dad.healthColorArray[2]),
 			FlxColor.fromRGB(boyfriend.healthColorArray[0], boyfriend.healthColorArray[1], boyfriend.healthColorArray[2]));
 	}
@@ -2377,6 +2391,7 @@ isReplaying = false;
 			var isAlt: Bool = section.altAnim && !gottaHitNote;
 			swagNote.gfNote = (section.gfSection && gottaHitNote == section.mustHitSection);
 			swagNote.animSuffix = isAlt ? "-alt" : "";
+			// opponentPlay：只反转判定归属（谁来打），演出相关字段(gfNote/animSuffix/位置)仍按原谱面
 			swagNote.mustPress = gottaHitNote;
 			swagNote.sustainLength = holdLength;
 			swagNote.noteType = noteType;
@@ -2425,7 +2440,7 @@ isReplaying = false;
 							oldNote.resizeByRatio(curStepCrochet / Conductor.stepCrochet);
 						}
 
-						if (sustainNote.mustPress) sustainNote.x += FlxG.width / 2; // general offset
+						if (gottaHitNote) sustainNote.x += FlxG.width / 2; // general offset（按演出侧摆放）
 						else if(ClientPrefs.data.middleScroll)
 						{
 							sustainNote.x += 310;
@@ -2450,9 +2465,9 @@ isReplaying = false;
 					}
 				}
 
-				if (swagNote.mustPress)
+				if (gottaHitNote)
 				{
-					swagNote.x += FlxG.width / 2; // general offset
+					swagNote.x += FlxG.width / 2; // general offset（按演出侧摆放）
 				}
 				else if(ClientPrefs.data.middleScroll)
 				{
@@ -2642,6 +2657,30 @@ isReplaying = false;
 	}
 
 	public var skipArrowStartTween:Bool = false; //for lua
+	// Play As Opponent（opponentPlay）实现说明：
+	// 不交换任何角色引用/箭头位置/血条图标，完整保留原有演出（镜头、事件、布局全部按原谱面走）。
+	// 关键：note.mustPress 始终保持原版语义（true=bf 侧、false=dad 侧），绝不反转它，
+	// 否则所有读取 mustPress 的脚本/模组/NoteType 都会判断错左右。
+	// 只把"谁提供输入 / 谁自动演奏 / 谁会 miss"在判定层换边：isPlayerNote() 决定当前人类
+	// 玩家控制的音符（opponentPlay 时为 dad 侧）；CPU 自动演奏另一侧。
+	// 表现层出口（渲染归组、亮灯、唱歌角色、人声）按 opponentPlay 重定向到对应的一侧。
+	// 改为 static：Note.update() 需要据此判断"当前 CPU 自动演奏侧"，以便把自动命中逻辑绑定到真正的控制侧。
+	public static var opponentPlay:Bool = false;
+
+	// 玩家实际操作侧的箭头组（opponentPlay 时为对手侧箭头）
+	inline public function playerSideStrums():FlxTypedGroup<StrumNote>
+		return opponentPlay ? opponentStrums : playerStrums;
+	// 玩家实际操控的角色（opponentPlay 时为 dad）
+	inline public function playerSideChar():Character
+		return opponentPlay ? dad : boyfriend;
+	// CPU 自动演奏侧的角色（opponentPlay 时为 boyfriend）
+	inline public function cpuSideChar():Character
+		return opponentPlay ? boyfriend : dad;
+	// 当前由人类玩家控制的音符（opponentPlay 时为对手/dad 侧，否则为玩家/bf 侧）。
+	// 注意：note.mustPress 始终保持原版语义（true=bf 侧），不要反转它，否则脚本会读错。
+	inline public function isPlayerNote(note:Note):Bool
+		return (note.mustPress != opponentPlay);
+
 	private function generateStaticArrows(player:Int, ?instant:Bool = false):Void
 	{
 		var strumLineX:Float = ClientPrefs.data.middleScroll ? STRUM_X_MIDDLESCROLL : STRUM_X;
@@ -2656,7 +2695,8 @@ isReplaying = false;
 			for (i in 0...4)
 			{
 				var targetAlpha:Float = 1;
-				if (player < 1)
+				// "隐藏/淡化对手箭头" 的规则应作用于 CPU 自动演奏侧（opponentPlay 时是右侧玩家箭头组）
+				if ((player < 1) != opponentPlay)
 				{
 					if(!ClientPrefs.data.opponentStrums) targetAlpha = 0;
 					else if(ClientPrefs.data.middleScroll) targetAlpha = 0.35;
@@ -2702,7 +2742,8 @@ isReplaying = false;
 		for (i in 0...totalColumns)
 		{
 			var targetAlpha:Float = 1;
-			if (player < 1)
+			// 同上：淡化规则作用于 CPU 自动演奏侧
+			if ((player < 1) != opponentPlay)
 			{
 				if(!ClientPrefs.data.opponentStrums) targetAlpha = 0;
 				else if(ClientPrefs.data.middleScroll) targetAlpha = 0.35;
@@ -3078,7 +3119,7 @@ isReplaying = false;
 						var keyName = keysArray[action.key];
 						Controls.instance.setVirtualKeyState(keyName, false);
 						// 播放static动画
-						var spr:StrumNote = playerStrums.members[action.key];
+						var spr:StrumNote = playerSideStrums().members[action.key];
 						if(spr != null)
 						{
 							spr.playAnim('static');
@@ -3110,7 +3151,7 @@ isReplaying = false;
 				if(notes.length > 0) {
 					for (n in notes) {
 						var canHit:Bool = (n != null && !strumsBlocked[n.noteData] && n.canBeHit
-							&& n.mustPress && !n.tooLate && !n.wasGoodHit && !n.blockHit);
+							&& isPlayerNote(n) && !n.tooLate && !n.wasGoodHit && !n.blockHit);
 
 						if (canHit && n.isSustainNote) {
 							var released:Bool = !replayHeldKeys[n.noteData];
@@ -3146,7 +3187,7 @@ isReplaying = false;
 							Controls.instance.setVirtualKeyState(keyName, true);
 
 							// 空按 - 播放pressed动画
-							var spr:StrumNote = playerStrums.members[replayAction.key];
+							var spr:StrumNote = playerSideStrums().members[replayAction.key];
 							if(spr != null && strumsBlocked[replayAction.key] != true && spr.animation.curAnim.name != 'confirm')
 							{
 								spr.playAnim('pressed');
@@ -3183,7 +3224,7 @@ isReplaying = false;
 								Controls.instance.setVirtualKeyState(keyName, true);
 						
 								// 播放pressed动画（会在goodNoteHit中被confirm覆盖）
-							var spr:StrumNote = playerStrums.members[replayAction.key];
+							var spr:StrumNote = playerSideStrums().members[replayAction.key];
 							if(spr != null && strumsBlocked[replayAction.key] != true)
 							{
 								spr.playAnim('pressed');
@@ -3193,7 +3234,7 @@ isReplaying = false;
 							// 正常按键，找到对应的音符并打击
 							var targetNotes:Array<Note> = notes.members.filter(function(n:Note):Bool {
 								// 使用小容差（5ms）来匹配音符，避免浮点数精度问题
-								return n != null && n.mustPress && n.noteData == replayAction.key && !n.wasGoodHit
+								return n != null && isPlayerNote(n) && n.noteData == replayAction.key && !n.wasGoodHit
 									&& Math.abs(n.strumTime - replayAction.noteTime) < 5;
 							});
 							for(note in targetNotes)
@@ -3687,8 +3728,10 @@ isReplaying = false;
 							var daNote:Note = notes.members[i];
 							if(daNote == null) continue;
 
-							var strumGroup:FlxTypedGroup<StrumNote> = playerStrums;
-							if(!daNote.mustPress) strumGroup = opponentStrums;
+					// 渲染归组只按原版几何关系：bf 音符(mustPress)在右侧 playerStrums，dad 音符在左侧 opponentStrums。
+					// 不随 opponentPlay 改变——opponentPlay 时你打的音符(dad 侧)天然就在左侧对手箭头上。
+					var strumGroup:FlxTypedGroup<StrumNote> = playerStrums;
+					if(!daNote.mustPress) strumGroup = opponentStrums;
 
 						var strum:StrumNote = strumGroup.members[daNote.noteData];
 						if (strum == null)
@@ -3699,11 +3742,11 @@ isReplaying = false;
 						}
 						daNote.followStrumNote(strum, fakeCrochet, songSpeed / playbackRate);
 
-							if(daNote.mustPress)
-							{
-								if(cpuControlled && !daNote.blockHit && daNote.canBeHit && (daNote.isSustainNote || daNote.strumTime <= Conductor.songPosition))
-									goodNoteHit(daNote);
-							}
+						if(isPlayerNote(daNote))
+						{
+							if(cpuControlled && !daNote.blockHit && daNote.canBeHit && (daNote.isSustainNote || daNote.strumTime <= Conductor.songPosition))
+								goodNoteHit(daNote);
+						}
 							else if (!daNote.hitByOpponent && !daNote.ignoreNote && daNote.canBeHit && (daNote.isSustainNote || daNote.strumTime <= Conductor.songPosition))
 							{
 								opponentNoteHit(daNote);
@@ -3717,7 +3760,7 @@ isReplaying = false;
 							// Kill extremely late notes and cause misses
 							if (Conductor.songPosition - daNote.strumTime > noteKillOffset)
 							{
-								if (daNote.mustPress /*&& !cpuControlled */&& !daNote.ignoreNote && !endingSong && (daNote.tooLate || !daNote.wasGoodHit))
+								if (isPlayerNote(daNote) /*&& !cpuControlled */&& !daNote.ignoreNote && !endingSong && (daNote.tooLate || !daNote.wasGoodHit))
 									noteMiss(daNote);
 
 								daNote.active = daNote.visible = false;
@@ -3925,8 +3968,19 @@ isReplaying = false;
 		// 赢与输的判定区间正相反，且玩家(iconP1)/对手(iconP2)两侧都生效
 		var p1State:String = (healthBar.percent < 20) ? 'lose' : ((ClientPrefs.data.threeIcons && healthBar.percent > 80) ? 'win' : 'normal');
 		var p2State:String = (healthBar.percent > 80) ? 'lose' : ((ClientPrefs.data.threeIcons && healthBar.percent < 20) ? 'win' : 'normal');
-		iconP1.setIconState(p1State);
-		iconP2.setIconState(p2State);
+		if(opponentPlay)
+		{
+			// opponentPlay：玩家是左侧 dad(iconP2)、对手是右侧 bf(iconP1)，
+			// 把“玩家态(p1State)”给 iconP2、“对手态(p2State)”给 iconP1，修正输赢状态反置。
+			// 三态(win/lose/normal)判定区间不变，threeIcons 兼容性保留。
+			iconP1.setIconState(p2State);
+			iconP2.setIconState(p1State);
+		}
+		else
+		{
+			iconP1.setIconState(p1State);
+			iconP2.setIconState(p2State);
+		}
 		return health;
 	}
 
@@ -4008,7 +4062,7 @@ isReplaying = false;
 			if(ret != LuaUtils.Function_Stop)
 			{
 				FlxG.animationTimeScale = 1;
-				boyfriend.stunned = true;
+				playerSideChar().stunned = true;
 				deathCounter++;
 
 				paused = true;
@@ -4074,6 +4128,7 @@ isReplaying = false;
 		}
 
 		var isDad:Bool = (SONG.notes[sec].mustHitSection != true);
+		if (opponentPlay) isDad = !isDad;
 		moveCamera(isDad);
 		if (isDad)
 			callOnScripts('onMoveCamera', ['dad']);
@@ -4931,7 +4986,7 @@ isReplaying = false;
 
 	private function keyPressed(key:Int)
 	{
-		if(cpuControlled || paused || inCutscene || key < 0 || key >= playerStrums.length || !generatedMusic || endingSong || boyfriend.stunned || isReplaying) return;
+		if(cpuControlled || paused || inCutscene || key < 0 || key >= playerStrums.length || !generatedMusic || endingSong || playerSideChar().stunned || isReplaying) return;
 
 		var ret:Dynamic = callOnScripts('onKeyPressPre', [key]);
 		if(ret == LuaUtils.Function_Stop) return;
@@ -4946,7 +5001,7 @@ isReplaying = false;
 
 		var plrInputNotes:Array<Note> = notes.members.filter(function(n:Note):Bool {
 			if (n == null || n.isSustainNote || n.noteData != key) return false;
-			if (strumsBlocked[n.noteData] || !n.mustPress || n.tooLate || n.wasGoodHit || n.blockHit) return false;
+			if (strumsBlocked[n.noteData] || !isPlayerNote(n) || n.tooLate || n.wasGoodHit || n.blockHit) return false;
 			if (preciseHit)
 			{
 				var timeUntilHit:Float = n.strumTime - Conductor.songPosition;
@@ -5056,7 +5111,7 @@ isReplaying = false;
 	// [毫秒级精确判定] 开启时 songPosition 被临时改为精确值，这里还原为本帧原值，避免影响后续逻辑与音符视觉位置（防抖动）；下一帧 update 会重新从音频时钟同步。
 	if (preciseHit) Conductor.songPosition = lastTime;
 
-		var spr:StrumNote = playerStrums.members[key];
+		var spr:StrumNote = playerSideStrums().members[key];
 		if(strumsBlocked[key] != true && spr != null && spr.animation.curAnim.name != 'confirm')
 		{
 			spr.playAnim('pressed');
@@ -5125,7 +5180,7 @@ isReplaying = false;
 		if(guitarHeroSustains && holdTailJudge)
 			tryTailJudgeOnRelease(key);
 
-		var spr:StrumNote = playerStrums.members[key];
+		var spr:StrumNote = playerSideStrums().members[key];
 		if(spr != null)
 		{
 			spr.playAnim('static');
@@ -5146,7 +5201,7 @@ isReplaying = false;
 		var target:Note = null;
 		for (n in notes)
 		{
-			if(n == null || !n.isSustainNote || !n.mustPress) continue;
+			if(n == null || !n.isSustainNote || !isPlayerNote(n)) continue;
 			if(n.noteData != key) continue;
 			if(n.wasGoodHit || n.tooLate || n.missed || n.ignoreNote || n.blockHit) continue;
 			if(n.parent == null || !n.parent.wasGoodHit) continue; // 头部必须已命中(长条正在进行中)
@@ -5170,7 +5225,7 @@ isReplaying = false;
 		var lastTail:Note = null;
 		for (n in notes)
 		{
-			if(n == null || !n.isSustainNote || !n.mustPress) continue;
+			if(n == null || !n.isSustainNote || !isPlayerNote(n)) continue;
 			if(n.noteData != key) continue;
 			if(n.parent == null || !n.parent.wasGoodHit || n.parent.missed) continue;
 			// 取该列当前活跃长条的最后一个尾音
@@ -5217,7 +5272,7 @@ isReplaying = false;
 		var activeCols:Int = 0;
 		for (n in notes)
 		{
-			if(n == null || !n.isSustainNote || !n.mustPress) continue;
+			if(n == null || !n.isSustainNote || !isPlayerNote(n)) continue;
 			if(n.tooLate || n.missed || n.ignoreNote) continue;
 			if(n.parent == null || !n.parent.wasGoodHit) continue; // 头部已命中(长条进行中)
 			if(n.noteData < 0 || n.noteData >= counted.length || counted[n.noteData]) continue;
@@ -5323,13 +5378,13 @@ isReplaying = false;
 				if(pressArray[i] && strumsBlocked[i] != true)
 					keyPressed(i);
 
-		if (startedCountdown && !inCutscene && !boyfriend.stunned && generatedMusic)
+		if (startedCountdown && !inCutscene && !playerSideChar().stunned && generatedMusic)
 		{
 
 			if (notes.length > 0) {
 				for (n in notes) { // I can't do a filter here, that's kinda awesome
 					var canHit:Bool = (n != null && !strumsBlocked[n.noteData] && n.canBeHit
-						&& n.mustPress && !n.tooLate && !n.wasGoodHit && !n.blockHit);
+						&& isPlayerNote(n) && !n.tooLate && !n.wasGoodHit && !n.blockHit);
 
 					if (guitarHeroSustains)
 						canHit = canHit && n.parent != null && n.parent.wasGoodHit;
@@ -5364,7 +5419,7 @@ isReplaying = false;
 
 	function noteMiss(daNote:Note):Void { //You didn't hit the key and let it go offscreen, also used by Hurt Notes
 		// 记录回放数据（仅在非回放模式下）
-		if(!isReplaying && daNote.mustPress && !daNote.isSustainNote)
+		if(!isReplaying && isPlayerNote(daNote) && !daNote.isSustainNote)
 		{
 			replayData.push({
 				time: Conductor.songPosition,
@@ -5378,7 +5433,7 @@ isReplaying = false;
 		
 		//Dupe note remove
 		notes.forEachAlive(function(note:Note) {
-			if (daNote != note && daNote.mustPress && daNote.noteData == note.noteData && daNote.isSustainNote == note.isSustainNote && Math.abs(daNote.strumTime - note.strumTime) < 1)
+			if (daNote != note && isPlayerNote(daNote) && daNote.noteData == note.noteData && daNote.isSustainNote == note.isSustainNote && Math.abs(daNote.strumTime - note.strumTime) < 1)
 				invalidateNote(note);
 		});
 
@@ -5461,8 +5516,8 @@ isReplaying = false;
 		totalPlayed++;
 		RecalculateRating(true);
 
-		// play character anims
-		var char:Character = boyfriend;
+		// play character anims（opponentPlay 时受控角色是 dad）
+		var char:Character = playerSideChar();
 		if((note != null && note.gfNote) || (SONG.notes[curSection] != null && SONG.notes[curSection].gfSection)) char = gf;
 
 		if(char != null && (note == null || !note.noMissAnimation) && char.hasMissAnimations)
@@ -5479,7 +5534,9 @@ isReplaying = false;
 				gf.specialAnim = true;
 			}
 		}
-		vocals.volume = 0;
+		// opponentPlay 时玩家唱的是对手人声轨
+		if(opponentPlay && opponentVocals.length > 0) opponentVocals.volume = 0;
+		else vocals.volume = 0;
 	}
 
 	function opponentNoteHit(note:Note):Void
@@ -5496,15 +5553,17 @@ isReplaying = false;
 		if (songName != 'tutorial')
 			camZooming = true;
 
-		if(note.noteType == 'Hey!' && dad.hasAnimation('hey'))
+		// opponentPlay 时自动演奏侧是 boyfriend
+		var autoChar:Character = cpuSideChar();
+		if(note.noteType == 'Hey!' && autoChar.hasAnimation('hey'))
 		{
-			dad.playAnim('hey', true);
-			dad.specialAnim = true;
-			dad.heyTimer = 0.6;
+			autoChar.playAnim('hey', true);
+			autoChar.specialAnim = true;
+			autoChar.heyTimer = 0.6;
 		}
 		else if(!note.noAnimation)
 		{
-			var char:Character = dad;
+			var char:Character = autoChar;
 			var animToPlay:String = singAnimations[Std.int(Math.abs(Math.min(singAnimations.length-1, note.noteData)))] + note.animSuffix;
 			if(note.gfNote) char = gf;
 
@@ -5541,8 +5600,8 @@ isReplaying = false;
 			}
 		}
 
-		if(opponentVocals.length <= 0) vocals.volume = 1;
-		strumPlayAnim(true, Std.int(Math.abs(note.noteData)), Conductor.stepCrochet * 1.25 / 1000 / playbackRate, note.isSustainNote);
+		if(opponentPlay || opponentVocals.length <= 0) vocals.volume = 1;
+		strumPlayAnim(!opponentPlay, Std.int(Math.abs(note.noteData)), Conductor.stepCrochet * 1.25 / 1000 / playbackRate, note.isSustainNote);
 		note.hitByOpponent = true;
 		
 		stagesFunc(function(stage:BaseStage) stage.opponentNoteHit(note));
@@ -5550,6 +5609,12 @@ isReplaying = false;
 		{
 			var result:Dynamic = callOnLuas('opponentNoteHit', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
 			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript('opponentNoteHit', [note]);
+			
+			if (opponentPlay)
+			{
+				var result2:Dynamic = callOnLuas('goodNoteHit', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
+				if(result2 != LuaUtils.Function_Stop && result2 != LuaUtils.Function_StopHScript && result2 != LuaUtils.Function_StopAll) callOnHScript('goodNoteHit', [note]);
+			}
 		}
 
 		if (!note.isSustainNote) invalidateNote(note);
@@ -5568,7 +5633,7 @@ isReplaying = false;
 		if (!effectiveDisableNoteLua())
 		{
 			result = callOnLuas('goodNoteHitPre', [notes.members.indexOf(note), leData, leType, isSus]);
-			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) result = callOnHScript('goodNoteHitPre', [note]);
+			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript('goodNoteHitPre', [note]);
 		}
 
 		if(result == LuaUtils.Function_Stop) return;
@@ -5590,7 +5655,7 @@ isReplaying = false;
 			{
 				var animToPlay:String = singAnimations[Std.int(Math.abs(Math.min(singAnimations.length-1, note.noteData)))] + note.animSuffix;
 
-				var char:Character = boyfriend;
+				var char:Character = playerSideChar();
 				var animCheck:String = 'hey';
 				if(note.gfNote)
 				{
@@ -5643,7 +5708,7 @@ isReplaying = false;
 
 			if(!cpuControlled)
 			{
-				var spr = playerStrums.members[note.noteData];
+				var spr = playerSideStrums().members[note.noteData];
 				if(spr != null) {
 					// 玩家游玩时，重置 botplay 模式标志
 					spr.isBotplayMode = false;
@@ -5680,8 +5745,9 @@ isReplaying = false;
 					}
 				}
 			}
-			else strumPlayAnim(false, Std.int(Math.abs(note.noteData)), Conductor.stepCrochet * 1.25 / 1000 / playbackRate, note.isSustainNote);
-			vocals.volume = 1;
+			else strumPlayAnim(opponentPlay, Std.int(Math.abs(note.noteData)), Conductor.stepCrochet * 1.25 / 1000 / playbackRate, note.isSustainNote);
+			if(opponentPlay && opponentVocals.length > 0) opponentVocals.volume = 1;
+			else vocals.volume = 1;
 
 			if (!note.isSustainNote)
 			{
@@ -5711,10 +5777,11 @@ isReplaying = false;
 				switch(note.noteType)
 				{
 					case 'Hurt Note':
-						if(boyfriend.hasAnimation('hurt'))
+						var hurtChar:Character = playerSideChar();
+						if(hurtChar.hasAnimation('hurt'))
 						{
-							boyfriend.playAnim('hurt', true);
-							boyfriend.specialAnim = true;
+							hurtChar.playAnim('hurt', true);
+							hurtChar.specialAnim = true;
 						}
 				}
 			}
@@ -5728,6 +5795,12 @@ isReplaying = false;
 		{
 			var result:Dynamic = callOnLuas('goodNoteHit', [notes.members.indexOf(note), leData, leType, isSus]);
 			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript('goodNoteHit', [note]);
+			
+			if (opponentPlay)
+			{
+				var result2:Dynamic = callOnLuas('opponentNoteHit', [notes.members.indexOf(note), leData, leType, isSus]);
+				if(result2 != LuaUtils.Function_Stop && result2 != LuaUtils.Function_StopHScript && result2 != LuaUtils.Function_StopAll) callOnHScript('opponentNoteHit', [note]);
+			}
 		}
 		if(!note.isSustainNote) invalidateNote(note);
 	}
@@ -5786,7 +5859,7 @@ isReplaying = false;
 
 	public function spawnNoteSplashOnNote(note:Note) {
 		if(note != null) {
-			var strum:StrumNote = playerStrums.members[note.noteData];
+			var strum:StrumNote = playerSideStrums().members[note.noteData];
 			if(strum != null)
 				spawnNoteSplash(strum.x, strum.y, note.noteData, note, strum);
 		}
@@ -6149,9 +6222,11 @@ isReplaying = false;
 
 	public function playerDance():Void
 	{
-		var anim:String = boyfriend.getAnimationName();
-		if(boyfriend.holdTimer > Conductor.stepCrochet * (0.0011 #if FLX_PITCH / FlxG.sound.music.pitch #end) * boyfriend.singDuration && anim.startsWith('sing') && !anim.endsWith('miss'))
-			boyfriend.dance();
+		var char:Character = playerSideChar();
+		if(char == null) return;
+		var anim:String = char.getAnimationName();
+		if(char.holdTimer > Conductor.stepCrochet * (0.0011 #if FLX_PITCH / FlxG.sound.music.pitch #end) * char.singDuration && anim.startsWith('sing') && !anim.endsWith('miss'))
+			char.dance();
 	}
 
 	override function sectionHit()
