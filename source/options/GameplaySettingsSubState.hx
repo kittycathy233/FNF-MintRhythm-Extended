@@ -1,5 +1,7 @@
 package options;
 
+import states.PlayState;
+
 class GameplaySettingsSubState extends BaseOptionsMenu
 {
 	public function new()
@@ -20,6 +22,40 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 			Language.get("middlescroll_desc"),
 			'middleScroll',
 			BOOL);
+		addOption(option);
+
+		var option:Option = new Option(
+			"Lane Cover (Player)",
+			"玩家轨道阴影覆盖层透明度。0=关闭，1=最暗。",
+			'laneCoverAlphaP1',
+			FLOAT);
+		option.scrollSpeed = 2;
+		option.minValue = 0;
+		option.maxValue = 1;
+		option.changeValue = 0.05;
+		option.decimals = 2;
+		option.onChange = onChangeLaneCover;
+		addOption(option);
+
+		var option:Option = new Option(
+			"Lane Cover (Opponent)",
+			"对手轨道阴影覆盖层透明度。0=关闭，1=最暗。",
+			'laneCoverAlphaP2',
+			FLOAT);
+		option.scrollSpeed = 2;
+		option.minValue = 0;
+		option.maxValue = 1;
+		option.changeValue = 0.05;
+		option.decimals = 2;
+		option.onChange = onChangeLaneCover;
+		addOption(option);
+
+		var option:Option = new Option(
+			"Lane Cover × Strum Alpha",
+			"开启后，覆盖层透明度将与下方箭头自身透明度叠加（乘算），随 middleScroll 等效果自动变暗。",
+			'laneCoverByStrumAlpha',
+			BOOL);
+		option.onChange = onChangeLaneCover;
 		addOption(option);
 
 		var option:Option = new Option(
@@ -440,5 +476,10 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 			ClientPrefs.data.hitWindowPreset = 'Custom';
 			refreshPresetDisabledState();
 		}
+	}
+
+	private function onChangeLaneCover()
+	{
+		if (PlayState.instance != null) PlayState.instance.createLaneCovers();
 	}
 }

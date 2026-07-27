@@ -334,6 +334,9 @@ class PlayState extends MusicBeatState
 	public var opponentStrums:FlxTypedGroup<StrumNote> = new FlxTypedGroup<StrumNote>();
 	public var playerStrums:FlxTypedGroup<StrumNote> = new FlxTypedGroup<StrumNote>();
 	public var grpNoteSplashes:FlxTypedGroup<NoteSplash> = new FlxTypedGroup<NoteSplash>();
+	public var laneCovers:FlxTypedGroup<FlxSprite> = new FlxTypedGroup<FlxSprite>();
+	private var opponentLaneCover:FlxSprite = null;
+	private var playerLaneCover:FlxSprite = null;
 
 	public var camZooming:Bool = false;
 	public var camZoomingMult:Float = 1;
@@ -881,6 +884,7 @@ isReplaying = false;
 		comboGroup = new FlxSpriteGroup();
 		comboSpritePool = new FlxTypedGroup<FlxSprite>(ClientPrefs.data.comboSpritePoolSize);
 		noteGroup = new FlxTypedGroup<FlxBasic>();
+		add(laneCovers);
 		add(comboGroup);
 		add(uiGroup);
 		add(noteGroup);
@@ -1643,9 +1647,10 @@ isReplaying = false;
 
 			canPause = true;
 			applyMania(SONG.mania);
-			generateStaticArrows(0);
-			generateStaticArrows(1);
-			for (i in 0...playerStrums.length) {
+		generateStaticArrows(0);
+		generateStaticArrows(1);
+		createLaneCovers();
+		for (i in 0...playerStrums.length) {
 				setOnScripts('defaultPlayerStrumX' + i, playerStrums.members[i].x);
 				setOnScripts('defaultPlayerStrumY' + i, playerStrums.members[i].y);
 			}
@@ -2725,6 +2730,72 @@ isReplaying = false;
 		}
 	}
 
+	/** 根据当前 strum 的实际位置，为每个 strum 组（对手/玩家）生成 Track 上的黑色半透明覆盖层（阴影）。 */
+	public function createLaneCovers():Void
+	{
+		opponentLaneCover = null;
+		playerLaneCover = null;
+		laneCovers.clear();
+		if (ClientPrefs.data.laneCoverAlphaP1 <= 0 && ClientPrefs.data.laneCoverAlphaP2 <= 0) return;
+
+		if (ClientPrefs.data.laneCoverAlphaP2 > 0)
+			opponentLaneCover = createLaneCoverFor(opponentStrums, ClientPrefs.data.laneCoverAlphaP2);
+		if (ClientPrefs.data.laneCoverAlphaP1 > 0)
+			playerLaneCover = createLaneCoverFor(playerStrums, ClientPrefs.data.laneCoverAlphaP1);
+	}
+
+	/** 每帧更新覆盖层位置、尺寸、透明度，适应 modchart 对 strum 的移动与 alpha 变化。 */
+	public function updateLaneCovers():Void
+	{
+		if (laneCovers.members.length == 0) return;
+
+		function updateCover(c:FlxSprite, group:FlxTypedGroup<StrumNote>, baseAlpha:Float) {
+			if (c == null || group.length == 0) return;
+			var minX:Float = Math.POSITIVE_INFINITY;
+			var maxX:Float = Math.NEGATIVE_INFINITY;
+			for (s in group) {
+				minX = Math.min(minX, s.x);
+				maxX = Math.max(maxX, s.x + s.width);
+			}
+			c.x = minX;
+			c.scale.x = maxX - minX;
+
+			// 基于箭头 alpha 叠加：覆盖层最终透明度 = 基础设置值 × 该组首个 strum 的 alpha
+			var finalAlpha:Float = baseAlpha;
+			if (ClientPrefs.data.laneCoverByStrumAlpha)
+				finalAlpha *= group.members[0].alpha;
+			c.alpha = finalAlpha;
+		}
+
+		updateCover(opponentLaneCover, opponentStrums, ClientPrefs.data.laneCoverAlphaP2);
+		updateCover(playerLaneCover, playerStrums, ClientPrefs.data.laneCoverAlphaP1);
+	}
+
+	private function createLaneCoverFor(group:FlxTypedGroup<StrumNote>, baseAlpha:Float):FlxSprite
+	{
+		if (group == null || group.length == 0) return null;
+
+		var minX:Float = Math.POSITIVE_INFINITY;
+		var maxX:Float = Math.NEGATIVE_INFINITY;
+		for (s in group)
+		{
+			minX = Math.min(minX, s.x);
+			maxX = Math.max(maxX, s.x + s.width);
+		}
+		if (minX == Math.POSITIVE_INFINITY) return null;
+
+		var w:Int = Math.ceil(maxX - minX);
+		var cover:FlxSprite = new FlxSprite(minX, 0);
+		cover.makeGraphic(1, Std.int(FlxG.height), FlxColor.BLACK);
+		cover.scale.x = w;
+		cover.updateHitbox();
+		cover.alpha = ClientPrefs.data.laneCoverByStrumAlpha && group.members[0] != null ? baseAlpha * group.members[0].alpha : baseAlpha;
+		cover.scrollFactor.set();
+		cover.cameras = [camHUD];
+		laneCovers.add(cover);
+		return cover;
+	}
+
 	/** 应用某 mania 的多键配置：键数、缩放、配色前缀、sing 动画、键位 action。 */
 	public function applyMania(mania:Int):Void
 	{
@@ -2823,6 +2894,7 @@ isReplaying = false;
 			setOnScripts('defaultPlayerStrumX' + i, playerStrums.members[i].x);
 			setOnScripts('defaultPlayerStrumY' + i, playerStrums.members[i].y);
 		}
+		createLaneCovers();
 	}
 
 	/** Change Mania 时按当前 mania 重映射已有音符的列号；列号超出新键数的音符会由 followStrumNote 隐藏。 */
@@ -3830,6 +3902,8 @@ isReplaying = false;
 				}
 			}
 		}
+
+		updateLaneCovers();
 	}
 
 	var iconsAnimations:Bool = true;

@@ -28,6 +28,9 @@ import openfl.display.StageQuality;
 	public var downScroll:Bool = false;
 	public var middleScroll:Bool = false;
 	public var opponentStrums:Bool = true;
+	public var laneCoverAlphaP1:Float = 0.0; // 玩家轨道阴影覆盖层透明度（0=关闭，1=最暗）
+	public var laneCoverAlphaP2:Float = 0.0; // 对手轨道阴影覆盖层透明度（0=关闭，1=最暗）
+	public var laneCoverByStrumAlpha:Bool = false; // 覆盖层透明度是否基于箭头当前 alpha 叠加（乘算）
 	public var showFPS:Bool = true;
 	public var flashing:Bool = true;
 	public var autoPause:Bool = false;
