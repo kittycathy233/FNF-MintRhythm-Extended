@@ -801,8 +801,8 @@ class Note extends FlxSprite
 		var lateWindow:Float = Conductor.safeZoneOffset * lateHitMult;
 		var timeUntilHit:Float = (strumTime - Conductor.songPosition);
 
-		// opponentPlay：自动命中逻辑绑定到真正的 CPU 控制侧，而非死板的 !mustPress
-		if (mustPress == PlayState.opponentPlay)
+		// playOpponent：自动命中逻辑绑定到真正的 CPU 控制侧，而非死板的 !mustPress
+		if (mustPress == PlayState.playOpponent)
 		{
 			canBeHit = (timeUntilHit > -lateWindow && timeUntilHit < earlyWindow);
 

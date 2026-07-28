@@ -432,7 +432,7 @@ class ResultsScreen extends FlxSubState
 							instakill: ClientPrefs.getGameplaySetting('instakill', false),
 							practice: ClientPrefs.getGameplaySetting('practice', false),
 							botplay: ClientPrefs.getGameplaySetting('botplay', false),
-							opponentplay: ClientPrefs.getGameplaySetting('opponentplay', false)
+							playOpponent: ClientPrefs.getGameplaySetting('playOpponent', false)
 						}
 					},
 					replay: PlayState.instance.replayData

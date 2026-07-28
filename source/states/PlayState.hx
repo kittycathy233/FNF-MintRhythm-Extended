@@ -619,7 +619,7 @@ class PlayState extends MusicBeatState
 			if (Reflect.hasField(replayGameplaySettings, 'instakill')) ClientPrefs.data.gameplaySettings.set('instakill', replayGameplaySettings.instakill);
 			if (Reflect.hasField(replayGameplaySettings, 'practice')) ClientPrefs.data.gameplaySettings.set('practice', replayGameplaySettings.practice);
 			if (Reflect.hasField(replayGameplaySettings, 'botplay')) ClientPrefs.data.gameplaySettings.set('botplay', replayGameplaySettings.botplay);
-			if (Reflect.hasField(replayGameplaySettings, 'opponentplay')) ClientPrefs.data.gameplaySettings.set('opponentplay', replayGameplaySettings.opponentplay);
+			if (Reflect.hasField(replayGameplaySettings, 'playOpponent')) ClientPrefs.data.gameplaySettings.set('playOpponent', replayGameplaySettings.playOpponent);
 		}
 	}
 	else
@@ -806,7 +806,7 @@ isReplaying = false;
 			gfGroup.add(gf);
 		}
 
-		opponentPlay = ClientPrefs.getGameplaySetting('opponentplay', false);
+		playOpponent = ClientPrefs.getGameplaySetting('playOpponent', false);
 		dad = new Character(0, 0, SONG.player2);
 		startCharacterPos(dad, true);
 		dadGroup.add(dad);
@@ -815,7 +815,7 @@ isReplaying = false;
 		startCharacterPos(boyfriend);
 		boyfriendGroup.add(boyfriend);
 
-		if (opponentPlay)
+		if (playOpponent)
 		{
 			// 交换"唱歌动画自动回位"行为：受控角色(dad)按玩家规则回位（配合 playerDance），
 			// 自动演奏侧(boyfriend)按 CPU 规则自动回位，避免卡在 sing 姿势。
@@ -1071,9 +1071,9 @@ isReplaying = false;
 		healthBar = new Bar(0, healthBarY, 'healthBar', function() return health, 0, 2);
 		healthBar.screenCenter(X);
 		// 普通模式：leftToRight=false，玩家(bf 在右)命中使右侧颜色向左扩张，维持原本逻辑。
-		// opponentPlay：玩家改为控制左侧 dad，血条改为“由左到右、从低到高”填充（leftToRight=true），
+		// playOpponent：玩家改为控制左侧 dad，血条改为“由左到右、从低到高”填充（leftToRight=true），
 		// 此时 dad 在左、bf 在右且位置不变，命中时左侧 dad 颜色向右扩张，方向符合“血量低→高 左→右”过渡。
-		healthBar.leftToRight = opponentPlay;
+		healthBar.leftToRight = playOpponent;
 		healthBar.scrollFactor.set();
 		healthBar.visible = !ClientPrefs.data.hideHud;
 		healthBar.alpha = ClientPrefs.data.healthBarAlpha;
@@ -1399,7 +1399,7 @@ isReplaying = false;
 	#end
 
 	public function reloadHealthBarColors() {
-		// 不改变左右颜色顺序：左侧始终是 dad、右侧始终是 bf（opponentPlay 仅改填充方向，不动图标/颜色位置）。
+		// 不改变左右颜色顺序：左侧始终是 dad、右侧始终是 bf（playOpponent 仅改填充方向，不动图标/颜色位置）。
 		healthBar.setColors(FlxColor.fromRGB(dad.healthColorArray[0], dad.healthColorArray[1], dad.healthColorArray[2]),
 			FlxColor.fromRGB(boyfriend.healthColorArray[0], boyfriend.healthColorArray[1], boyfriend.healthColorArray[2]));
 	}
@@ -2391,7 +2391,7 @@ isReplaying = false;
 			var isAlt: Bool = section.altAnim && !gottaHitNote;
 			swagNote.gfNote = (section.gfSection && gottaHitNote == section.mustHitSection);
 			swagNote.animSuffix = isAlt ? "-alt" : "";
-			// opponentPlay：只反转判定归属（谁来打），演出相关字段(gfNote/animSuffix/位置)仍按原谱面
+			// playOpponent：只反转判定归属（谁来打），演出相关字段(gfNote/animSuffix/位置)仍按原谱面
 			swagNote.mustPress = gottaHitNote;
 			swagNote.sustainLength = holdLength;
 			swagNote.noteType = noteType;
@@ -2657,29 +2657,29 @@ isReplaying = false;
 	}
 
 	public var skipArrowStartTween:Bool = false; //for lua
-	// Play As Opponent（opponentPlay）实现说明：
+	// Play As Opponent（playOpponent）实现说明：
 	// 不交换任何角色引用/箭头位置/血条图标，完整保留原有演出（镜头、事件、布局全部按原谱面走）。
 	// 关键：note.mustPress 始终保持原版语义（true=bf 侧、false=dad 侧），绝不反转它，
 	// 否则所有读取 mustPress 的脚本/模组/NoteType 都会判断错左右。
 	// 只把"谁提供输入 / 谁自动演奏 / 谁会 miss"在判定层换边：isPlayerNote() 决定当前人类
-	// 玩家控制的音符（opponentPlay 时为 dad 侧）；CPU 自动演奏另一侧。
-	// 表现层出口（渲染归组、亮灯、唱歌角色、人声）按 opponentPlay 重定向到对应的一侧。
+	// 玩家控制的音符（playOpponent 时为 dad 侧）；CPU 自动演奏另一侧。
+	// 表现层出口（渲染归组、亮灯、唱歌角色、人声）按 playOpponent 重定向到对应的一侧。
 	// 改为 static：Note.update() 需要据此判断"当前 CPU 自动演奏侧"，以便把自动命中逻辑绑定到真正的控制侧。
-	public static var opponentPlay:Bool = false;
+	public static var playOpponent:Bool = false;
 
-	// 玩家实际操作侧的箭头组（opponentPlay 时为对手侧箭头）
+	// 玩家实际操作侧的箭头组（playOpponent 时为对手侧箭头）
 	inline public function playerSideStrums():FlxTypedGroup<StrumNote>
-		return opponentPlay ? opponentStrums : playerStrums;
-	// 玩家实际操控的角色（opponentPlay 时为 dad）
+		return playOpponent ? opponentStrums : playerStrums;
+	// 玩家实际操控的角色（playOpponent 时为 dad）
 	inline public function playerSideChar():Character
-		return opponentPlay ? dad : boyfriend;
-	// CPU 自动演奏侧的角色（opponentPlay 时为 boyfriend）
+		return playOpponent ? dad : boyfriend;
+	// CPU 自动演奏侧的角色（playOpponent 时为 boyfriend）
 	inline public function cpuSideChar():Character
-		return opponentPlay ? boyfriend : dad;
-	// 当前由人类玩家控制的音符（opponentPlay 时为对手/dad 侧，否则为玩家/bf 侧）。
+		return playOpponent ? boyfriend : dad;
+	// 当前由人类玩家控制的音符（playOpponent 时为对手/dad 侧，否则为玩家/bf 侧）。
 	// 注意：note.mustPress 始终保持原版语义（true=bf 侧），不要反转它，否则脚本会读错。
 	inline public function isPlayerNote(note:Note):Bool
-		return (note.mustPress != opponentPlay);
+		return (note.mustPress != playOpponent);
 
 	private function generateStaticArrows(player:Int, ?instant:Bool = false):Void
 	{
@@ -2695,8 +2695,8 @@ isReplaying = false;
 			for (i in 0...4)
 			{
 				var targetAlpha:Float = 1;
-				// "隐藏/淡化对手箭头" 的规则应作用于 CPU 自动演奏侧（opponentPlay 时是右侧玩家箭头组）
-				if ((player < 1) != opponentPlay)
+				// "隐藏/淡化对手箭头" 的规则应作用于 CPU 自动演奏侧（playOpponent 时是右侧玩家箭头组）
+				if ((player < 1) != playOpponent)
 				{
 					if(!ClientPrefs.data.opponentStrums) targetAlpha = 0;
 					else if(ClientPrefs.data.middleScroll) targetAlpha = 0.35;
@@ -2743,7 +2743,7 @@ isReplaying = false;
 		{
 			var targetAlpha:Float = 1;
 			// 同上：淡化规则作用于 CPU 自动演奏侧
-			if ((player < 1) != opponentPlay)
+			if ((player < 1) != playOpponent)
 			{
 				if(!ClientPrefs.data.opponentStrums) targetAlpha = 0;
 				else if(ClientPrefs.data.middleScroll) targetAlpha = 0.35;
@@ -3729,7 +3729,7 @@ isReplaying = false;
 							if(daNote == null) continue;
 
 					// 渲染归组只按原版几何关系：bf 音符(mustPress)在右侧 playerStrums，dad 音符在左侧 opponentStrums。
-					// 不随 opponentPlay 改变——opponentPlay 时你打的音符(dad 侧)天然就在左侧对手箭头上。
+					// 不随 playOpponent 改变——playOpponent 时你打的音符(dad 侧)天然就在左侧对手箭头上。
 					var strumGroup:FlxTypedGroup<StrumNote> = playerStrums;
 					if(!daNote.mustPress) strumGroup = opponentStrums;
 
@@ -3968,9 +3968,9 @@ isReplaying = false;
 		// 赢与输的判定区间正相反，且玩家(iconP1)/对手(iconP2)两侧都生效
 		var p1State:String = (healthBar.percent < 20) ? 'lose' : ((ClientPrefs.data.threeIcons && healthBar.percent > 80) ? 'win' : 'normal');
 		var p2State:String = (healthBar.percent > 80) ? 'lose' : ((ClientPrefs.data.threeIcons && healthBar.percent < 20) ? 'win' : 'normal');
-		if(opponentPlay)
+		if(playOpponent)
 		{
-			// opponentPlay：玩家是左侧 dad(iconP2)、对手是右侧 bf(iconP1)，
+			// playOpponent：玩家是左侧 dad(iconP2)、对手是右侧 bf(iconP1)，
 			// 把“玩家态(p1State)”给 iconP2、“对手态(p2State)”给 iconP1，修正输赢状态反置。
 			// 三态(win/lose/normal)判定区间不变，threeIcons 兼容性保留。
 			iconP1.setIconState(p2State);
@@ -5515,7 +5515,7 @@ isReplaying = false;
 		totalPlayed++;
 		RecalculateRating(true);
 
-		// play character anims（opponentPlay 时受控角色是 dad）
+		// play character anims（playOpponent 时受控角色是 dad）
 		var char:Character = playerSideChar();
 		if((note != null && note.gfNote) || (SONG.notes[curSection] != null && SONG.notes[curSection].gfSection)) char = gf;
 
@@ -5533,8 +5533,8 @@ isReplaying = false;
 				gf.specialAnim = true;
 			}
 		}
-		// opponentPlay 时玩家唱的是对手人声轨
-		if(opponentPlay && opponentVocals.length > 0) opponentVocals.volume = 0;
+		// playOpponent 时玩家唱的是对手人声轨
+		if(playOpponent && opponentVocals.length > 0) opponentVocals.volume = 0;
 		else vocals.volume = 0;
 	}
 
@@ -5543,7 +5543,7 @@ isReplaying = false;
 		var result:Dynamic = LuaUtils.Function_Continue;
 		if (!effectiveDisableNoteLua())
 		{
-			var preCbName:String = opponentPlay ? 'goodNoteHitPre' : 'opponentNoteHitPre';
+			var preCbName:String = playOpponent ? 'goodNoteHitPre' : 'opponentNoteHitPre';
 			result = callOnLuas(preCbName, [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
 			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) result = callOnHScript(preCbName, [note]);
 		}
@@ -5553,7 +5553,7 @@ isReplaying = false;
 		if (songName != 'tutorial')
 			camZooming = true;
 
-		// opponentPlay 时自动演奏侧是 boyfriend
+		// playOpponent 时自动演奏侧是 boyfriend
 		var autoChar:Character = cpuSideChar();
 		if(note.noteType == 'Hey!' && autoChar.hasAnimation('hey'))
 		{
@@ -5600,17 +5600,17 @@ isReplaying = false;
 			}
 		}
 
-		if(opponentPlay || opponentVocals.length <= 0) vocals.volume = 1;
-		strumPlayAnim(!opponentPlay, Std.int(Math.abs(note.noteData)), Conductor.stepCrochet * 1.25 / 1000 / playbackRate, note.isSustainNote);
+		if(playOpponent || opponentVocals.length <= 0) vocals.volume = 1;
+		strumPlayAnim(!playOpponent, Std.int(Math.abs(note.noteData)), Conductor.stepCrochet * 1.25 / 1000 / playbackRate, note.isSustainNote);
 		note.hitByOpponent = true;
 		
 		stagesFunc(function(stage:BaseStage) {
-			if (opponentPlay) stage.goodNoteHit(note);
+			if (playOpponent) stage.goodNoteHit(note);
 			else stage.opponentNoteHit(note);
 		});
 		if (!effectiveDisableNoteLua())
 		{
-			var cbName:String = opponentPlay ? 'goodNoteHit' : 'opponentNoteHit';
+			var cbName:String = playOpponent ? 'goodNoteHit' : 'opponentNoteHit';
 			var result:Dynamic = callOnLuas(cbName, [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
 			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript(cbName, [note]);
 		}
@@ -5630,7 +5630,7 @@ isReplaying = false;
 		var result:Dynamic = LuaUtils.Function_Continue;
 		if (!effectiveDisableNoteLua())
 		{
-			var preCbName:String = opponentPlay ? 'opponentNoteHitPre' : 'goodNoteHitPre';
+			var preCbName:String = playOpponent ? 'opponentNoteHitPre' : 'goodNoteHitPre';
 			result = callOnLuas(preCbName, [notes.members.indexOf(note), leData, leType, isSus]);
 			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) result = callOnHScript(preCbName, [note]);
 		}
@@ -5744,8 +5744,8 @@ isReplaying = false;
 					}
 				}
 			}
-			else strumPlayAnim(opponentPlay, Std.int(Math.abs(note.noteData)), Conductor.stepCrochet * 1.25 / 1000 / playbackRate, note.isSustainNote);
-			if(opponentPlay && opponentVocals.length > 0) opponentVocals.volume = 1;
+			else strumPlayAnim(playOpponent, Std.int(Math.abs(note.noteData)), Conductor.stepCrochet * 1.25 / 1000 / playbackRate, note.isSustainNote);
+			if(playOpponent && opponentVocals.length > 0) opponentVocals.volume = 1;
 			else vocals.volume = 1;
 
 			if (!note.isSustainNote)
@@ -5790,12 +5790,12 @@ isReplaying = false;
 		}
 
 		stagesFunc(function(stage:BaseStage) {
-			if (opponentPlay) stage.opponentNoteHit(note);
+			if (playOpponent) stage.opponentNoteHit(note);
 			else stage.goodNoteHit(note);
 		});
 		if (!effectiveDisableNoteLua())
 		{
-			var cbName:String = opponentPlay ? 'opponentNoteHit' : 'goodNoteHit';
+			var cbName:String = playOpponent ? 'opponentNoteHit' : 'goodNoteHit';
 			var result:Dynamic = callOnLuas(cbName, [notes.members.indexOf(note), leData, leType, isSus]);
 			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript(cbName, [note]);
 		}

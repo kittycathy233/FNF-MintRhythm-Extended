@@ -122,7 +122,7 @@ import openfl.display.StageQuality;
 		'instakill' => false,
 		'practice' => false,
 		'botplay' => false,
-		'opponentplay' => false
+		'playOpponent' => false
 	];
 
 	public var comboOffset:Array<Int> = [0, 0, 0, 0, 0, 0];
