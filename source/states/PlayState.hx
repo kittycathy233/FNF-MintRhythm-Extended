@@ -4128,7 +4128,6 @@ isReplaying = false;
 		}
 
 		var isDad:Bool = (SONG.notes[sec].mustHitSection != true);
-		if (opponentPlay) isDad = !isDad;
 		moveCamera(isDad);
 		if (isDad)
 			callOnScripts('onMoveCamera', ['dad']);
@@ -5544,8 +5543,9 @@ isReplaying = false;
 		var result:Dynamic = LuaUtils.Function_Continue;
 		if (!effectiveDisableNoteLua())
 		{
-			result = callOnLuas('opponentNoteHitPre', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
-			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) result = callOnHScript('opponentNoteHitPre', [note]);
+			var preCbName:String = opponentPlay ? 'goodNoteHitPre' : 'opponentNoteHitPre';
+			result = callOnLuas(preCbName, [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
+			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) result = callOnHScript(preCbName, [note]);
 		}
 
 		if(result == LuaUtils.Function_Stop) return;
@@ -5604,17 +5604,15 @@ isReplaying = false;
 		strumPlayAnim(!opponentPlay, Std.int(Math.abs(note.noteData)), Conductor.stepCrochet * 1.25 / 1000 / playbackRate, note.isSustainNote);
 		note.hitByOpponent = true;
 		
-		stagesFunc(function(stage:BaseStage) stage.opponentNoteHit(note));
+		stagesFunc(function(stage:BaseStage) {
+			if (opponentPlay) stage.goodNoteHit(note);
+			else stage.opponentNoteHit(note);
+		});
 		if (!effectiveDisableNoteLua())
 		{
-			var result:Dynamic = callOnLuas('opponentNoteHit', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
-			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript('opponentNoteHit', [note]);
-			
-			if (opponentPlay)
-			{
-				var result2:Dynamic = callOnLuas('goodNoteHit', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
-				if(result2 != LuaUtils.Function_Stop && result2 != LuaUtils.Function_StopHScript && result2 != LuaUtils.Function_StopAll) callOnHScript('goodNoteHit', [note]);
-			}
+			var cbName:String = opponentPlay ? 'goodNoteHit' : 'opponentNoteHit';
+			var result:Dynamic = callOnLuas(cbName, [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
+			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript(cbName, [note]);
 		}
 
 		if (!note.isSustainNote) invalidateNote(note);
@@ -5632,8 +5630,9 @@ isReplaying = false;
 		var result:Dynamic = LuaUtils.Function_Continue;
 		if (!effectiveDisableNoteLua())
 		{
-			result = callOnLuas('goodNoteHitPre', [notes.members.indexOf(note), leData, leType, isSus]);
-			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript('goodNoteHitPre', [note]);
+			var preCbName:String = opponentPlay ? 'opponentNoteHitPre' : 'goodNoteHitPre';
+			result = callOnLuas(preCbName, [notes.members.indexOf(note), leData, leType, isSus]);
+			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) result = callOnHScript(preCbName, [note]);
 		}
 
 		if(result == LuaUtils.Function_Stop) return;
@@ -5790,17 +5789,15 @@ isReplaying = false;
 			if(!note.noteSplashData.disabled && !note.isSustainNote && ClientPrefs.data.cpuStrums) spawnNoteSplashOnNote(note);
 		}
 
-		stagesFunc(function(stage:BaseStage) stage.goodNoteHit(note));
+		stagesFunc(function(stage:BaseStage) {
+			if (opponentPlay) stage.opponentNoteHit(note);
+			else stage.goodNoteHit(note);
+		});
 		if (!effectiveDisableNoteLua())
 		{
-			var result:Dynamic = callOnLuas('goodNoteHit', [notes.members.indexOf(note), leData, leType, isSus]);
-			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript('goodNoteHit', [note]);
-			
-			if (opponentPlay)
-			{
-				var result2:Dynamic = callOnLuas('opponentNoteHit', [notes.members.indexOf(note), leData, leType, isSus]);
-				if(result2 != LuaUtils.Function_Stop && result2 != LuaUtils.Function_StopHScript && result2 != LuaUtils.Function_StopAll) callOnHScript('opponentNoteHit', [note]);
-			}
+			var cbName:String = opponentPlay ? 'opponentNoteHit' : 'goodNoteHit';
+			var result:Dynamic = callOnLuas(cbName, [notes.members.indexOf(note), leData, leType, isSus]);
+			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript(cbName, [note]);
 		}
 		if(!note.isSustainNote) invalidateNote(note);
 	}
