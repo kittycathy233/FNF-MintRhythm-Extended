@@ -118,6 +118,12 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 			'loadLeatherIcons',
 			BOOL);
 		addOption(option);
+
+		var option:Option = new Option("Opponent Splashes",
+			"Show NoteSplash effects when opponent hits notes.\nRequires CPU Strums to be visible. Compatible with playOpponent mode.",
+			'opponentSplashes',
+			BOOL);
+		addOption(option);
 		
 		var option:Option = new Option("Time Bar:",
 			Language.get("timebar_desc"),

@@ -269,6 +269,7 @@ import openfl.display.StageQuality;
 	// Leather 风格相关
 	public var biggerInfoText:Bool = false; // 更大的信息文本
 	public var loadLeatherIcons:Bool = false; // 启用后优先加载 Leather 格式的小图标（leather/<角色名>-icons.png），支持 Mods 覆盖
+	public var opponentSplashes:Bool = false; // 启用后对手侧箭头击打也会显示 NoteSplash
 
 	// Simple Info Display (Leather风格) 设置
 	public var fpsLayer:String = "Stage"; // FPS计数器所在图层: "Stage" 或 "Game"

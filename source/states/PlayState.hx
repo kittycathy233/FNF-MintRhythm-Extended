@@ -2670,6 +2670,9 @@ isReplaying = false;
 	// 玩家实际操作侧的箭头组（playOpponent 时为对手侧箭头）
 	inline public function playerSideStrums():FlxTypedGroup<StrumNote>
 		return playOpponent ? opponentStrums : playerStrums;
+	// 对手/CPU 自动演奏侧的箭头组（playOpponent 时为玩家侧箭头），用于对手飞溅定位
+	inline public function opponentSideStrums():FlxTypedGroup<StrumNote>
+		return playOpponent ? playerStrums : opponentStrums;
 	// 玩家实际操控的角色（playOpponent 时为 dad）
 	inline public function playerSideChar():Character
 		return playOpponent ? dad : boyfriend;
@@ -5603,7 +5606,15 @@ isReplaying = false;
 		if(playOpponent || opponentVocals.length <= 0) vocals.volume = 1;
 		strumPlayAnim(!playOpponent, Std.int(Math.abs(note.noteData)), Conductor.stepCrochet * 1.25 / 1000 / playbackRate, note.isSustainNote);
 		note.hitByOpponent = true;
-		
+
+		// 对手侧 NoteSplash（兼容 playOpponent：此时对手侧箭头在 playerStrums 上）
+		if (ClientPrefs.data.opponentSplashes && ClientPrefs.data.cpuStrums
+			&& !note.noteSplashData.disabled && !note.isSustainNote) {
+			var strum:StrumNote = opponentSideStrums().members[note.noteData];
+			if (strum != null)
+				spawnNoteSplash(strum.x, strum.y, note.noteData, note, strum);
+		}
+
 		stagesFunc(function(stage:BaseStage) {
 			if (playOpponent) stage.goodNoteHit(note);
 			else stage.opponentNoteHit(note);
