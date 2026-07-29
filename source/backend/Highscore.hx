@@ -1,28 +1,30 @@
 package backend;
 
+import backend.Mods;
+
 class Highscore
 {
 	public static var weekScores:Map<String, Int> = new Map();
 	public static var songScores:Map<String, Int> = new Map<String, Int>();
 	public static var songRating:Map<String, Float> = new Map<String, Float>();
 
-	public static function resetSong(song:String, diff:Int = 0):Void
+	public static function resetSong(song:String, diff:Int = 0, ?folder:String):Void
 	{
-		var daSong:String = formatSong(song, diff);
+		var daSong:String = namespacedKey(song, diff, folder);
 		setScore(daSong, 0);
 		setRating(daSong, 0);
 	}
 
-	public static function resetWeek(week:String, diff:Int = 0):Void
+	public static function resetWeek(week:String, diff:Int = 0, ?folder:String):Void
 	{
-		var daWeek:String = formatSong(week, diff);
+		var daWeek:String = namespacedKey(week, diff, folder);
 		setWeekScore(daWeek, 0);
 	}
 
-	public static function saveScore(song:String, score:Int = 0, ?diff:Int = 0, ?rating:Float = -1):Void
+	public static function saveScore(song:String, score:Int = 0, ?diff:Int = 0, ?rating:Float = -1, ?folder:String):Void
 	{
 		if(song == null) return;
-		var daSong:String = formatSong(song, diff);
+		var daSong:String = namespacedKey(song, diff, folder);
 
 		if (songScores.exists(daSong))
 		{
@@ -39,9 +41,9 @@ class Highscore
 		}
 	}
 
-	public static function saveWeekScore(week:String, score:Int = 0, ?diff:Int = 0):Void
+	public static function saveWeekScore(week:String, score:Int = 0, ?diff:Int = 0, ?folder:String):Void
 	{
-		var daWeek:String = formatSong(week, diff);
+		var daWeek:String = namespacedKey(week, diff, folder);
 
 		if (weekScores.exists(daWeek))
 		{
@@ -82,27 +84,36 @@ class Highscore
 		return Paths.formatToSongPath(song) + Difficulty.getFilePath(diff);
 	}
 
-	public static function getScore(song:String, diff:Int):Int
+	// 在分数键中加入模组命名空间，实现跨模组隔离；
+	// 基础游戏（folder 为空）保持原键以兼容旧存档
+	static function namespacedKey(song:String, diff:Int, ?folder:String):String
 	{
-		var daSong:String = formatSong(song, diff);
+		var base:String = formatSong(song, diff);
+		var mod:String = (folder != null && folder.length > 0) ? folder : Mods.currentModDirectory;
+		return (mod != null && mod.length > 0) ? (mod + ':' + base) : base;
+	}
+
+	public static function getScore(song:String, diff:Int, ?folder:String):Int
+	{
+		var daSong:String = namespacedKey(song, diff, folder);
 		if (!songScores.exists(daSong))
 			setScore(daSong, 0);
 
 		return songScores.get(daSong);
 	}
 
-	public static function getRating(song:String, diff:Int):Float
+	public static function getRating(song:String, diff:Int, ?folder:String):Float
 	{
-		var daSong:String = formatSong(song, diff);
+		var daSong:String = namespacedKey(song, diff, folder);
 		if (!songRating.exists(daSong))
 			setRating(daSong, 0);
 
 		return songRating.get(daSong);
 	}
 
-	public static function getWeekScore(week:String, diff:Int):Int
+	public static function getWeekScore(week:String, diff:Int, ?folder:String):Int
 	{
-		var daWeek:String = formatSong(week, diff);
+		var daWeek:String = namespacedKey(week, diff, folder);
 		if (!weekScores.exists(daWeek))
 			setWeekScore(daWeek, 0);
 
