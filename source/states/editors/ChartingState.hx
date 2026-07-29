@@ -5612,13 +5612,18 @@ for (i in 0...GRID_PLAYERS)
 			{
 				try
 				{
-					var path:String = fileDialog.path.replace('\\', '/');
+				var path:String = fileDialog.path.replace('\\', '/');
 
-					var chartName:String = Paths.formatToSongPath(PlayState.SONG.song) + '.json';
-					chartName = chartName.substring(chartName.lastIndexOf('/')+1, chartName.lastIndexOf('.'));
+				// 在选中的保存路径下创建以歌曲名命名的子文件夹，避免文件直接散落在根目录
+				var songFolder:String = Paths.formatToSongPath(PlayState.SONG.song);
+				if (songFolder.length < 1) songFolder = 'song';
+				path = '$path/$songFolder';
+				if (!FileSystem.exists(path)) FileSystem.createDirectory(path);
 
-					var chartFile:String = '$path/$chartName-chart.json';
-					var metadataFile:String = '$path/$chartName-metadata.json';
+				var chartName:String = songFolder;
+
+				var chartFile:String = '$path/$chartName-chart.json';
+				var metadataFile:String = '$path/$chartName-metadata.json';
 
 					updateChartData();
 					var pack:VSlicePackage = VSlice.export(PlayState.SONG);
@@ -5773,9 +5778,14 @@ for (i in 0...GRID_PLAYERS)
 
 									fileDialog.openDirectory('Save V-Slice Chart/Metadata JSONs', function()
 									{
-										overwriteSavedSomething = false;
-										var path:String = fileDialog.path.replace('\\', '/');
-										if(path.endsWith('/')) path = path.substr(0, path.length-1);
+									overwriteSavedSomething = false;
+									var path:String = fileDialog.path.replace('\\', '/');
+									if(path.endsWith('/')) path = path.substr(0, path.length-1);
+									// 在选中的保存路径下创建以歌曲名命名的子文件夹
+									var songFolder:String = songName;
+									if (songFolder.length < 1) songFolder = 'song';
+									path = '$path/$songFolder';
+									if (!FileSystem.exists(path)) FileSystem.createDirectory(path);
 										overwriteCheck('$path/$songName-chart.json', '$songName-chart.json', PsychJsonPrinter.print(pack.chart, ['events', 'notes', 'scrollSpeed']), function()
 										{
 											overwriteCheck('$path/$songName-metadata.json', '$songName-metadata.json', PsychJsonPrinter.print(pack.metadata, ['characters', 'difficulties', 'timeChanges']), function()
@@ -5885,6 +5895,11 @@ for (i in 0...GRID_PLAYERS)
 							{
 								var path:String = fileDialog.path.replace('\\', '/');
 								if(!path.endsWith('/')) path += '/';
+								// 在选中的保存路径下创建以歌曲名命名的子文件夹
+								var songFolder:String = Paths.formatToSongPath(metadata.songName);
+								if (songFolder.length < 1) songFolder = 'song';
+								path += '$songFolder/';
+								if (!FileSystem.exists(path)) FileSystem.createDirectory(path);
 
 								var diffs:Array<String> = metadata.playData.difficulties.copy();
 								var defaultDiff:String = Paths.formatToSongPath(Difficulty.getDefault());
@@ -5908,11 +5923,11 @@ for (i in 0...GRID_PLAYERS)
 										overwriteCheck(path + 'events.json', 'events.json', PsychJsonPrinter.print(pack.events, ['events']), function()
 										{
 											if(overwriteSavedSomething)
-												showOutput('Files saved successfully to: ${fileDialog.path}!');
+												showOutput('Files saved successfully to: ${path}!');
 										}, true);
 									}
 									else if(overwriteSavedSomething)
-										showOutput('Files saved successfully to: ${fileDialog.path}!');
+										showOutput('Files saved successfully to: ${path}!');
 								}
 								
 								overwriteSavedSomething = false;
