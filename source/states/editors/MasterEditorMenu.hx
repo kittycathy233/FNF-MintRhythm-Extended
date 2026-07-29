@@ -8,6 +8,7 @@ import states.MainMenuState;
 import states.FreeplayState;
 import states.StoryPlayerState;
 import states.editors.StoryEditorState;
+import states.editors.HoldCoverEditorState;
 
 class MasterEditorMenu extends MusicBeatState
 {
@@ -20,6 +21,7 @@ class MasterEditorMenu extends MusicBeatState
 		'Dialogue Editor',
 		'Dialogue Portrait Editor',
 		'Note Splash Editor',
+		'Hold Cover Editor',
 		'Spine Viewer (WIP)',
 		'Story Player (WIP)',
 		'Story Editor (WIP)'
@@ -127,8 +129,10 @@ class MasterEditorMenu extends MusicBeatState
 					LoadingState.loadAndSwitchState(new DialogueEditorState(), false);
 				case 'Dialogue Portrait Editor':
 					LoadingState.loadAndSwitchState(new DialogueCharacterEditorState(), false);
-				case 'Note Splash Editor':
-					MusicBeatState.switchState(new NoteSplashEditorState());
+			case 'Note Splash Editor':
+				MusicBeatState.switchState(new NoteSplashEditorState());
+			case 'Hold Cover Editor':
+				MusicBeatState.switchState(new HoldCoverEditorState());
 				case 'Spine Viewer (WIP)':
 					MusicBeatState.switchState(new SpineViewerState());
 				case 'Story Player (WIP)':

@@ -334,6 +334,9 @@ class PlayState extends MusicBeatState
 	public var opponentStrums:FlxTypedGroup<StrumNote> = new FlxTypedGroup<StrumNote>();
 	public var playerStrums:FlxTypedGroup<StrumNote> = new FlxTypedGroup<StrumNote>();
 	public var grpNoteSplashes:FlxTypedGroup<NoteSplash> = new FlxTypedGroup<NoteSplash>();
+	public var grpHoldCovers:FlxTypedGroup<NoteHoldCover> = new FlxTypedGroup<NoteHoldCover>();
+	public var playerHoldCovers:Array<NoteHoldCover> = [];
+	public var opponentHoldCovers:Array<NoteHoldCover> = [];
 	public var laneCovers:FlxTypedGroup<FlxSprite> = new FlxTypedGroup<FlxSprite>();
 	private var opponentLaneCover:FlxSprite = null;
 	private var playerLaneCover:FlxSprite = null;
@@ -1040,6 +1043,7 @@ isReplaying = false;
 		}
 
 		noteGroup.add(grpNoteSplashes);
+		noteGroup.add(grpHoldCovers);
 
 		camFollow = new FlxObject();
 		camFollow.setPosition(camPos.x, camPos.y);
@@ -1305,6 +1309,11 @@ isReplaying = false;
 		var splash:NoteSplash = new NoteSplash();
 		grpNoteSplashes.add(splash);
 		splash.alpha = 0.000001; //cant make it invisible or it won't allow precaching
+
+		// 预缓存 Hold Cover 贴图，避免第一次长条命中时卡顿
+		if(ClientPrefs.data.holdCovers)
+			for (c in NoteHoldCover.COVER_COLORS)
+				Paths.image(NoteHoldCover.getColorAtlasPath(c));
 
 		#if !android
 		addTouchPad('NONE', 'P');
@@ -1664,6 +1673,7 @@ isReplaying = false;
 		generateStaticArrows(0);
 		generateStaticArrows(1);
 		createLaneCovers();
+		createHoldCovers();
 		for (i in 0...playerStrums.length) {
 				setOnScripts('defaultPlayerStrumX' + i, playerStrums.members[i].x);
 				setOnScripts('defaultPlayerStrumY' + i, playerStrums.members[i].y);
@@ -2775,6 +2785,77 @@ isReplaying = false;
 	}
 
 	/** 根据当前 strum 的实际位置，为每个 strum 组（对手/玩家）生成 Track 上的黑色半透明覆盖层（阴影）。 */
+	/** 为两侧每列 strum 创建 Hold Cover（长条按住光效），mania 变化时重建。 */
+	public function createHoldCovers():Void
+	{
+		playerHoldCovers = [];
+		opponentHoldCovers = [];
+		NoteHoldCover.configs.clear(); // 重新读取（皮肤 / JSON 可能已更改）
+		for (cover in grpHoldCovers.members)
+			if(cover != null) cover.destroy();
+		grpHoldCovers.clear();
+		if(!ClientPrefs.data.holdCovers) return;
+
+		for (i in 0...playerSideStrums().members.length)
+		{
+			var strum:StrumNote = playerSideStrums().members[i];
+			if(strum == null) continue;
+			var cover:NoteHoldCover = new NoteHoldCover(strum, i);
+			grpHoldCovers.add(cover);
+			playerHoldCovers[i] = cover;
+		}
+
+		if(ClientPrefs.data.opponentHoldCovers)
+		{
+			for (i in 0...opponentSideStrums().members.length)
+			{
+				var strum:StrumNote = opponentSideStrums().members[i];
+				if(strum == null) continue;
+				var cover:NoteHoldCover = new NoteHoldCover(strum, i);
+				grpHoldCovers.add(cover);
+				opponentHoldCovers[i] = cover;
+			}
+		}
+	}
+
+	/** 长条命中时驱动 Hold Cover：头 -> start，中段 -> 刷新循环，最后一节 -> end 爆发 */
+	public function holdCoverHit(note:Note, playerSide:Bool):Void
+	{
+		if(!ClientPrefs.data.holdCovers || note == null || note.noteSplashData.disabled) return;
+		if(!playerSide && (!ClientPrefs.data.opponentHoldCovers || !ClientPrefs.data.cpuStrums)) return;
+
+		var covers:Array<NoteHoldCover> = playerSide ? playerHoldCovers : opponentHoldCovers;
+		if(note.noteData < 0 || note.noteData >= covers.length) return;
+		var cover:NoteHoldCover = covers[note.noteData];
+		if(cover == null) return;
+
+		cover.timeout = Conductor.stepCrochet * 2.5 / 1000 / playbackRate;
+		if(!note.isSustainNote)
+		{
+			if(note.tail.length > 0) cover.startHold(); // 长条头
+		}
+		else if(note.parent != null && note.parent.tail.length > 0
+			&& note.parent.tail[note.parent.tail.length - 1] == note)
+		{
+			// 对手飞溅禁用时不播放 end 爆发动画（holdcover 本身仍启用，start/hold 照常）
+			if(playerSide || ClientPrefs.data.opponentSplashes)
+				cover.playEnd(); // 长条最后一节
+			else
+				cover.hideCover(true);
+		}
+		else
+			cover.keepHold(); // 长条中段
+	}
+
+	/** 隐藏某列 Hold Cover（松手 / miss）。force=false 时不打断正在播放的 end 动画 */
+	public function hideHoldCover(playerSide:Bool, direction:Int, force:Bool = true):Void
+	{
+		var covers:Array<NoteHoldCover> = playerSide ? playerHoldCovers : opponentHoldCovers;
+		if(direction < 0 || direction >= covers.length) return;
+		var cover:NoteHoldCover = covers[direction];
+		if(cover != null) cover.hideCover(force);
+	}
+
 	public function createLaneCovers():Void
 	{
 		opponentLaneCover = null;
@@ -2939,6 +3020,7 @@ isReplaying = false;
 			setOnScripts('defaultPlayerStrumY' + i, playerStrums.members[i].y);
 		}
 		createLaneCovers();
+		createHoldCovers();
 	}
 
 	/** Change Mania 时按当前 mania 重映射已有音符的列号；列号超出新键数的音符会由 followStrumNote 隐藏。 */
@@ -5189,6 +5271,8 @@ isReplaying = false;
 			spr.resetAnim = 0;
 			spr.holdConfirmActive = false;
 		}
+		// 松手隐藏该列 Hold Cover（不打断已完成长条的 end 动画）
+		hideHoldCover(true, key, false);
 		callOnScripts('onKeyRelease', [key]);
 	}
 
@@ -5460,6 +5544,9 @@ isReplaying = false;
 
 	function noteMissCommon(direction:Int, note:Note = null)
 	{
+		// miss 时立即隐藏该列 Hold Cover
+		hideHoldCover(true, direction);
+
 		// score and data
 		var subtract:Float = pressMissDamage;
 		if(note != null) subtract = note.missHealth;
@@ -5615,6 +5702,9 @@ isReplaying = false;
 				spawnNoteSplash(strum.x, strum.y, note.noteData, note, strum);
 		}
 
+		// 对手侧 Hold Cover
+		if(note.isSustainNote || note.tail.length > 0) holdCoverHit(note, false);
+
 		stagesFunc(function(stage:BaseStage) {
 			if (playOpponent) stage.goodNoteHit(note);
 			else stage.opponentNoteHit(note);
@@ -5758,6 +5848,9 @@ isReplaying = false;
 			else strumPlayAnim(playOpponent, Std.int(Math.abs(note.noteData)), Conductor.stepCrochet * 1.25 / 1000 / playbackRate, note.isSustainNote);
 			if(playOpponent && opponentVocals.length > 0) opponentVocals.volume = 1;
 			else vocals.volume = 1;
+
+			// Hold Cover：长条头/中段/末尾驱动光效
+			if(note.isSustainNote || note.tail.length > 0) holdCoverHit(note, true);
 
 			if (!note.isSustainNote)
 			{

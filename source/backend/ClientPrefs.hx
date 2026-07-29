@@ -39,6 +39,7 @@ import openfl.display.StageQuality;
 	public var threeIcons:Bool = false; // 三态图标（正常 / 输 / 赢）：开启后图标图片按宽矩形横向均分为 3 个状态
 	public var noteSkin:String = 'Default';
 	public var splashSkin:String = 'Psych';
+	public var holdCoverSkin:String = 'Default'; // Hold Cover 皮肤（后缀，如 -Psych），Default 表示使用默认 holdCover{Color} 素材
 	public var splashAlpha:Float = 0.6;
 	public var splashLimitEnabled:Bool = false; // 是否启用飞溅数量限制
 	public var splashLimit:Int = 16; // 飞溅最大同时存在数量（默认16）
@@ -270,6 +271,8 @@ import openfl.display.StageQuality;
 	public var biggerInfoText:Bool = false; // 更大的信息文本
 	public var loadLeatherIcons:Bool = false; // 启用后优先加载 Leather 格式的小图标（leather/<角色名>-icons.png），支持 Mods 覆盖
 	public var opponentSplashes:Bool = false; // 启用后对手侧箭头击打也会显示 NoteSplash
+	public var holdCovers:Bool = true; // 长条按住期间在箭头上显示 Hold Cover 光效（类似原版 FNF），末尾播放爆发动画
+	public var opponentHoldCovers:Bool = false; // 对手侧也显示 Hold Cover（需 CPU Strums 可见）
 
 	// Simple Info Display (Leather风格) 设置
 	public var fpsLayer:String = "Stage"; // FPS计数器所在图层: "Stage" 或 "Game"

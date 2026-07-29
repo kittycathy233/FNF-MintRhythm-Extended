@@ -89,6 +89,21 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 			option.onChange = onChangeSplashSkin;
 		}
 
+		var holdCoverSkins:Array<String> = Mods.mergeAllTextsNamed('images/holdCover/list.txt');
+		if(holdCoverSkins.length > 0)
+		{
+			if(!holdCoverSkins.contains(ClientPrefs.data.holdCoverSkin))
+				ClientPrefs.data.holdCoverSkin = ClientPrefs.defaultData.holdCoverSkin;
+
+			holdCoverSkins.insert(0, ClientPrefs.defaultData.holdCoverSkin);
+			var option:Option = new Option("Hold Cover Skin:",
+				"Select the Hold Cover skin to use.\nRequires holdCover/holdCover{Color}{Skin}.png and optional .json configs.",
+				'holdCoverSkin',
+				STRING,
+				holdCoverSkins);
+			addOption(option);
+		}
+
 		var option:Option = new Option("Note Splash Opacity",
 			Language.get("notesplashopacity_desc"),
 			'splashAlpha',
@@ -122,6 +137,18 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		var option:Option = new Option("Opponent Splashes",
 			"Show NoteSplash effects when opponent hits notes.\nRequires CPU Strums to be visible. Compatible with playOpponent mode.",
 			'opponentSplashes',
+			BOOL);
+		addOption(option);
+
+		var option:Option = new Option("Hold Covers",
+			"Show a glow effect on the receptor while holding sustain notes,\nwith a burst animation at the end of the hold. (Like vanilla FNF)",
+			'holdCovers',
+			BOOL);
+		addOption(option);
+
+		var option:Option = new Option("Opponent Hold Covers",
+			"Show Hold Cover effects on the opponent's side too.\nRequires CPU Strums and Hold Covers to be enabled.",
+			'opponentHoldCovers',
 			BOOL);
 		addOption(option);
 		
