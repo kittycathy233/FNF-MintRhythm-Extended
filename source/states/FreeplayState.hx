@@ -47,9 +47,7 @@ class FreeplayState extends MusicBeatState
 	var songsFull:Array<SongMetadata> = []; // 全部曲目（筛选前的完整列表）
 	var searchTxt:PsychUIInputText;
 	var searchLabel:FlxText;
-	var searchContainer:FlxSpriteGroup; // 搜索框容器（整体飞入/飞出）
-	var searchVisible:Bool = true; // 搜索框当前是否飞入（可见）
-	var searchTween:FlxTween = null; // 飞入/飞出补间，支持中途打断
+	var searchContainer:FlxSpriteGroup; // 搜索框容器（默认常驻显示）
 	private static final SEARCH_BOX_W:Int = 400;
 	private static final SEARCH_Y_SHOWN:Float = 0;
 	private static final SEARCH_Y_HIDDEN:Float = -60;
@@ -66,6 +64,7 @@ class FreeplayState extends MusicBeatState
 	var scoreBG:FlxSprite;
 	var scoreText:FlxText;
 	var diffText:FlxText;
+	var modText:FlxText; // 当前选中模组名称（显示在最高分数下方、选中难度上方）
 	var lerpScore:Int = 0;
 	var lerpRating:Float = 0;
 	var intendedScore:Int = 0;
@@ -203,7 +202,13 @@ class FreeplayState extends MusicBeatState
 		diffText = new FlxText(scoreText.x, scoreText.y + scoreText.height, 0, "", 24);
 		diffText.font = scoreText.font;
 
-		var height:Float = scoreText.y + diffText.height + scoreText.height + 4;
+		modText = new FlxText(scoreText.x, 0, 0, '', 16);
+		modText.font = Paths.font("unifont-16.0.02.otf"); // 使用 unifont 以兼容多语言模组名与装饰符号
+		var modDir:String = backend.Mods.currentModDirectory;
+		var modName:String = (modDir != null && modDir.length > 0) ? modDir : 'Friday Night Funkin\'';
+		modText.text = '◆ ' + modName + ' ◆';
+
+		var height:Float = scoreText.y + scoreText.height + 2 + modText.height + 2 + diffText.height + 4;
 		scoreBG = new FlxSprite(scoreText.x - 6, 0).makeGraphic(1, Std.int(height), 0xFF000000);
 		scoreBG.alpha = 0.6;
 
@@ -249,6 +254,7 @@ class FreeplayState extends MusicBeatState
 		add(scoreBG);
 		add(diffText);
 		add(scoreText);
+		add(modText);
 		add(missingTextBG);
 		add(missingText);
 		add(bottomBG);
@@ -257,7 +263,7 @@ class FreeplayState extends MusicBeatState
 		add(bpmTextBG);
 		add(bpmText);
 
-		// 搜索 / 筛选（顶部居中，TAB 控制飞入/飞出）
+		// 搜索 / 筛选（顶部居中，默认常驻显示）
 		searchContainer = new FlxSpriteGroup();
 		searchContainer.y = SEARCH_Y_SHOWN;
 
@@ -411,25 +417,6 @@ class FreeplayState extends MusicBeatState
 		}
 	}
 
-	/**
-	 * TAB 键切换搜索框飞入 / 飞出。
-	 * 若动画进行中再次按下，会取消当前补间并从当前位置反向播放（支持打断）。
-	 */
-	private function toggleSearchBox():Void
-	{
-		searchVisible = !searchVisible;
-
-		if (searchTween != null)
-			searchTween.cancel();
-
-		// 飞出时若仍处于输入焦点，则取消焦点，避免继续向隐藏的框输入
-		if (!searchVisible && PsychUIInputText.focusOn == searchTxt)
-			PsychUIInputText.focusOn = null;
-
-		searchTween = FlxTween.tween(searchContainer, {y: searchVisible ? SEARCH_Y_SHOWN : SEARCH_Y_HIDDEN}, 0.3,
-			{ease: flixel.tweens.FlxEase.quadOut, onComplete: function(_) searchTween = null});
-	}
-
 	var instPlaying:Int = -1;
 
 	public static var vocals:FlxSound = null;
@@ -456,9 +443,11 @@ class FreeplayState extends MusicBeatState
 			FlxG.mouse.visible = true;
 		#end
 
-		// 未在播放预览时恢复搜索框显示状态（遵循 TAB 的 searchVisible）
-		if (!player.playingMusic && searchContainer.visible != searchVisible)
-			searchContainer.visible = searchVisible;
+		// 未在播放预览时恢复搜索框与模组名文本显示（播放预览时由 SPACE 分支隐藏）
+		if (!player.playingMusic && !searchContainer.visible)
+			searchContainer.visible = true;
+		if (!player.playingMusic && !modText.visible)
+			modText.visible = true;
 
 		if (FlxG.sound.music.volume < 0.7)
 			FlxG.sound.music.volume += 0.5 * elapsed;
@@ -787,8 +776,9 @@ class FreeplayState extends MusicBeatState
 			FlxG.mouse.visible = false;
 			#end
 
-			// 播放预览时一并隐藏搜索框（标签 + 输入框）
+			// 播放预览时一并隐藏搜索框（标签 + 输入框）与模组名文本
 			searchContainer.visible = false;
+			modText.visible = false;
 
 				// 重置BPM检测，并显示初始BPM
 				lastBPM = -1;
@@ -1045,10 +1035,7 @@ class FreeplayState extends MusicBeatState
 		}
 		#end
 
-		// TAB 切换搜索框飞入 / 飞出（支持动画中途打断）
-		if (FlxG.keys.justPressed.TAB)
-			toggleSearchBox();
-
+		updateModText();
 		updateTexts(elapsed);
 		super.update(elapsed);
 	}
@@ -1346,7 +1333,8 @@ class FreeplayState extends MusicBeatState
 		// searchTxt 可能在 MusicPlayer 初始化时尚未创建，此时退化为顶部定位
 		var topY:Float = (searchTxt != null) ? (SEARCH_Y_SHOWN + searchTxt.height + 6) : 10;
 		scoreText.y = topY;
-		diffText.y = scoreText.y + scoreText.height + 2;
+		modText.y = scoreText.y + scoreText.height + 2;
+		diffText.y = modText.y + modText.height + 2;
 
 		scoreText.x = FlxG.width - scoreText.width - 6;
 		scoreBG.scale.x = FlxG.width - scoreText.x + 6;
@@ -1354,6 +1342,21 @@ class FreeplayState extends MusicBeatState
 		scoreBG.y = scoreText.y - 6;
 		diffText.x = Std.int(scoreBG.x + (scoreBG.width / 2));
 		diffText.x -= diffText.width / 2;
+		modText.x = Std.int(scoreBG.x + (scoreBG.width / 2));
+		modText.x -= modText.width / 2;
+	}
+
+	private function updateModText():Void
+	{
+		var modDir:String = backend.Mods.currentModDirectory;
+		var newName:String = (modDir != null && modDir.length > 0) ? modDir : 'Friday Night Funkin\'';
+		var display:String = '◆ ' + newName + ' ◆';
+		if (modText.text != display)
+		{
+			modText.text = display;
+			// 文本变化导致宽度变化，重新按背景框居中
+			modText.x = Std.int(scoreBG.x + (scoreBG.width / 2)) - Std.int(modText.width / 2);
+		}
 	}
 
 	var _drawDistance:Int = 4;
