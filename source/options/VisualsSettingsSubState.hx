@@ -112,6 +112,12 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 			'threeIcons',
 			BOOL);
 		addOption(option);
+
+		var option:Option = new Option("Load Leather Icons",
+			"Prioritize Leather Engine format icons (leather/<name>-icons.png) over default.\nMods' leather icons take priority automatically. Falls back to default if not found.",
+			'loadLeatherIcons',
+			BOOL);
+		addOption(option);
 		
 		var option:Option = new Option("Time Bar:",
 			Language.get("timebar_desc"),

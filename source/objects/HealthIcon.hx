@@ -29,6 +29,16 @@ class HealthIcon extends FlxSprite
 	public function changeIcon(char:String, ?allowGPU:Bool = true) {
 		if(this.char != char) {
 			var name:String = 'icons/' + char;
+
+			// Leather 图标模式：启用后优先查找 leather/<角色名>-icons 格式，
+			// Paths.fileExists / Paths.image 会自动按 Mods → currentLevel → shared 顺序解析，
+			// 因此 Mods 中的 Leather 图标会被自动优先使用。
+			if (ClientPrefs.data.loadLeatherIcons) {
+				var leatherName:String = 'icons/leather/' + char + '-icons';
+				if (Paths.fileExists('images/' + leatherName + '.png', IMAGE))
+					name = leatherName;
+			}
+
 			if(!Paths.fileExists('images/' + name + '.png', IMAGE)) name = 'icons/icon-' + char; //Older versions of psych engine's support
 			if(!Paths.fileExists('images/' + name + '.png', IMAGE)) name = 'icons/icon-face'; //Prevents crash from missing icon
 
