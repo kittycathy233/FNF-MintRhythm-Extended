@@ -355,7 +355,8 @@ class Character extends FlxSprite
 	var _lastPlayedAnimation:String;
 	inline public function getAnimationName():String
 	{
-		return _lastPlayedAnimation;
+		// 永不返回 null，避免 update() 里 getAnimationName().endsWith/startsWith 空引用崩溃
+		return (_lastPlayedAnimation != null) ? _lastPlayedAnimation : '';
 	}
 
 	public function isAnimationFinished():Bool

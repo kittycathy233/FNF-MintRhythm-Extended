@@ -188,7 +188,11 @@ class PhillyStreets extends BaseStage
 		add(spraycanPile);
 		darkenable.push(spraycanPile);
 
-		if(gf != null)
+		// 只有当 GF 真的拥有 nene 的刀子动画时，才启用「举刀」机制
+		// 否则换成其它 GF 时会去播放不存在的动画，导致角色卡死甚至崩溃
+		neneMechanicEnabled = (gf != null && gf.hasAnimation('raiseKnife') && gf.hasAnimation('lowerKnife') && gf.hasAnimation('idleKnife'));
+
+		if(neneMechanicEnabled)
 		{
 			gf.animation.callback = function(name:String, frameNumber:Int, frameIndex:Int)
 			{
@@ -267,15 +271,18 @@ class PhillyStreets extends BaseStage
 		FlxG.sound.list.add(neneLaugh);
 
 		camHUD.alpha = 0;
-		gf.animation.finishCallback = function(name:String)
+		if(gf != null)
 		{
-			switch(name)
+			gf.animation.finishCallback = function(name:String)
 			{
-				case 'danceLeft', 'danceRight':
-					gf.dance();
+				switch(name)
+				{
+					case 'danceLeft', 'danceRight', 'idle':
+						gf.dance();
+				}
 			}
+			gf.dance();
 		}
-		gf.dance();
 			
 		dad.animation.finishCallback = function(name:String)
 		{
@@ -349,8 +356,12 @@ class PhillyStreets extends BaseStage
 		// nene spits and laughs
 		cutsceneHandler.timer(cutsceneDelay + 6.2, function()
 		{
-			gf.animation.finishCallback = null;
-			gf.playAnim('laughCutscene', true);
+			if(gf != null)
+			{
+				gf.animation.finishCallback = null;
+				if(gf.hasAnimation('laughCutscene')) gf.playAnim('laughCutscene', true);
+				else gf.dance();
+			}
 			neneLaugh.play(true);
 		});
 
@@ -373,10 +384,10 @@ class PhillyStreets extends BaseStage
 			cutsceneHandler.finishCallback();
 
 			dad.dance();
-			gf.dance();
+			if(gf != null) gf.dance();
 			boyfriend.dance();
 			dad.animation.finishCallback = null;
-			gf.animation.finishCallback = null;
+			if(gf != null) gf.animation.finishCallback = null;
 			
 			game.moveCameraSection();
 			game.cameraSpeed = 1;
@@ -401,7 +412,7 @@ class PhillyStreets extends BaseStage
 	override function startSong()
 	{
 		abot.snd = FlxG.sound.music;
-		gf.animation.finishCallback = onNeneAnimationFinished;
+		if(neneMechanicEnabled && gf != null) gf.animation.finishCallback = onNeneAnimationFinished;
 	}
 	
 	function onNeneAnimationFinished(name:String)
@@ -520,6 +531,8 @@ class PhillyStreets extends BaseStage
 	
 	var currentNeneState:NeneState = STATE_DEFAULT;
 	var animationFinished:Bool = false;
+	// GF 是否支持 nene 的举刀机制（createPost 中根据动画表检测）
+	var neneMechanicEnabled:Bool = false;
 	override function update(elapsed:Float)
 	{
 		if(scrollingSky != null) scrollingSky.scrollX -= elapsed * 22;
@@ -532,7 +545,7 @@ class PhillyStreets extends BaseStage
 			rainShader.update(elapsed);
 		}
 		
-		if(gf == null || !game.startedCountdown) return;
+		if(!neneMechanicEnabled || gf == null || !game.startedCountdown) return;
 
 		animationFinished = gf.isAnimationFinished();
 		transitionState();
@@ -540,6 +553,8 @@ class PhillyStreets extends BaseStage
 
 	function transitionState()
 	{
+		if(!neneMechanicEnabled || gf == null) return;
+
 		switch (currentNeneState)
 		{
 			case STATE_DEFAULT:
@@ -606,7 +621,7 @@ class PhillyStreets extends BaseStage
 		//if(curBeat % 2 == 0) abot.beatHit();
 		switch(currentNeneState) {
 			case STATE_READY:
-				if (blinkCountdown == 0)
+				if (blinkCountdown == 0 && neneMechanicEnabled && gf != null)
 				{
 					gf.playAnim('idleKnife', false);
 					blinkCountdown = FlxG.random.int(MIN_BLINK_DELAY, MAX_BLINK_DELAY);
@@ -796,7 +811,7 @@ class PhillyStreets extends BaseStage
 			{
 				case 50, 100:
 					var animToPlay:String = 'combo${game.combo}';
-					if(gf.animation.exists(animToPlay))
+					if(gf != null && gf.hasAnimation(animToPlay))
 					{
 						gf.playAnim(animToPlay);
 						gf.specialAnim = true;
