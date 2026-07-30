@@ -1,11 +1,11 @@
 {
 	"start": "holdCoverStartBlue",
 	"offsets": [
-		-8,
-		30
+		-10,
+		40
 	],
 	"end": "holdCoverEndBlue",
 	"fps": 24,
 	"hold": "holdCoverBlue",
-	"scale": 1
+	"scale": 1.2
 }
