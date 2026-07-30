@@ -97,7 +97,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 
 			holdCoverSkins.insert(0, ClientPrefs.defaultData.holdCoverSkin);
 			var option:Option = new Option("Hold Cover Skin:",
-				"Select the Hold Cover skin to use.\nRequires holdCover/holdCover{Color}{Skin}.png and optional .json configs.",
+				Language.get("hold_cover_skin_desc"),
 				'holdCoverSkin',
 				STRING,
 				holdCoverSkins);
@@ -123,31 +123,31 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 
 		var option:Option = new Option("3-State Icons (Normal/Lose/Win)",
-			"Enables 3-state health icons: Normal / Lose / Win.\nThe icon image should be a wide rectangle with the three states laid out left-to-right (Normal, Lose, Win). You can also use a 450x150 sheet of 3 square icons. When disabled, the classic 2-state square icons are used.",
+			Language.get("three_icons_desc"),
 			'threeIcons',
 			BOOL);
 		addOption(option);
 
 		var option:Option = new Option("Load Leather Icons",
-			"Prioritize Leather Engine format icons (leather/<name>-icons.png) over default.\nMods' leather icons take priority automatically. Falls back to default if not found.",
+			Language.get("load_leather_icons_desc"),
 			'loadLeatherIcons',
 			BOOL);
 		addOption(option);
 
 		var option:Option = new Option("Opponent Splashes",
-			"Show NoteSplash effects when opponent hits notes.\nRequires CPU Strums to be visible. Compatible with playOpponent mode.",
+			Language.get("opponent_splashes_desc"),
 			'opponentSplashes',
 			BOOL);
 		addOption(option);
 
 		var option:Option = new Option("Hold Covers",
-			"Show a glow effect on the receptor while holding sustain notes,\nwith a burst animation at the end of the hold. (Like vanilla FNF)",
+			Language.get("hold_covers_desc"),
 			'holdCovers',
 			BOOL);
 		addOption(option);
 
 		var option:Option = new Option("Opponent Hold Covers",
-			"Show Hold Cover effects on the opponent's side too.\nRequires CPU Strums and Hold Covers to be enabled.",
+			Language.get("opponent_hold_covers_desc"),
 			'opponentHoldCovers',
 			BOOL);
 		addOption(option);
@@ -196,7 +196,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		option.onChange = onChangeFPSCounter;
 
 		var option:Option = new Option("FPS Counter Style:",
-			"Choose between Psych (detailed) or Simple (Leather) style",
+			Language.get("fps_counter_style_desc"),
 			'fpsStyle',
 			STRING,
 			['Psych', 'Simple']);
@@ -204,7 +204,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		option.onChange = onChangeFPSStyle;
 
 		var option:Option = new Option("FPS Counter Layer:",
-			"Stage (screen-space) or Game (1280x720)",
+			Language.get("fps_counter_layer_desc"),
 			'fpsLayer',
 			STRING,
 			['Stage', 'Game']);
@@ -212,7 +212,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		option.onChange = onChangeFPSLayer;
 		
 		var option:Option = new Option("Psych FPS Settings...",
-			'Customize Psych style FPS counter appearance and content',
+			Language.get("fps_settings_button_desc"),
 			'_fpsSettings',
 			BUTTON);
 		addOption(option);
@@ -221,7 +221,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		};
 		
 		var option:Option = new Option("Simple FPS Settings...",
-			'Customize Simple (Leather) style FPS counter appearance and content',
+			Language.get("simple_info_settings_button_desc"),
 			'_simpleInfoSettings',
 			BUTTON);
 		addOption(option);
@@ -264,7 +264,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 	#end
 
 	var option:Option = new Option("Disable Networking",
-		"Blocks all internet usage at once: update checks, tip fetches, external links and Discord RPC.",
+		Language.get("disable_networking_desc"),
 		'disableNetworking',
 		BOOL);
 	addOption(option);
@@ -277,59 +277,59 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 	addOption(option);
 
 	var option:Option = new Option("Single Hold Animation",
-		"Only play confirm animation once when holding long notes",
+		Language.get("single_hold_note_animation_desc"),
 		'singleHoldNoteAnimation',
 		BOOL);
 	addOption(option);
 
 	var option:Option = new Option("Auto Reset Strum Animation",
-		"Automatically reset strum notes to default animation",
+		Language.get("auto_reset_strum_anim_desc"),
 		'autoResetStrumAnim',
 		BOOL);
 	addOption(option);
 
 	var option:Option = new Option("Fallback Perfect to Sick",
-		"If mod doesn't have perfect/marvelous rating images, use sick instead",
+		Language.get("fallback_perfect_to_sick_desc"),
 		'fallbackPerfectToSick',
 		BOOL);
 	addOption(option);
 
 	var option:Option = new Option("Fallback EX Perfect to Sick",
-		"If mod doesn't have perfect/marvelous EX rating images, use sick instead",
+		Language.get("fallback_experfect_to_sick_desc"),
 		'fallbackEXPerfectToSick',
 		BOOL);
 	addOption(option);
 
 	var soundTrayOptions:Array<String> = ['Flixel', 'Funkin', 'Kathy', 'Dave'];
 	var option:Option = new Option("Sound Tray Style:",
-		"Choose the style of the sound tray",
+		Language.get("sound_tray_style_desc"),
 		'soundTrayStyle',
 		STRING,
 		soundTrayOptions);
 	addOption(option);
 	
 	var option:Option = new Option("Hold Note Behind:",
-		"Place hold notes behind normal notes and strum arrows",
+		Language.get("hold_note_behind_desc"),
 		'holdNoteBehind',
 		BOOL);
 	addOption(option);
 
 	var option:Option = new Option("Legacy Main Menu UI",
-		"Use the old Psych Engine v0.7.3 main menu style",
+		Language.get("legacy_main_menu_desc"),
 		'legacyMainMenu',
 		BOOL);
 	addOption(option);
 
 	// Fake OS 伪装设置
 	var option:Option = new Option("Fake OS Mode",
-		"",
+		Language.get("fake_os_mode_desc"),
 		'fakeOSMode',
 		BOOL);
 	addOption(option);
 	option.onChange = onChangeFakeOSMode;
 
 	var option:Option = new Option("Fake Window Title",
-		"",
+		Language.get("fake_window_title_desc"),
 		'fakeWindowTitlePreset',
 		STRING,
 		["Kathy Engine", "Friday Night Funkin': MintRhythm Engine", "Friday Night Funkin': OS Engine", "Friday Night Funkin': Psych Engine", "Friday Night Funkin'", "FNF", "WTF in FNF", "Rhythm Game", "Not FNF", "Just a Game"]);
@@ -337,7 +337,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 	option.onChange = onChangeFakeWindowTitle;
 
 	var option:Option = new Option("Fake OS Version",
-		"",
+		Language.get("fake_os_version_desc"),
 		'fakeOSVersion',
 		STRING,
 		["1.0.0", "1.0.1", "1.1.0", "1.2.0", "1.3.0", "1.3.1", "1.4.0", "1.4.1", "1.5.0", "1.5.1"]);

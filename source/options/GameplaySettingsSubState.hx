@@ -26,7 +26,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 
 		var option:Option = new Option(
 			"Lane Cover (Player)",
-			"玩家轨道阴影覆盖层透明度。0=关闭，1=最暗。",
+			Language.get("lane_cover_p1_desc"),
 			'laneCoverAlphaP1',
 			FLOAT);
 		option.scrollSpeed = 2;
@@ -39,7 +39,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 
 		var option:Option = new Option(
 			"Lane Cover (Opponent)",
-			"对手轨道阴影覆盖层透明度。0=关闭，1=最暗。",
+			Language.get("lane_cover_p2_desc"),
 			'laneCoverAlphaP2',
 			FLOAT);
 		option.scrollSpeed = 2;
@@ -52,7 +52,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 
 		var option:Option = new Option(
 			"Lane Cover × Strum Alpha",
-			"开启后，覆盖层透明度将与下方箭头自身透明度叠加（乘算），随 middleScroll 等效果自动变暗。",
+			Language.get("lane_cover_strum_alpha_desc"),
 			'laneCoverByStrumAlpha',
 			BOOL);
 		option.onChange = onChangeLaneCover;
@@ -74,14 +74,14 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 
 		var option:Option = new Option(
 			"Precise Hit Timing",
-			"毫秒级精确判定：按键瞬间用音频时钟同步判定时间并实时计算判定窗口（替代上一帧缓存的 canBeHit），消除约 1 帧的判定滞后与边界误判。",
+			Language.get("precise_hit_desc"),
 			'preciseHit',
 			BOOL);
 		addOption(option);
 
 		var option:Option = new Option(
 			"Input System",
-			"选择输入判定系统模式\nDefault = 传统模式（按时间升序，最近的优先）\nRhythm = Rhythm模式（只允许击中离判定线最近的音符，其余触发Miss）",
+			Language.get("input_system_desc"),
 			'inputSystem',
 			STRING,
 			['default', 'rhythm']);
@@ -97,7 +97,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 
 		var option:Option = new Option(
 			"GC On Resume",
-			"恢复游戏时强制清理内存（可能导致恢复延迟）",
+			Language.get("gc_on_resume_desc"),
 			'gcOnResume',
 			BOOL);
 		addOption(option);
@@ -161,7 +161,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 
 		var option:Option = new Option(
 			"Hold Note Tail Fix",
-			"长按音符尾条判定优化：修正尾部判定时机，避免按住到可见尾部仍断连。off=原版, extend=延伸末段到可见尾部(A), earlyHit=放宽末段提前命中(B), both=两者皆用",
+			Language.get("hold_note_tail_fix_desc"),
 			'sustainTailFix',
 			STRING,
 			['off', 'extend', 'earlyHit', 'both']);
@@ -169,14 +169,14 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 
 		var option:Option = new Option(
 			"Hold Release Instant Miss",
-			"仅在开启 Sustains as One Note 时生效：长条命中期间松开按键会立刻判定 miss（比原版更严格、更即时）。",
+			Language.get("hold_release_instant_miss_desc"),
 			'holdReleaseInstantMiss',
 			BOOL);
 		addOption(option);
 
 		var option:Option = new Option(
 			"Hold Tail Judgement",
-			"长条尾部也算一个有效命中：命中尾部时增加 combo 并显示评级（但不加分）；若超时未命中照样断连并 miss。",
+			Language.get("hold_tail_judge_desc"),
 			'holdTailJudge',
 			BOOL);
 		addOption(option);
@@ -190,14 +190,14 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 
 		var option:Option = new Option(
 			"Hold Tail Leniency",
-			"开启后，长条尾部判定（按释放时机）会额外放宽判定窗口，更易命中。需配合 Hold Tail Judgement 使用。",
+			Language.get("hold_tail_leniency_desc"),
 			'holdTailLeniency',
 			BOOL);
 		addOption(option);
 
 		var option:Option = new Option(
 			"Hold Tail Leniency (ms)",
-			"长条尾部判定的宽容毫秒数：各评级窗口与命中窗口上限都会额外放宽该数值（默认20，范围0-50）。",
+			Language.get("hold_tail_leniency_ms_desc"),
 			'holdTailLeniencyMs',
 			FLOAT);
 		option.scrollSpeed = 2;

@@ -61,7 +61,7 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 
 		var option:Option = new Option('Optimized Note Loading',
-			'Auto-detects high-density charts and uses optimized loading. OFF = always legacy, ON = always optimized, AUTO = automatic based on chart NPS.',
+			Language.get("optimized_note_loading_desc"),
 			'useOptimizedNoteLoading',
 			STRING,
 			['OFF', 'ON', 'AUTO']);
@@ -92,27 +92,27 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 
 		// PlayState宽屏自适应
 		var option:Option = new Option('PlayState Adaptive Width',
-			'Allows PlayState to adapt its width to the window (960-1680px), height locked at 720. Better display on wider screens.',
+			Language.get("playstate_adaptive_width_desc"),
 			'playStateAdaptiveWidth',
 			BOOL);
 		addOption(option);
 
 		// 制谱器分辨率跟随窗口
 		var option:Option = new Option('Chart Editor Follow Window',
-			'When ON, the Chart Editor resolution follows the window size (720p~1080p adaptive). When OFF, it uses the game default fixed resolution (1280x720).',
+			Language.get("chart_editor_follow_window_desc"),
 			'chartEditorFollowWindow',
 			BOOL);
 		addOption(option);
 
 		// 飞溅数量限制设置
 		var option:Option = new Option('Splash Limit',
-			'Limit the maximum number of simultaneous note splashes. OFF = no limit.',
+			Language.get("splash_limit_desc"),
 			'splashLimitEnabled',
 			BOOL);
 		addOption(option);
 
 		var option:Option = new Option('Max Splashes',
-			'Maximum number of note splashes that can exist at the same time. Only works when Splash Limit is ON.',
+			Language.get("max_splashes_desc"),
 			'splashLimit',
 			INT);
 		option.minValue = 1;

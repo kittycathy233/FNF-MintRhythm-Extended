@@ -48,7 +48,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 
 		// 开发者模式（放在最顶部）：启用后可进入编辑器菜单，legacy 主界面显示 toolbox 入口
 		var option:Option = new Option('Developer Mode',
-			'Enable to access the editor menu (chart/character/stage...). In legacy main menu, shows the toolbox entry.',
+			Language.get("developer_mode_desc"),
 			'developer',
 			BOOL);
 		addOption(option);
@@ -86,7 +86,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		addOption(option);
 
 		option = new Option('Show mode label in ms text',
-			'Show (BOT) or (REPLAY) label in ms timing text',
+			Language.get("show_mode_label_ms_desc"),
 			'showModeLabelInMsTxt',
 			BOOL);
 		addOption(option);
@@ -104,7 +104,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		addOption(option);
 
 		option = new Option('Ghost Effect (Multi-Press)',
-			'Show a ghost afterimage of the character when hitting multiple notes at once',
+			Language.get("ghost_effect_desc"),
 			'ghostEffect',
 			BOOL);
 		addOption(option);
@@ -129,7 +129,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		addOption(smoothHPOption);
 
 		option = new Option('Health Overflow Icons',
-			'Requires Smooth HP Bar. Lets health exceed 100% on dense charts and pushes the health icons past the bar edges.',
+			Language.get("health_overflow_desc"),
 			'healthOverflow',
 			BOOL);
 		healthOverflowOption = addOption(option);
@@ -137,7 +137,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		healthOverflowOption.onChange = refreshHealthOverflowState;
 
 		option = new Option('Overflow Return Speed',
-			'How fast the overfilled health eases back to 100%. Higher = quicker. Requires Smooth HP Bar + Health Overflow Icons.',
+			Language.get("health_overflow_drain_desc"),
 			'healthOverflowDrain',
 			FLOAT);
 		option.displayFormat = '%v';
@@ -150,7 +150,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		healthOverflowDrainOptionIndex = optionsArray.length - 1;
 
 		option = new Option('Smooth HP Speed',
-			'How tightly the health bar eases to the real health. Higher = snappier (less lag). Requires Smooth HP Bar.',
+			Language.get("smooth_hp_speed_desc"),
 			'smoothHPSpeed',
 			FLOAT);
 		option.displayFormat = '%v';
@@ -227,7 +227,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 
 		// ===== 渲染质量（StageQuality） =====
 		option = new Option('Stage Quality',
-			'Vector/text rendering quality (StageQuality). Lower = faster on mobile but blurrier text. Applies live; a restart re-renders everything for sure.',
+			Language.get("stage_quality_desc"),
 			'stageQuality',
 			STRING,
 			['LOW', 'MEDIUM', 'HIGH', 'BEST']);
@@ -238,13 +238,13 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 
 		// ===== rating/combo 精灵对象池 =====
 		option = new Option('Combo Sprite Pooling',
-			'Reuse rating/combo/number sprites instead of creating & destroying them on every hit. ON = smoother (less GC / less hit-stutter). Turn OFF for maximum compatibility if a mod misbehaves with recycled combo sprites.',
+			Language.get("combo_sprite_pooling_desc"),
 			'comboSpritePooling',
 			BOOL);
 		addOption(option);
 
 		option = new Option('Combo Sprite Pool Size',
-			'Max number of sprites in the pool. 0 = unlimited (grow as needed). >0 = rotating mode (reuse oldest when full). Higher = more memory, lower = more recycling overhead. Typical value: 16-64.',
+			Language.get("combo_sprite_pool_size_desc"),
 			'comboSpritePoolSize',
 			INT);
 		option.minValue = 0;
@@ -254,38 +254,38 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 
 		// ===== 低延迟 / 性能模式 =====
 		option = new Option('Auto Song Resync',
-			'On weak devices, the engine jumps the song back when audio/logic desyncs. Turn OFF to avoid sudden rewinds and rely on manual calibration.',
+			Language.get("auto_song_resync_desc"),
 			'autoResync',
 			BOOL);
 		addOption(option);
 
 		option = new Option('Hide Missed Notes (Cull)',
-			'Stop drawing notes that were already missed and scrolled off-screen (or became extremely late). Lowers render load in SPAM charts. Misses are still counted normally.',
+			Language.get("hide_missed_notes_desc"),
 			'hideMissedNotes',
 			BOOL);
 		addOption(option);
 
 		option = new Option('Low-Latency Mode',
-			'Turns OFF auto resync (no rewinds), forces missed-note culling, instant-resolve of expired notes AND disables per-note scripts. Lowest input latency / steadiest framerate at the cost of possible drift and modchart callbacks.',
+			Language.get("low_latency_desc"),
 			'lowLatency',
 			BOOL);
 		addOption(option);
 
 		// ===== 高密度谱面（SPAM）性能优化 =====
 		option = new Option('Instant-Resolve Expired Notes',
-			'Notes already past the miss window are settled immediately instead of being drawn for a few frames. Prevents lag-spiral avalanches in SPAM charts. Same threshold as the normal miss kill, so judgement is unaffected.',
+			Language.get("instant_resolve_expired_desc"),
 			'instantResolveExpired',
 			BOOL);
 		addOption(option);
 
 		option = new Option('Disable Per-Note Scripts',
-			'Skip Lua/HScript callbacks (onSpawnNote / goodNoteHit / noteMiss / opponentNoteHit) for every single note. Big boost in dense charts. WARNING: breaks modcharts that rely on these callbacks.',
+			Language.get("disable_note_lua_desc"),
 			'disableNoteLua',
 			BOOL);
 		addOption(option);
 
 		option = new Option('Max Notes Spawned / Frame',
-			'Cap how many note sprites can be created in a single frame (0 = unlimited). After a lag spike the backlog is spread over several frames instead of spawning hundreds at once. Notes are never dropped, only delayed a frame or two.',
+			Language.get("max_notes_per_frame_desc"),
 			'maxNotesPerFrame',
 			INT);
 		option.scrollSpeed = 60;
@@ -373,7 +373,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		addOption(option);
 
 		option = new Option('Time Bar Gradient',
-			'Only works with Psych style. Gradient from opponent color to player color.',
+			Language.get("time_bar_gradient_desc"),
 			'timeBarGradient',
 			BOOL);
 		addOption(option);
@@ -400,7 +400,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		var loadingStyleOption = addOption(option);
 		
 		option = new Option('Blue Archive Language',
-			'Select language for Blue Archive loading transition',
+			Language.get("ba_language_desc"),
 			'blueArchiveLanguage',
 			STRING,
 			['CN', 'JP', 'KR', 'EN']);
@@ -422,7 +422,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		timebarStyleOption = addOption(option);
 		timebarStyleOptionIndex = optionsArray.length - 1;
 
-		option = new Option('Bigger Info Text', 'When toggled, the time bar will have a larger font.', 'biggerInfoText', BOOL);
+		option = new Option('Bigger Info Text', Language.get("bigger_info_text_desc"), 'biggerInfoText', BOOL);
 		biggerInfoTextOption = addOption(option);
 		biggerInfoTextOptionIndex = optionsArray.length - 1;
 
@@ -543,7 +543,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		addOption(option);
 
 		option = new Option('Startup Splash',
-			'Choose the splash screen shown on startup:\nCustom Logo = Kathy engine intro animation;\nFlixel = Flixel built-in splash;\nNone = go straight into the game',
+			Language.get("startup_splash_desc"),
 			'splashMode',
 			STRING,
 			['Kathy', 'Flixel', 'Flixel+', 'None']);
