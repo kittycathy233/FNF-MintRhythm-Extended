@@ -50,6 +50,8 @@
     "charting_charting_tip": "此標籤頁的所有更改不會影響遊戲遊玩！",
     "charting_mousescrsnap_text": "滑鼠滾輪自動對齊",
     "charting_ignwarning_text": "忽略一些必要的二次確認提示",
+    "charting_rightclickdel_text": "右鍵移除箭頭",
+    "charting_dragcreatesustain_text": "拖動生成箭頭長條",
     "charting_musthitsec_text": "是否為玩家段",
     "charting_gfsec_text": "是否為GF段",
     "charting_altanim_text": "使用Alt動畫",

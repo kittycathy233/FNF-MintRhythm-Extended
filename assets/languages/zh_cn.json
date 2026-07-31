@@ -120,6 +120,8 @@
 
     "charting_mousescrsnap_text": "鼠标滚轮自动对齐",
     "charting_ignwarning_text":"忽略一些必要的二次确认提示",
+    "charting_rightclickdel_text":"右键移除箭头",
+    "charting_dragcreatesustain_text":"拖动生成箭头长条",
     "charting_musthitsec_text": "是否为玩家段",
     "charting_gfsec_text": "是否为GF段",
     "charting_altanim_text": "使用Alt动画",

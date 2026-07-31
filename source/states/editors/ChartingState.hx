@@ -53,6 +53,7 @@ enum abstract UndoAction(String)
 	var DELETE_NOTE = 'Delete Note';
 	var MOVE_NOTE = 'Move Note';
 	var SELECT_NOTE = 'Select Note';
+	var MODIFY_NOTE = 'Modify Note';
 }
 
 enum abstract ChartingTheme(String)
@@ -324,6 +325,22 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var vortexIndicator:FlxSprite;
 	var strumLineNotes:FlxTypedGroup<StrumNote> = new FlxTypedGroup<StrumNote>();
 	var dummyArrow:FlxSprite;
+	var dragPreview:FlxSprite;
+	var isDraggingNote:Bool = false;
+	var dragNote:MetaNote = null;
+	var dragExistingNote:Bool = false; // 当前拖动是否为“延伸已有箭头”而非新建
+	var dragExtendOriginalSustain:Float = 0; // 延伸前记录的原始长条长度（用于撤销）
+	var dragPendingNote:MetaNote = null; // 左键按住已有箭头后的待命状态，移动超过阈值才真正开始延伸拖动
+	var dragPendingStartY:Float = 0; // 进入待命拖动时的鼠标Y（用于判断拖动阈值）
+	var dragStartStrumTime:Float = 0;
+	var dragStartNoteData:Int = 0;
+	var dragStartTrackType:String = 'normal';
+	var dragStartEventTrackIndex:Null<Int> = null;
+	var dragStartX:Float = 0;
+	var dragStartChartY:Float = 0;
+	var dragStartMouseY:Float = 0; // 按下左键时的原始鼠标Y，用于区分“单击”与“向下拖动”
+	var rightClickDeleteNote:Bool = false;
+	var dragCreateHoldNote:Bool = true;
 	var isMovingNotes:Bool = false;
 	var movingNotesLastData:Int = 0;
 	var movingNotesLastY:Float = 0;
@@ -453,6 +470,21 @@ if(_shouldReset) Conductor.songPosition = 0;
 		if(chartEditorSave.data.allowDragCharacters == null) chartEditorSave.data.allowDragCharacters = false;
 		if(chartEditorSave.data.mouseScrollSnap == null) chartEditorSave.data.mouseScrollSnap = false;
 		if(chartEditorSave.data.ignoreProgressWarns == null) chartEditorSave.data.ignoreProgressWarns = false;
+		if(chartEditorSave.data.rightClickDeleteNote == null) chartEditorSave.data.rightClickDeleteNote = true;
+		if(chartEditorSave.data.dragCreateHoldNote == null) chartEditorSave.data.dragCreateHoldNote = true;
+		rightClickDeleteNote = chartEditorSave.data.rightClickDeleteNote;
+		dragCreateHoldNote = chartEditorSave.data.dragCreateHoldNote;
+
+		// 音频相关设置（charting 选项卡需保存的项，播放速度除外）
+		if(chartEditorSave.data.hitsoundPlayerVol == null) chartEditorSave.data.hitsoundPlayerVol = 0;
+		if(chartEditorSave.data.hitsoundOpponentVol == null) chartEditorSave.data.hitsoundOpponentVol = 0;
+		if(chartEditorSave.data.metronomeVol == null) chartEditorSave.data.metronomeVol = 0;
+		if(chartEditorSave.data.instVolume == null) chartEditorSave.data.instVolume = 0.6;
+		if(chartEditorSave.data.playerVolume == null) chartEditorSave.data.playerVolume = 1;
+		if(chartEditorSave.data.opponentVolume == null) chartEditorSave.data.opponentVolume = 1;
+		if(chartEditorSave.data.instMuted == null) chartEditorSave.data.instMuted = false;
+		if(chartEditorSave.data.playerMuted == null) chartEditorSave.data.playerMuted = false;
+		if(chartEditorSave.data.opponentMuted == null) chartEditorSave.data.opponentMuted = false;
 
 		if(chartEditorSave.data.customBgColor == null) chartEditorSave.data.customBgColor = '303030';
 		if(chartEditorSave.data.customGridColors == null || chartEditorSave.data.customGridColors.length < 2)
@@ -475,6 +507,14 @@ if(_shouldReset) Conductor.songPosition = 0;
 		dummyArrow.updateHitbox();
 		dummyArrow.scrollFactor.x = 0;
 		add(dummyArrow);
+
+		dragPreview = new FlxSprite().makeGraphic(1, 1, 0x4DD2FF);
+		dragPreview.setGraphicSize(GRID_SIZE, 1);
+		dragPreview.updateHitbox();
+		dragPreview.scrollFactor.x = 0;
+		dragPreview.alpha = 0.4;
+		dragPreview.visible = false;
+		add(dragPreview);
 
 		vortexIndicator = new FlxSprite(gridLayout.startX - GRID_SIZE, FlxG.height/2).loadGraphic(Paths.image('editors/vortex_indicator'));
 		vortexIndicator.setGraphicSize(GRID_SIZE);
@@ -727,7 +767,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 		add(tipText);
 
 		// 制谱器版本（左下角固定显示）
-		var versionText:FlxText = new FlxText(15, FlxG.height - 30, 280, 'v1.0.1-beta', 16);
+		var versionText:FlxText = new FlxText(15, FlxG.height - 30, 280, 'v1.0.2', 16);
 		versionText.cameras = [camUI];
 		versionText.setFormat(Paths.font("unifont-16.0.02.otf"), 20, FlxColor.WHITE, LEFT);
 		versionText.borderColor = FlxColor.BLACK;
@@ -1818,8 +1858,18 @@ if(_shouldReset) Conductor.songPosition = 0;
 					if(trackInfo.trackType == 'event') uiColumn += GRID_COLUMNS_PER_PLAYER;
 					else if(trackInfo.trackType == 'player') uiColumn += GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT;
 
-					var noteData:Int = uiColumnToNoteData(uiColumn);
-					dummyArrow.visible = !selectionBox.visible;
+			var noteData:Int = uiColumnToNoteData(uiColumn);
+			dummyArrow.visible = !selectionBox.visible;
+			if(isDraggingNote)
+			{
+				dummyArrow.visible = false;
+				updateDragPreview();
+			}
+			if(isDraggingNote)
+			{
+				dummyArrow.visible = false;
+				updateDragPreview();
+			}
 
 					// 计算最终的UI列并应用间距偏移
 					var finalUIColumn:Int = noteDataToUIColumn(noteData);
@@ -1961,20 +2011,21 @@ if(_shouldReset) Conductor.songPosition = 0;
 		
 									trace('Notes selected: ' + selectedNotes.length);
 								}
-								else if(!FlxG.keys.pressed.CONTROL) // Remove Note/Event
-								{
-									var kind:String = !closest.isEvent ? 'note' : 'event';
-									trace('Removed $kind at time: ${closest.strumTime}');
-									if(!closest.isEvent)
-										notes.remove(closest);
-									else
-										events.remove(cast (closest, EventMetaNote));
-		
-									selectedNotes.remove(closest);
-									curRenderedNotes.remove(closest, true);
-									addUndoAction(DELETE_NOTE, !closest.isEvent ? {notes: [closest]} : {events: [closest]});
-								}
-								if(selectedNotes.length == 1) onSelectNote();
+						else if(!FlxG.keys.pressed.CONTROL && !rightClickDeleteNote) // Remove Note/Event
+						{
+							deleteNoteUnderCursor(closest);
+						}
+						else if(!FlxG.keys.pressed.CONTROL && rightClickDeleteNote) // 启用“右键移除箭头”时，左键改为选中已有箭头，并在启用“拖动生成箭头长条”时进入待命拖动（可拖动延伸其长条）
+						{
+							resetSelectedNotes();
+							selectedNotes.push(closest);
+							if(dragCreateHoldNote && !closest.isEvent)
+							{
+								dragPendingNote = closest;
+								dragPendingStartY = FlxG.mouse.y;
+							}
+						}
+						if(selectedNotes.length == 1) onSelectNote();
 								forceDataUpdate = true;
 							}
 							else if(!holdingAlt && touch.y >= trackInfo.grid.y && touch.y < trackInfo.grid.y + trackInfo.grid.height) // Add note
@@ -2093,9 +2144,24 @@ if(_shouldReset) Conductor.songPosition = 0;
 				else if(mouseTrackInfo.trackType == 'player') uiColumn += GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT;
 
 				var noteData:Int = uiColumnToNoteData(uiColumn);
-				dummyArrow.visible = !selectionBox.visible;
-				
-				// 计算最终的UI列并应用间距偏移
+			dummyArrow.visible = !selectionBox.visible;
+
+			// 待命拖动：左键按住已有箭头并移动超过阈值后，才真正开始延伸拖动（避免单纯点击选中误触）
+			if(dragPendingNote != null)
+			{
+				if(Math.abs(FlxG.mouse.y - dragPendingStartY) > GRID_SIZE * curZoom / 3)
+					startDragExtend(dragPendingNote);
+				else if(FlxG.mouse.justReleased)
+					dragPendingNote = null;
+			}
+
+			if(isDraggingNote)
+			{
+				dummyArrow.visible = false;
+				updateDragPreview();
+			}
+			
+			// 计算最终的UI列并应用间距偏移
 				var finalUIColumn:Int = noteDataToUIColumn(noteData);
 				var spacingOffset:Float = 0;
 				if (finalUIColumn >= GRID_COLUMNS_PER_PLAYER)
@@ -2199,22 +2265,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 					}
 					else if(FlxG.mouse.x >= gridLayout.startX && FlxG.mouse.x < gridLayout.startX + gridLayout.totalWidth)
 					{
-						var closeNotes:Array<MetaNote> = curRenderedNotes.members.filter(function(note:MetaNote)
-						{
-							var chartY:Float = FlxG.mouse.y - note.chartY;
-							if(note.isEvent && noteData < 0)
-						{
-							var eventDiffX:Float = FlxG.mouse.x - mouseTrackInfo.trackX;
-							var clickTrackIndex:Int = Std.int(Math.floor(eventDiffX / GRID_SIZE));
-							clickTrackIndex = Std.int(Math.max(0, Math.min(clickTrackIndex, EVENT_TRACK_COUNT - 1)));
-							var eventNote:EventMetaNote = cast note;
-							return eventNote.eventTrackIndex == clickTrackIndex && chartY >= 0 && chartY < GRID_SIZE;
-						}
-							return (!note.isEvent && note.songData[1] == noteData) && chartY >= 0 && chartY < GRID_SIZE;
-						});
-						closeNotes.sort(function(a:MetaNote, b:MetaNote) return Math.abs(a.strumTime - FlxG.mouse.y) < Math.abs(b.strumTime - FlxG.mouse.y) ? 1 : -1);
-
-						var closest = closeNotes[0];
+						var closest = getClosestNoteUnderMouse();
 						if(closest != null && (!closest.isEvent || !lockedEvents))
 						{
 							if(FlxG.keys.pressed.SHIFT || holdingAlt) // Select Note/Event
@@ -2234,24 +2285,31 @@ if(_shouldReset) Conductor.songPosition = 0;
 	
 								trace('Notes selected: ' + selectedNotes.length);
 							}
-							else if(!FlxG.keys.pressed.CONTROL) // Remove Note/Event
+						else if(!FlxG.keys.pressed.CONTROL && !rightClickDeleteNote) // Remove Note/Event
+						{
+							deleteNoteUnderCursor(closest);
+						}
+						else if(!FlxG.keys.pressed.CONTROL && rightClickDeleteNote) // 启用“右键移除箭头”时，左键改为选中已有箭头，并在启用“拖动生成箭头长条”时进入待命拖动（可拖动延伸其长条）
+						{
+							resetSelectedNotes();
+							selectedNotes.push(closest);
+							if(dragCreateHoldNote && !closest.isEvent)
 							{
-								var kind:String = !closest.isEvent ? 'note' : 'event';
-								trace('Removed $kind at time: ${closest.strumTime}');
-								if(!closest.isEvent)
-									notes.remove(closest);
-								else
-									events.remove(cast (closest, EventMetaNote));
-	
-								selectedNotes.remove(closest);
-								curRenderedNotes.remove(closest, true);
-								addUndoAction(DELETE_NOTE, !closest.isEvent ? {notes: [closest]} : {events: [closest]});
+								dragPendingNote = closest;
+								dragPendingStartY = FlxG.mouse.y;
 							}
-							if(selectedNotes.length == 1) onSelectNote();
-							forceDataUpdate = true;
+						}
+						if(selectedNotes.length == 1) onSelectNote();
+						forceDataUpdate = true;
 						}
 						else if(!holdingAlt && FlxG.mouse.y >= mouseTrackInfo.grid.y && FlxG.mouse.y < mouseTrackInfo.grid.y + mouseTrackInfo.grid.height) // Add note
 						{
+							if(dragCreateHoldNote)
+							{
+								startDragCreate();
+							}
+							else
+							{
 							// 鼠标 Y（均匀像素）→ 步 → ramp 感知毫秒，放置与显示一致
 							var stepAtMouse:Float = (diffY / (GRID_SIZE * curZoom)) + cachedSectionRow[curSec];
 							var strumTime:Float = Conductor.getTimeFromStep(stepAtMouse);
@@ -2325,9 +2383,20 @@ if(_shouldReset) Conductor.songPosition = 0;
 							}
 							onSelectNote();
 							softReloadNotes();
+							}
 						}
 					}
 				}
+			else if(rightClickDeleteNote && FlxG.mouse.justPressedRight && !ignoreClickForThisFrame)
+			{
+				var closestDel = getClosestNoteUnderMouse();
+				if(closestDel != null && (!closestDel.isEvent || !lockedEvents))
+				{
+					deleteNoteUnderCursor(closestDel);
+					if(selectedNotes.length == 1) onSelectNote();
+					forceDataUpdate = true;
+				}
+			}
 			}
 			else if(!ignoreClickForThisFrame)
 			{
@@ -2337,6 +2406,11 @@ if(_shouldReset) Conductor.songPosition = 0;
 				dummyArrow.visible = false;
 			}
 		}
+		if(isDraggingNote && FlxG.mouse.justReleased)
+			finishDragCreate();
+		else if(dragPendingNote != null && FlxG.mouse.justReleased)
+			dragPendingNote = null; // 按下后未移动即释放：仅选中，取消待命拖动
+
 		ignoreClickForThisFrame = false;
 
 	// 基于Conductor.songPosition自动播放角色sing动画
@@ -3887,6 +3961,279 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		}
 	}
 
+	// 获取鼠标当前位置下最接近的箭头（音符/事件），供左键选择与右键删除共用
+	function getClosestNoteUnderMouse():MetaNote
+	{
+		var trackInfo = getTrackAtPosition(FlxG.mouse.x, FlxG.mouse.y);
+		if(trackInfo == null) return null;
+
+		var diffX:Float = FlxG.mouse.x - trackInfo.trackX;
+		var uiColumn:Int = Math.floor(diffX / GRID_SIZE);
+		if(trackInfo.trackType == 'event') uiColumn += GRID_COLUMNS_PER_PLAYER;
+		else if(trackInfo.trackType == 'player') uiColumn += GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT;
+
+		var noteData:Int = uiColumnToNoteData(uiColumn);
+		if(trackInfo.trackType == 'event') noteData = -1;
+
+		var closeNotes:Array<MetaNote> = curRenderedNotes.members.filter(function(note:MetaNote)
+		{
+			var chartY:Float = FlxG.mouse.y - note.chartY;
+			if(note.isEvent && noteData < 0)
+			{
+				var eventDiffX:Float = FlxG.mouse.x - trackInfo.trackX;
+				var clickTrackIndex:Int = Std.int(Math.floor(eventDiffX / GRID_SIZE));
+				clickTrackIndex = Std.int(Math.max(0, Math.min(clickTrackIndex, EVENT_TRACK_COUNT - 1)));
+				var eventNote:EventMetaNote = cast note;
+				return eventNote.eventTrackIndex == clickTrackIndex && chartY >= 0 && chartY < GRID_SIZE;
+			}
+			return (!note.isEvent && note.songData[1] == noteData) && chartY >= 0 && chartY < GRID_SIZE;
+		});
+		closeNotes.sort(function(a:MetaNote, b:MetaNote) return Math.abs(a.strumTime - FlxG.mouse.y) < Math.abs(b.strumTime - FlxG.mouse.y) ? 1 : -1);
+		return closeNotes[0];
+	}
+
+	// 删除指定箭头（音符或事件），并记录撤销操作
+	function deleteNoteUnderCursor(note:MetaNote):Void
+	{
+		var kind:String = !note.isEvent ? 'note' : 'event';
+		trace('Removed $kind at time: ${note.strumTime}');
+		if(!note.isEvent)
+			notes.remove(note);
+		else
+			events.remove(cast (note, EventMetaNote));
+
+		selectedNotes.remove(note);
+		curRenderedNotes.remove(note, true);
+		addUndoAction(DELETE_NOTE, !note.isEvent ? {notes: [note]} : {events: [note]});
+	}
+
+	// 在空白处按下左键时立即创建箭头，并进入“拖拽创建长条”状态（拖动时实时预览长度）
+	function startDragCreate():Void
+	{
+		var trackInfo = getTrackAtPosition(FlxG.mouse.x, FlxG.mouse.y);
+		if(trackInfo == null) return;
+
+		var diffX:Float = FlxG.mouse.x - trackInfo.trackX;
+		var uiColumn:Int = Math.floor(diffX / GRID_SIZE);
+		if(trackInfo.trackType == 'event') uiColumn += GRID_COLUMNS_PER_PLAYER;
+		else if(trackInfo.trackType == 'player') uiColumn += GRID_COLUMNS_PER_PLAYER + EVENT_TRACK_COUNT;
+
+		var noteData:Int = uiColumnToNoteData(uiColumn);
+		if(trackInfo.trackType == 'event') noteData = -1;
+
+		isDraggingNote = true;
+		dragStartNoteData = noteData;
+		dragStartTrackType = trackInfo.trackType;
+		dragStartEventTrackIndex = null;
+		if(trackInfo.trackType == 'event')
+		{
+			var eventDiffX:Float = FlxG.mouse.x - trackInfo.trackX;
+			var idx:Int = Std.int(Math.floor(eventDiffX / GRID_SIZE));
+			if(idx >= 0 && idx < EVENT_TRACK_COUNT) dragStartEventTrackIndex = idx;
+		}
+
+		var diffY:Float = FlxG.mouse.y - trackInfo.grid.y;
+		if(!FlxG.keys.pressed.SHIFT)
+			diffY -= diffY % (GRID_SIZE * curZoom / (curQuant/16)); // 乘 curZoom 以适配不同缩放
+		if(trackInfo.nextGrid.visible) diffY = Math.min(diffY, trackInfo.grid.height + trackInfo.nextGrid.height);
+		else diffY = Math.min(diffY, trackInfo.grid.height);
+		if(trackInfo.prevGrid.visible) diffY = Math.max(diffY, -trackInfo.prevGrid.height);
+		else diffY = Math.max(diffY, 0);
+
+		var stepAtMouse:Float = (diffY / (GRID_SIZE * curZoom)) + cachedSectionRow[curSec];
+		dragStartStrumTime = Conductor.getTimeFromStep(stepAtMouse);
+		dragStartChartY = trackInfo.grid.y + diffY;
+		dragStartMouseY = FlxG.mouse.y; // 记录按下点，用于判断是否真正向下拖动
+
+		// 记录起始轨道的屏幕 X 坐标（拖拽过程中长条始终停留在该轨道）
+		dragStartX = dummyArrow.x;
+
+		// 立即创建真实箭头，拖动过程中实时更新长条长度
+		if(dragStartNoteData >= 0)
+		{
+			var noteSetupData:Array<Dynamic> = [dragStartStrumTime, dragStartNoteData, 0];
+			var typeSelected:String = noteTypes[noteTypeDropDown.selectedIndex].trim();
+			if(typeSelected != null && typeSelected.length > 0)
+				noteSetupData.push(typeSelected);
+
+			var noteAdded:MetaNote = createNote(noteSetupData);
+			var didAdd:Bool = false;
+			for (num in sectionFirstNoteID...notes.length)
+			{
+				var note = notes[num];
+				if(note.strumTime >= dragStartStrumTime)
+				{
+					notes.insert(num, noteAdded);
+					didAdd = true;
+					break;
+				}
+			}
+			if(!didAdd) notes.push(noteAdded);
+
+			dragNote = noteAdded;
+			resetSelectedNotes();
+			selectedNotes.push(noteAdded);
+
+			var targetChar:Character = (dragStartNoteData >= 4) ? dad : boyfriend;
+			var direction:Int = dragStartNoteData % 4;
+			if(targetChar != null && targetChar.visible)
+				playCharacterSing(targetChar, direction);
+		}
+		else if(!lockedEvents && dragStartTrackType == 'event')
+		{
+			var eventAdded:EventMetaNote = createEvent([dragStartStrumTime, [[eventsList[Std.int(Math.max(eventDropDown.selectedIndex, 0))][0], value1InputText.text, value2InputText.text, value3InputText.text, value4InputText.text]]], dragStartEventTrackIndex);
+			var didAdd:Bool = false;
+			for (num in sectionFirstEventID...events.length)
+			{
+				var event = events[num];
+				if(event.strumTime >= dragStartStrumTime)
+				{
+					events.insert(num, eventAdded);
+					didAdd = true;
+					break;
+				}
+			}
+			if(!didAdd) events.push(eventAdded);
+
+			dragNote = eventAdded;
+			resetSelectedNotes();
+			selectedNotes.push(eventAdded);
+		}
+
+		softReloadNotes();
+		dragPreview.visible = true;
+		updateDragPreview();
+	}
+
+	// 对已有箭头进行拖动延伸：复用“拖动生成长条”逻辑，直接修改该箭头的长度（需启用“拖动生成箭头长条”）
+	function startDragExtend(note:MetaNote):Void
+	{
+		isDraggingNote = true;
+		dragExistingNote = true;
+		dragNote = note;
+		dragExtendOriginalSustain = note.sustainLength; // 记录原始长条长度，供撤销使用
+
+		dragStartStrumTime = note.strumTime;
+		dragStartNoteData = note.noteData;
+		dragStartTrackType = note.isEvent ? 'event' : ((note.noteData >= GRID_COLUMNS_PER_PLAYER) ? 'player' : 'normal');
+		dragStartX = note.x;     // 延伸时箭头始终停留在该轨道
+		dragStartChartY = note.y; // 以箭头头部为起点计算位移
+
+		dragPendingNote = null; // 已进入真正拖动，取消待命标记
+
+		resetSelectedNotes();
+		selectedNotes.push(note);
+
+		dragPreview.visible = true;
+		updateDragPreview();
+	}
+
+	// 拖动过程中实时更新长条预览：直接修改真实箭头的长度，并显示半透明参考框
+	function updateDragPreview():Void
+	{
+		// 已有箭头延伸：按相对起始点（箭头头部）的位移直接计算新长条长度，与轨道无关，避免跨轨误差
+		if(dragExistingNote && dragNote != null)
+		{
+			var emy:Float = FlxG.mouse.y;
+			var deltaY:Float = emy - dragStartChartY;
+			if(!FlxG.keys.pressed.SHIFT)
+			{
+				// 默认按半格吸附，使长条长度可按半格增量修改
+				var snap:Float = GRID_SIZE * curZoom / (curQuant/16) / 2; // 乘 curZoom 适配缩放
+				deltaY -= deltaY % snap;
+			}
+			var steps:Float = deltaY / (GRID_SIZE * curZoom);
+			var sustain:Float = steps * Conductor.stepCrochet;
+			if(sustain < 0) sustain = 0; // 向上拖拽视为缩短（到头部则为普通箭头）
+
+			if(!dragNote.isEvent)
+				dragNote.setSustainLength(sustain, Conductor.stepCrochet, curZoom);
+
+			var topY:Float = Math.min(dragStartChartY, emy);
+			var h:Float = Math.max(4, Math.abs(emy - dragStartChartY));
+			dragPreview.setPosition(dragStartX, topY);
+			dragPreview.setGraphicSize(GRID_SIZE, h);
+			dragPreview.updateHitbox();
+			return;
+		}
+
+		var my:Float = FlxG.mouse.y;
+		var myTrack = getTrackAtPosition(FlxG.mouse.x, my);
+		if(myTrack == null || dragNote == null) return;
+
+		// 只有鼠标从按下点向下移动才视为“拖拽生成长条”；单纯点击（即使按在格线下半部）
+		// 也是普通箭头，长条为 0。这样可避免头部向下取整吸附导致点击下半格也生成半个长条。
+		var deltaY:Float = 0;
+		if(my > dragStartMouseY)
+		{
+			// 相对头部（dragStartChartY，当前格线）计算长条，头部不跳到下一格
+			deltaY = my - dragStartChartY;
+			if(!FlxG.keys.pressed.SHIFT)
+			{
+				var snap:Float = GRID_SIZE * curZoom / (curQuant/16) / 2; // 乘 curZoom 适配缩放
+				deltaY = Math.ceil(deltaY / snap) * snap; // 向下拖动向上取整到下一吸附点
+
+				// 最小长度为“一整格”（一 grid），杜绝亚格超短长条
+				var oneGrid:Float = GRID_SIZE * curZoom;
+				if(deltaY > 0 && deltaY < oneGrid) deltaY = oneGrid;
+			}
+		}
+
+		// 限制在谱面小节可见范围内（相对头部计算边界）
+		var headOffset:Float = dragStartChartY - myTrack.grid.y;
+		var maxDelta:Float = (myTrack.nextGrid.visible ? myTrack.grid.height + myTrack.nextGrid.height : myTrack.grid.height) - headOffset;
+		var minDelta:Float = (myTrack.prevGrid.visible ? -myTrack.prevGrid.height : 0) - headOffset;
+		deltaY = Math.max(minDelta, Math.min(maxDelta, deltaY));
+
+		var steps:Float = deltaY / (GRID_SIZE * curZoom);
+		var sustain:Float = steps * Conductor.stepCrochet;
+		if(sustain < 0) sustain = 0;
+
+		// setSustainLength 内部已自动吸附到半格（stepCrochet/2）
+		if(!dragNote.isEvent)
+			dragNote.setSustainLength(sustain, Conductor.stepCrochet, curZoom);
+
+		// 预览框与真实长条一致：从头部向下延伸 deltaY（避免视觉长度与长条长度不符）
+		var headY:Float = dragStartChartY;
+		var topY:Float = Math.min(headY, headY + deltaY);
+		var h:Float = Math.max(4, Math.abs(deltaY));
+		dragPreview.setPosition(dragStartX, topY);
+		dragPreview.setGraphicSize(GRID_SIZE, h);
+		dragPreview.updateHitbox();
+	}
+
+	// 左键释放时确认长条（箭头已在拖拽开始时创建），仅记录撤销操作
+	function finishDragCreate():Void
+	{
+		if(!isDraggingNote) return;
+		isDraggingNote = false;
+		dragPreview.visible = false;
+
+		if(dragNote != null)
+		{
+			if(dragExistingNote)
+			{
+				// 仅在实际改变长条长度时记录撤销，避免单纯点击选中产生冗余历史
+				if(dragExtendOriginalSustain != dragNote.sustainLength)
+				{
+					addUndoAction(MODIFY_NOTE, {
+						note: dragNote,
+						isEvent: dragNote.isEvent,
+						originalSustain: dragExtendOriginalSustain,
+						modifiedSustain: dragNote.sustainLength
+					});
+				}
+			}
+			else
+			{
+				addUndoAction(ADD_NOTE, !dragNote.isEvent ? {notes: [dragNote]} : {events: [dragNote]});
+			}
+			onSelectNote();
+		}
+		dragNote = null;
+		dragExistingNote = false;
+	}
+
 	function positionNoteXByData(note:MetaNote, ?data:Null<Int> = null, ?cols:Null<Int> = null)
 	{
 		if(data == null) data = note.songData[1];
@@ -4084,6 +4431,8 @@ for (i in 0...GRID_PLAYERS)
 
 	var mouseSnapCheckBox:PsychUICheckBox;
 	var ignoreProgressCheckBox:PsychUICheckBox;
+	var rightClickDeleteCheckBox:PsychUICheckBox;
+	var dragHoldCheckBox:PsychUICheckBox;
 	var hitsoundPlayerStepper:PsychUINumericStepper;
 	var hitsoundOpponentStepper:PsychUINumericStepper;
 	var metronomeStepper:PsychUINumericStepper;
@@ -4127,29 +4476,99 @@ for (i in 0...GRID_PLAYERS)
 		if(chartEditorSave.data.ignoreProgressWarns == null) chartEditorSave.data.ignoreProgressWarns = false;
 		ignoreProgressCheckBox.checked = chartEditorSave.data.ignoreProgressWarns;
 
-		objY += 50;
-		hitsoundPlayerStepper = new PsychUINumericStepper(objX, objY, 0.2, 0, 0, 1, 1);
-		hitsoundOpponentStepper = new PsychUINumericStepper(objX + 100, objY, 0.2, 0, 0, 1, 1);
-		metronomeStepper = new PsychUINumericStepper(objX + 200, objY, 0.2, 0, 0, 1, 1);
+		objY += 30;
+		rightClickDeleteCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_rightclickdel_text'), 280, function()
+		{
+			rightClickDeleteNote = rightClickDeleteCheckBox.checked;
+			chartEditorSave.data.rightClickDeleteNote = rightClickDeleteNote;
+			chartEditorSave.flush();
+		});
+		if(chartEditorSave.data.rightClickDeleteNote == null) chartEditorSave.data.rightClickDeleteNote = false;
+		rightClickDeleteCheckBox.checked = chartEditorSave.data.rightClickDeleteNote;
+
+		objY += 30;
+		dragHoldCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_dragcreatesustain_text'), 280, function()
+		{
+			dragCreateHoldNote = dragHoldCheckBox.checked;
+			chartEditorSave.data.dragCreateHoldNote = dragCreateHoldNote;
+			chartEditorSave.flush();
+		});
+		if(chartEditorSave.data.dragCreateHoldNote == null) chartEditorSave.data.dragCreateHoldNote = true;
+		dragHoldCheckBox.checked = chartEditorSave.data.dragCreateHoldNote;
 
 		objY += 50;
-		instVolumeStepper = new PsychUINumericStepper(objX, objY, 0.1, 0.6, 0, 1, 1);
-		instVolumeStepper.onValueChange = updateAudioVolume;
-		playerVolumeStepper = new PsychUINumericStepper(objX + 100, objY, 0.1, 1, 0, 1, 1);
-		playerVolumeStepper.onValueChange = updateAudioVolume;
-		opponentVolumeStepper = new PsychUINumericStepper(objX + 200, objY, 0.1, 1, 0, 1, 1);
-		opponentVolumeStepper.onValueChange = updateAudioVolume;
+		hitsoundPlayerStepper = new PsychUINumericStepper(objX, objY, 0.2, chartEditorSave.data.hitsoundPlayerVol, 0, 1, 1);
+		hitsoundPlayerStepper.onValueChange = function()
+		{
+			chartEditorSave.data.hitsoundPlayerVol = hitsoundPlayerStepper.value;
+			chartEditorSave.flush();
+		};
+		hitsoundOpponentStepper = new PsychUINumericStepper(objX + 100, objY, 0.2, chartEditorSave.data.hitsoundOpponentVol, 0, 1, 1);
+		hitsoundOpponentStepper.onValueChange = function()
+		{
+			chartEditorSave.data.hitsoundOpponentVol = hitsoundOpponentStepper.value;
+			chartEditorSave.flush();
+		};
+		metronomeStepper = new PsychUINumericStepper(objX + 200, objY, 0.2, chartEditorSave.data.metronomeVol, 0, 1, 1);
+		metronomeStepper.onValueChange = function()
+		{
+			chartEditorSave.data.metronomeVol = metronomeStepper.value;
+			chartEditorSave.flush();
+		};
+
+		objY += 50;
+		instVolumeStepper = new PsychUINumericStepper(objX, objY, 0.1, chartEditorSave.data.instVolume, 0, 1, 1);
+		instVolumeStepper.onValueChange = function()
+		{
+			chartEditorSave.data.instVolume = instVolumeStepper.value;
+			chartEditorSave.flush();
+			updateAudioVolume();
+		};
+		playerVolumeStepper = new PsychUINumericStepper(objX + 100, objY, 0.1, chartEditorSave.data.playerVolume, 0, 1, 1);
+		playerVolumeStepper.onValueChange = function()
+		{
+			chartEditorSave.data.playerVolume = playerVolumeStepper.value;
+			chartEditorSave.flush();
+			updateAudioVolume();
+		};
+		opponentVolumeStepper = new PsychUINumericStepper(objX + 200, objY, 0.1, chartEditorSave.data.opponentVolume, 0, 1, 1);
+		opponentVolumeStepper.onValueChange = function()
+		{
+			chartEditorSave.data.opponentVolume = opponentVolumeStepper.value;
+			chartEditorSave.flush();
+			updateAudioVolume();
+		};
 
 		objY += 25;
-		instMuteCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_mute_text'), 60, updateAudioVolume);
-		playerMuteCheckBox = new PsychUICheckBox(objX + 100, objY, Language.get('charting_mute_text'), 60, updateAudioVolume);
-		opponentMuteCheckBox = new PsychUICheckBox(objX + 200, objY, Language.get('charting_mute_text'), 60, updateAudioVolume);
+		instMuteCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_mute_text'), 60, function()
+		{
+			chartEditorSave.data.instMuted = instMuteCheckBox.checked;
+			chartEditorSave.flush();
+			updateAudioVolume();
+		});
+		instMuteCheckBox.checked = chartEditorSave.data.instMuted;
+		playerMuteCheckBox = new PsychUICheckBox(objX + 100, objY, Language.get('charting_mute_text'), 60, function()
+		{
+			chartEditorSave.data.playerMuted = playerMuteCheckBox.checked;
+			chartEditorSave.flush();
+			updateAudioVolume();
+		});
+		playerMuteCheckBox.checked = chartEditorSave.data.playerMuted;
+		opponentMuteCheckBox = new PsychUICheckBox(objX + 200, objY, Language.get('charting_mute_text'), 60, function()
+		{
+			chartEditorSave.data.opponentMuted = opponentMuteCheckBox.checked;
+			chartEditorSave.flush();
+			updateAudioVolume();
+		});
+		opponentMuteCheckBox.checked = chartEditorSave.data.opponentMuted;
 
 		objY += 50;
 
 		tab_group.add(playbackSlider);
 		tab_group.add(mouseSnapCheckBox);
 		tab_group.add(ignoreProgressCheckBox);
+		tab_group.add(rightClickDeleteCheckBox);
+		tab_group.add(dragHoldCheckBox);
 
 		tab_group.add(new FlxText(hitsoundPlayerStepper.x, hitsoundPlayerStepper.y - 15, 100, Language.get('charting_playersoundhit_text')).setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(new FlxText(hitsoundOpponentStepper.x, hitsoundOpponentStepper.y - 15, 100, Language.get('charting_opposoundhit_text')).setFormat(Paths.font(Language.get('uitab_font'))));
@@ -7312,6 +7731,12 @@ function adaptNotesToNewTimes(oldTimes:Array<Float>)
 				selectedNotes = action.data.old;
 				if(lockedEvents) selectedNotes = selectedNotes.filter((note:MetaNote) -> !note.isEvent);
 				onSelectNote();
+
+			case MODIFY_NOTE:
+				var n:MetaNote = action.data.note;
+				n.setSustainLength(action.data.originalSustain, Conductor.stepCrochet, curZoom);
+				softReloadNotes();
+				onSelectNote();
 		}
 		showOutput('Undo #${currentUndo+1}: ${action.action}');
 		if(action.action != SELECT_NOTE) chartDataDirty = true;
@@ -7345,6 +7770,12 @@ function adaptNotesToNewTimes(oldTimes:Array<Float>)
 				resetSelectedNotes();
 				selectedNotes = action.data.current;
 				if(lockedEvents) selectedNotes = selectedNotes.filter((note:MetaNote) -> !note.isEvent);
+				onSelectNote();
+
+			case MODIFY_NOTE:
+				var n:MetaNote = action.data.note;
+				n.setSustainLength(action.data.modifiedSustain, Conductor.stepCrochet, curZoom);
+				softReloadNotes();
 				onSelectNote();
 		}
 		showOutput('Redo #${currentUndo+1}: ${action.action}');

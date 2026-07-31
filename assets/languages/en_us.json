@@ -112,6 +112,8 @@
 
     "charting_mousescrsnap_text": "Mouse Scroll Snap",
     "charting_ignwarning_text":"Ignore Progress Warnings",
+    "charting_rightclickdel_text":"Right-Click to Erase Notes",
+    "charting_dragcreatesustain_text":"Drag to Create Sustain Notes",
     "charting_musthitsec_text": "Must Hit Section.",
     "charting_gfsec_text": "GF Section.",
     "charting_altanim_text": "Alt Anim",
