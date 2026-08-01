@@ -3914,6 +3914,15 @@ isReplaying = false;
         iconP2.scale.x = FlxMath.lerp(1, iconP2.scale.x, iconLerp);
         iconP2.scale.y = FlxMath.lerp(1, iconP2.scale.y, iconLerp);
     }
+    else if (ClientPrefs.data.iconbopstyle == "Dave") {
+        iconSizeResetTime = Math.max(0, iconSizeResetTime - elapsed / playbackRate);
+        var iconLerp:Float = FlxMath.bound(iconSizeResetTime / ICON_SQUASH_TIME, 0, 1);
+        iconLerp = iconLerp * iconLerp * iconLerp * iconLerp; // 等价于 FlxEase.quartIn
+        iconP1.setGraphicSize(Std.int(FlxMath.lerp(iconP1.frameWidth, iconP1.width, iconLerp)),
+                              Std.int(FlxMath.lerp(iconP1.frameHeight, iconP1.height, iconLerp)));
+        iconP2.setGraphicSize(Std.int(FlxMath.lerp(iconP2.frameWidth, iconP2.width, iconLerp)),
+                              Std.int(FlxMath.lerp(iconP2.frameHeight, iconP2.height, iconLerp)));
+    }
     // Kathy 专属缩放逻辑
     else if (ClientPrefs.data.iconbopstyle == "Kathy") {
         var healthPercent:Float = healthBar.percent;
@@ -3935,9 +3944,8 @@ isReplaying = false;
 				case "Leather": 6;
 				case "SB": 20;
 				case "VSlice(New)": 14;
-				case "VSlice(Old)": 36;
-				case "Dave": 22;
-				case "NovaFlare": 22;
+			case "VSlice(Old)": 36;
+			case "NovaFlare": 22;
 				default: 9;
 			}
 
@@ -6190,9 +6198,18 @@ isReplaying = false;
 						iconP2.scale.set(1.1, 1.1);
 
                 case "Dave":
-                    var funny:Float = Math.max(Math.min(2.4, 3.8), 0.1);
-                    iconP1.setGraphicSize(Std.int(iconP1.width + (100 * (funny + 0.1))), Std.int(iconP1.height - (35 * funny))); // 调整宽度和高度
-                    iconP2.setGraphicSize(Std.int(iconP2.width + (100 * ((2 - funny) + 0.1))), Std.int(iconP2.height - (35 * ((2 - funny) + 0.1)))); // 调整宽度和高度
+                    var funny:Float = FlxMath.bound(healthBar.percent / 50, 0.1, 1.9);
+                    if (playOpponent)
+                    {
+                        iconP2.setGraphicSize(Std.int(iconP2.width + (50 * (funny + 0.1))), Std.int(iconP2.height - (25 * funny)));
+                        iconP1.setGraphicSize(Std.int(iconP1.width + (50 * ((2 - funny) + 0.1))), Std.int(iconP1.height - (25 * ((2 - funny) + 0.1))));
+                    }
+                    else
+                    {
+                        iconP1.setGraphicSize(Std.int(iconP1.width + (50 * (funny + 0.1))), Std.int(iconP1.height - (25 * funny)));
+                        iconP2.setGraphicSize(Std.int(iconP2.width + (50 * ((2 - funny) + 0.1))), Std.int(iconP2.height - (25 * ((2 - funny) + 0.1))));
+                    }
+                    iconSizeResetTime = ICON_SQUASH_TIME;
                 case "Squash":
                     // 压扁风格：beat 上双方 icon 被压扁，随血量/输赢状态表现不同，恢复在 updateIconsScale 中处理
                     var pct:Float = healthBar.percent;
@@ -6307,9 +6324,18 @@ isReplaying = false;
                 	iconP2.scale.set(1.1, 1.1);
                 
             	case "Dave": 
-                    var funny:Float = Math.max(Math.min(1.2, 1.9), 0.1);
-                    iconP1.setGraphicSize(Std.int(iconP1.width + (70 * (funny + 0.1))), Std.int(iconP1.height - (35 * funny)));
-                    iconP2.setGraphicSize(Std.int(iconP2.width + (70 * ((2 - funny) + 0.1))), Std.int(iconP2.height - (35 * ((2 - funny) + 0.1))));
+                    var funny:Float = FlxMath.bound(healthBar.percent / 50, 0.1, 1.9);
+                    if (playOpponent)
+                    {
+                        iconP2.setGraphicSize(Std.int(iconP2.width + (50 * (funny + 0.1))), Std.int(iconP2.height - (25 * funny)));
+                        iconP1.setGraphicSize(Std.int(iconP1.width + (50 * ((2 - funny) + 0.1))), Std.int(iconP1.height - (25 * ((2 - funny) + 0.1))));
+                    }
+                    else
+                    {
+                        iconP1.setGraphicSize(Std.int(iconP1.width + (50 * (funny + 0.1))), Std.int(iconP1.height - (25 * funny)));
+                        iconP2.setGraphicSize(Std.int(iconP2.width + (50 * ((2 - funny) + 0.1))), Std.int(iconP2.height - (25 * ((2 - funny) + 0.1))));
+                    }
+                    iconSizeResetTime = ICON_SQUASH_TIME;
             	case "Squash":
                     var pct:Float = healthBar.percent;
                     var playerWin:Bool = (ClientPrefs.data.threeIcons && pct > 80);
