@@ -44,6 +44,13 @@
     "uitab_font": "unifont-16.0.02.otf",
     "charting_infobar": "MiSans-Bold.otf",
     "score_best_desc": "个人最佳成绩: ",
+
+    "wintitle_dynamic": "启用后窗口标题将显示当前界面、已加载模组，以及游玩中的当前曲目。伪装系统模式下会自动禁用。",
+    "wintitle_state": "在窗口标题中显示当前界面/状态名称（例如主菜单、自由演奏）。",
+    "wintitle_mod": "在窗口标题中显示当前已加载模组的名称。",
+    "wintitle_song": "游玩时在窗口标题中实时显示当前曲目名称。",
+    "wintitle_difficulty": "游玩时，在曲目名称旁边同时显示当前难度。",
+
     "charting_forhelptextpc": "按 F1 键查看帮助",
     "charting_forhelptextm": "按 F 键查看帮助",
     "charting_charting_text": "制谱",

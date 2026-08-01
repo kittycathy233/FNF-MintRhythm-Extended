@@ -31,6 +31,12 @@
     "request_admin_button": "Get Admin Rights",
     "score_best_desc": "PERSONAL BEST:",
 
+    "wintitle_dynamic": "Update the window title with the current screen, loaded mod and (while playing) the current song. Disabled automatically when Fake OS Mode is on.",
+    "wintitle_state": "Display the name of the current screen/state in the window title (e.g. Main Menu, Freeplay).",
+    "wintitle_mod": "Display the currently loaded mod's name in the window title.",
+    "wintitle_song": "While playing, display the current song's name in the window title (real-time).",
+    "wintitle_difficulty": "While playing, also show the current song's difficulty next to its name.",
+
     "game_font": "vcr.ttf",
     "checkbox_font_size": 8,
     "charting_font_size": 10,

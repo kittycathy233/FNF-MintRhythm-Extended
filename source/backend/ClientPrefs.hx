@@ -267,6 +267,13 @@ import openfl.display.StageQuality;
 	public var fakeWindowTitlePreset:String = "Kathy Engine";
 	public var fakeOSVersion:String = "1.5.1";
 
+	// 动态窗口标题（Dynamic Window Title）
+	public var dynamicWindowTitle:Bool = false; // 启用动态窗口标题（显示当前界面/模组/曲目信息）
+	public var windowTitleShowState:Bool = true; // 标题中显示当前界面/状态名称
+	public var windowTitleShowMod:Bool = true; // 标题中显示当前模组名称
+	public var windowTitleShowSong:Bool = true; // 标题中显示当前游玩曲目
+	public var windowTitleShowDifficulty:Bool = false; // 标题中显示当前曲目难度
+
 	// Leather 风格相关
 	public var biggerInfoText:Bool = false; // 更大的信息文本
 	public var loadLeatherIcons:Bool = false; // 启用后优先加载 Leather 格式的小图标（leather/<角色名>-icons.png），支持 Mods 覆盖

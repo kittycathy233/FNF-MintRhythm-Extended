@@ -400,6 +400,9 @@ class Main extends Sprite
 		Lib.current.stage.addEventListener(Event.DEACTIVATE, onAppDeactivate);
 		Lib.current.stage.addEventListener(Event.ACTIVATE, onAppActivate);
 
+		// 动态窗口标题：每帧检测当前状态是否切换，切换时刷新标题
+		Lib.current.stage.addEventListener(Event.ENTER_FRAME, onWindowTitleFrame);
+
 		#if (cpp && windows && !mobile)
 		// 延迟初始化窗口关闭回调，确保窗口完全创建后再设置
 		haxe.Timer.delay(function()
@@ -586,23 +589,66 @@ class Main extends Sprite
 			if (ClientPrefs.data.fakeOSMode)
 			{
 				Lib.current.stage.window.title = ClientPrefs.data.fakeWindowTitle;
+				return;
 			}
-			else
-			{
-				var baseTitle:String = Application.current.meta.get('title');
-				if (baseTitle == null) baseTitle = "Kathy Engine";
 
-				#if (cpp && windows && !mobile)
-				if (isAdminCached)
+			var baseTitle:String = Application.current.meta.get('title');
+			if (baseTitle == null) baseTitle = "Kathy Engine";
+
+			var adminSuffix:String = "";
+			#if (cpp && windows && !mobile)
+			if (isAdminCached) adminSuffix = " (Administrator)";
+			#end
+
+			// 未启用动态窗口标题时，仅显示基础标题
+			if (!ClientPrefs.data.dynamicWindowTitle)
+			{
+				Lib.current.stage.window.title = baseTitle + adminSuffix;
+				return;
+			}
+
+			var parts:Array<String> = [baseTitle + adminSuffix];
+
+			// 当前模组名称
+			if (ClientPrefs.data.windowTitleShowMod)
+			{
+				var modName:String = Mods.currentModDirectory;
+				if (modName != null && modName.length > 0)
+					parts.push("Mod: " + modName);
+			}
+
+			// 游玩中：显示当前曲目（实时信息）
+			if (Std.isOfType(FlxG.state, PlayState) && PlayState.SONG != null)
+			{
+				if (ClientPrefs.data.windowTitleShowSong)
 				{
-					Lib.current.stage.window.title = '$baseTitle (Administrator)';
-				}
-				else
-				#end
-				{
-					Lib.current.stage.window.title = baseTitle;
+					var songStr:String = PlayState.SONG.song;
+					if (ClientPrefs.data.windowTitleShowDifficulty)
+						songStr += " (" + Difficulty.getString() + ")";
+					parts.push("Playing: " + songStr);
 				}
 			}
+			else if (ClientPrefs.data.windowTitleShowState)
+			{
+				// 非游玩状态：显示当前界面/状态名称
+				var stateName:String = (FlxG.state == null) ? "Unknown" : Type.getClassName(Type.getClass(FlxG.state)).split('.').pop();
+				parts.push("Screen: " + stateName);
+			}
+
+			Lib.current.stage.window.title = parts.join(" | ");
+		}
+	}
+
+
+	// 每帧检测状态切换（仅在状态实例变化时刷新窗口标题，避免重复设置）
+	private static var _lastWindowTitleState:Dynamic = null;
+	private static function onWindowTitleFrame(_):Void
+	{
+		var cur = FlxG.state;
+		if (cur != _lastWindowTitleState)
+		{
+			_lastWindowTitleState = cur;
+			updateWindowTitle();
 		}
 	}
 

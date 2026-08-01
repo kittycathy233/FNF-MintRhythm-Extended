@@ -105,6 +105,13 @@
 
     "score_best_desc": "最佳個人成績：",
 
+    "wintitle_dynamic": "啟用後視窗標題將顯示目前介面、已載入模組，以及遊玩中的目前曲目。偽裝系統模式下會自動停用。",
+    "wintitle_state": "在視窗標題中顯示目前介面/狀態名稱（例如主選單、自由演奏）。",
+    "wintitle_mod": "在視窗標題中顯示目前已載入模組的名稱。",
+    "wintitle_song": "遊玩時在視窗標題中即時顯示目前曲目名稱。",
+    "wintitle_difficulty": "遊玩時，在曲目名稱旁邊同時顯示目前難度。",
+
+
     "charting_new_tab1": "  新建",
     "charting_opchart_tab1": "  開啟譜面...",
     "charting_opautosave_tab1": "  開啟自動儲存...",

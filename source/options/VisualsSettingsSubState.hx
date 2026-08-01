@@ -342,7 +342,43 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		STRING,
 		["1.0.0", "1.0.1", "1.1.0", "1.2.0", "1.3.0", "1.3.1", "1.4.0", "1.4.1", "1.5.0", "1.5.1"]);
 	addOption(option);
-	option.onChange = onChangeFakeOSMode;
+		option.onChange = onChangeFakeOSMode;
+
+		// ===== 动态窗口标题 (Dynamic Window Title) =====
+		var option:Option = new Option("Dynamic Window Title",
+			Language.get('wintitle_dynamic'),
+			'dynamicWindowTitle',
+			BOOL);
+		option.onChange = function() { Main.updateWindowTitle(); };
+		addOption(option);
+
+		var option:Option = new Option("Show Current Screen",
+			Language.get('wintitle_state'),
+			'windowTitleShowState',
+			BOOL);
+		option.onChange = function() { Main.updateWindowTitle(); };
+		addOption(option);
+
+		var option:Option = new Option("Show Current Mod",
+			Language.get('wintitle_mod'),
+			'windowTitleShowMod',
+			BOOL);
+		option.onChange = function() { Main.updateWindowTitle(); };
+		addOption(option);
+
+		var option:Option = new Option("Show Current Song",
+			Language.get('wintitle_song'),
+			'windowTitleShowSong',
+			BOOL);
+		option.onChange = function() { Main.updateWindowTitle(); };
+		addOption(option);
+
+		var option:Option = new Option("Show Song Difficulty",
+			Language.get('wintitle_difficulty'),
+			'windowTitleShowDifficulty',
+			BOOL);
+		option.onChange = function() { Main.updateWindowTitle(); };
+		addOption(option);
 
 		super();
 		add(notes);
