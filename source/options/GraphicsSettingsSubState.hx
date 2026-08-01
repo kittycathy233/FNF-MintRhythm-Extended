@@ -121,6 +121,17 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		option.displayFormat = '%v';
 		addOption(option);
 
+		// 资源加载线程数（默认 1 = 单线程；数值越大加载越并行，但更耗内存、低端机可能 OOM）
+		var option:Option = new Option('Loading Threads',
+			Language.get("loading_threads_desc"),
+			'loadingThreadCount',
+			INT);
+		option.minValue = 1;
+		option.maxValue = 16;
+		option.defaultValue = 1;
+		option.displayFormat = '%v';
+		addOption(option);
+
 		super();
 		insert(3, aris);
 

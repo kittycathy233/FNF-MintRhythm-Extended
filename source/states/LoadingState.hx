@@ -421,13 +421,17 @@ class LoadingState extends MusicBeatState
 
 	static function _startPool()
 	{
-		#if MULTITHREADED_LOADING
-		// Due to the Main thread and Discord thread, we decrease it by 2.
-		// 但中国大陆似乎不常用discord
-		var threadCount:Int = Std.int(Math.max(4, CoolUtil.getCPUThreadsCount() - #if DISCORD_ALLOWED 2 #else 1 #end));
-		#else
-		var threadCount:Int = 4;
-		#end
+		// _startPool() 会被 prepareToSong() / getNextState() / _threadFunc() 各调用一次，
+		// 以前每次都 new 一个新池并丢掉旧引用（旧池的线程永远不会被 shutdown），
+		// 导致每进一次歌就泄漏两个线程池，玩得越久卡顿越明显。
+		// 这里改成复用：池只在 _loaded() 里被 shutdown 并置 null。
+		if (threadPool != null)
+			return;
+
+		// 使用「Loading Threads」设置（默认 1 = 单线程），限制在 [1, 16] 之间。
+		// 1 表示完全串行加载，最省内存、最稳；调大可并行预加载资源，但更耗内存、低端机可能 OOM。
+		var pref:Int = ClientPrefs.data.loadingThreadCount;
+		var threadCount:Int = Std.int(Math.max(1, Math.min(pref < 1 ? 1 : pref, 16)));
 		threadPool = new FixedThreadPool(threadCount);
 	}
 

@@ -156,6 +156,33 @@ class Song
 		return PlayState.SONG;
 	}
 
+	/**
+	 * 只计算谱面 JSON 的路径，不读文件。开销极小，可以在主线程调用后把路径丢给后台线程去读。
+	 */
+	public static function getChartPath(jsonInput:String, ?folder:String):String
+	{
+		if(folder == null) folder = jsonInput;
+		return Paths.json('${Paths.formatToSongPath(folder)}/${Paths.formatToSongPath(jsonInput)}');
+	}
+
+	/**
+	 * 把一份**已经解析好**的谱面应用成当前谱面。
+	 * 用于缓存命中 / 后台线程预解析的结果，避免重复 Json.parse。
+	 */
+	public static function applyChart(songJson:SwagSong, folder:String, ?path:String):SwagSong
+	{
+		if(songJson == null) return null;
+
+		PlayState.SONG = songJson;
+		loadedSongName = folder;
+		chartPath = (path != null ? path : _lastPath);
+		#if windows
+		if(chartPath != null) chartPath = chartPath.replace('/', '\\');
+		#end
+		StageData.loadDirectory(songJson);
+		return songJson;
+	}
+
 	static var _lastPath:String;
 	public static function getChart(jsonInput:String, ?folder:String):SwagSong
 	{

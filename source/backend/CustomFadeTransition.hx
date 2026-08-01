@@ -331,11 +331,13 @@ class CustomFadeTransition extends FlxSubState {
             transBlack.screenCenter();
             add(transBlack);
 
-            transBG = new FlxSprite( 0, 0).loadGraphic(Paths.image('menuExtend/CustomFadeTransition/BA/Login_Pad_BG'));
-            transBG.updateHitbox();
-            transBG.scrollFactor.set();
-            transBG.screenCenter();
-           // add(transBG);
+            // transBG 没有被 add 到显示列表，却每次转场都要同步解码一张整屏 PNG，
+            // 是纯粹的主线程开销，这里不再加载。若之后要用回来，把下面几行取消注释即可。
+            // transBG = new FlxSprite(0, 0).loadGraphic(Paths.image('menuExtend/CustomFadeTransition/BA/Login_Pad_BG'));
+            // transBG.updateHitbox();
+            // transBG.scrollFactor.set();
+            // transBG.screenCenter();
+            // add(transBG);
 
             // 图片加载（完全按照NovaFlare的方式）
             baLoadingPics = new FlxSprite(0, 0).loadGraphic(Paths.image(kathyImages[ClientPrefs.data.randomIndex]));

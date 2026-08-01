@@ -51,6 +51,7 @@ import openfl.display.StageQuality;
 	public var stageQuality:String = 'MEDIUM'; // 矢量/文本渲染质量(StageQuality)：LOW/MEDIUM/HIGH/BEST，移动端建议 MEDIUM 及以下
 	public var comboSpritePooling:Bool = true; // rating/combo/数字 精灵对象池：true=复用(省GC、减命中卡顿)，false=回退传统 new/destroy(最大兼容性)
 	public var comboSpritePoolSize:Int = 32; // 对象池容量上限（0=无限增长模式，>0=循环复用模式），推荐值16-64
+	public var loadingThreadCount:Int = 1; // 进入歌曲时资源加载的线程数（1=单线程，越大并行越高但更耗内存/可能触发OOM）
 	public var hideHud:Bool = false;
 	public var noteOffset:Int = 0;
 	public var arrowRGB:Array<Array<FlxColor>> = [

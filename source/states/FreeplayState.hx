@@ -28,19 +28,119 @@ class FreeplayState extends MusicBeatState
 
 	// 谱面数据缓存：避免试听和进入游戏时重复加载同一谱面
 	private static var _songDataCache:Map<String, SwagSong> = new Map();
+	private static var _songPathCache:Map<String, String> = new Map();
+
+	// 后台预解析：在玩家还在浏览列表时就把选中曲目的谱面 JSON 解析好，
+	// 这样按下确认键时不需要在主线程做 File.getContent + Json.parse，避免掉帧卡顿。
+	#if (sys && FEATURE_FILESYSTEM)
+	private static var _prefetchMutex:sys.thread.Mutex = new sys.thread.Mutex();
+	private static var _prefetchDone:Map<String, SwagSong> = new Map(); // 仅在持锁时访问
+	private static var _prefetchBusy:Map<String, Bool> = new Map(); // 仅主线程访问
+	#end
+
+	// 把后台线程解析好的谱面并入主缓存（只在主线程调用）
+	private static function drainPrefetched():Void
+	{
+		#if (sys && FEATURE_FILESYSTEM)
+		_prefetchMutex.acquire();
+		for (key => data in _prefetchDone)
+		{
+			_prefetchBusy.remove(key);
+			if (data != null && !_songDataCache.exists(key))
+				_songDataCache.set(key, data);
+		}
+		_prefetchDone.clear();
+		_prefetchMutex.release();
+		#end
+	}
 
 	// 获取缓存的谱面数据，若不存在则加载并缓存
 	private static function getCachedSongData(folder:String, poop:String, songLowercase:String):SwagSong
 	{
+		drainPrefetched();
+
 		var cacheKey:String = folder + '_' + poop;
 		var songData:SwagSong = _songDataCache.get(cacheKey);
 		if (songData == null)
 		{
 			songData = Song.loadFromJson(poop, songLowercase);
 			if (songData != null)
+			{
 				_songDataCache.set(cacheKey, songData);
+				_songPathCache.set(cacheKey, Song.chartPath);
+			}
+			return songData;
 		}
-		return songData;
+
+		// 命中缓存时同样要重新应用全局状态，否则 PlayState.SONG 还停留在上一次加载的谱面
+		return Song.applyChart(songData, songLowercase, _songPathCache.get(cacheKey));
+	}
+
+	// 当前想要预解析的曲目 key，以及停留多久后才真正开始预解析（避免快速滚动列表时狂开线程）
+	var prefetchKey:String = null;
+	var prefetchDelay:Float = 0;
+	private static inline var PREFETCH_DELAY:Float = 1.0;
+
+	function updateChartPrefetch(elapsed:Float):Void
+	{
+		#if (sys && FEATURE_FILESYSTEM)
+		drainPrefetched();
+
+		if (player.playingMusic || songs.length == 0 || curDifficulty < 0 || curSelected < 0 || curSelected >= songs.length)
+			return;
+
+		var meta:SongMetadata = songs[curSelected];
+		var songLowercase:String = Paths.formatToSongPath(meta.songName);
+		var poop:String = Highscore.formatSong(songLowercase, curDifficulty);
+		var cacheKey:String = meta.folder + '_' + poop;
+
+		if (cacheKey != prefetchKey)
+		{
+			prefetchKey = cacheKey;
+			prefetchDelay = PREFETCH_DELAY;
+			return;
+		}
+
+		if (prefetchDelay <= 0)
+			return;
+
+		prefetchDelay -= elapsed;
+		if (prefetchDelay > 0)
+			return;
+		prefetchDelay = 0;
+
+		if (_songDataCache.exists(cacheKey) || _prefetchBusy.exists(cacheKey))
+			return;
+
+		// 路径解析必须留在主线程（依赖 Mods.currentModDirectory 等全局状态）
+		var path:String = Song.getChartPath(poop, songLowercase);
+		if (path == null || !FileSystem.exists(path))
+			return; // 打包进 assets 的谱面走原来的同步分支
+
+		// 先在主线程触发 ExtraKeysHandler 的懒初始化，保证后台线程里只做只读访问
+		if (backend.ExtraKeysHandler.instance == null)
+			return;
+
+		_prefetchBusy.set(cacheKey, true);
+		_songPathCache.set(cacheKey, path);
+
+		sys.thread.Thread.create(() ->
+		{
+			var parsed:SwagSong = null;
+			try
+			{
+				parsed = Song.parseJSON(File.getContent(path), poop);
+			}
+			catch (e:Dynamic)
+			{
+				parsed = null;
+			}
+
+			_prefetchMutex.acquire();
+			_prefetchDone.set(cacheKey, parsed);
+			_prefetchMutex.release();
+		});
+		#end
 	}
 
 	var songs:Array<SongMetadata> = [];
@@ -448,6 +548,9 @@ class FreeplayState extends MusicBeatState
 			searchContainer.visible = true;
 		if (!player.playingMusic && !modText.visible)
 			modText.visible = true;
+
+		// 后台预解析当前选中曲目的谱面，让按下确认键时直接命中缓存
+		updateChartPrefetch(elapsed);
 
 		if (FlxG.sound.music.volume < 0.7)
 			FlxG.sound.music.volume += 0.5 * elapsed;
@@ -1502,6 +1605,13 @@ class FreeplayState extends MusicBeatState
 
 		// 清理谱面缓存，释放内存
 		_songDataCache.clear();
+		_songPathCache.clear();
+		#if (sys && FEATURE_FILESYSTEM)
+		_prefetchMutex.acquire();
+		_prefetchDone.clear();
+		_prefetchMutex.release();
+		_prefetchBusy.clear();
+		#end
 
 		super.destroy();
 
