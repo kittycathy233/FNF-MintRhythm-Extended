@@ -3898,10 +3898,24 @@ isReplaying = false;
 	}
 
 	// Health icon updaters
+	var iconSizeResetTime:Float = 0; // 压扁风格(Squash)的恢复计时器：beat 触发后从 ICON_SQUASH_TIME 递减到 0，期间平滑恢复为正常大小
+	var ICON_SQUASH_TIME:Float = 2.0; // 压扁风格恢复时长（秒），数值越大回弹越慢越柔和
 	public dynamic function updateIconsScale(elapsed:Float)
 {
+    // 压扁风格(Squash)：beat 上双方 icon 被压扁（一方变矮胖、一方变高瘦），
+    // 并随血量/输赢状态表现不同，随后在 0.8 秒内平滑过渡回正常大小（参考 JSE 的 Dave and Bambi）。
+    if (ClientPrefs.data.iconbopstyle == "Squash")
+    {
+        iconSizeResetTime = Math.max(0, iconSizeResetTime - elapsed / playbackRate);
+        var t:Float = FlxMath.bound(iconSizeResetTime / ICON_SQUASH_TIME, 0, 1);
+        var iconLerp:Float = t * t * t * t; // 等价于 FlxEase.quartIn：开头慢、结尾快地恢复
+        iconP1.scale.x = FlxMath.lerp(1, iconP1.scale.x, iconLerp);
+        iconP1.scale.y = FlxMath.lerp(1, iconP1.scale.y, iconLerp);
+        iconP2.scale.x = FlxMath.lerp(1, iconP2.scale.x, iconLerp);
+        iconP2.scale.y = FlxMath.lerp(1, iconP2.scale.y, iconLerp);
+    }
     // Kathy 专属缩放逻辑
-    if (ClientPrefs.data.iconbopstyle == "Kathy") {
+    else if (ClientPrefs.data.iconbopstyle == "Kathy") {
         var healthPercent:Float = healthBar.percent;
         var targetScale:Float = 1.0;
         
@@ -6175,11 +6189,35 @@ isReplaying = false;
 						iconP1.scale.set(1.1, 1.1);
 						iconP2.scale.set(1.1, 1.1);
 
-					case "Dave":
-						var funny:Float = Math.max(Math.min(2.4, 3.8), 0.1);
-						iconP1.setGraphicSize(Std.int(iconP1.width + (100 * (funny + 0.1))), Std.int(iconP1.height - (35 * funny))); // 调整宽度和高度
+                case "Dave":
+                    var funny:Float = Math.max(Math.min(2.4, 3.8), 0.1);
+                    iconP1.setGraphicSize(Std.int(iconP1.width + (100 * (funny + 0.1))), Std.int(iconP1.height - (35 * funny))); // 调整宽度和高度
                     iconP2.setGraphicSize(Std.int(iconP2.width + (100 * ((2 - funny) + 0.1))), Std.int(iconP2.height - (35 * ((2 - funny) + 0.1)))); // 调整宽度和高度
-					default:
+                case "Squash":
+                    // 压扁风格：beat 上双方 icon 被压扁，随血量/输赢状态表现不同，恢复在 updateIconsScale 中处理
+                    var pct:Float = healthBar.percent;
+                    var playerWin:Bool = (ClientPrefs.data.threeIcons && pct > 80);
+                    var playerLose:Bool = (pct < 20);
+                    var playerIcon:HealthIcon = playOpponent ? iconP2 : iconP1;
+                    var oppIcon:HealthIcon = playOpponent ? iconP1 : iconP2;
+                    if (playerWin)
+                    {
+                        playerIcon.scale.set(0.85, 1.25); // 领先方被拉长（高瘦）
+                        oppIcon.scale.set(1.25, 0.8);   // 落后方被压扁（矮胖）
+                    }
+                    else if (playerLose)
+                    {
+                        playerIcon.scale.set(1.25, 0.8);
+                        oppIcon.scale.set(0.85, 1.25);
+                    }
+                    else
+                    {
+                        var off:Float = (pct - 50) / 50; // -1 ~ 1
+                        playerIcon.scale.set(1.15 + 0.1 * off, 0.85 - 0.1 * off);
+                        oppIcon.scale.set(1.15 - 0.1 * off, 0.85 + 0.1 * off);
+                    }
+                    iconSizeResetTime = ICON_SQUASH_TIME;
+                default:
 						iconP1.scale.set(1.2, 1.2);
 						iconP2.scale.set(1.2, 1.2);
 				}
@@ -6272,6 +6310,29 @@ isReplaying = false;
                     var funny:Float = Math.max(Math.min(1.2, 1.9), 0.1);
                     iconP1.setGraphicSize(Std.int(iconP1.width + (70 * (funny + 0.1))), Std.int(iconP1.height - (35 * funny)));
                     iconP2.setGraphicSize(Std.int(iconP2.width + (70 * ((2 - funny) + 0.1))), Std.int(iconP2.height - (35 * ((2 - funny) + 0.1))));
+            	case "Squash":
+                    var pct:Float = healthBar.percent;
+                    var playerWin:Bool = (ClientPrefs.data.threeIcons && pct > 80);
+                    var playerLose:Bool = (pct < 20);
+                    var playerIcon:HealthIcon = playOpponent ? iconP2 : iconP1;
+                    var oppIcon:HealthIcon = playOpponent ? iconP1 : iconP2;
+                    if (playerWin)
+                    {
+                        playerIcon.scale.set(0.85, 1.25);
+                        oppIcon.scale.set(1.25, 0.8);
+                    }
+                    else if (playerLose)
+                    {
+                        playerIcon.scale.set(1.25, 0.8);
+                        oppIcon.scale.set(0.85, 1.25);
+                    }
+                    else
+                    {
+                        var off:Float = (pct - 50) / 50;
+                        playerIcon.scale.set(1.15 + 0.1 * off, 0.85 - 0.1 * off);
+                        oppIcon.scale.set(1.15 - 0.1 * off, 0.85 + 0.1 * off);
+                    }
+                    iconSizeResetTime = ICON_SQUASH_TIME;
             	default:
                 	iconP1.scale.set(1.2, 1.2);
                 	iconP2.scale.set(1.2, 1.2);
