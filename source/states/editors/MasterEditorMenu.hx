@@ -21,7 +21,7 @@ class MasterEditorMenu extends MusicBeatState
 		'Dialogue Editor',
 		'Dialogue Portrait Editor',
 		'Note Splash Editor',
-		'Hold Cover Editor',
+		'Hold Cover Editor (WIP)',
 		'Spine Viewer (WIP)',
 		'Story Player (WIP)',
 		'Story Editor (WIP)'
@@ -131,7 +131,7 @@ class MasterEditorMenu extends MusicBeatState
 					LoadingState.loadAndSwitchState(new DialogueCharacterEditorState(), false);
 			case 'Note Splash Editor':
 				MusicBeatState.switchState(new NoteSplashEditorState());
-			case 'Hold Cover Editor':
+			case 'Hold Cover Editor (WIP)':
 				MusicBeatState.switchState(new HoldCoverEditorState());
 				case 'Spine Viewer (WIP)':
 					MusicBeatState.switchState(new SpineViewerState());
