@@ -385,6 +385,12 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			['Psych', 'OS', 'Kathy', 'Leather', 'SB', 'Vanilla', 'VSlice(New)', 'VSlice(Old)', 'Codename', 'Dave', 'Squash', 'NovaFlare', 'NONE']);
 		addOption(option);
 
+		option = new Option('IconBop Normalize',
+			Language.get("iconbop_normalize_desc"),
+			'iconbopNormalize',
+			BOOL);
+		addOption(option);
+
 		option = new Option('ScoreTxt Style',
 			Language.get("scoretxt_style_desc"),
 			'scoretxtstyle',

@@ -3900,13 +3900,24 @@ isReplaying = false;
 	// Health icon updaters
 	var iconSizeResetTime:Float = 0; // 压扁风格(Squash)的恢复计时器：beat 触发后从 ICON_SQUASH_TIME 递减到 0，期间平滑恢复为正常大小
 	var ICON_SQUASH_TIME:Float = 2.0; // 压扁风格恢复时长（秒），数值越大回弹越慢越柔和
+
+	// 图标缩放回弹的插值因子：
+	// - 归一化(iconbopNormalize=true)：1 - e^(-k·dt·playbackRate)，任意刷新率/倍速下表现一致（高刷屏不再偏快/偏慢）
+	// - 关闭：沿用旧版逐帧线性公式 k·dt·playbackRate，保留旧手感（低帧下可能偏离）
+	private function iconBopLerpFactor(perSec:Float, dt:Float):Float
+	{
+		if (ClientPrefs.data.iconbopNormalize)
+			return 1 - Math.exp(-perSec * playbackRate * dt);
+		return perSec * playbackRate * dt;
+	}
+
 	public dynamic function updateIconsScale(elapsed:Float)
 {
     // 压扁风格(Squash)：beat 上双方 icon 被压扁（一方变矮胖、一方变高瘦），
     // 并随血量/输赢状态表现不同，随后在 0.8 秒内平滑过渡回正常大小（参考 JSE 的 Dave and Bambi）。
     if (ClientPrefs.data.iconbopstyle == "Squash")
     {
-        iconSizeResetTime = Math.max(0, iconSizeResetTime - elapsed / playbackRate);
+        iconSizeResetTime = Math.max(0, iconSizeResetTime - elapsed * playbackRate);
         var t:Float = FlxMath.bound(iconSizeResetTime / ICON_SQUASH_TIME, 0, 1);
         var iconLerp:Float = t * t * t * t; // 等价于 FlxEase.quartIn：开头慢、结尾快地恢复
         iconP1.scale.x = FlxMath.lerp(1, iconP1.scale.x, iconLerp);
@@ -3915,7 +3926,7 @@ isReplaying = false;
         iconP2.scale.y = FlxMath.lerp(1, iconP2.scale.y, iconLerp);
     }
     else if (ClientPrefs.data.iconbopstyle == "Dave") {
-        iconSizeResetTime = Math.max(0, iconSizeResetTime - elapsed / playbackRate);
+        iconSizeResetTime = Math.max(0, iconSizeResetTime - elapsed * playbackRate);
         var iconLerp:Float = FlxMath.bound(iconSizeResetTime / ICON_SQUASH_TIME, 0, 1);
         iconLerp = iconLerp * iconLerp * iconLerp * iconLerp; // 等价于 FlxEase.quartIn
         iconP1.setGraphicSize(Std.int(FlxMath.lerp(iconP1.frameWidth, iconP1.width, iconLerp)),
@@ -3932,11 +3943,12 @@ isReplaying = false;
         var scaleIntensity:Float = 1 - Math.abs(healthPercent - 50) / 50;
         targetScale += 0.1 * scaleIntensity;
         
-        // 平滑缩放过渡
-        iconP1.scale.x = FlxMath.lerp(iconP1.scale.x, targetScale, elapsed * 12);
-        iconP1.scale.y = FlxMath.lerp(iconP1.scale.y, targetScale, elapsed * 12);
-        iconP2.scale.x = FlxMath.lerp(iconP2.scale.x, targetScale, elapsed * 12);
-        iconP2.scale.y = FlxMath.lerp(iconP2.scale.y, targetScale, elapsed * 12);
+        // 平滑缩放过渡（归一化：任意刷新率下回弹速度一致）
+        var kathyFactor:Float = iconBopLerpFactor(12, elapsed);
+        iconP1.scale.x = FlxMath.lerp(iconP1.scale.x, targetScale, kathyFactor);
+        iconP1.scale.y = FlxMath.lerp(iconP1.scale.y, targetScale, kathyFactor);
+        iconP2.scale.x = FlxMath.lerp(iconP2.scale.x, targetScale, kathyFactor);
+        iconP2.scale.y = FlxMath.lerp(iconP2.scale.y, targetScale, kathyFactor);
     } else {
 			var speedMultiplier:Float = switch (ClientPrefs.data.iconbopstyle)
 			{
@@ -3957,10 +3969,13 @@ isReplaying = false;
 				var rate:Float;
 				var targetScale:Float;
 				if (ClientPrefs.data.iconbopstyle == "Leather") {
-					rate = 0.1 / ((Main.game != null ? Main.game.framerate : 60) / 60) * playbackRate;
+					// Leather 原生逐帧 0.1 衰减（每 1/60 秒衰减 10%）→ 归一化后换算为每秒收敛速率 0.1*60
+					rate = ClientPrefs.data.iconbopNormalize
+						? 1 - Math.exp(-(0.1 * 60) * playbackRate * elapsed)
+						: 0.1 / ((Main.game != null ? Main.game.framerate : 60) / 60) * playbackRate;
 					targetScale = iconP1.startSize;
 				} else {
-					rate = elapsed * speedMultiplier * playbackRate;
+					rate = iconBopLerpFactor(speedMultiplier, elapsed);
 					targetScale = 1;
 				}
 				iconP1.scale.x = FlxMath.lerp(iconP1.scale.x, targetScale, rate);

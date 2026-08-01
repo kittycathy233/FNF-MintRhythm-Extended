@@ -164,6 +164,7 @@ import openfl.display.StageQuality;
 	public var scoretxtbounce:Bool = false;
 	public var exratbounce:Bool = false;
 	public var iconbopstyle:String = 'Kathy';
+	public var iconbopNormalize:Bool = true; // 图标回弹是否按刷新率归一化（true=任意刷新率表现一致，高刷屏不再偏快/偏慢）
 	public var healthbarstyle:String = 'Psych';
 	public var ratingsAlpha:Float = 1;
 	public var customFadeStyle:String = 'V-Slice';
