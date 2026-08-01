@@ -494,17 +494,10 @@ class ModsMenuState extends MusicBeatState
 
 			if(lastMode == hoveringOnMods)
 			{
-				if(hoveringOnMods)
-				{
-					if(controls.UI_RIGHT_P)
-					{
-						hoveringOnMods = false;
-						var button = getButton();
-						button.ignoreCheck = button.onFocus = false;
-						curSelectedButton = 0;
-						changeSelectedButton();
-					}
-				}
+			if(hoveringOnMods)
+			{
+				// Bottom buttons are mouse/touch only; keyboard never enters them.
+			}
 				else 
 				{
 					if(controls.BACK)
@@ -526,11 +519,9 @@ class ModsMenuState extends MusicBeatState
 							switch(curSelectedButton)
 							{
 								case -3:
-									curSelectedButton = -2;
-									changeSelectedButton();
+									changeSelectedButton(1);
 								case -2:
-									curSelectedButton = -1;
-									changeSelectedButton();
+									changeSelectedButton(1);
 								case -1:
 									curSelectedMod = 0;
 									hoveringOnMods = true;
@@ -544,11 +535,9 @@ class ModsMenuState extends MusicBeatState
 							switch(curSelectedButton)
 							{
 								case -1:
-									curSelectedButton = -2;
-									changeSelectedButton();
+									changeSelectedButton(-1);
 								case -2:
-									curSelectedButton = -3;
-									changeSelectedButton();
+									changeSelectedButton(-1);
 								case -3:
 									curSelectedMod = 0;
 									hoveringOnMods = true;
@@ -568,20 +557,14 @@ class ModsMenuState extends MusicBeatState
 					else if(controls.UI_LEFT_P)
 					{
 						if(curSelectedButton == -2) // Disable All -> Enable All
-						{
-							curSelectedButton = -1;
-							changeSelectedButton();
-						}
+							changeSelectedButton(1);
 						else if(curSelectedButton < 0)
 							changeSelectedButton(-1);
 					}
 					else if(controls.UI_RIGHT_P)
 					{
 						if(curSelectedButton == -1) // Enable All -> Disable All
-						{
-							curSelectedButton = -2;
-							changeSelectedButton();
-						}
+							changeSelectedButton(-1);
 						else if(curSelectedButton < 0)
 							changeSelectedButton(1);
 					}
@@ -670,7 +653,6 @@ class ModsMenuState extends MusicBeatState
 			button.ignoreCheck = button.onFocus = false;
 		}
 
-		var lastSelected = curSelectedMod;
 		curSelectedMod += add;
 
 		var limited:Bool = false;
@@ -685,25 +667,9 @@ class ModsMenuState extends MusicBeatState
 			limited = true;
 		}
 		
+		// Bottom buttons are mouse/touch only; keyboard navigation stays within the mod list.
 		if(!controls.mobileC && !isMouseWheel && limited && Math.abs(add) == 1)
-		{
-			if(add < 0) // pressed up on first mod
-			{
-				curSelectedMod = lastSelected;
-				hoveringOnMods = false;
-				curSelectedButton = -1; // Enable All
-				changeSelectedButton();
-				return;
-			}
-			else // pressed down on last mod
-			{
-				curSelectedMod = lastSelected;
-				hoveringOnMods = false;
-				curSelectedButton = -1; // Enable All (start from top)
-				changeSelectedButton();
-				return;
-			}
-		}
+			return;
 		
 		holdingMod = false;
 		holdingElapsed = 0;
@@ -782,7 +748,7 @@ class ModsMenuState extends MusicBeatState
 	}
 
 	var waitingToRestart:Bool = false;
-	function moveModToPosition(?mod:String = null, position:Int = 0)
+	function moveModToPosition(?position:Int = 0, ?mod:String = null)
 	{
 		if(mod == null) mod = modsList.all[curSelectedMod];
 		if(position >= modsList.all.length) position = 0;
