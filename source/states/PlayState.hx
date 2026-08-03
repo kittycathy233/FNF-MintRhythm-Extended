@@ -13,6 +13,7 @@ import sys.FileSystem;
 #end
 
 import flixel.FlxBasic;
+import flixel.graphics.FlxGraphic;
 import flixel.FlxObject;
 import flixel.FlxSubState;
 import flixel.util.FlxSort;
@@ -4526,6 +4527,14 @@ isReplaying = false;
 	// checkModHasImage 缓存：避免每次note命中都执行文件系统查询
 	var _modImageCache:Map<String, Bool> = null;
 
+	// 评分弹窗贴图缓存：在 cachePopUpScore() 中一次性预存 FlxGraphic 引用，
+	// 命中时直接 loadGraphic(缓存引用)，省掉每次命中 6 次 Paths.image() 的路径计算与 Map 查找。
+	// 按 rating.name 索引（perfect/sick/good/bad/shit），值已是 fallback 规则（marvelous→perfect→sick）后的最终贴图。
+	var _ratingGfxCache:Map<String, FlxGraphic> = null;
+	var _exRatingGfxCache:Map<String, FlxGraphic> = null;
+	var _numGfxCache:Array<FlxGraphic> = null;
+	var _comboGfx:FlxGraphic = null;
+
 	private function checkModHasImage(imagePath:String):Bool
 	{
 		if (_modImageCache == null) _modImageCache = [];
@@ -4553,14 +4562,45 @@ isReplaying = false;
 		if (stageUI != "normal")
 			uiFolder = uiPrefix + "UI/";
 
+		// 预存 FlxGraphic 引用：命中时直接 loadGraphic(缓存引用)，避免每次命中都调用 Paths.image()
+		// 重新计算路径字符串、查 currentTrackedAssets Map。同时在此处预先应用 marvelous→perfect→sick
+		// 的 fallback 规则，使 popUpScore 命中路径只做一次 Map 查表。
+		_ratingGfxCache = [];
+		_exRatingGfxCache = [];
 		for (rating in ratingsData)
-			Paths.image(uiFolder + rating.image + uiPostfix + ratingexspr);
-		for (theEXrating in ratingsData)
-			Paths.image(uiFolder + theEXrating.image + uiPostfix + exratingexspr);
+		{
+			// 普通 rating：按 fallback 规则确定最终贴图名（与原 popUpScore 中的判断一致）
+			var ratingImageToUse:String = rating.image;
+			if (rating.name == 'perfect' && ClientPrefs.data.fallbackPerfectToSick)
+			{
+				var hasMarvelousImg:Bool = checkModHasImage(uiFolder + 'marvelous' + ratingexspr + uiPostfix);
+				var hasPerfectImg:Bool = checkModHasImage(uiFolder + 'perfect' + ratingexspr + uiPostfix);
+				if (hasMarvelousImg)
+					ratingImageToUse = 'marvelous';
+				else if (!hasPerfectImg)
+					ratingImageToUse = 'sick';
+			}
+			_ratingGfxCache.set(rating.name, Paths.image(uiFolder + ratingImageToUse + ratingexspr + uiPostfix));
+
+			// EX rating：同样应用 fallback 规则
+			var exRatingImageToUse:String = rating.image;
+			if (rating.name == 'perfect' && ClientPrefs.data.fallbackEXPerfectToSick)
+			{
+				var hasMarvelousEXImg:Bool = checkModHasImage(uiFolder + 'marvelous' + exratingexspr + uiPostfix);
+				var hasPerfectEXImg:Bool = checkModHasImage(uiFolder + 'perfect' + exratingexspr + uiPostfix);
+				if (hasMarvelousEXImg)
+					exRatingImageToUse = 'marvelous';
+				else if (!hasPerfectEXImg)
+					exRatingImageToUse = 'sick';
+			}
+			_exRatingGfxCache.set(rating.name, Paths.image(uiFolder + exRatingImageToUse + exratingexspr + uiPostfix));
+		}
+		// 数字 0-9 贴图
+		_numGfxCache = [];
 		for (i in 0...10)
-			Paths.image(uiFolder + 'num' + i + uiPostfix + numexspr);
-		// 预缓存 combo 图片（popUpScore 中每次命中都会加载）
-		Paths.image(uiFolder + 'combo' + uiPostfix);
+			_numGfxCache.push(Paths.image(uiFolder + 'num' + i + uiPostfix + numexspr));
+		// combo 贴图（popUpScore 中每次命中都会加载）
+		_comboGfx = Paths.image(uiFolder + 'combo' + uiPostfix);
 	}
 
 	private function popUpScore(note:Note = null, scoreGain:Bool = true, leniencyMs:Float = 0):Void
@@ -4727,22 +4767,9 @@ isReplaying = false;
 		{
 			var rating:FlxSprite = recycleComboSprite();
 			var theEXrating:FlxSprite = recycleComboSprite();
-			var ratingImageToUse:String = daRating.image;
-			
-			// 如果是 perfect，检查模组是否有 marvelous 或 perfect 贴图
-			if (daRating.name == 'perfect' && ClientPrefs.data.fallbackPerfectToSick)
-			{
-				var hasMarvelousImg:Bool = checkModHasImage(uiFolder + 'marvelous' + ratingexspr + uiPostfix);
-				var hasPerfectImg:Bool = checkModHasImage(uiFolder + 'perfect' + ratingexspr + uiPostfix);
-				
-				// 优先尝试 marvelous，如果没有就用 perfect，再没有就用 sick
-				if (hasMarvelousImg)
-					ratingImageToUse = 'marvelous';
-				else if (!hasPerfectImg)
-					ratingImageToUse = 'sick';
-			}
-			
-			rating.loadGraphic(Paths.image(uiFolder + ratingImageToUse + ratingexspr + uiPostfix));
+			// 直接复用 cachePopUpScore() 预存的 FlxGraphic 引用（已按 fallback 规则确定最终贴图），
+			// 跳过每次命中的 Paths.image() 路径计算与 Map 查找；缓存不可用时回退到原逻辑
+			rating.loadGraphic(_ratingGfxCache != null ? _ratingGfxCache.get(daRating.name) : Paths.image(uiFolder + daRating.image + ratingexspr + uiPostfix));
 			rating.screenCenter();
 			rating.x = placement - 40;
 			rating.y -= 60;
@@ -4751,21 +4778,7 @@ isReplaying = false;
 			rating.y -= ClientPrefs.data.comboOffset[1] - 130;
 			rating.antialiasing = antialias;
 
-			var exRatingImageToUse:String = daRating.image;
-			
-			// 同样处理 EX rating
-			if (daRating.name == 'perfect' && ClientPrefs.data.fallbackEXPerfectToSick)
-			{
-				var hasMarvelousEXImg:Bool = checkModHasImage(uiFolder + 'marvelous' + exratingexspr + uiPostfix);
-				var hasPerfectEXImg:Bool = checkModHasImage(uiFolder + 'perfect' + exratingexspr + uiPostfix);
-				
-				if (hasMarvelousEXImg)
-					exRatingImageToUse = 'marvelous';
-				else if (!hasPerfectEXImg)
-					exRatingImageToUse = 'sick';
-			}
-
-			theEXrating.loadGraphic(Paths.image(uiFolder + exRatingImageToUse + exratingexspr + uiPostfix));
+			theEXrating.loadGraphic(_exRatingGfxCache != null ? _exRatingGfxCache.get(daRating.name) : Paths.image(uiFolder + daRating.image + exratingexspr + uiPostfix));
 			theEXrating.screenCenter();
 			theEXrating.x = placement - 40;
 			theEXrating.y -= 60;
@@ -4777,7 +4790,7 @@ isReplaying = false;
 
 	
 			var comboSpr:FlxSprite = recycleComboSprite();
-			comboSpr.loadGraphic(Paths.image(uiFolder + 'combo' + uiPostfix));
+			comboSpr.loadGraphic(_comboGfx != null ? _comboGfx : Paths.image(uiFolder + 'combo' + uiPostfix));
 			comboSpr.screenCenter();
 			comboSpr.x = placement;
 			//comboSpr.acceleration.y = FlxG.random.int(200, 300) * playbackRate * playbackRate;
@@ -4939,7 +4952,8 @@ isReplaying = false;
 			for (i in 0...separatedScore.length)
 			{
 				var numScore:FlxSprite = recycleComboSprite();
-				numScore.loadGraphic(Paths.image(uiFolder + 'num' + Std.parseInt(separatedScore.charAt(i)) + uiPostfix));
+				var numIdx:Int = Std.parseInt(separatedScore.charAt(i));
+				numScore.loadGraphic((_numGfxCache != null && numIdx < _numGfxCache.length) ? _numGfxCache[numIdx] : Paths.image(uiFolder + 'num' + numIdx + uiPostfix));
 				numScore.screenCenter();
 				numScore.x = placement + (43 * daLoop) - 70 + ClientPrefs.data.comboOffset[2];
 				numScore.y += 80 - ClientPrefs.data.comboOffset[3] + 110;
@@ -6030,6 +6044,11 @@ isReplaying = false;
 			comboSpritePool.destroy();
 			comboSpritePool = null;
 		}
+		// 清理评分贴图缓存引用（FlxGraphic 本身由 Paths.currentTrackedAssets 统一管理，这里只释放本实例的引用）
+		_ratingGfxCache = null;
+		_exRatingGfxCache = null;
+		_numGfxCache = null;
+		_comboGfx = null;
 
 		if (psychlua.CustomSubstate.instance != null)
 		{
