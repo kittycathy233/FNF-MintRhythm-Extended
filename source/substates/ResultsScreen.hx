@@ -143,9 +143,10 @@ class ResultsScreen extends FlxSubState
 		}
 
 		// 组合文本
+		var sickPlus:Int = PlayState.instance.songSickPlus;
 		var comboStr = 'Judgements:\n'
-			+ (!ClientPrefs.data.rmPerfect ? 'Perfects - ${perfects}\n' : "")
-			+ 'Sicks - ${sicks}\n'
+			+ (ClientPrefs.data.rmPerfect == 'off' ? 'Perfects - ${perfects}\n' : "")
+			+ 'Sicks - ${sicks}' + (ClientPrefs.data.rmPerfect == 'sickPlus' && sickPlus > 0 ? ' (Sick+ : ${sickPlus})' : '') + '\n'
 			+ 'Goods - ${goods}\n'
 			+ 'Bads - ${bads}\n'
 			+ 'Shits - ${shits}\n\n'
@@ -163,13 +164,14 @@ class ResultsScreen extends FlxSubState
 
 		// 为每个判定添加不同颜色
 		var idx = 0;
-		if (!ClientPrefs.data.rmPerfect)
+		if (ClientPrefs.data.rmPerfect == 'off')
 		{
 			idx = comboStr.indexOf('Perfects');
 			comboText.setTextFormat(new TextFormat("assets/fonts/vcr.ttf", Math.floor(32 * scale), 0xFFFFC0CB), idx, idx + ('Perfects - ${perfects}'.length));
 		}
 		idx = comboStr.indexOf('Sicks');
-		comboText.setTextFormat(new TextFormat("assets/fonts/vcr.ttf", Math.floor(32 * scale), 0xFF87CEFA), idx, idx + ('Sicks - ${sicks}'.length));
+		var sicksLineLen:Int = 'Sicks - ${sicks}'.length + (ClientPrefs.data.rmPerfect == 'sickPlus' && sickPlus > 0 ? ' (Sick+ - ${sickPlus})'.length : 0);
+		comboText.setTextFormat(new TextFormat("assets/fonts/vcr.ttf", Math.floor(32 * scale), 0xFF87CEFA), idx, idx + sicksLineLen);
 		idx = comboStr.indexOf('Goods');
 		comboText.setTextFormat(new TextFormat("assets/fonts/vcr.ttf", Math.floor(32 * scale), 0xFF66CDAA), idx, idx + ('Goods - ${goods}'.length));
 		idx = comboStr.indexOf('Bads');
@@ -220,7 +222,7 @@ class ResultsScreen extends FlxSubState
 
 		settingsText = createTextField(Math.floor(20 * scale), Math.floor(stageHeight + 60 * scale), Math.floor(stageWidth - 300 * scale), FlxColor.WHITE,
 			Math.floor(18 * scale));
-		settingsText.text = 'Avg: ${Math.round(averageMs * 100) / 100}ms (${!ClientPrefs.data.rmPerfect ? "PERFECT:" + ClientPrefs.data.perfectWindow + "ms," : ""}SICK:${ClientPrefs.data.sickWindow}ms,GOOD:${ClientPrefs.data.goodWindow}ms,BAD:${ClientPrefs.data.badWindow}ms)';
+		settingsText.text = 'Avg: ${Math.round(averageMs * 100) / 100}ms (${ClientPrefs.data.rmPerfect == 'off' ? "PERFECT:" + ClientPrefs.data.perfectWindow + "ms," : ""}SICK:${ClientPrefs.data.sickWindow}ms,GOOD:${ClientPrefs.data.goodWindow}ms,BAD:${ClientPrefs.data.badWindow}ms)';
 		overlaySprite.addChild(settingsText);
 
 		/*var sicks = PlayState.sicks;
@@ -396,9 +398,9 @@ class ResultsScreen extends FlxSubState
 						chartPath: chartPath,
 						chartMTime: statMTime,
 						difficulty: Difficulty.getString(PlayState.storyDifficulty, false),
-						judgmentSettings: {
-							rmPerfect: ClientPrefs.data.rmPerfect,
-							perfectWindow: ClientPrefs.data.perfectWindow,
+					judgmentSettings: {
+						rmPerfect: ClientPrefs.data.rmPerfect,
+						perfectWindow: ClientPrefs.data.perfectWindow,
 							sickWindow: ClientPrefs.data.sickWindow,
 							goodWindow: ClientPrefs.data.goodWindow,
 							badWindow: ClientPrefs.data.badWindow,

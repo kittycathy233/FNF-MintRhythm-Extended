@@ -21,6 +21,8 @@ class RatingCounter extends FlxBasic
 	// MA和PA文本组件
 	public var maText:FlxText;
 	public var paText:FlxText;
+	// Sick+ 独立文本组件（仅 sickPlus 模式下、PlayState 中 songSickPlus>0 时显示）
+	public var sickPlusText:FlxText;
 	
 	// 基础位置
 	public var baseX:Float;
@@ -83,13 +85,19 @@ class RatingCounter extends FlxBasic
 		maText = new FlxText(baseX, baseY, 0, '', 18);
 		maText.setFormat(Paths.font("vcr.ttf"), 18, COLOR_DEFAULT, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		maText.scrollFactor.set();
-		maText.visible = !ClientPrefs.data.rmPerfect;
+		maText.visible = ClientPrefs.data.rmPerfect == 'off';
 		
 		// 创建PA文本
 		paText = new FlxText(baseX, baseY, 0, '', 18);
 		paText.setFormat(Paths.font("vcr.ttf"), 18, COLOR_DEFAULT, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		paText.scrollFactor.set();
-		
+
+		// 创建 Sick+ 独立文本（sickPlus 模式下使用，初始隐藏，由 updateCounters 决定是否显示）
+		sickPlusText = new FlxText(baseX, baseY, 0, 'Sick+: 0', 18);
+		sickPlusText.setFormat(Paths.font("vcr.ttf"), 18, COLOR_SICK, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		sickPlusText.scrollFactor.set();
+		sickPlusText.visible = false;
+
 		// 初始化位置
 		updatePosition();
 	}
@@ -144,6 +152,7 @@ class RatingCounter extends FlxBasic
 		}
 		group.add(maText);
 		group.add(paText);
+		group.add(sickPlusText);
 	}
 	
 	/**
@@ -151,7 +160,7 @@ class RatingCounter extends FlxBasic
 	 */
 	public function updateCounters():Void
 	{
-		var hasPerfect:Bool = !ClientPrefs.data.rmPerfect;
+		var hasPerfect:Bool = ClientPrefs.data.rmPerfect == 'off';
 		var perfects:Int = 0;
 		var sicks:Int = 0;
 		var goods:Int = 0;
@@ -191,7 +200,20 @@ class RatingCounter extends FlxBasic
 				case 'shit': label = 'Shits';
 				default: label = rating.name;
 			}
-			ratingText.text.text = label + ': ' + rating.hits;
+			var displayText:String = label + ': ' + rating.hits;
+			ratingText.text.text = displayText;
+		}
+
+		// Sick+ 独立行：sickPlus 模式下显示 PlayState 中的 Sick+ 计数（纯统计，不并入 Sicks）
+		if (ClientPrefs.data.rmPerfect == 'sickPlus')
+		{
+			var sickPlus:Int = states.PlayState.instance != null ? states.PlayState.instance.songSickPlus : 0;
+			sickPlusText.text = '[Sick+: ' + sickPlus + ']';
+			sickPlusText.visible = sickPlus > 0;
+		}
+		else
+		{
+			sickPlusText.visible = false;
 		}
 		
 		// 计算分母
@@ -328,8 +350,17 @@ class RatingCounter extends FlxBasic
 		{
 			ratingText.text.visible = visible;
 		}
-		maText.visible = visible && !ClientPrefs.data.rmPerfect;
+		maText.visible = visible && ClientPrefs.data.rmPerfect == 'off';
 		paText.visible = visible;
+		// Sick+ 行：sickPlus 模式下显示，且依赖 updateCounters 中设定的可见性
+		if (visible && ClientPrefs.data.rmPerfect == 'sickPlus')
+		{
+			sickPlusText.visible = states.PlayState.instance != null && states.PlayState.instance.songSickPlus > 0;
+		}
+		else
+		{
+			sickPlusText.visible = false;
+		}
 	}
 	
 	/**
@@ -337,10 +368,11 @@ class RatingCounter extends FlxBasic
 	 */
 	public function updatePosition():Void
 	{
-		// 计算显示的总行数（评分 + MA + PA）
+		// 计算显示的总行数（评分 + MA + PA + 可能的 Sick+）
 		var totalLines:Int = ratingTexts.length;
-		if (!ClientPrefs.data.rmPerfect) totalLines += 2;
+		if (ClientPrefs.data.rmPerfect == 'off') totalLines += 2;
 		else totalLines += 1;
+		if (ClientPrefs.data.rmPerfect == 'sickPlus') totalLines += 1;
 		
 		var totalHeight:Float = totalLines * LINE_HEIGHT;
 		var startY:Float = (FlxG.height - totalHeight) / 2;
@@ -357,7 +389,11 @@ class RatingCounter extends FlxBasic
 		
 		// 更新MA文本位置
 		maText.y = currentY;
-		if (!ClientPrefs.data.rmPerfect) currentY += LINE_HEIGHT;
+		if (ClientPrefs.data.rmPerfect == 'off') currentY += LINE_HEIGHT;
+
+		// 更新 Sick+ 文本位置（sickPlus 模式下，位于评分与 PA 之间）
+		sickPlusText.y = currentY;
+		if (ClientPrefs.data.rmPerfect == 'sickPlus') currentY += LINE_HEIGHT;
 		
 		// 更新PA文本位置
 		paText.y = currentY;
@@ -384,6 +420,7 @@ class RatingCounter extends FlxBasic
 		}
 		maText.destroy();
 		paText.destroy();
+		sickPlusText.destroy();
 		ratingTexts = [];
 		super.destroy();
 	}

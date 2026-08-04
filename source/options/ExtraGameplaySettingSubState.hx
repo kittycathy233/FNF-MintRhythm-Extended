@@ -73,10 +73,11 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		extraRatingBounceOption = addOption(option);
 		extraRatingBounceOptionIndex = optionsArray.length - 1;
 
-		option = new Option('Remove Perfect! Note Judgement',
+		option = new Option('Perfect Judgement Mode',
 			Language.get("rm_perfect_judge_desc"),
 			'rmPerfect',
-			BOOL);
+			STRING,
+			['off', 'remove', 'sickPlus']);
 		addOption(option);
 
 		option = new Option('Remove the "ms" offset',
@@ -689,7 +690,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			if (change > 0) newSelection++; else newSelection--;
 			newSelection = FlxMath.wrap(newSelection, 0, optionsArray.length - 1);
 		}
-		
+
 		// 调用父类的 changeSelection，但直接修改 curSelected 来改变位置
 		curSelected = newSelection - change;
 		super.changeSelection(change);

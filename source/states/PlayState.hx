@@ -401,6 +401,7 @@ class PlayState extends MusicBeatState
 	public var songScore:Int = 0;
 	public var songHits:Int = 0;
 	public var songMisses:Int = 0;
+	public var songSickPlus:Int = 0; // Sick+模式下命中perfect窗口的次数（纯统计用，不影响FC/准度）
 	public var scoreTxt:FlxText;
 	var timeTxt:FlxText;
 	var scoreTxtTween:FlxTween;
@@ -1949,11 +1950,11 @@ isReplaying = false;
 	public dynamic function fullComboFunction()
 	{
 		// 根据是否启用perfect来确定索引
-		var perfects:Int = !ClientPrefs.data.rmPerfect ? ratingsData[0].hits : 0;
-		var sicks:Int = !ClientPrefs.data.rmPerfect ? ratingsData[1].hits : ratingsData[0].hits;
-		var goods:Int = !ClientPrefs.data.rmPerfect ? ratingsData[2].hits : ratingsData[1].hits;
-		var bads:Int = !ClientPrefs.data.rmPerfect ? ratingsData[3].hits : ratingsData[2].hits;
-		var shits:Int = !ClientPrefs.data.rmPerfect ? ratingsData[4].hits : ratingsData[3].hits;
+		var perfects:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[0].hits : 0;
+		var sicks:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[1].hits : ratingsData[0].hits;
+		var goods:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[2].hits : ratingsData[1].hits;
+		var bads:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[3].hits : ratingsData[2].hits;
+		var shits:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[4].hits : ratingsData[3].hits;
 
 		//ratingFC = "";
 		ratingFC = /*ClientPrefs.data.scoretxtstyle == 'Psych' ? "?" : */"?";
@@ -1995,11 +1996,11 @@ isReplaying = false;
 				missesRating = "FC ~ ";
 				
 				// 根据是否启用perfect来确定索引
-				var perfects:Int = !ClientPrefs.data.rmPerfect ? ratingsData[0].hits : 0;
-				var sicks:Int = !ClientPrefs.data.rmPerfect ? ratingsData[1].hits : ratingsData[0].hits;
-				var goods:Int = !ClientPrefs.data.rmPerfect ? ratingsData[2].hits : ratingsData[1].hits;
-				var bads:Int = !ClientPrefs.data.rmPerfect ? ratingsData[3].hits : ratingsData[2].hits;
-				var shits:Int = !ClientPrefs.data.rmPerfect ? ratingsData[4].hits : ratingsData[3].hits;
+				var perfects:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[0].hits : 0;
+				var sicks:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[1].hits : ratingsData[0].hits;
+				var goods:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[2].hits : ratingsData[1].hits;
+				var bads:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[3].hits : ratingsData[2].hits;
+				var shits:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[4].hits : ratingsData[3].hits;
 				
 				if (bads < 10 && shits == 0)
 					missesRating = "SDB ~ ";
@@ -4602,6 +4603,16 @@ isReplaying = false;
 			}
 			_exRatingGfxCache.set(rating.name, Paths.image(uiFolder + exRatingImageToUse + exratingexspr + uiPostfix));
 		}
+		// Sick+ 模式：perfect 不在 ratingsData 中，但需要缓存 perfect 贴图供 Sick+ 显示使用
+		// 仅当 fallbackPerfectToSick=false（即选择显示 Perfect 贴图）时才需要缓存
+		if (ClientPrefs.data.rmPerfect == 'sickPlus' && !ClientPrefs.data.fallbackPerfectToSick)
+		{
+			_ratingGfxCache.set('perfect', Paths.image(uiFolder + 'perfect' + ratingexspr + uiPostfix));
+		}
+		if (ClientPrefs.data.rmPerfect == 'sickPlus' && !ClientPrefs.data.fallbackEXPerfectToSick)
+		{
+			_exRatingGfxCache.set('perfect', Paths.image(uiFolder + 'perfect' + exratingexspr + uiPostfix));
+		}
 		// 数字 0-9 贴图
 		_numGfxCache = [];
 		for (i in 0...10)
@@ -4657,6 +4668,15 @@ isReplaying = false;
 
 		// 存储打击数据供 HitGraph 使用，同时一次性计算 daRating 给后续计分/动画/EX贴图 共用
 		var daRating:Rating = Conductor.judgeNote(ratingsData, noteDiff / playbackRate);
+		// Sick+ 模式：命中 perfect 窗口时，判定为 Sick 但给予 Perfect 分数(500)，且可选显示 Perfect 贴图
+		// 不创建新的 ratingData，纯粹在 popUpScore 中处理分数和贴图显示
+		var isSickPlus:Bool = false;
+		if (ClientPrefs.data.rmPerfect == 'sickPlus' && daRating.name == 'sick')
+		{
+			var absJudgeDiff:Float = Math.abs(noteDiff / playbackRate);
+			if (absJudgeDiff <= ClientPrefs.data.perfectWindow)
+				isSickPlus = true;
+		}
 		// 触发评分计数器动画
 		if (ratingCounterModule != null && !note.ratingDisabled)
 		{
@@ -4743,6 +4763,10 @@ isReplaying = false;
 		if(!note.ratingDisabled) daRating.hits++;
 		note.rating = daRating.name;
 		score = daRating.score;
+		// Sick+ 给予 Perfect 分数(500)
+		if (isSickPlus) score = 500;
+		// Sick+ 计数（纯统计用，不影响FC/准度）
+		if (isSickPlus && !note.ratingDisabled) songSickPlus++;
 
 		if(daRating.noteSplash && !note.noteSplashData.disabled && ClientPrefs.data.cpuStrums)
 			spawnNoteSplashOnNote(note);
@@ -4770,13 +4794,25 @@ isReplaying = false;
 			antialias = !isPixelStage;
 		}
 
+		// Sick+ 贴图显示：复用 fallbackPerfectToSick/fallbackEXPerfectToSick 设置
+		// fallbackPerfectToSick=false → 显示 Perfect 贴图; =true → 显示 Sick 贴图(回落到sick)
+		var displayRatingName:String = daRating.name;
+		var displayExRatingName:String = daRating.name;
+		if (isSickPlus)
+		{
+			if (!ClientPrefs.data.fallbackPerfectToSick)
+				displayRatingName = 'perfect';
+			if (!ClientPrefs.data.fallbackEXPerfectToSick)
+				displayExRatingName = 'perfect';
+		}
+
 		if (ClientPrefs.data.popUpRating)
 		{
 			var rating:FlxSprite = recycleComboSprite();
 			var theEXrating:FlxSprite = recycleComboSprite();
 			// 直接复用 cachePopUpScore() 预存的 FlxGraphic 引用（已按 fallback 规则确定最终贴图），
 			// 跳过每次命中的 Paths.image() 路径计算与 Map 查找；缓存不可用时回退到原逻辑
-			rating.loadGraphic(_ratingGfxCache != null ? _ratingGfxCache.get(daRating.name) : Paths.image(uiFolder + daRating.image + ratingexspr + uiPostfix));
+			rating.loadGraphic(_ratingGfxCache != null ? _ratingGfxCache.get(displayRatingName) : Paths.image(uiFolder + displayRatingName + ratingexspr + uiPostfix));
 			rating.screenCenter();
 			rating.x = placement - 40;
 			rating.y -= 60;
@@ -4785,7 +4821,7 @@ isReplaying = false;
 			rating.y -= ClientPrefs.data.comboOffset[1] - 130;
 			rating.antialiasing = antialias;
 
-			theEXrating.loadGraphic(_exRatingGfxCache != null ? _exRatingGfxCache.get(daRating.name) : Paths.image(uiFolder + daRating.image + exratingexspr + uiPostfix));
+			theEXrating.loadGraphic(_exRatingGfxCache != null ? _exRatingGfxCache.get(displayExRatingName) : Paths.image(uiFolder + displayExRatingName + exratingexspr + uiPostfix));
 			theEXrating.screenCenter();
 			theEXrating.x = placement - 40;
 			theEXrating.y -= 60;

@@ -30,7 +30,7 @@ class Rating
 	{
 		var ratingsData:Array<Rating> = [];
 
-		if (!ClientPrefs.data.rmPerfect){
+		if (ClientPrefs.data.rmPerfect == 'off'){
     		var rating:Rating = new Rating('perfect');
     		rating.ratingMod = 1;
     		rating.score = 500;

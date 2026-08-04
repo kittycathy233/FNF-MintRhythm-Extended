@@ -85,7 +85,7 @@ class NoteOffsetState extends MusicBeatState
 		coolText.x = FlxG.width * 0.35;
 
 		//rating = new FlxSprite().loadGraphic(Paths.image('sick'));
-		if(!ClientPrefs.data.rmPerfect)
+		if(ClientPrefs.data.rmPerfect == 'off')
 			{
 				theEXrating = new FlxSprite().loadGraphic(Paths.image('perfect-extra'));
 				rating = new FlxSprite().loadGraphic(Paths.image('perfect'));

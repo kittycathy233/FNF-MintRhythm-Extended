@@ -54,7 +54,7 @@ class HitGraph extends Sprite
 		// 从 ClientPrefs 读取所有判定窗口
 		var windows:Array<Float> = [];
 
-		if (!ClientPrefs.data.rmPerfect)
+		if (ClientPrefs.data.rmPerfect != 'remove')
 			windows.push(ClientPrefs.data.perfectWindow);
 		windows.push(ClientPrefs.data.sickWindow);
 		windows.push(ClientPrefs.data.goodWindow);
@@ -201,7 +201,7 @@ class HitGraph extends Sprite
 		var safeFrames:Float = ClientPrefs.data.safeFrames * (1000 / 60); // 转换为毫秒
 
 		// 绘制判定线（Late - 正值）
-		if (!ClientPrefs.data.rmPerfect && perfectWindow > 0)
+		if (ClientPrefs.data.rmPerfect != 'remove' && perfectWindow > 0)
 		{
 			gfx.beginFill(ratingColors.get("perfect"));
 			drawJudgementLine(perfectWindow);
@@ -237,7 +237,7 @@ class HitGraph extends Sprite
 		}
 
 		// 绘制判定线（Early - 负值）
-		if (!ClientPrefs.data.rmPerfect && perfectWindow > 0)
+		if (ClientPrefs.data.rmPerfect != 'remove' && perfectWindow > 0)
 		{
 			gfx.beginFill(ratingColors.get("perfect"));
 			drawJudgementLine(-perfectWindow);

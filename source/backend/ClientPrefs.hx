@@ -157,7 +157,7 @@ import openfl.display.StageQuality;
 	public var exgameversion:Bool = true;
 	public var exratingDisplay:Bool = true;
 	public var showHaxelibs:Bool = true;
-	public var rmPerfect:Bool = false;	
+	public var rmPerfect:String = 'off'; // 'off'=正常(Perfect独立判定), 'remove'=完全移除Perfect, 'sickPlus'=Perfect变为Sick+状态(算Sick但可选显示Perfect贴图,给Perfect分数)
 	public var ratbounce:Bool = true;
 	public var scoretxtstyle:String = 'Kathy';
 	public var rmmsTimeTxt:Bool = false;
@@ -530,6 +530,18 @@ class ClientPrefs {
 			data.useShitWindowAsSafeZone = true;
 		if (!Reflect.hasField(FlxG.save.data, 'softJudgmentEdge'))
 			data.softJudgmentEdge = false;
+
+		// 向后兼容：将旧版 Bool 类型的 rmPerfect 转换为新版 String 三选一
+		// 旧 false → 'off'(正常), 旧 true → 'remove'(完全移除), 新存档直接为 String
+		if (Reflect.hasField(FlxG.save.data, 'rmPerfect'))
+		{
+			var savedRmPerfect:Dynamic = Reflect.field(FlxG.save.data, 'rmPerfect');
+			if (savedRmPerfect == true)
+				data.rmPerfect = 'remove';
+			else if (savedRmPerfect == false)
+				data.rmPerfect = 'off';
+			// 若已是 String ('off'/'remove'/'sickPlus') 则保持不变
+		}
 
 		// 确保 Fake OS 标题从预设中正确初始化
 		if (data.fakeWindowTitlePreset != null) {
