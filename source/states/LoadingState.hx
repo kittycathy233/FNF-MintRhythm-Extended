@@ -374,9 +374,8 @@ class LoadingState extends MusicBeatState
 
 	static function getNextState(target:FlxState, stopMusic = false, intrusive:Bool = true):FlxState
 	{
-		#if !SHOW_LOADING_SCREEN
-		intrusive = false;
-		#end
+		if (!ClientPrefs.data.loadingScreen)
+			intrusive = false;
 
 		LoadingState.isIntrusive = intrusive;
 		_startPool();

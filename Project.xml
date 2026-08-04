@@ -33,7 +33,7 @@
 	<define name="IRIS_DEBUG"/>
 	
 	<define name="MULTITHREADED_LOADING" if="cpp" /> <!-- UNCOMMENTING THIS LINE WILL ENABLE MULTITHREADED LOADING, WHICH IMPROVES LOADING TIMES, BUT WITH A LOW CHANCE FOR THE GAME FREEZE ON SONG LOAD -->
-	<define name="SHOW_LOADING_SCREEN" />
+	<!--define name="SHOW_LOADING_SCREEN" /-->
 	<define name="PSYCH_WATERMARKS"/> <!-- DELETE THIS TO REMOVE THE PSYCH LOGO FROM LOADING SCREEN -->
 
 	<section if="officialBuild">
@@ -51,7 +51,7 @@
 	<window if="html5" resizable="true" />
 
 	<!--Desktop-specific-->
-	<window if="desktop" orientation="landscape" fullscreen="false" resizable="true" vsync="false" antialiasing="2" allow-high-dpi="true"/>
+	<window if="desktop" orientation="landscape" fullscreen="false" resizable="true" vsync="false" allow-high-dpi="true"/>
 
 	<!--Mobile-specific-->
 	<window if="mobile" orientation="landscape" fullscreen="true" resizable="false" allow-shaders="true" require-shaders="true" />
@@ -117,7 +117,7 @@
 
 	<!-- 核心库 -->
 	<haxelib name="flixel" version="5.9.0"/>
-	<haxelib name="openfl"version="9.4.2"/>
+	<haxelib name="openfl" version="9.4.2"/>
 	<haxelib name="flixel-addons" version="4.0.1"/>
 	<haxelib name="tjson" version="1.4.0"/>
 

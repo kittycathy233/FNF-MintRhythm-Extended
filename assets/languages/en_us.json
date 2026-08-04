@@ -495,6 +495,7 @@
     "splash_limit_desc": "Limit the maximum number of simultaneous note splashes. OFF = no limit.",
     "max_splashes_desc": "Maximum number of note splashes that can exist at once. Only works when Splash Limit is ON.",
     "loading_threads_desc": "Number of threads used to preload assets when entering a song (1 = single-threaded; higher = more parallel loading but uses more memory).",
+    "show_loading_screen_desc": "Show the loading screen transition when entering a song. Disable to skip it and switch directly (may cause a brief freeze while assets load).",
     "hold_cover_skin_desc": "Select the Hold Cover skin to use. Requires holdCover/holdCover{Color}{Skin}.png and optional .json configs.",
     "three_icons_desc": "Enables 3-state health icons: Normal / Lose / Win. The icon image should be a wide rectangle with the three states left-to-right. You can also use a 450x150 sheet of 3 square icons. When disabled, classic 2-state square icons are used.",
     "load_leather_icons_desc": "Prioritize Leather Engine format icons (leather/<name>-icons.png) over default. Mods' leather icons take priority automatically. Falls back to default if not found.",

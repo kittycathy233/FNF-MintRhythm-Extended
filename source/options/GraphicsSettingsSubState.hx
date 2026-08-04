@@ -132,6 +132,13 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		option.displayFormat = '%v';
 		addOption(option);
 
+		// 是否显示进入歌曲时的加载界面
+		var option:Option = new Option('Show Loading Screen',
+			Language.get("show_loading_screen_desc"),
+			'loadingScreen',
+			BOOL);
+		addOption(option);
+
 		super();
 		insert(3, aris);
 

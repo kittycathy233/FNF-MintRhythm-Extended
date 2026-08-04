@@ -510,6 +510,7 @@
     "splash_limit_desc": "限制同时存在的音符特效最大数量。OFF = 不限制。",
     "max_splashes_desc": "可同时存在的音符特效最大数量。仅在开启 Splash Limit 时生效。",
     "loading_threads_desc": "进入歌曲时资源预加载所用的线程数（1=单线程，越高加载越并行但更占内存）。",
+    "show_loading_screen_desc": "进入歌曲时显示加载界面。关闭后跳过加载界面直接切换（资源加载时可能出现短暂卡顿）。",
     "hold_cover_skin_desc": "选择 Hold Cover 皮肤。需要 holdCover/holdCover{Color}{Skin}.png 及可选的 .json 配置。",
     "three_icons_desc": "启用三态血量图标：Normal / Lose / Win。图标图片应为宽矩形，三种状态从左到右排列（Normal, Lose, Win）。也可使用 450x150 的 3 个方形图标表。关闭时使用经典双态方形图标。",
     "load_leather_icons_desc": "优先使用 Leather Engine 格式图标（leather/<name>-icons.png）而非默认。模组的 leather 图标会自动优先。找不到时回退到默认。",
