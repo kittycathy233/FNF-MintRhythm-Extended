@@ -1110,7 +1110,7 @@ isReplaying = false;
 			// LeatherEngine 原版：图标在血条上居中
 			iconP1.y = healthBar.y - (iconP1.height / 2) - iconP1.offset.y;
 		} else {
-			iconP1.y = healthBar.y - 75;
+			iconP1.y = healthBar.y - iconP1.frameHeight / 2;
 		}
 		iconP1.visible = !ClientPrefs.data.hideHud;
 		iconP1.alpha = ClientPrefs.data.healthBarAlpha;
@@ -1122,7 +1122,7 @@ isReplaying = false;
 			// LeatherEngine 原版：图标在血条上居中
 			iconP2.y = healthBar.y - (iconP2.height / 2) - iconP2.offset.y;
 		} else {
-			iconP2.y = healthBar.y - 75;
+			iconP2.y = healthBar.y - iconP2.frameHeight / 2;
 		}
 		iconP2.visible = !ClientPrefs.data.hideHud;
 		iconP2.alpha = ClientPrefs.data.healthBarAlpha;
@@ -4022,9 +4022,9 @@ isReplaying = false;
 
 	// Kathy专属动效
 	//不要了，不好看
-	/*if(ClientPrefs.data.iconbopstyle == "Kathy") {
-			iconP1.x = healthBar.barCenter + (150 * iconP1.scale.x - 150)/2 - iconOffset;
-			iconP2.x = healthBar.barCenter - (150 * iconP2.scale.x)/2 - iconOffset*2;
+	/*if(ClientPrefs.data.iconbopstyle == "Kathy") 		{
+			iconP1.x = healthBar.barCenter + (iconP1.frameHeight * iconP1.scale.x - iconP1.frameHeight)/2 - iconOffset;
+			iconP2.x = healthBar.barCenter - (iconP2.frameHeight * iconP2.scale.x)/2 - iconOffset*2;
 
 			// 垂直浮动效果
 			var wave = Math.sin(Conductor.songPosition / 400) * 1.5;
@@ -4033,8 +4033,8 @@ isReplaying = false;
 		} else */
 		{
 
-			iconP1.x = healthBar.barCenter + (150 * iconP1.scale.x - 150)/2 - iconOffset;
-			iconP2.x = healthBar.barCenter - (150 * iconP2.scale.x)/2 - iconOffset*2;
+			iconP1.x = healthBar.barCenter + (iconP1.frameHeight * iconP1.scale.x - iconP1.frameHeight)/2 - iconOffset;
+			iconP2.x = healthBar.barCenter - (iconP2.frameHeight * iconP2.scale.x)/2 - iconOffset*2;
 
 			// 超满血溢出移动：血量超过满值时，让小图标向血条右端外溢出（需丝滑血条 + 超满设置）
 			if (ClientPrefs.data.smoothHP && ClientPrefs.data.healthOverflow)
@@ -4066,6 +4066,13 @@ isReplaying = false;
 				iconP1.y = iconP1InitialY + (iconP1.scale.y - 1) * 70;
         		iconP2.y = iconP2InitialY + (iconP2.scale.y - 1) * 70;
 				}
+			}
+			else if (ClientPrefs.data.iconbopstyle == "Dave") {
+				// 顶部对齐：固定上边缘，向下生长；兼容任意贴图尺寸（不再硬编码 150）
+				iconP1.offset.y = 0;
+				iconP2.offset.y = 0;
+				iconP1.y = healthBar.y - iconP1.frameHeight / 2;
+				iconP2.y = healthBar.y - iconP2.frameHeight / 2;
 			}
 		}
 
