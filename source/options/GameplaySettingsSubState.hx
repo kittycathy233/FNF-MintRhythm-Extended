@@ -1,6 +1,7 @@
 package options;
 
 import states.PlayState;
+import backend.MusicBeatState;
 
 class GameplaySettingsSubState extends BaseOptionsMenu
 {
@@ -40,6 +41,24 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.onChange = function() {
 			ClientPrefs.data.keyViewerTotal = 0;
 			ClientPrefs.saveSettings();
+		};
+
+		var option:Option = new Option(
+			"Key Viewer Trail",
+			Language.get("keyviewer_trail_desc"),
+			'keyViewerTrail',
+			STRING,
+			['auto', 'up', 'down']);
+		addOption(option);
+
+		var option:Option = new Option(
+			"Key Viewer Position",
+			Language.get("keyviewer_pos_desc"),
+			'_keyViewerPos',
+			BUTTON);
+		addOption(option);
+		option.onChange = function() {
+			MusicBeatState.switchState(new KeyViewerPosState());
 		};
 
 		var option:Option = new Option(

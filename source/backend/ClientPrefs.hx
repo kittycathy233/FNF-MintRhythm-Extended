@@ -297,6 +297,11 @@ import openfl.display.StageQuality;
 
 	// KeyViewer 累计按键总数（跨游戏重启持久化）
 	public var keyViewerTotal:Int = 0;
+	// KeyViewer 轨迹方向：'auto' 跟随 downscroll，'up' 强制上升，'down' 强制下落
+	public var keyViewerTrail:String = 'auto';
+	// KeyViewer 位置偏移（像素，相对默认位置）：在设置内拖动校准，跨重启持久化
+	public var keyViewerPosX:Float = 0;
+	public var keyViewerPosY:Float = 0;
 
 }
 

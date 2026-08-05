@@ -2,6 +2,8 @@ package objects;
 
 import flixel.FlxG;
 import flixel.FlxSprite;
+import flixel.FlxObject;
+import flixel.FlxCamera;
 import flixel.FlxBasic;
 import flixel.group.FlxGroup;
 import flixel.math.FlxMath;
@@ -9,6 +11,7 @@ import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import backend.Paths;
 import backend.ClientPrefs;
+import backend.Controls;
 import states.PlayState;
 import flixel.input.keyboard.FlxKey;
 import openfl.display.Shape;
@@ -36,6 +39,9 @@ class KeyViewer extends FlxGroup
 	static final BG_COLOR:FlxColor = 0xFF191919; // 25,25,25
 	static final TEXT_COLOR:FlxColor = 0xFFFFFFFF; // 白色
 	static final FONT_NAME:String = 'BlackSugarPlumCandy-Bold.ttf'; // 支持中英日韩
+	static final KEY_NAME_SIZE:Int = 20;     // 按键名基础字号（长名字会自适应缩小以完整显示）
+	static final KEY_NAME_MIN:Int = 9;       // 按键名最小字号下限
+	static final KEY_NAME_PAD:Int = 6;      // 按键名左右内边距（防止贴边）
 
 	// ---- 按键按钮尺寸 ----
 	static final SLOT_W:Int = 56;     // 按键槽位宽度（用于布局与背景，保持不变）
@@ -69,9 +75,10 @@ class KeyViewer extends FlxGroup
 	static final FADE_DIST:Float = 500;       // 飘出消失距离（Fade out distance）
 	static final MAX_STRETCH:Float = 250;     // 按住时长条最大拉长量（上限）
 	static final FADE_LINE:Float = 200;       // 遮罩线：距按键顶端 200px，白块超出此线被裁切渐隐
-	static final VIS_SPAWN_Y:Float = -5;      // 生成位置相对按钮顶端的偏移（Spawn position offset 0,-5）
+	static final VIS_SPAWN_Y:Float = 0;       // 生成位置相对按钮顶端的偏移（0 = 恰好在按键描边顶部）
 	static final PARTICLE_H:Float = 16;       // 单条轨迹粒子高度
 	static final POOL_PER_KEY:Int = 12;       // 每键粒子池容量（上限同时存在的轨迹数）
+	static final DOWN_TRAIL_AREA:Int = 120;   // 下落模式下面板整体上移的像素，给按键下方留出屏幕空隙绘制向下轨迹
 
 	var keysArray:Array<String>;
 	var keyCaps:Array<FlxSprite> = [];   // 按键本体（圆角深色填充）
@@ -86,12 +93,15 @@ class KeyViewer extends FlxGroup
 	var particleStretch:Array<Array<Float>> = []; // 按住期间已拉长量
 	var particleDrift:Array<Array<Float>> = [];   // 松开后已上飘量
 	var particleHolding:Array<Array<Bool>> = [];  // 该条当前是否仍处于按住状态
-	var particleAnchorY:Array<Array<Float>> = []; // 长条底部锚定 y（按键顶端附近）
+	var particleAnchorY:Array<Array<Float>> = []; // 长条锚定 y（上升=按键顶端，下落=按键底端）
+	var particleDown:Array<Array<Bool>> = []; // 每个粒子的轨迹方向：true=向下，false=向上
 
 	var statsText:FlxText; // 右侧 KPS / Total / Max（单行多行文本，收紧行距）
 
 	var iconSprite:FlxSprite; // 左侧自定义图标（可为 null）
 	var nameText:FlxText;     // 底部自定义名字（可为 null）
+	public var bgSprite:FlxSprite = null; // 背景面板（供位置校准界面做拖动命中检测）
+	public var viewerCam:FlxCamera = null; // 自定义相机：位置校准/预览态注入 camHUD；游戏内用 camOther
 
 	var keyTimes:Array<Float> = []; // 最近一次按下的时间戳（毫秒），用于计算 KPS
 	var totalKeys:Int = 0;
@@ -108,8 +118,10 @@ class KeyViewer extends FlxGroup
 		// 累计按键总数：从持久存档读取，跨游戏重启保留
 		totalKeys = ClientPrefs.data.keyViewerTotal;
 
-		// 读取玩家实际键位（当前 mania 的 action 列表）
-		keysArray = PlayState.instance.keysArray.copy();
+		// 读取玩家实际键位（当前 mania 的 action 列表）；位置校准/预览态无 PlayState 时用默认 4K 布局
+		keysArray = (PlayState.instance != null)
+			? PlayState.instance.keysArray.copy()
+			: ['note_left', 'note_down', 'note_up', 'note_right'];
 
 		var nKeys:Int = keysArray.length;
 		// 布局使用固定槽位 SLOT_W，使背景面板尺寸不随按键视觉大小变化
@@ -149,19 +161,40 @@ class KeyViewer extends FlxGroup
 			nameBandH = lineCount * (NAME_FONT_SIZE + NAME_LINE_GAP);
 		}
 
-		// 背景高度 = 按键区 + 紧贴按键描边下方的名字带（含上下内边距）
-		// 按键在按键区内垂直居中，其底边距按键区底边为 (keyAreaH - BTN_SIZE) / 2，
-		// 故按键底边相对背景顶边的偏移 = (keyAreaH + BTN_SIZE) / 2。
-		var bgH:Int = Math.ceil((keyAreaH + BTN_SIZE) / 2 + NAME_TOP_PAD + nameBandH + NAME_BOTTOM_PAD);
-		var bgX:Float = (FlxG.width - bgW) / 2; // 整个面板居中于屏幕
-		var bgY:Float = FlxG.height - bgH - 6;
+		// 轨迹方向（按下时确定，整局不变）：下落模式需把名字移到按键上方，
+		// 并在按键下方预留可见轨迹区，否则向下生成的白块会直接冲出屏幕底部。
+		var downTrail:Bool = trailGoesDown();
 
-		// 按键在按键区内垂直居中
-		var yPos:Float = bgY + (keyAreaH - BTN_SIZE) / 2;
+		var bgH:Int;
+		if (downTrail)
+		{
+			// 上→下顺序：名字带(顶部) + 按键区。下落轨迹绘制在面板下方的屏幕空隙中，
+			// 不计入面板高度，避免面板被轨迹区撑得过高。
+			bgH = Math.ceil(NAME_TOP_PAD + nameBandH + NAME_BOTTOM_PAD + keyAreaH);
+		}
+		else
+		{
+			// 原布局：按键区（按键居中）+ 紧贴按键描边下方的名字带
+			bgH = Math.ceil((keyAreaH + BTN_SIZE) / 2 + NAME_TOP_PAD + nameBandH + NAME_BOTTOM_PAD);
+		}
+		var bgX:Float = (FlxG.width - bgW) / 2; // 整个面板居中于屏幕
+		// 下落模式：面板整体上移 DOWN_TRAIL_AREA，给按键下方的向下轨迹留出屏幕空隙
+		var bottomGap:Float = downTrail ? DOWN_TRAIL_AREA : 0;
+		var bgY:Float = FlxG.height - bgH - 6 - bottomGap;
+
+		// 用户自定义位置偏移（在设置内通过拖动校准，持久化保存）；应用于整块面板
+		bgX += ClientPrefs.data.keyViewerPosX;
+		bgY += ClientPrefs.data.keyViewerPosY;
+
+		// 按键垂直位置：下落模式紧贴名字带下方（随名字增长整体上移、按键屏位置不变）；上升模式在按键区内居中
+		var yPos:Float = downTrail
+			? bgY + NAME_TOP_PAD + nameBandH + NAME_BOTTOM_PAD
+			: bgY + (keyAreaH - BTN_SIZE) / 2;
 
 		// 背景面板（圆角 + 1px 描边）
 		var bg = makeRoundRect(bgW, bgH, BG_COLOR, BG_BORDER_THICK, BORDER_COLOR, BG_RADIUS);
 		bg.setPosition(bgX, bgY);
+		bgSprite = bg;
 		bg.alpha = 0.85;
 		bg.scrollFactor.set(0, 0);
 		add(bg);
@@ -212,28 +245,14 @@ class KeyViewer extends FlxGroup
 			add(glow);
 			keyGlows.push(glow);
 
-			// 按键圆角描边外框（按下时颜色立刻切换，不与发光层共用缓动）
-			var border = makeRoundRect(BTN_SIZE, BTN_SIZE, FlxColor.TRANSPARENT, BORDER_THICK, BORDER_COLOR, KEY_RADIUS);
-			border.setPosition(bx, yPos);
-			border.scrollFactor.set(0, 0);
-			add(border);
-			keyBorders.push(border);
-
-			// 键名文字（真实物理按键）
-			var label = new FlxText(bx, yPos + (BTN_SIZE - 16) / 2, BTN_SIZE, getKeyName(keysArray[i]), 16);
-			label.setFormat(Paths.font(FONT_NAME), 16, TEXT_COLOR, CENTER);
-			label.scrollFactor.set(0, 0);
-			add(label);
-			keyLabels.push(label);
-
-			keyPressGlow.push(0.0);
-
 			// 预建该键的轨迹可视化粒子池（按下时激活：先拉长，松开后上飘消失）
+			// 在描边之前 add，使轨迹绘制在描边之下（描边最后绘制，盖在轨迹之上）
 			var pPool:Array<FlxSprite> = [];
 			var pStretch:Array<Float> = [];
 			var pDrift:Array<Float> = [];
 			var pHolding:Array<Bool> = [];
 			var pAnchor:Array<Float> = [];
+			var pDown:Array<Bool> = [];
 			var pW:Float = BTN_SIZE; // 轨迹条宽度跟随按键（描边）宽度
 			for (p in 0...POOL_PER_KEY)
 			{
@@ -248,12 +267,45 @@ class KeyViewer extends FlxGroup
 				pDrift.push(0);
 				pHolding.push(false);
 				pAnchor.push(0);
+				pDown.push(false);
 			}
 			particles.push(pPool);
 			particleStretch.push(pStretch);
 			particleDrift.push(pDrift);
 			particleHolding.push(pHolding);
 			particleAnchorY.push(pAnchor);
+			particleDown.push(pDown);
+
+			// 按键圆角描边外框（按下时颜色立刻切换，不与发光层共用缓动）
+			// 放在轨迹之后 add，使其绘制在轨迹之上（轨迹位于描边之下）
+			var border = makeRoundRect(BTN_SIZE, BTN_SIZE, FlxColor.TRANSPARENT, BORDER_THICK, BORDER_COLOR, KEY_RADIUS);
+			border.setPosition(bx, yPos);
+			border.scrollFactor.set(0, 0);
+			add(border);
+			keyBorders.push(border);
+
+			// 键名文字（真实物理按键），字号自适应：名字过长时缩小以完整显示于按键内
+			var keyName:String = getKeyName(keysArray[i]);
+			var label = new FlxText(bx, yPos, BTN_SIZE, keyName, KEY_NAME_SIZE);
+			label.setFormat(Paths.font(FONT_NAME), KEY_NAME_SIZE, TEXT_COLOR, CENTER);
+			// 自适应：先按自动宽度测量真实像素宽，超出则等比缩小字号（下限 KEY_NAME_MIN）
+			label.fieldWidth = 0;
+			var natW:Float = label.width;
+			if (natW > BTN_SIZE - KEY_NAME_PAD)
+			{
+				var fit:Int = Math.floor(KEY_NAME_SIZE * (BTN_SIZE - KEY_NAME_PAD) / natW);
+				if (fit < KEY_NAME_MIN) fit = KEY_NAME_MIN;
+				label.size = fit;
+				label.setFormat(Paths.font(FONT_NAME), fit, TEXT_COLOR, CENTER);
+			}
+			label.fieldWidth = BTN_SIZE; // 恢复按字段宽度居中对齐
+			label.x = bx;
+			label.y = yPos + (BTN_SIZE - label.height) / 2;
+			label.scrollFactor.set(0, 0);
+			add(label);
+			keyLabels.push(label);
+
+			keyPressGlow.push(0.0);
 		}
 
 		// 右侧 KPS / Total / Max：用单个多行文本，行距收紧（STAT_LINE_GAP），并在按键区内垂直居中
@@ -262,24 +314,38 @@ class KeyViewer extends FlxGroup
 		statsText = new FlxText(textX, 0, textW, 'KPS: 0\nTotal: 0\nMax: 0', 14);
 		statsText.setFormat(Paths.font(FONT_NAME), 14, TEXT_COLOR, LEFT);
 		statsText.scrollFactor.set(0, 0);
-		statsText.y = Math.round(bgY + (keyAreaH - statsText.height) / 2);
+		statsText.y = Math.round(yPos + (BTN_SIZE - statsText.height) / 2);
 		add(statsText);
 
-		// 底部名字：紧贴按键描边正下方（取按键底边），水平居中于背景，并在文本带内垂直居中（兼容多行）
+		// 底部/顶部名字：随轨迹方向切换位置，水平居中于按键区中心
 		if (nameText != null)
 		{
-			var keyBottom:Float = yPos + BTN_SIZE;
-			var nameTopY:Float = keyBottom + NAME_TOP_PAD;
-			nameText.x = bgX; // 对齐到背景左缘（宽度=bgW 且居中，故文本水平居中于背景）
-			nameText.y = Math.round(nameTopY + Math.max(0, (nameBandH - nameText.height) / 2));
+			// 以「按键区」中心为基准水平居中（而非整个面板，避免右侧统计区把名字挤偏）
+			var keyCenterX:Float = keyStartX + totalWidth / 2;
+			nameText.x = Math.round(keyCenterX - bgW / 2);
+			if (downTrail)
+			{
+				// 下落模式：名字置于面板顶部（按键上方），腾出按键下方给向下轨迹
+				nameText.y = Math.round(bgY + NAME_TOP_PAD + Math.max(0, (nameBandH - nameText.height) / 2));
+			}
+			else
+			{
+				// 上升模式：名字紧贴按键描边正下方，并在文本带内垂直居中（兼容多行）
+				var keyBottom:Float = yPos + BTN_SIZE;
+				var nameTopY:Float = keyBottom + NAME_TOP_PAD;
+				nameText.y = Math.round(nameTopY + Math.max(0, (nameBandH - nameText.height) / 2));
+			}
 			add(nameText);
 		}
 
-		// 全部挂到 camOther 相机（覆盖层顶部，位于 HUD 之上）
+		// 全部挂到相机（默认 camOther；位置校准/预览态用注入的 viewerCam）
+		var useCam:FlxCamera = (viewerCam != null)
+			? viewerCam
+			: ((PlayState.instance != null) ? PlayState.instance.camOther : null);
 		for (member in members)
 		{
 			if (member != null && Std.isOfType(member, FlxSprite))
-				member.cameras = [PlayState.instance.camOther];
+				member.cameras = (useCam != null) ? [useCam] : null;
 		}
 
 		startTime = FlxG.game.ticks;
@@ -290,7 +356,12 @@ class KeyViewer extends FlxGroup
 		super.update(elapsed);
 
 		var now:Float = FlxG.game.ticks;
+		// 校准/预览态无 PlayState 时（无 controls），跳过按键交互逻辑，避免空引用
+		if (PlayState.instance == null || PlayState.instance.controls == null)
+			return;
 		var controls = PlayState.instance.controls;
+		// Botplay / Replay 模式下不计入按键 Total（仍保留 KPS、Max 与按下时的白块显示）
+		var countTotal:Bool = !PlayState.instance.cpuControlled && !PlayState.instance.isReplaying;
 
 		for (i in 0...keysArray.length)
 		{
@@ -313,9 +384,12 @@ class KeyViewer extends FlxGroup
 			if (controls.justPressed(action))
 			{
 				keyTimes.push(now);
-				totalKeys++;
-				saveDirty = true; // Total 变化，待落盘
-				spawnTrail(i); // 生成一条从按键顶端向上拉长的轨迹长条
+				if (countTotal)
+				{
+					totalKeys++;
+					saveDirty = true; // Total 变化，待落盘
+				}
+				spawnTrail(i); // 生成一条轨迹长条（方向由设置决定）
 			}
 
 			// 更新该键的所有轨迹粒子
@@ -327,8 +401,9 @@ class KeyViewer extends FlxGroup
 
 			for (p in 0...pool.length)
 			{
-			var spr:FlxSprite = pool[p];
-			if (!spr.active) continue;
+		var spr:FlxSprite = pool[p];
+		if (!spr.active) continue;
+		var d:Bool = particleDown[i][p]; // 该粒子轨迹方向：true=下落，false=上升
 
 		if (holding[p])
 		{
@@ -345,9 +420,9 @@ class KeyViewer extends FlxGroup
 		}
 		else
 		{
-			// 已松开：整条向上飘走（高度保持，整体飞向遮罩线）
+			// 已松开：整条沿轨迹方向飘走（高度保持）
 			drift[p] += VIS_SPEED;
-			spr.y -= VIS_SPEED;
+			spr.y += d ? VIS_SPEED : -VIS_SPEED; // 下落 / 上升
 		}
 
 		// 长条高度完全由 stretch 决定（stretch=0 即最小高度≈0，瞬间点击不产生高块）
@@ -356,38 +431,46 @@ class KeyViewer extends FlxGroup
 		spr.updateHitbox();
 		if (holding[p])
 		{
-			// 按住期：底部钉在按键顶端(anchorY)，顶部向上延伸 h
-			spr.y = anchorY[p] - h;
+			// 上升：底部钉在按键顶端(anchorY)，顶部向上延伸 h；下落：顶部钉在按键底端(anchorY)，向下延伸 h
+			spr.y = d ? anchorY[p] : anchorY[p] - h;
 			spr.alpha = 1;
 		}
 		// 飘走阶段：spr.y 已在前面 spr.y -= VIS_SPEED 累积上飘，这里不再重设（否则会被钉回原位）
 
-			// 遮罩线（fade line）：距按键顶端 FADE_LINE 处，白块超出此线的部分被水平裁断
-			// 注意：clipRect 使用帧（纹理）坐标，需把屏幕局部差按 scale.y 换算回帧坐标，
-			// 否则 setGraphicSize 拉长后坐标单位不一致会导致整条被误裁（瞬间消失）
-			var fadeLineY:Float = anchorY[p] - FADE_LINE;
+			// 遮罩线（fade line）：上升=按键顶端上方 FADE_LINE；下落=按键底端下方 FADE_LINE。
+			// 白块超出该线的部分被裁断渐隐。clipRect 使用帧（纹理）坐标，需把屏幕局部差按
+			// scale.y 换算回帧坐标，否则 setGraphicSize 拉长后坐标单位不一致会误裁。
+			// 上升：保留线以下（靠近按键）部分 → frame[lineLocalTex .. frameHeight]
+			// 下落：保留线以上（靠近按键）部分 → frame[0 .. lineLocalTex]
+			var fadeLineY:Float = d ? (anchorY[p] + FADE_LINE) : (anchorY[p] - FADE_LINE);
 			var lineLocalTex:Float = (fadeLineY - spr.y) / spr.scale.y; // 遮罩线在帧局部坐标系的 y
-			if (lineLocalTex <= 0)
+			if (d)
 			{
-				spr.clipRect = null; // 整条都在线以下：完整显示
-			}
-			else if (lineLocalTex >= spr.frameHeight)
-			{
-				spr.clipRect = new flixel.math.FlxRect(0, 0, spr.width, 0); // 整条都在线以上：裁掉不可见
+				if (lineLocalTex <= 0)
+					spr.clipRect = new flixel.math.FlxRect(0, 0, spr.width, 0); // 整条已越过线：不可见
+				else if (lineLocalTex >= spr.frameHeight)
+					spr.clipRect = null; // 整条都在线以内：完整显示
+				else
+					spr.clipRect = new flixel.math.FlxRect(0, 0, spr.width, lineLocalTex);
 			}
 			else
 			{
-				// 只保留遮罩线以下的部分，顶部被裁断
-				spr.clipRect = new flixel.math.FlxRect(0, lineLocalTex, spr.width, spr.frameHeight - lineLocalTex);
+				if (lineLocalTex <= 0)
+					spr.clipRect = null; // 整条都在线以内：完整显示
+				else if (lineLocalTex >= spr.frameHeight)
+					spr.clipRect = new flixel.math.FlxRect(0, 0, spr.width, 0); // 整条已越过线：不可见
+				else
+					spr.clipRect = new flixel.math.FlxRect(0, lineLocalTex, spr.width, spr.frameHeight - lineLocalTex);
 			}
 
 			// 飘走阶段整体淡出
 			if (!holding[p])
 				spr.alpha = Math.max(0, spr.alpha - VIS_SPEED / FADE_DIST);
 
-			// 回收：仅飘走阶段，整条越过遮罩线（底部到线以上）或 alpha 归零
-			var bottomY:Float = spr.y + spr.height;
-			if (!holding[p] && (spr.alpha <= 0.001 || bottomY <= fadeLineY))
+		// 回收：仅飘走阶段，整条越过遮罩线（上升=底部到线以上，下落=顶部到线以下）或 alpha 归零
+		var bottomY:Float = spr.y + spr.height;
+		var passed:Bool = d ? (spr.y >= fadeLineY) : (bottomY <= fadeLineY);
+		if (!holding[p] && (spr.alpha <= 0.001 || passed))
 			{
 				spr.visible = false;
 				spr.active = false;
@@ -434,6 +517,34 @@ class KeyViewer extends FlxGroup
 		super.destroy();
 	}
 
+	// 根据设置决定轨迹方向：'down'=强制下落，'up'=强制上升，'auto'=跟随游戏内 downscroll 设置
+	function trailGoesDown():Bool
+	{
+		return switch (ClientPrefs.data.keyViewerTrail)
+		{
+			case 'down': true;
+			case 'auto': !ClientPrefs.data.downScroll; // auto 与 downscroll 相反：非下落时白块向下
+			default: false; // 'up' 或未知值
+		}
+	}
+
+	/**
+	 * 整体平移整个 KeyViewer（位置校准界面拖动用）。
+	 * 直接累加每个成员的屏幕坐标；偏移量由调用方记录到 ClientPrefs。
+	 */
+	public function moveBy(dx:Float, dy:Float):Void
+	{
+		for (m in members)
+		{
+			if (m != null && Std.isOfType(m, FlxObject))
+			{
+				var o:FlxObject = cast m;
+				o.x += dx;
+				o.y += dy;
+			}
+		}
+	}
+
 	/**
 	 * 在第 i 个键顶部生成一条轨迹粒子（按键轨迹可视化）。
 	 * 从粒子池中取一个未激活的，重置位置/透明度/进度后激活。
@@ -445,6 +556,8 @@ class KeyViewer extends FlxGroup
 		var drift:Array<Float> = particleDrift[i];
 		var holding:Array<Bool> = particleHolding[i];
 		var anchorY:Array<Float> = particleAnchorY[i];
+		var pDownArr:Array<Bool> = particleDown[i];
+		var down:Bool = trailGoesDown(); // 本次生成的轨迹方向（按下时确定，全程不变）
 
 		// 快速连按：先把该键仍在"按住"状态的上一条转成飘走，避免多条长条根部重叠
 		for (q in 0...pool.length)
@@ -460,12 +573,14 @@ class KeyViewer extends FlxGroup
 				var spr:FlxSprite = pool[p];
 			var btn:FlxSprite = keyCaps[i];
 			var pW:Float = BTN_SIZE; // 轨迹条宽度跟随按键（描边）宽度
-				// 底部锚定在按键顶端（含生成偏移），长条将由此向上延伸
-				anchorY[p] = btn.y + VIS_SPAWN_Y;
-				spr.x = btn.x + (BTN_SIZE - pW) / 2;
-				spr.setGraphicSize(Math.round(pW), Math.round(PARTICLE_H));
-				spr.updateHitbox();
-				spr.y = anchorY[p] - PARTICLE_H; // 初始为单块高度
+			pDownArr[p] = down;
+			// 上升：锚定按键顶端，长条由此向上延伸；下落：锚定按键底端，长条由此向下延伸
+			anchorY[p] = down ? (btn.y + BTN_SIZE) : (btn.y + VIS_SPAWN_Y);
+			spr.x = btn.x + (BTN_SIZE - pW) / 2;
+			spr.setGraphicSize(Math.round(pW), Math.round(PARTICLE_H));
+			spr.updateHitbox();
+			// 初始单块：上升时块底贴按键顶端（向上生成），下落时块顶贴按键底端（向下生成）
+			spr.y = down ? anchorY[p] : anchorY[p] - PARTICLE_H;
 				spr.alpha = 1;
 				spr.clipRect = null;
 				spr.visible = true;
@@ -485,49 +600,40 @@ class KeyViewer extends FlxGroup
 	 */
 	function getKeyName(action:String):String
 	{
-		var binds = PlayState.instance.controls.keyboardBinds.get(action);
-		if (binds == null || binds.length == 0)
-			return convertActionName(action);
+		// 优先用游戏内 controls；校准/预览态无 PlayState 时，临时创建 Controls 读取 ClientPrefs 真实键位
+		var binds:Array<FlxKey> = null;
+		if (PlayState.instance != null && PlayState.instance.controls != null)
+			binds = PlayState.instance.controls.keyboardBinds.get(action);
+		else
+			binds = (new Controls()).keyboardBinds.get(action);
 
-		var key:FlxKey = binds[0];
-		var name:String = key.toString();
-		// 修正常见按键显示
-		switch (name)
+		if (binds != null && binds.length > 0)
 		{
-			case 'LEFT': return '←';
-			case 'RIGHT': return '→';
-			case 'UP': return '↑';
-			case 'DOWN': return '↓';
-			case 'SPACE': return 'SPACE';
-			case 'ENTER': return 'ENTER';
-			case 'SHIFT': return 'SHIFT';
-			case 'LSHIFT': return 'L-SHIFT';
-			case 'RSHIFT': return 'R-SHIFT';
-			case 'CAPSLOCK': return 'CAPS';
-			case 'BACKSPACE': return 'BACK';
-			case 'ESCAPE': return 'ESC';
-			case 'TAB': return 'TAB';
-			case 'CTRL': return 'CTRL';
-			case 'LCTRL': return 'L-CTRL';
-			case 'RCTRL': return 'R-CTRL';
-			case 'ALT': return 'ALT';
-			case 'LALT': return 'L-ALT';
-			case 'RALT': return 'R-ALT';
-			case 'SEMICOLON': return ';';
-			case 'COMMA': return ',';
-			case 'PERIOD': return '.';
-			case 'SLASH': return '/';
-			case 'BACKSLASH': return '\\';
-			case 'QUOTE': return '\'';
-			case 'LBRACKET': return '[';
-			case 'RBRACKET': return ']';
-			case 'MINUS': return '-';
-			case 'PLUS': return '=';
-			default:
-				// 单字符按键（A-Z, 0-9）原样返回
-				if (name.length == 1) return name.toUpperCase();
-				return name.toUpperCase();
+			var key:FlxKey = binds[0];
+			var name:String = key.toString();
+			// 修正常见按键显示
+			switch (name)
+			{
+				case 'LEFT': return '←';
+				case 'RIGHT': return '→';
+				case 'UP': return '↑';
+				case 'DOWN': return '↓';
+				case 'SPACE': return 'SPACE';
+				case 'ENTER': return 'ENTER';
+				case 'ESCAPE': return 'ESC';
+				case 'BACKSPACE': return '⌫';
+				case 'TAB': return 'TAB';
+				case 'SHIFT': return 'SHIFT';
+				case 'CONTROL': return 'CTRL';
+				case 'ALT': return 'ALT';
+				default:
+					// 去掉可能的 "G" 前缀（gamepad 枚举）等，仅保留可读部分
+					if (name != null && name.length > 0)
+						return name;
+					return convertActionName(action);
+			}
 		}
+		return convertActionName(action);
 	}
 
 	/**

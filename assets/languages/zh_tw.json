@@ -270,6 +270,8 @@
     "keyviewer_desc": "在遊玩介面顯示按鍵指示器（復刻 JKPS 效果），跟隨你的實際按鍵綁定。",
     "keyviewer_profile_desc": "在按鍵顯示左側顯示 images/keyviewer/icon.png（圓角裁剪），底部顯示自訂名稱（可在 images/keyviewer/name.txt 中修改）。無圖示時左側不留空缺。",
     "keyviewer_reset_total_desc": "將累計按鍵總數（Total）重設為 0。",
+    "keyviewer_trail_desc": "按鍵軌跡（白塊）的生成方向：Auto 與遊戲內下落設定（downscroll）相反，Up 強制從按鍵頂端向上，Down 強制從按鍵底端向下。",
+    "keyviewer_pos_desc": "開啟校準介面，用滑鼠或觸控拖動 Key Viewer 面板以調整位置，自動儲存。",
     "gameovervibration_name": "失敗震動",
     "gameovervibration_desc": "勾選後失敗時裝置會震動",
     "sustainsasone_name": "長按判定合併",
