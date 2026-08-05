@@ -150,6 +150,9 @@ import openfl.display.StageQuality;
 	public var loadingScreen:Bool = true;
 	public var basiclanguage:String = 'en-US';
 	public var language:String = 'zh_cn';
+	public var keyViewer:Bool = false; // 游戏内按键显示覆盖层（复刻 JKPS 效果）
+	public var keyViewerProfile:Bool = false; // KeyViewer 左侧图标 + 底部自定义名字（关闭时按键垂直居中）
+	public var keyViewerName:String = ''; // KeyViewer 底部显示的自定义名字（留空则读取 images/keyviewer/name.txt）
 
 	//杂七杂八的特性
 	public var fpsCounterSize:Int = 14;
@@ -291,6 +294,9 @@ import openfl.display.StageQuality;
 	public var simpleInfoShowFPS:Bool = true; // SimpleInfoDisplay 显示FPS
 	public var simpleInfoShowMem:Bool = true; // SimpleInfoDisplay 显示内存
 	public var simpleInfoShowVersion:Bool = false; // SimpleInfoDisplay 显示版本
+
+	// KeyViewer 累计按键总数（跨游戏重启持久化）
+	public var keyViewerTotal:Int = 0;
 
 }
 

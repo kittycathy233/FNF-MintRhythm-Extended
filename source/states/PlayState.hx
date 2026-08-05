@@ -453,7 +453,8 @@ class PlayState extends MusicBeatState
 	public var introSoundsSuffix:String = '';
 
 	// Less laggy controls
-	private var keysArray:Array<String>;
+	public var keysArray:Array<String>;
+	public var keyViewer:objects.KeyViewer; // 游戏内按键显示覆盖层
 	public var songName:String;
 
 	// Callbacks for stages
@@ -1690,6 +1691,13 @@ isReplaying = false;
 			Conductor.songPosition = -Conductor.crochet * 5 + Conductor.offset;
 			setOnScripts('startedCountdown', true);
 			callOnScripts('onCountdownStarted');
+
+			// 创建游戏内按键显示覆盖层（复刻 JKPS 效果，跟随玩家键位）
+			if (ClientPrefs.data.keyViewer && keyViewer == null)
+			{
+				keyViewer = new objects.KeyViewer();
+				add(keyViewer);
+			}
 
 			var swagCounter:Int = 0;
 			if (startOnTime > 0) {
@@ -6077,6 +6085,11 @@ isReplaying = false;
 	}
 
 	override function destroy() {
+		if (keyViewer != null)
+		{
+			keyViewer.destroy();
+			keyViewer = null;
+		}
 		if (comboSpritePool != null)
 		{
 			for (spr in comboSpritePool.members.copy())

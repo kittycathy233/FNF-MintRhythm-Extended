@@ -18,6 +18,31 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		addOption(option);
 
 		var option:Option = new Option(
+			"Key Viewer",
+			Language.get("keyviewer_desc"),
+			'keyViewer',
+			BOOL);
+		addOption(option);
+
+		var option:Option = new Option(
+			"Key Viewer Profile",
+			Language.get("keyviewer_profile_desc"),
+			'keyViewerProfile',
+			BOOL);
+		addOption(option);
+
+		var option:Option = new Option(
+			"Reset Key Viewer Total",
+			Language.get("keyviewer_reset_total_desc"),
+			'_keyViewerResetTotal',
+			BUTTON);
+		addOption(option);
+		option.onChange = function() {
+			ClientPrefs.data.keyViewerTotal = 0;
+			ClientPrefs.saveSettings();
+		};
+
+		var option:Option = new Option(
 			"Middlescroll",
 			Language.get("middlescroll_desc"),
 			'middleScroll',
