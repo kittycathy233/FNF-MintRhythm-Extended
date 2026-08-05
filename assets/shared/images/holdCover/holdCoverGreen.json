@@ -2,10 +2,10 @@
 	"start": "holdCoverStartGreen",
 	"offsets": [
 		-10,
-		35
+		40
 	],
 	"end": "holdCoverEndGreen",
 	"fps": 24,
 	"hold": "holdCoverGreen",
-	"scale": 1.2
+	"scale": 1.3
 }
