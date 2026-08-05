@@ -48,7 +48,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 			Language.get("keyviewer_trail_desc"),
 			'keyViewerTrail',
 			STRING,
-			['auto', 'up', 'down']);
+			['off', 'auto', 'up', 'down']);
 		addOption(option);
 
 		var option:Option = new Option(

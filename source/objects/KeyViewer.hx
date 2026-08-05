@@ -10,7 +10,9 @@ import flixel.math.FlxMath;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import backend.Paths;
+import backend.Mods;
 import backend.ClientPrefs;
+import shaders.RoundedCornerShader;
 import backend.Controls;
 import states.PlayState;
 import flixel.input.keyboard.FlxKey;
@@ -20,6 +22,10 @@ import openfl.display.BitmapDataChannel;
 import openfl.geom.Matrix;
 import openfl.geom.Point;
 import openfl.geom.Rectangle;
+#if MODS_ALLOWED
+import sys.io.File;
+import sys.FileSystem;
+#end
 
 /**
  * 游戏内按键显示覆盖层（KeyViewer）。
@@ -44,10 +50,11 @@ class KeyViewer extends FlxGroup
 	static final KEY_NAME_PAD:Int = 6;      // 按键名左右内边距（防止贴边）
 
 	// ---- 按键按钮尺寸 ----
-	static final SLOT_W:Int = 56;     // 按键槽位宽度（用于布局与背景，保持不变）
-	static final BTN_SIZE:Int = 46;   // 实际按键视觉尺寸（比槽位小，留出圆角/间距感）
-	static final BTN_GAP:Int = 8;
-	static final TEXT_AREA_W:Int = 100; // 按键右侧统计文本区宽度（有图标时左侧图标区同宽）
+	static final SLOT_W:Int = 46;     // 按键槽位宽度（= 按键视觉尺寸，使可视间隔等于 BTN_GAP）
+	static final BTN_SIZE:Int = 46;   // 实际按键视觉尺寸
+	static final BTN_GAP:Int = 5;
+	static final KEY_AREA_PAD:Int = 8; // 按键在按键区内上下内边距（up 模式即顶边留白，与键距 BTN_GAP 解耦）
+	static final TEXT_AREA_W:Int = 100; // 按键右侧统计文本区宽度（有图标时仅作图标最大边长上限，不再占固定宽度）
 
 	// ---- 描边（圆角描边，复刻 white-orange 主题）----
 	static final BORDER_THICK:Int = 3;            // 按键描边厚度（像素）
@@ -129,24 +136,80 @@ class KeyViewer extends FlxGroup
 
 		// ---- 资料条（左侧图标 + 底部名字）----
 		var profileOn:Bool = ClientPrefs.data.keyViewerProfile;
-		var iconKey:String = profileOn ? findIconKey() : null;
-		var iconBmp:BitmapData = null;
-		if (iconKey != null)
+		// 左侧图标：支持 png 静图 / gif 动图 / 精灵图集(idle 动画)，按文件后缀自动兼容
+		var iconBmp:BitmapData = null; // 仅静图使用，供圆角裁剪
+		var iconObj:FlxSprite = null;  // 非静图显示对象（gif 为 FlxGifSprite，精灵为 FlxSprite）
+		var iconSrcW:Int = 0;          // 源图自然尺寸，用于等比缩放
+		var iconSrcH:Int = 0;
+		if (profileOn)
 		{
-			// 必须 allowGPU=false：本引擎在 GPU 缓存开启时会丢弃位图的 CPU surface，
-			// 之后用 BitmapData.draw 绘制它会触发 Cairo 段错误（cairo_paint）。
-			var graphic = Paths.image(iconKey, null, false);
-			if (graphic != null && graphic.bitmap != null && graphic.bitmap.width > 0 && graphic.bitmap.height > 0)
-				iconBmp = graphic.bitmap;
+			var info = findIconInfo();
+			if (info != null)
+			{
+				switch (info.type)
+				{
+				case 'gif':
+					var g = new FlxGifSprite(0, 0);
+					// mods 覆盖优先：mods 下的 gif 是绝对文件系统路径，必须读成字节再喂给 loadGif，
+					// 否则 Assets.getBytes 会把 Windows 盘符 E: 误判为“资源库名:路径”分隔符而崩溃。
+					// 解析失败时（无 mods 覆盖 / 无内置 gif）退回相对资源路径字符串（与 aris.gif 加载一致，可正常读取）。
+					var loaded:Bool = false;
+					#if MODS_ALLOWED
+					var gifBytes:haxe.io.Bytes = resolveGifBytes(info.key);
+					if (gifBytes != null) { g.loadGif(gifBytes); loaded = true; }
+					#end
+					if (!loaded)
+						g.loadGif('assets/shared/images/' + info.key + '.gif');
+					g.antialiasing = ClientPrefs.data.antialiasing;
+						iconObj = g;
+						iconSrcW = Std.int(g.width);
+						iconSrcH = Std.int(g.height);
+					case 'sprite':
+						var s = new FlxSprite(0, 0);
+						try { s.frames = Paths.getSparrowAtlas(info.key); } catch (e:Dynamic) {}
+						if (s.frames != null && s.frames.numFrames > 0)
+						{
+							// 优先按 idle 前缀；无 idle 帧则把全部帧作为 idle 循环播放
+							var idlePrefix:String = null;
+							for (f in s.frames.frames)
+							{
+								if (f.name.toLowerCase().indexOf('idle') >= 0) { idlePrefix = 'idle'; break; }
+							}
+							if (idlePrefix != null)
+								s.animation.addByPrefix('idle', idlePrefix, 24, true);
+							else
+							{
+								var idx:Array<Int> = [for (i in 0...s.frames.numFrames) i];
+								s.animation.add('idle', idx, 24, true);
+							}
+							s.animation.play('idle');
+							s.antialiasing = ClientPrefs.data.antialiasing;
+							iconObj = s;
+							iconSrcW = Std.int(s.width);
+							iconSrcH = Std.int(s.height);
+						}
+					default: // 'png' 静图
+						// 必须 allowGPU=false：本引擎在 GPU 缓存开启时会丢弃位图的 CPU surface，
+						// 之后用 BitmapData.draw 绘制它会触发 Cairo 段错误（cairo_paint）。
+						var graphic = Paths.image(info.key, null, false);
+						if (graphic != null && graphic.bitmap != null && graphic.bitmap.width > 0 && graphic.bitmap.height > 0)
+						{
+							iconBmp = graphic.bitmap;
+							iconSrcW = iconBmp.width;
+							iconSrcH = iconBmp.height;
+						}
+				}
+			}
 		}
-		var hasIcon:Bool = (iconBmp != null);
+		var hasIcon:Bool = (iconBmp != null || iconObj != null);
 
-		// 左侧区域宽度：仅在「资料条开启且找到图标」时才留出空缺，其余情况一律收起（最左按键左侧无空缺）
+		// 按键区高度：按键在区内垂直居中所需的上下内边距（KEY_AREA_PAD），与键距 BTN_GAP 解耦
+		var keyAreaH:Int = BTN_SIZE + KEY_AREA_PAD * 2;
+
+		// 左侧区域宽度：与右侧统计区等宽（TEXT_AREA_W），达成左右对称；无图标时收起为 0
 		var leftW:Int = hasIcon ? TEXT_AREA_W : 0;
 
-		var keyAreaH:Int = SLOT_W + BTN_GAP * 2; // 按键区高度（用于居中按键与右侧统计）
-
-		// 背景宽度不依赖名字条高度，先算出来，用于创建名字文本
+		// 背景宽度：左侧区域 + 两侧留白 + 按键区 + 右侧统计区（不依赖名字条高度，先算出来用于创建名字文本）
 		var bgW:Int = leftW + BTN_GAP * 2 + totalWidth + TEXT_AREA_W;
 
 		// 底部名字文本（资料条开启时始终显示，可多行；先创建以定位）
@@ -165,17 +228,30 @@ class KeyViewer extends FlxGroup
 		// 并在按键下方预留可见轨迹区，否则向下生成的白块会直接冲出屏幕底部。
 		var downTrail:Bool = trailGoesDown();
 
+		// 面板总高度：名字带 + 按键区（下落模式的向下轨迹绘制在面板外的屏幕空隙中，不计入面板高度）
 		var bgH:Int;
 		if (downTrail)
 		{
-			// 上→下顺序：名字带(顶部) + 按键区。下落轨迹绘制在面板下方的屏幕空隙中，
-			// 不计入面板高度，避免面板被轨迹区撑得过高。
 			bgH = Math.ceil(NAME_TOP_PAD + nameBandH + NAME_BOTTOM_PAD + keyAreaH);
 		}
 		else
 		{
-			// 原布局：按键区（按键居中）+ 紧贴按键描边下方的名字带
 			bgH = Math.ceil((keyAreaH + BTN_SIZE) / 2 + NAME_TOP_PAD + nameBandH + NAME_BOTTOM_PAD);
+		}
+
+		// 左侧图标：在左侧框内等比自适应缩放以填充。
+		// 缩放上限取「左侧框宽」与「整块面板高度」较小者：宽度上限=左侧框宽（保持左右对称），
+		// 高度上限=整块面板高度（图标在左列、名字在按键下方，不同列不重叠，可随面板撑满左列，
+		// 消除“小图大框”的空旷感）。
+		var iconW:Int = 0;
+		var iconH:Int = 0;
+		if (hasIcon)
+		{
+			var maxW:Float = leftW - ICON_PAD * 2; // 左侧框宽上限（无图标时 leftW=0，不会进入此分支）
+			var maxH:Float = bgH - ICON_PAD * 2;   // 整块面板高度上限
+			var sc:Float = Math.min(maxW / iconSrcW, maxH / iconSrcH);
+			iconW = Std.int(Math.max(1, Math.round(iconSrcW * sc)));
+			iconH = Std.int(Math.max(1, Math.round(iconSrcH * sc)));
 		}
 		var bgX:Float = (FlxG.width - bgW) / 2; // 整个面板居中于屏幕
 		// 下落模式：面板整体上移 DOWN_TRAIL_AREA，给按键下方的向下轨迹留出屏幕空隙
@@ -199,24 +275,35 @@ class KeyViewer extends FlxGroup
 		bg.scrollFactor.set(0, 0);
 		add(bg);
 
-		// 左侧自定义图标：等比缩小到合理尺寸（只缩不放）+ 圆角裁剪，
-		// 尺寸上限取「左侧槽宽」与「按键区高度」较小者，避免显得过大；位置在整个面板（含名字条）内垂直居中
+		// 左侧自定义图标：已在前面按实际尺寸缩放（iconW×iconH）+ 圆角裁剪；
+		// 左侧区域宽度已紧贴图标，这里只需居中对齐即可。
 		if (hasIcon)
 		{
-			var maxW:Float = leftW - ICON_PAD * 2;
-			var maxH:Float = keyAreaH - ICON_PAD * 2;
-			var sc:Float = Math.min(maxW / iconBmp.width, maxH / iconBmp.height);
-			if (sc > 1) sc = 1; // 图标本身较小时不放大，避免糊图
-			var iw:Int = Std.int(Math.max(1, Math.round(iconBmp.width * sc)));
-			var ih:Int = Std.int(Math.max(1, Math.round(iconBmp.height * sc)));
-
-			var icon = new FlxSprite();
-			icon.loadGraphic(makeRoundedBitmap(iconBmp, iw, ih, ICON_RADIUS));
+			var icon:FlxSprite;
+			if (iconBmp != null)
+			{
+				icon = new FlxSprite();
+				icon.loadGraphic(makeRoundedBitmap(iconBmp, iconW, iconH, ICON_RADIUS));
+				icon.antialiasing = ClientPrefs.data.antialiasing;
+			}
+			else
+			{
+				icon = iconObj; // gif / 精灵：已加载且正在播放动画
+				icon.setGraphicSize(iconW, iconH);
+				icon.updateHitbox();
+				icon.antialiasing = ClientPrefs.data.antialiasing;
+				// 动画精灵无法像 png 那样预渲染圆角位图，改用 GPU shader 按 UV 裁剪圆角，
+				// 与 png 的 makeRoundedBitmap 视觉效果一致（uSize 用显示尺寸，半径用 ICON_RADIUS）。
+				// 注意：uSize/uRadius 由 FlxShader 宏在子类上生成，必须用 RoundedCornerShader 类型变量持有。
+				var rc:RoundedCornerShader = new RoundedCornerShader();
+				rc.uSize.value = [iconW, iconH];
+				rc.uRadius.value = [ICON_RADIUS];
+				icon.shader = rc;
+			}
 			icon.setPosition(
-				Math.round(bgX + (leftW - iw) / 2),
-				Math.round(bgY + (bgH - ih) / 2)); // 含名字条的整块内垂直居中
+				Math.round(bgX + (leftW - iconW) / 2),
+				Math.round(bgY + (bgH - iconH) / 2)); // 含名字条的整块内垂直居中
 			icon.scrollFactor.set(0, 0);
-			icon.antialiasing = ClientPrefs.data.antialiasing;
 			add(icon);
 			iconSprite = icon;
 		}
@@ -362,6 +449,8 @@ class KeyViewer extends FlxGroup
 		var controls = PlayState.instance.controls;
 		// Botplay / Replay 模式下不计入按键 Total（仍保留 KPS、Max 与按下时的白块显示）
 		var countTotal:Bool = !PlayState.instance.cpuControlled && !PlayState.instance.isReplaying;
+		// 'off' 时完全关闭按键轨迹可视化（不生成也不更新白块）
+		var trailEnabled:Bool = ClientPrefs.data.keyViewerTrail != 'off';
 
 		for (i in 0...keysArray.length)
 		{
@@ -389,9 +478,10 @@ class KeyViewer extends FlxGroup
 					totalKeys++;
 					saveDirty = true; // Total 变化，待落盘
 				}
-				spawnTrail(i); // 生成一条轨迹长条（方向由设置决定）
+				if (trailEnabled) spawnTrail(i); // 生成一条轨迹长条（方向由设置决定）
 			}
 
+			if (trailEnabled) { // 关闭轨迹可视化时跳过整段粒子更新
 			// 更新该键的所有轨迹粒子
 			var pool:Array<FlxSprite> = particles[i];
 			var stretch:Array<Float> = particleStretch[i];
@@ -447,20 +537,20 @@ class KeyViewer extends FlxGroup
 			if (d)
 			{
 				if (lineLocalTex <= 0)
-					spr.clipRect = new flixel.math.FlxRect(0, 0, spr.width, 0); // 整条已越过线：不可见
+					spr.clipRect = new flixel.math.FlxRect(0, 0, spr.frameWidth, 0); // 整条已越过线：不可见
 				else if (lineLocalTex >= spr.frameHeight)
 					spr.clipRect = null; // 整条都在线以内：完整显示
 				else
-					spr.clipRect = new flixel.math.FlxRect(0, 0, spr.width, lineLocalTex);
+					spr.clipRect = new flixel.math.FlxRect(0, 0, spr.frameWidth, lineLocalTex);
 			}
 			else
 			{
 				if (lineLocalTex <= 0)
 					spr.clipRect = null; // 整条都在线以内：完整显示
 				else if (lineLocalTex >= spr.frameHeight)
-					spr.clipRect = new flixel.math.FlxRect(0, 0, spr.width, 0); // 整条已越过线：不可见
+					spr.clipRect = new flixel.math.FlxRect(0, 0, spr.frameWidth, 0); // 整条已越过线：不可见
 				else
-					spr.clipRect = new flixel.math.FlxRect(0, lineLocalTex, spr.width, spr.frameHeight - lineLocalTex);
+					spr.clipRect = new flixel.math.FlxRect(0, lineLocalTex, spr.frameWidth, spr.frameHeight - lineLocalTex);
 			}
 
 			// 飘走阶段整体淡出
@@ -476,6 +566,7 @@ class KeyViewer extends FlxGroup
 				spr.active = false;
 				spr.alpha = 0;
 				spr.clipRect = null;
+			}
 			}
 			}
 		}
@@ -647,16 +738,51 @@ class KeyViewer extends FlxGroup
 	}
 
 	/**
-	 * 查找左侧自定义图标（images/keyViewer/icon.png，兼容全小写目录名）。
+	 * 按文件后缀自动查找左侧自定义图标，返回类型与资源 key。
+	 * 支持：icon.gif（动图）/ icon.xml 或 icon.json（精灵图集，配合同名 png）/ icon.png（静图）。
 	 * 找不到时返回 null，此时左侧空缺会被收起。
 	 */
-	function findIconKey():String
+	function findIconInfo():{type:String, key:String}
 	{
 		for (key in ICON_KEYS)
-			if (Paths.fileExists('images/$key.png', IMAGE))
-				return key;
+		{
+			if (Paths.fileExists('images/$key.gif', IMAGE) || Paths.fileExists('images/$key.gif', BINARY))   // gif 动图
+				return {type: 'gif', key: key};
+			if (Paths.fileExists('images/$key.xml', TEXT) || Paths.fileExists('images/$key.json', TEXT)) // 精灵图集
+				return {type: 'sprite', key: key};
+			if (Paths.fileExists('images/$key.png', IMAGE))   // 静态 png
+				return {type: 'png', key: key};
+		}
 		return null;
 	}
+
+	#if MODS_ALLOWED
+	/**
+	 * 兼容 mods 地解析 gif 图标字节：先查全局 mods、再查当前 mod 目录（及顶层 mods），
+	 * 最后回退内置资源（返回 null，由调用方改用相对路径字符串加载）。
+	 * 必须读成字节喂给 FlxGifSprite.loadGif，否则 Windows 绝对路径的盘符 E: 会被
+	 * Assets.getBytes 误判为“资源库名:路径”分隔符而崩溃。
+	 */
+	function resolveGifBytes(key:String):haxe.io.Bytes
+	{
+		// 1) 全局 mods（任意启用的全局 mod 目录）
+		for (mod in Mods.getGlobalMods())
+		{
+			var p:String = Paths.mods('$mod/images/$key.gif');
+			if (FileSystem.exists(p)) return File.getBytes(p);
+		}
+		// 2) 当前 mod 目录 / 顶层 mods
+		if (Mods.currentModDirectory != null && Mods.currentModDirectory.length > 0)
+		{
+			var p:String = Paths.mods(Mods.currentModDirectory + '/images/$key.gif');
+			if (FileSystem.exists(p)) return File.getBytes(p);
+		}
+		var top:String = Paths.mods('images/$key.gif');
+		if (FileSystem.exists(top)) return File.getBytes(top);
+		// 3) 内置资源：交给调用方用相对路径字符串加载（aris.gif 同款，可正常读取）
+		return null;
+	}
+	#end
 
 	/**
 	 * 把源位图等比缩放绘制到 w×h，并做圆角裁剪（超出圆角的部分 alpha 置 0）。
