@@ -32,11 +32,22 @@ class StorageUtil
 {
 	#if sys
 	public static function getStorageDirectory():String
-		return #if android haxe.io.Path.addTrailingSlash(AndroidContext.getExternalFilesDir()) #elseif ios lime.system.System.documentsDirectory #else Sys.getCwd() #end;
+		return #if android haxe.io.Path.addTrailingSlash(AndroidContext.getExternalFilesDir()) #elseif ios
+			haxe.io.Path.addTrailingSlash(lime.system.System.documentsDirectory) #else Sys.getCwd() #end;
+
+	/**
+	 * 用户可见的数据根目录（mods / saves / logs 都放这里）。
+	 *
+	 * Android 固定为 /sdcard/.KathyEngine/；
+	 * 其余 sys 目标（iOS、桌面等）回落到 getStorageDirectory()，
+	 * 这样非 Android 平台引用该方法时也能编译并拿到可写目录。
+	 */
+	public static function getExternalStorageDirectory():String
+		return #if android '/sdcard/.KathyEngine/' #else getStorageDirectory() #end;
 
 	public static function saveContent(fileName:String, fileData:String, ?alert:Bool = true):Void
 	{
-		final folder:String = #if android StorageUtil.getExternalStorageDirectory() + #else Sys.getCwd() + #end 'saves/';
+		final folder:String = getExternalStorageDirectory() + 'saves/';
 		try
 		{
 			if (!FileSystem.exists(folder))
@@ -54,10 +65,6 @@ class StorageUtil
 	}
 
 	#if android
-	// always force path due to haxe
-	public static function getExternalStorageDirectory():String
-		return '/sdcard/.KathyEngine/';
-
 	public static function requestPermissions():Void
 	{
 		if (AndroidVersion.SDK_INT >= AndroidVersionCode.TIRAMISU)

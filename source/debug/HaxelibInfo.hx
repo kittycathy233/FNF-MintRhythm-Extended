@@ -13,19 +13,15 @@ class HaxelibInfo {
 	public static macro function getHaxelibInfo():ExprOf<String> {
 		#if !display
 		try {
-			// 获取项目根目录（当前工作目录）
-			var cwd = Sys.getCwd();
-			// 移除末尾的路径分隔符（如果有）
-			if (StringTools.endsWith(cwd, "/") || StringTools.endsWith(cwd, "\\")) {
-				cwd = cwd.substring(0, cwd.length - 1);
-			}
-			var projectPath = cwd + "/Project.xml";
-			if (!FileSystem.exists(projectPath)) {
-				// 尝试在父目录中查找
-				projectPath = cwd + "/../Project.xml";
-				if (!FileSystem.exists(projectPath)) {
-					Context.error("Project.xml not found in " + cwd, Context.currentPos());
-				}
+			// 定位项目根目录的 Project.xml。
+			// 注意：iOS/Android 等原生目标由 lime 生成 Xcode/Gradle 工程后，
+			// haxe 是在 export/<cfg>/<target>/... 子目录里被调用的，
+			// 此时 Sys.getCwd() 并不是项目根目录，必须向上逐级查找。
+			var projectPath = findProjectXml();
+			if (projectPath == null) {
+				// 找不到不应该中断构建，降级为「信息不可用」即可
+				Context.warning("Project.xml not found (cwd: " + Sys.getCwd() + "), haxelib info disabled", Context.currentPos());
+				return macro $v{"(haxelib info unavailable)"};
 			}
 			var xmlContent = File.getContent(projectPath);
 			var xml = Xml.parse(xmlContent);
@@ -160,6 +156,43 @@ class HaxelibInfo {
 	}
 
 	#if macro
+	/**
+	 * 从当前工作目录、以及宏调用点所在源文件目录出发，向上逐级查找 Project.xml。
+	 * @return 找到的绝对/相对路径，找不到返回 null
+	 */
+	static function findProjectXml():Null<String> {
+		var startDirs:Array<String> = [];
+
+		var cwd = Sys.getCwd();
+		if (cwd != null && cwd.length > 0)
+			startDirs.push(cwd);
+
+		// 宏调用点所在的 .hx 文件（如 source/debug/FPSCounter.hx）同样可以反推项目根目录
+		var posFile = Context.getPosInfos(Context.currentPos()).file;
+		if (posFile != null && posFile.length > 0) {
+			try {
+				startDirs.push(FileSystem.absolutePath(haxe.io.Path.directory(posFile)));
+			} catch (_:Dynamic) {}
+		}
+
+		for (start in startDirs) {
+			var dir = haxe.io.Path.removeTrailingSlashes(StringTools.replace(start, "\\", "/"));
+			var depth = 0;
+			while (dir != null && dir.length > 0 && depth < 12) {
+				var candidate = dir + "/Project.xml";
+				if (FileSystem.exists(candidate))
+					return candidate;
+
+				var parent = haxe.io.Path.directory(dir);
+				if (parent == null || parent == dir)
+					break;
+				dir = parent;
+				depth++;
+			}
+		}
+		return null;
+	}
+
 	/**
 	 * 编译期日志开关。
 	 *
