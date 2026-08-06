@@ -30,11 +30,45 @@ jobs:
   build:
     name: Build
     runs-on: ${{ inputs.os }}
+    # 兜底：任何一步卡死时，最多 2 小时后整个 job 自动失败，
+    # 而不是一直占着 runner 直到 GitHub 默认的 6 小时上限。
+    timeout-minutes: 120
     steps:
+      # git 的 smart-HTTP 传输默认没有任何超时保护：一旦服务端限流或连接卡住，
+      # fetch 会静默挂起直到 job 被取消（曾出现 iOS/Windows 卡 20 分钟无输出）。
+      # 这里设置低速阈值，让卡住的 fetch 主动报错退出，从而能被下面的重试捕获。
+      - name: Harden git transport
+        shell: bash
+        run: |
+          git config --global http.version HTTP/1.1
+          git config --global http.postBuffer 524288000
+          git config --global http.lowSpeedLimit 1000
+          git config --global http.lowSpeedTime 60
+
+      # 保留 fetch-depth: 0，因为 debug/GameVersion.hx 需要用
+      # `git rev-list --count HEAD` 统计提交数，浅克隆会让结果恒为 1。
+      # 改用 blob:none 部分克隆：commit/tree 全量保留，历史版本的大文件
+      # （assets 里的 png/ogg 等）不再下载，传输量降低一个数量级。
       - name: Checkout
+        id: checkout
         uses: actions/checkout@v4
+        continue-on-error: true
+        timeout-minutes: 15
         with:
           fetch-depth: 0
+          filter: blob:none
+          fetch-tags: false
+          show-progress: false
+
+      - name: Checkout (retry)
+        if: steps.checkout.outcome == 'failure'
+        uses: actions/checkout@v4
+        timeout-minutes: 15
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          fetch-tags: false
+          show-progress: false
 
       - name: Setup Haxe
         uses: krdlab/setup-haxe@v2

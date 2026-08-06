@@ -44,6 +44,9 @@ jobs:
     name: ${{ matrix.name }}
     needs: get-commit-hash
     strategy:
+      # 单个平台失败（尤其是 checkout 卡住这类偶发问题）不应连累其它平台，
+      # 否则要重跑整个矩阵，而且其它平台的日志会被 "operation was canceled" 掩盖。
+      fail-fast: false
       matrix:
         include:
           - name: Windows

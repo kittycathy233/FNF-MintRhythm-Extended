@@ -38,6 +38,8 @@ jobs:
     name: ${{ matrix.name }}
     needs: get-commit-hash
     strategy:
+      # 单个平台失败不连累其它平台，便于定位真正出问题的那个
+      fail-fast: false
       matrix:
         include:
           - name: Android
