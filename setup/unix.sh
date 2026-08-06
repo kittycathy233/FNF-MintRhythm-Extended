@@ -7,7 +7,7 @@ echo Makking the main haxelib and setuping folder in same time..
 mkdir ~/haxelib && haxelib setup ~/haxelib
 echo Installing dependencies...
 echo This might take a few moments depending on your internet speed.
-haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp v4.3.148 --quiet
+haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp v4.3.152 --quiet
 # hxcpp git 源码版需要重新编译命令行工具（hxcpp.n），否则构建时会卡在交互提示
 HAXELIB_PATH=$(haxelib config)
 ( cd "$HAXELIB_PATH/hxcpp/git/tools/hxcpp" && haxe compile.hxml )
