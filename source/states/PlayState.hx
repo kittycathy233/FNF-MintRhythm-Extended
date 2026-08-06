@@ -3658,17 +3658,23 @@ isReplaying = false;
 					// 保存到跟踪数组
 					spawnedNotes[notesAddedCount] = note;
 
-					// #4 过期即时结算：越过 noteKillOffset 的音符按 sick 结算（对手方直接跳过），
-					// 不加入任何渲染组、不逐帧绘制，也不产生视觉开销（详见 instantResolveAsSick）
-					if (instantExpire)
-					{
-						note.spawned = true;
-						note.active = note.visible = false;
-						if (note.mustPress && !note.ignoreNote && !endingSong)
-							instantResolveAsSick(note);
-						notesAddedCount++;
-						continue;
-					}
+				// #4 过期即时结算：越过 noteKillOffset 的音符按 sick 结算（对手方直接跳过），
+				// 不加入任何渲染组、不逐帧绘制，也不产生视觉开销（详见 instantResolveAsSick）
+				if (instantExpire)
+				{
+					note.spawned = true;
+					note.active = note.visible = false;
+					if (note.mustPress && !note.ignoreNote && !endingSong)
+						instantResolveAsSick(note);
+					// [OOM FIX] 过期音符结算完毕后立即销毁并解除 spawnedNotes 强引用。
+					// 否则对手方过期音符既不入渲染组、也永不被 invalidateNote 回收，会随整曲
+					// 单向累积，最终撑爆 Java 堆（崩溃点 PlayState.update:3656 的 OutOfMemoryError）。
+					// 后续循环通过 previousNoteIndex/parentIndex 引用它时已做 null + animation 校验，置空安全。
+					note.destroy();
+					spawnedNotes[notesAddedCount] = null;
+					notesAddedCount++;
+					continue;
+				}
 					
 					// 生成音符，根据 holdNoteBehind 设置调整添加顺序
 					if (ClientPrefs.data.holdNoteBehind) {
