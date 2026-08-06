@@ -95,6 +95,19 @@ import openfl.display.StageQuality;
 	// 的 Lua/HScript 调用。密集谱下这些逐音符调用开销巨大。⚠ 会使依赖这些回调的 modchart 失效，默认关闭。
 	public var disableNoteLua:Bool = false;
 
+	// ===== 综合音符性能优化总开关 =====
+	// 控制不影响对象生命周期的优化（容器 push 替代 insert(0)、PreloadedChartNote 原生 class、
+	// 皮肤缓存统一清理、cos/sin 缓存、notesHitArray 改用 Timer.stamp、Lua 热路径去 indexOf）。
+	// 这些改动不改变 Note 实例生命周期，脚本安全。关闭则全量回退。默认开启。
+	public var noteOptimization:Bool = true;
+
+	// ===== 对象池开关 =====
+	// 开启后按 (noteData) 分桶复用普通音符实例，消除每秒数十~数百次 new/destroy 的 GC 停顿。
+	// ⚠ 风险：复用的 Note 实例对脚本而言不再是“每个都是全新对象”。若谱面/modchart 的
+	// onSpawnNote / goodNoteHit / noteMiss 回调保存了 Note 对象引用并跨 spawn 访问其字段，
+	// 可能读到被复用的脏数据。默认关闭；仅在你确认所用脚本不依赖音符对象持久引用时开启。
+	public var notePooling:Bool = false;
+
 	public var timeBarType:String = 'Time Left';
 	public var scoreZoom:Bool = true;
 	public var noReset:Bool = false;

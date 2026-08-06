@@ -113,7 +113,9 @@ class PlayState extends MusicBeatState
 	private static var _psAdaptiveActive:Bool = false;
 
 	//杂七杂八的新特性
-	var notesHitArray:Array<Date> = [];
+	// 存命中时间戳（haxe.Timer.stamp() 秒级浮点），替代原 Array<Date> + Date.now()，
+	// 消除每帧 Date 分配 + 系统调用 + O(n) remove。仅用于计算 NPS。
+	var notesHitArray:Array<Float> = [];
 	var nps:Int = 0;
 	var maxNPS:Int = 0;
 	var npsCheck:Int = 0;
@@ -323,6 +325,11 @@ class PlayState extends MusicBeatState
 	public var unspawnNotesPreloaded:Array<PreloadedChartNote> = []; // 预加载音符数据
 	public var spawnedNotes:Array<Note> = []; // 跟踪已生成的音符，按预加载索引
 	public var notesAddedCount:Int = 0;
+
+	// 对象池：按 "noteData:sustain" 分桶复用 Note 实例，消除高密度谱每秒数十~数百次
+	// new/destroy 带来的 GC 停顿。仅在 noteOptimization 且脚本未激活时启用（脚本激活时
+	// 由 effectiveDisableNoteLua() 控制退化为原始 new/destroy，保证回调语义不变）。
+	private var notePool:Map<String, Array<Note>> = new Map<String, Array<Note>>();
 	private var useOptimizedLoading:Bool = false; // 本次歌曲实际采用的加载方式
 
 	// 分帧延迟初始化：将非关键操作分散到后续帧，避免 create() 中主线程长时间阻塞
@@ -2225,6 +2232,10 @@ isReplaying = false;
 		unspawnNotesPreloaded = [];
 		spawnedNotes = [];
 		notesAddedCount = 0;
+		// 切歌时清空对象池：旧曲的 Note 实例帧已绑定旧皮肤，跨曲复用会导致皮肤错乱。
+		notePool.clear();
+		// 切歌时统一清空皮肤探测缓存（替代原每音符销毁时清空，避免高密度谱数十万次文件系统 stat）
+		Note.resetNoteSkinCache();
 
 		try
 		{
@@ -3603,12 +3614,7 @@ isReplaying = false;
 					// 创建 Note 对象，完全按照传统模式！
 					// noteData 按当前 mania 重映射（兼容 Change Mania），4 键下等价于原值
 					var remappedData:Int = noteData.rawColumn % totalColumns;
-					var note:Note = null;
-					if (noteData.isSustainNote) {
-						note = new Note(noteData.strumTime, remappedData, oldNote, true);
-					} else {
-						note = new Note(noteData.strumTime, remappedData, oldNote, false);
-					}
+					var note:Note = spawnNote(noteData.strumTime, remappedData, oldNote, noteData.isSustainNote);
 					
 					// 设置基本属性
 					note.animSuffix = noteData.animSuffix;
@@ -3657,6 +3663,7 @@ isReplaying = false;
 					
 					// 保存到跟踪数组
 					spawnedNotes[notesAddedCount] = note;
+					note.preloadIndex = notesAddedCount;
 
 				// #4 过期即时结算：越过 noteKillOffset 的音符按 sick 结算（对手方直接跳过），
 				// 不加入任何渲染组、不逐帧绘制，也不产生视觉开销（详见 instantResolveAsSick）
@@ -3680,16 +3687,20 @@ isReplaying = false;
 					if (ClientPrefs.data.holdNoteBehind) {
 						if (note.isSustainNote) {
 							// 如果是 hold note，添加到 holdNotes 组
-							holdNotes.insert(0, note);
-						} else {
-							// 如果是普通 note，添加到 normalNotes 组
-							normalNotes.insert(0, note);
-						}
-						// 同时也添加到主 notes 组，保持 modchart 兼容性
-						notes.insert(0, note);
+						if (ClientPrefs.data.noteOptimization) holdNotes.add(note);
+						else holdNotes.insert(0, note);
 					} else {
-						// 保持原来的行为
-						notes.insert(0, note);
+						// 如果是普通 note，添加到 normalNotes 组
+						if (ClientPrefs.data.noteOptimization) normalNotes.add(note);
+						else normalNotes.insert(0, note);
+					}
+					// 同时也添加到主 notes 组，保持 modchart 兼容性
+					if (ClientPrefs.data.noteOptimization) notes.add(note);
+					else notes.insert(0, note);
+				} else {
+					// 保持原来的行为
+					if (ClientPrefs.data.noteOptimization) notes.add(note);
+					else notes.insert(0, note);
 					}
 					note.ensureCurrentSkin(); // Change Mania 后按当前皮肤懒加载一次
 					note.spawned = true;
@@ -3772,11 +3783,12 @@ isReplaying = false;
 
 		{
 			var balls = notesHitArray.length - 1;
+			var now:Float = haxe.Timer.stamp() * 1000; // 毫秒
 			while (balls >= 0)
 			{
-				var cock:Date = notesHitArray[balls];
-				if (cock != null && cock.getTime() + 1000 < Date.now().getTime())
-					notesHitArray.remove(cock);
+				var t:Float = notesHitArray[balls];
+				if (t + 1000 < now)
+					notesHitArray.remove(t);
 				else
 					balls = 0;
 				balls--;
@@ -3827,7 +3839,11 @@ isReplaying = false;
 						while(i < notes.length)
 						{
 							var daNote:Note = notes.members[i];
-							if(daNote == null) continue;
+							if(daNote == null)
+							{
+								i++;
+								continue;
+							}
 
 					// 渲染归组只按原版几何关系：bf 音符(mustPress)在右侧 playerStrums，dad 音符在左侧 opponentStrums。
 					// 不随 playOpponent 改变——playOpponent 时你打的音符(dad 侧)天然就在左侧对手箭头上。
@@ -3839,6 +3855,7 @@ isReplaying = false;
 						{
 							// Change Mania 后键数减少：该轨已无对应箭头，隐藏音符避免报错。
 							daNote.visible = false;
+							i++;
 							continue;
 						}
 						daNote.followStrumNote(strum, fakeCrochet, songSpeed / playbackRate);
@@ -5964,7 +5981,7 @@ isReplaying = false;
 			{
 				combo++;
 				//if(combo > 9999) combo = 9999;
-				notesHitArray.unshift(Date.now());
+				notesHitArray.unshift(haxe.Timer.stamp() * 1000);
 				popUpScore(note);
 			}
 			// 特性2：长条最后一个尾音命中时，算作一个有效命中判定 —— 加 combo + 显示评级，但不加分
@@ -5973,7 +5990,7 @@ isReplaying = false;
 			{
 				var tailLeniencyMs:Float = (holdTailLeniency) ? holdTailLeniencyMs : 0;
 				combo++;
-				notesHitArray.unshift(Date.now());
+				notesHitArray.unshift(haxe.Timer.stamp() * 1000);
 				popUpScore(note, false, tailLeniencyMs); // scoreGain=false：只显示评级/计入准度，不加 songScore
 			}
 			var gainHealth:Bool = true; // prevent health gain, *if* sustains are treated as a singular note
@@ -6015,12 +6032,60 @@ isReplaying = false;
 	}
 
 	public function invalidateNote(note:Note):Void {
-		if(!ClientPrefs.data.lowQuality || !cpuControlled) note.kill();
+		// 始终调用 kill() 使 exists=false，确保主循环末尾 `if(daNote.exists) i++` 正确推进索引，
+		// 避免 lowQuality + cpuControlled(botPlay) 下 exists 残留导致 splice 后跳过下一颗音符。
+		note.kill();
 		notes.remove(note, true);
 		// 同时也从 normalNotes 和 holdNotes 中移除
 		normalNotes.remove(note, true);
 		holdNotes.remove(note, true);
-		note.destroy();
+		// 解除 spawnedNotes 强引用（与 OOM FIX 逻辑一致）：正常路径此前未置空，整曲跑完会持有
+		// 全部已 destroy 的 Note 对象（FlxPoint 等残骸），高密度谱下即数十~上百 MB 泄漏。
+		// 读取侧（生成循环）已做 null + animation 双重校验，置空安全。
+		if (note.preloadIndex >= 0 && note.preloadIndex < spawnedNotes.length)
+			spawnedNotes[note.preloadIndex] = null;
+
+		// 对象池回收：仅在 notePooling 开启、noteOptimization 开启、且为普通音符时复用实例。
+		// （sustain 不入池：构造时会改前驱 scale.y，见 spawnNote 注释；notePooling 默认关闭，确保安全。）
+		if (ClientPrefs.data.noteOptimization && ClientPrefs.data.notePooling && !note.isSustainNote)
+		{
+			var key:String = note.noteData + ':false';
+			var bucket:Array<Note> = notePool.get(key);
+			if (bucket == null) { bucket = []; notePool.set(key, bucket); }
+			// 防止同一实例被重复还池（理论上不会发生）
+			if (bucket.indexOf(note) == -1) bucket.push(note);
+		}
+		else
+		{
+			note.destroy();
+		}
+	}
+
+	/**
+	 * 音符工厂：统一替代 `new Note(...)`，支持对象池复用。
+	 * - notePooling 开启（且 noteOptimization 开启）时：优先从 notePool 取同桶（noteData）普通音符
+	 *   实例并 prepareForReuse，否则 new 一个（首次构建 frames/animation，落入池中后续复用）。
+	 * - notePooling 关闭（默认）：始终 new，保持原始语义。此时 onSpawnNote 等脚本回调拿到的每个
+	 *   Note 都是独立 new 的新对象，生命周期与脚本预期一致（不会读到被复用的脏对象）。
+	 * ⚠ 注意：池化仅在玩家显式开启 notePooling 时生效，因为引擎无法自动判断脚本是否依赖音符对象的
+	 *   持久引用（effectiveDisableNoteLua 语义为“是否禁用脚本”，与“是否激活”相反，不能作为退化依据）。
+	 */
+	public function spawnNote(strumTime:Float, noteData:Int, prevNote:Note, isSustain:Bool, ?inEditor:Bool = false):Note {
+		// 仅池化普通音符：sustain 音符构造时会修改前驱普通音符的 scale.y（累积拉伸），
+		// 池化复用会导致 scale.y 错乱，且 sustain 在高密度纯箭头谱中占比极小，收益不抵风险。
+		if (ClientPrefs.data.noteOptimization && ClientPrefs.data.notePooling && !isSustain)
+		{
+			var key:String = noteData + ':false';
+			var bucket:Array<Note> = notePool.get(key);
+			if (bucket != null && bucket.length > 0)
+			{
+				var note:Note = bucket.pop();
+				note.inEditor = inEditor;
+				note.prepareForReuse(strumTime, noteData, prevNote, false);
+				return note;
+			}
+		}
+		return new Note(strumTime, noteData, prevNote, isSustain, inEditor);
 	}
 
 	// 过期即时结算的“判为 sick”版本：把已越过 noteKillOffset 的音符按最高评级 sick 结算，而非判 miss。
@@ -6041,14 +6106,14 @@ isReplaying = false;
 		if (!note.isSustainNote)
 		{
 			combo++;
-			notesHitArray.unshift(Date.now());
+			notesHitArray.unshift(haxe.Timer.stamp() * 1000);
 		}
 		// 特性2：长条尾音命中同样计入一次有效命中（连击 + 准度），但不加分
 		else if (holdTailJudge && note.parent != null && note.parent.tail.length > 0
 			&& note.parent.tail[note.parent.tail.length - 1] == note)
 		{
 			combo++;
-			notesHitArray.unshift(Date.now());
+			notesHitArray.unshift(haxe.Timer.stamp() * 1000);
 		}
 
 		var gainHealth:Bool = true;
@@ -6268,7 +6333,11 @@ isReplaying = false;
 		}
 
 		if (generatedMusic)
-			notes.sort(FlxSort.byY, ClientPrefs.data.downScroll ? FlxSort.ASCENDING : FlxSort.DESCENDING);
+		{
+			// 优化模式下音符以 push 追加，天然按生成时间（≈Y 序）排列，无需每拍重排。
+			if (!ClientPrefs.data.noteOptimization)
+				notes.sort(FlxSort.byY, ClientPrefs.data.downScroll ? FlxSort.ASCENDING : FlxSort.DESCENDING);
+		}
 
 		if (iconBopEnabled)
 		{

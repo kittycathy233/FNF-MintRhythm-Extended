@@ -14,10 +14,24 @@ class StrumNote extends FlxSprite
 	public var resetAnim:Float = 0;
 	public var holdConfirmActive:Bool = false;
 	private var noteData:Int = 0;
-	public var direction:Float = 90;
+	// direction 为角度（默认 90，即向上）。缓存 cos/sin 避免每个流动音符每帧各算一次 Math.cos/sin
+	// （安卓 HXCPP 上走 C 库调用，高密度谱下数千次/帧）。
+	public var direction(default, set):Float = 90;
+	public var dirCos:Float = 0; // cos(90°)=0，缓存供流动音符快速路径读取
+	public var dirSin:Float = 1; // sin(90°)=1，缓存供流动音符快速路径读取
 	public var downScroll:Bool = false;
 	public var sustainReduce:Bool = true;
 	private var player:Int;
+
+	private function set_direction(value:Float):Float {
+		if (direction != value) {
+			direction = value;
+			var rad:Float = value * Math.PI / 180.0;
+			dirCos = Math.cos(rad);
+			dirSin = Math.sin(rad);
+		}
+		return value;
+	}
 	
 	public var texture(default, set):String = null;
 	private function set_texture(value:String):String {
@@ -91,6 +105,11 @@ class StrumNote extends FlxSprite
 		texture = skin; //Load texture and anims
 		scrollFactor.set();
 		playAnim('static');
+
+		// 初始化方向三角函数缓存（与 direction setter 逻辑一致）
+		var rad:Float = direction * Math.PI / 180.0;
+		dirCos = Math.cos(rad);
+		dirSin = Math.sin(rad);
 	}
 
 	public function reloadNote()

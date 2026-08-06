@@ -285,6 +285,18 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		option = new Option('Note Performance Optimization',
+			Language.get("note_optimization_desc"),
+			'noteOptimization',
+			BOOL);
+		addOption(option);
+
+		option = new Option('Note Object Pooling',
+			Language.get("note_pooling_desc"),
+			'notePooling',
+			BOOL);
+		addOption(option);
+
 		option = new Option('Max Notes Spawned / Frame',
 			Language.get("max_notes_per_frame_desc"),
 			'maxNotesPerFrame',

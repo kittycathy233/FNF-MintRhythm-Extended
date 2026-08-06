@@ -552,6 +552,8 @@
     "instant_resolve_expired_desc": "已超出 Miss 窗口的音符立即结算，而不再绘制几帧。防止 SPAM 谱面中的卡顿雪崩。与普通 Miss 阈值相同，判定不受影响。",
     "disable_note_lua_desc": "跳过每个音符的 Lua/HScript 回调（onSpawnNote / goodNoteHit / noteMiss / opponentNoteHit）。在密集谱面中大幅提升性能。警告：会破坏依赖这些回调的 modchart。",
     "max_notes_per_frame_desc": "限制单帧可创建的音符精灵数量（0 = 不限）。卡顿后积压会在多帧分摊，而不是一次性生成数百个。音符不会被丢弃，只是延迟一两帧。",
+    "note_optimization_desc": "综合音符性能优化：容器优化、三角函数/计时缓存、内存布局优化等（不改变音符对象生命周期，脚本安全）。关闭即全量回退原始逻辑，便于排查兼容问题。",
+    "note_pooling_desc": "⚠ 仅在你确认所用谱面/modchart 不依赖音符对象持久引用时开启。开启后按列分桶复用普通音符实例以消除 GC 停顿；若脚本的 onSpawnNote/goodNoteHit/noteMiss 保存了 Note 引用并跨 spawn 读取，可能读到被复用的脏数据。",
     "ratcounter_anim_desc": "评分计数器更新时播放小动画。",
     "enable_console_log_desc": "将游戏日志输出到系统控制台（终端）。",
     "time_bar_gradient_desc": "仅对 Psych 风格生效。从对手颜色渐变到玩家颜色。",

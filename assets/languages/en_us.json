@@ -537,6 +537,8 @@
     "instant_resolve_expired_desc": "Notes past the miss window are settled immediately instead of drawn for a few frames. Prevents lag-spiral avalanches in SPAM charts. Judgement unaffected.",
     "disable_note_lua_desc": "Skip Lua/HScript callbacks (onSpawnNote / goodNoteHit / noteMiss / opponentNoteHit) for every note. Big boost in dense charts. WARNING: breaks modcharts relying on these callbacks.",
     "max_notes_per_frame_desc": "Cap how many note sprites can be created in one frame (0 = unlimited). After a lag spike the backlog spreads over several frames. Notes are never dropped, only delayed a frame or two.",
+    "note_optimization_desc": "Comprehensive note performance optimization: container optimizations, trig/timing caches, and memory layout improvements (does not change note object lifecycle; script-safe). Turning it off falls back fully to the original logic for easier troubleshooting.",
+    "note_pooling_desc": "⚠ Only enable if you are sure your chart/modchart does not rely on persistent note object references. When on, normal notes are reused per-column-bucket to eliminate GC stutter; if a script's onSpawnNote/goodNoteHit/noteMiss keeps a Note reference across spawns, it may read stale reused data.",
     "ratcounter_anim_desc": "Play a small animation when the rating counter updates.",
     "enable_console_log_desc": "Output game logs to the system console (terminal).",
     "time_bar_gradient_desc": "Only works with Psych style. Gradient from opponent color to player color.",

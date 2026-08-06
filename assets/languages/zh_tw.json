@@ -507,6 +507,8 @@
     "instant_resolve_expired_desc": "已超出 Miss 視窗的音符立即結算，而不再繪製幾幀。防止 SPAM 譜面中的卡頓雪崩。與普通 Miss 閾值相同，判定不受影響。",
     "disable_note_lua_desc": "跳過每個音符的 Lua/HScript 回呼（onSpawnNote / goodNoteHit / noteMiss / opponentNoteHit）。在密集譜面中大幅提升效能。警告：會破壞依賴這些回呼的 modchart。",
     "max_notes_per_frame_desc": "限制單幀可建立的音符精靈數量（0 = 不限）。卡頓後積壓會在多幀分攤，而不是一次性產生數百個。音符不會被丟棄，只是延遲一兩幀。",
+    "note_optimization_desc": "綜合音符效能最佳化：容器最佳化、三角函數/計時快取、記憶體佈局最佳化等（不改變音符物件生命週期，腳本安全）。關閉即全量回退原始邏輯，便於排查相容問題。",
+    "note_pooling_desc": "⚠ 僅在你確認所用譜面/modchart 不依賴音符物件持久引用時開啟。開啟後按列分桶複用普通音符實例以消除 GC 停頓；若腳本的 onSpawnNote/goodNoteHit/noteMiss 儲存了 Note 引用並跨 spawn 讀取，可能讀到被複用的髒資料。",
     "ratcounter_anim_desc": "評分計數器更新時播放小動畫。",
     "enable_console_log_desc": "將遊戲日誌輸出到系統控制台（終端機）。",
     "time_bar_gradient_desc": "僅對 Psych 風格生效。從對手顏色漸變到玩家顏色。",

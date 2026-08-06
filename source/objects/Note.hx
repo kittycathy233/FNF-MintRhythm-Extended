@@ -26,27 +26,31 @@ typedef EventNote = {
 
 /**
  * 预加载音符数据 - 完整保存音符初始化所需的所有信息
+ * 注：原为 typedef 匿名结构体（HXCPP 上编译为 hx::Anon 动态对象，字段访问走哈希查找且每字段装箱）。
+ * 高密度纯箭头谱（数万音符）下会占用 10~15MB 且 GC 需扫描每对象 19 个 Dynamic 槽。
+ * 改为 @:structInit final class 后：构造语法 `{...}` 完全兼容、调用侧零改动，字段变原生值类型，
+ * 内存降至约 1/3~1/4、字段访问快一个数量级、GC 扫描开销大减。
  */
-typedef PreloadedChartNote = {
-	var strumTime:Float;
-	var noteData:Int;
-	var rawColumn:Int; // 原始谱面列号，未取模，供 Change Mania 时重映射
-	var mustPress:Bool;
-	var noteType:String;
-	var animSuffix:String;
-	var gfNote:Bool;
-	var isSustainNote:Bool;
-	var sustainLength:Float;
-	var earlyHitMult:Float; // 提前命中窗口倍率（供尾条判定优化方案B使用）
-	var parentIndex:Int; // 父音符在预加载数组中的索引
-	var previousNoteIndex:Int; // 前一个音符在预加载数组中的索引
-	var posOffsetX:Float;
-	var posOffsetY:Float;
-	var correctionOffset:Float;
-	var curStepCrochet:Float;
-	var needsOldNoteScaleAdjust:Bool; // 是否需要调整前一个音符的 scale
-	var isPixelStage:Bool;
-	var hasDownScrollCorrection:Bool;
+@:structInit final class PreloadedChartNote {
+	public var strumTime:Float;
+	public var noteData:Int;
+	public var rawColumn:Int; // 原始谱面列号，未取模，供 Change Mania 时重映射
+	public var mustPress:Bool;
+	public var noteType:String;
+	public var animSuffix:String;
+	public var gfNote:Bool;
+	public var isSustainNote:Bool;
+	public var sustainLength:Float;
+	public var earlyHitMult:Float; // 提前命中窗口倍率（供尾条判定优化方案B使用）
+	public var parentIndex:Int; // 父音符在预加载数组中的索引
+	public var previousNoteIndex:Int; // 前一个音符在预加载数组中的索引
+	public var posOffsetX:Float;
+	public var posOffsetY:Float;
+	public var correctionOffset:Float;
+	public var curStepCrochet:Float;
+	public var needsOldNoteScaleAdjust:Bool; // 是否需要调整前一个音符的 scale
+	public var isPixelStage:Bool;
+	public var hasDownScrollCorrection:Bool;
 }
 
 typedef NoteSplashData = {
@@ -85,6 +89,10 @@ class Note extends FlxSprite
 	public var noteData:Int = 0;
 	/** 原始谱面列号（未经 % 取模），用于 Change Mania 时重映射 noteData。4 键下等于 noteData。 */
 	public var noteColumnRaw:Int = 0;
+	// 记录 construct/reloadNote 后普通音符的基准 scale，供对象池 prepareForReuse 复位
+	// （避免被前驱 sustain 改过的 scale.y 在复用普通音符时累积错乱）。
+	public var baseScaleX:Float = 1;
+	public var baseScaleY:Float = 1;
 
 	public var mustPress:Bool = false;
 	public var canBeHit:Bool = false;
@@ -100,6 +108,9 @@ class Note extends FlxSprite
 	public var nextNote:Note;
 
 	public var spawned:Bool = false;
+	// 在预加载跟踪数组 spawnedNotes 中的索引；用于 invalidateNote 时解除强引用。
+	// -1 表示未通过优化路径生成（传统/编辑器路径），此时 invalidateNote 不会触碰 spawnedNotes。
+	public var preloadIndex:Int = -1;
 
 	public var tail:Array<Note> = []; // for sustains
 	public var parent:Note;
@@ -629,6 +640,156 @@ class Note extends FlxSprite
 	}
 
 	/**
+	 * 对象池复用：在已有 frames/animation（construct 阶段已按当前皮肤加载好）的基础上，
+	 * 仅复位"每次 spawn 会变化"的字段，并重跑与 `new` 一致的偏移/sustain 副作用逻辑，
+	 * **不调用 reloadNote**（避免昂贵的皮肤探测 + 帧重新解析 + addByPrefix 字符串扫描）。
+	 *
+	 * 安全前提：仅当 `noteOptimization && notePooling`（玩家显式开启对象池）时由 PlayState 池化工厂调用。
+	 * 默认（notePooling=false）下走原始 new/destroy，每个音符都是独立新对象，脚本语义不变。
+	 * Change Mania 皮肤变更时帧仍可通过 ensureCurrentSkin/updateManiaStyle 显式重载，不受此处跳过 reloadNote 影响。
+	 *
+	 * @param strumTime   音符命中时间
+	 * @param noteData    重映射后的列号（已兼容 Change Mania）
+	 * @param prevNote    前一个音符（用于 sustain 连接链；为 null 时自引用）
+	 * @param isSustain   是否为长条音符
+	 */
+	public function prepareForReuse(strumTime:Float, noteData:Int, prevNote:Note, isSustain:Bool):Void
+	{
+		// —— 复位每次 spawn 会变化的状态字段 ——
+		// 注意：以下字段若遗漏，池化复用时会产生判定错乱（脏值被复用）。
+		// canBeHit 必须复位（否则残留 true 会在 Note.update 前被主循环误判命中）；
+		// earlyHitMult/lateHitMult 影响判定窗口；hitsoundDisabled 影响命中被听。
+		tooLate = false;
+		wasGoodHit = false;
+		missed = false;
+		ignoreNote = false;
+		hitByOpponent = false;
+		noteWasHit = false;
+		blockHit = false;
+		canBeHit = false;
+		earlyHitMult = 1;
+		lateHitMult = 1;
+		hitsoundDisabled = false;
+		// 复位裁剪框（被裁剪过的音符复用会残留 clipRect 导致绘制异常）
+		clipRect = null;
+		flipY = false;
+		spawned = false;
+		preloadIndex = -1;
+		lowPriority = false;
+		noAnimation = false;
+		noMissAnimation = false;
+		hitCausesMiss = false;
+		hitsoundForce = false;
+		ratingDisabled = false;
+		rating = 'unknown';
+		ratingMod = 0;
+		eventName = '';
+		eventLength = 0;
+		eventVal1 = '';
+		eventVal2 = '';
+		tail = [];
+		parent = null;
+		nextNote = null;
+		this.prevNote = (prevNote == null) ? this : prevNote;
+		this.noteData = noteData;
+		this.isSustainNote = isSustain;
+		this.strumTime = strumTime + (inEditor ? 0 : ClientPrefs.data.noteOffset);
+		this.noteColumnRaw = noteData;
+		this.noteType = null;
+		this.animSuffix = '';
+		this.gfNote = false;
+		this.sustainLength = 0;
+		this.mustPress = false;
+		this.distance = 2000;
+		this.visible = true;
+		this.active = true;
+		this.exists = true;
+		this.offsetAngle = 0;
+		this.noteSplashHue = 0;
+		this.noteSplashSat = 0;
+		this.noteSplashBrt = 0;
+		// 命中/失判配置回到默认值（noteType setter 会按需覆盖）
+		hitHealth = 0.02;
+		missHealth = 0.1;
+		hitsound = 'hitsound';
+		// 记录当前皮肤版本：construct 时的帧即当前皮肤，避免 ensureCurrentSkin 立即重载
+		lastSkinVersion = noteSkinVersion;
+
+		// —— 重跑与 new 一致的初始偏移逻辑（不重建帧）——
+		x = (ClientPrefs.data.middleScroll ? PlayState.STRUM_X_MIDDLESCROLL : PlayState.STRUM_X) + 50;
+		y = -2000;
+		moves = false;
+		copyX = copyY = copyAngle = copyAlpha = true;
+		multSpeed = 1;
+
+		if (noteData > -1 && rgbShader != null)
+		{
+			var rgbDisabled:Bool = (PlayState.SONG != null && PlayState.SONG.disableNoteRGB);
+			rgbShader.enabled = !rgbDisabled;
+			if (ClientPrefs.data.arrowColorMode != 'HSV' && rgbDisabled)
+				shader = null;
+
+			x += swagWidth * noteData;
+			if (!isSustainNote && noteData < colArray.length)
+				animation.play(colArray[noteData % colArray.length] + 'Scroll');
+		}
+
+		// 前驱连接（与 new 一致：写前驱 nextNote）
+		if (this.prevNote != this)
+			this.prevNote.nextNote = this;
+
+		if (isSustainNote && this.prevNote != this)
+		{
+			alpha = 0.6;
+			multAlpha = 0.6;
+			hitsoundDisabled = true;
+			if (ClientPrefs.data.downScroll) flipY = true;
+			copyAngle = false;
+			animation.play(colArray[noteData % colArray.length] + 'holdend');
+
+			offsetX += width / 2;
+			if (ClientPrefs.data.downScroll) offsetX -= width / 2; // 保持与 construct 偏移一致
+			// 注：construct 中此处为 `offsetX += width/2` 后 `offsetX -= width/2`（净 0），
+			// 但这里为了与 construct 视觉结果严格一致，仍保留该对称操作。
+			offsetX -= width / 2;
+
+			if (PlayState.isPixelStage)
+				offsetX += 30;
+
+			if (this.prevNote.isSustainNote)
+			{
+				this.prevNote.animation.play(colArray[this.prevNote.noteData % colArray.length] + 'hold');
+				this.prevNote.scale.y *= Conductor.stepCrochet / 100 * 1.05;
+			if (PlayState.instance != null)
+				this.prevNote.scale.y *= PlayState.instance.songSpeed;
+				if (PlayState.isPixelStage)
+				{
+					this.prevNote.scale.y *= 1.19;
+					this.prevNote.scale.y *= (6 / this.prevNote.height);
+				}
+				this.prevNote.updateHitbox();
+			}
+
+			if (PlayState.isPixelStage)
+			{
+				scale.y *= PlayState.daPixelZoom;
+				updateHitbox();
+			}
+			earlyHitMult = 0;
+		}
+		else if (!isSustainNote)
+		{
+			// 复位基准 scale（construct 时 setGraphicSize(0.7)*strumScale 的结果），
+			// 消除上一轮被前驱 sustain 修改 scale.y 的累积影响。
+			scale.set(baseScaleX, baseScaleY);
+			centerOffsets();
+			centerOrigin();
+		}
+
+		x += offsetX;
+	}
+
+	/**
 	 * Change Mania 重映射后刷新音符：重新从当前皮肤加载帧（atlas 已按皮肤缓存，不会
 	 * 重复解析），并按当前 styleIndex 刷新配色。必须重加载帧，否则音符仍使用旧皮肤的
 	 * atlas，而新颜色前缀（rombus/circle 等）在旧 atlas 中不存在，会导致长条/音符显示异常。
@@ -760,6 +921,9 @@ class Note extends FlxSprite
 		setGraphicSize(Std.int(width * 0.7));
 		if (!PlayState.isPixelStage && PlayState.strumScale != 1) scale.scale(PlayState.strumScale);
 		updateHitbox();
+		// 记录基准 scale（供对象池 prepareForReuse 复位，消除 sustain 改前驱累积）
+		baseScaleX = scale.x;
+		baseScaleY = scale.y;
 	}
 
 	// 判断当前皮肤图集中是否存在名为 `name + '0000'` 的帧（用于缺失动画的回退判断）
@@ -833,7 +997,20 @@ class Note extends FlxSprite
 	override public function destroy()
 	{
 		super.destroy();
+		// 注意：此处不再清空 _lastValidChecked。该 static 缓存用于避免对相同皮肤重复
+		// 做 Paths.fileExists（多次 FileSystem.exists 系统调用）。原本在每实例 destroy 时清空，
+		// 会导致高密度纯箭头谱（每秒数十~数百次 spawn/destroy 交错）下命中率≈0，每次构造都
+		// 真跑文件系统 stat（安卓上单次数十微秒）。改为仅在切歌 / PlayState.destroy /
+		// 皮肤变更时统一清空一次，由 resetNoteSkinCache() 负责。
+	}
+
+	/**
+	 * 清空皮肤探测缓存。仅在切歌、PlayState 销毁或皮肤变更时调用一次，
+	 * 不应在单个 Note 销毁时调用（见 destroy() 注释）。
+	 */
+	public static function resetNoteSkinCache():Void {
 		_lastValidChecked = '';
+		_skinPathCache.clear();
 	}
 
 	public function followStrumNote(myStrum:StrumNote, fakeCrochet:Float, songSpeed:Float = 1)
@@ -847,7 +1024,12 @@ class Note extends FlxSprite
 		distance = (0.45 * (Conductor.songPosition - strumTime) * songSpeed * multSpeed);
 		if (!myStrum.downScroll) distance *= -1;
 
+		// 使用 StrumNote 缓存的 cos/sin（默认 90° 时 dirCos=0, dirSin=1），避免每音符每帧各算一次
+		// Math.cos/sin（HXCPP 上走 C 库调用，高密度谱下数千次/帧）。注意 angleDir 仅用于 copyAngle 的
+		// 角度计算（仍需原始角度值），而 x/y 平移改用缓存的 cos/sin。
 		var angleDir = strumDirection * Math.PI / 180;
+		var cosDir:Float = myStrum.dirCos;
+		var sinDir:Float = myStrum.dirSin;
 		if (copyAngle)
 			angle = strumDirection - 90 + strumAngle + offsetAngle;
 
@@ -855,11 +1037,11 @@ class Note extends FlxSprite
 			alpha = strumAlpha * multAlpha;
 
 		if(copyX)
-			x = strumX + offsetX + Math.cos(angleDir) * distance;
+			x = strumX + offsetX + cosDir * distance;
 
 		if(copyY)
 		{
-			y = strumY + offsetY + correctionOffset + Math.sin(angleDir) * distance;
+			y = strumY + offsetY + correctionOffset + sinDir * distance;
 			if(myStrum.downScroll && isSustainNote)
 			{
 				if(PlayState.isPixelStage)
