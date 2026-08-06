@@ -199,10 +199,8 @@ class FreeplayState extends MusicBeatState
 	private var bpmDisplayTime:Float = 0;
 
 	// 回放缓存相关
-	private var lastReplayCheckTime:Float = 0;
 	private var cachedReplayText:String = "";
 	private var cachedReplayIndex:Map<String, Array<String>> = new Map(); // 缓存回放文件索引：歌曲名 -> 难度列表
-	private var lastReplayFolderMTime:Float = 0; // 回放文件夹的最后修改时间，用于检测变化
 
 	override function create()
 	{
@@ -449,6 +447,7 @@ class FreeplayState extends MusicBeatState
 		grpIcons.clear();
 		iconArray = new Array<HealthIcon>();
 		iconLoadStatus = new Array<Bool>();
+		_iconsWarmed = false; // 列表重建后需要重新预加载图标
 
 		for (i in 0...songs.length)
 		{
@@ -552,6 +551,11 @@ class FreeplayState extends MusicBeatState
 		// 后台预解析当前选中曲目的谱面，让按下确认键时直接命中缓存
 		updateChartPrefetch(elapsed);
 
+		// 空闲时预加载附近图标，把“滚动时临时加载纹理”的开销摊到空闲帧，
+		// 避免滚动过程中间歇性卡顿
+		if (!player.playingMusic)
+			warmupIcons();
+
 		if (FlxG.sound.music.volume < 0.7)
 			FlxG.sound.music.volume += 0.5 * elapsed;
 
@@ -654,7 +658,10 @@ class FreeplayState extends MusicBeatState
 		if (!player.playingMusic && !typingSearch && songs.length > 0)
 		{
 			// scoreText.text = LanguageBasic.getPhrase('personal_best', 'PERSONAL BEST: {1} ({2}%)', [lerpScore, ratingSplit.join('.')]);
-			scoreText.text = '${Language.get('score_best_desc')} ${lerpScore} (${ratingSplit.join('.')}%)';
+			// 值未变化时不要重设 text，避免每帧重建 FlxText 位图（主要 GC / 重绘来源）
+			var scoreStr:String = Language.get('score_best_desc') + ' ' + lerpScore + ' (' + ratingSplit.join('.') + '%)';
+			if (scoreText.text != scoreStr)
+				scoreText.text = scoreStr;
 			positionHighscore();
 
 			if (songs.length > 1)
@@ -1356,42 +1363,14 @@ class FreeplayState extends MusicBeatState
 	{
 		if (songs.length == 0)
 			return;
-		#if FEATURE_FILESYSTEM
-		// 限制回放文本更新频率，避免每帧都更新（UI更新开销）
-		// 但切换曲目/难度时强制更新（forceUpdate = true）
-		var currentTime:Float = FlxG.game.ticks / 1000;
-		if (!forceUpdate && currentTime - lastReplayCheckTime < 0.5) // 每0.5秒更新一次文本
-		{
-			// 使用缓存的文本
-			if (cachedReplayText.length > 0)
-			{
-				bottomText.text = cachedReplayText;
-				bottomText.y = FlxG.height - bottomText.height - 2;
-				bottomBG.y = bottomText.y - 4;
-				bottomBG.makeGraphic(FlxG.width, Std.int(bottomText.height) + 8, 0x99000000);
-			}
-			return;
-		}
-		
-		lastReplayCheckTime = currentTime;
-		
-		// 检测回放文件夹是否有变化（新增、修改或删除回放文件）
-		var moddirCheck:String = (Mods.currentModDirectory != null && Mods.currentModDirectory.length > 0) ? Mods.currentModDirectory : 'global';
-		var replayFolderCheck:String = Paths.mods(moddirCheck + '/replay');
-		if (FileSystem.exists(replayFolderCheck))
-		{
-			var folderStat = FileSystem.stat(replayFolderCheck);
-			var currentMTime:Float = (folderStat != null && Reflect.hasField(folderStat, 'mtime')) ? Reflect.field(folderStat, 'mtime').getTime() : 0;
-			
-			// 如果文件夹修改时间变化，重新加载索引
-			if (currentMTime > lastReplayFolderMTime + 1000) // 加1秒缓冲，避免频繁重载
-			{
-				lastReplayFolderMTime = currentMTime;
-				preloadReplayIndex(); // 重新加载索引
-			}
-		}
-		
-		// 使用预加载的索引，不再扫描文件系统
+	#if FEATURE_FILESYSTEM
+	// 仅在切换曲目/难度（forceUpdate）或进入时刷新提示文本；不再每帧/每0.5秒轮询文件系统。
+	// FileSystem.exists/stat 在 Android 上会引入周期性微卡顿，而回放索引已在 create() 时预加载，
+	// 后续只要基于内存中的缓存索引生成文本即可。
+	if (!forceUpdate)
+		return;
+
+	// 使用预加载的索引，不再扫描文件系统
 		var currentSongName:String = Paths.formatToSongPath(songs[curSelected].songName);
 		var currentDifficultyName:String = Difficulty.getString(curDifficulty, false);
 		
@@ -1536,8 +1515,42 @@ class FreeplayState extends MusicBeatState
 				icon.alpha = (i == curSelected) ? 1.0 : 0.6; // 设置选中项的透明度
 			}
 			
-			_lastVisibles.push(i);
+		_lastVisibles.push(i);
+	}
+}
+
+	/**
+	 * 空闲时预加载图标：每帧最多创建 1 个尚未加载的图标（从当前选中项向两侧扩展），
+	 * 把“滚入可见窗口才加载纹理”的开销摊到空闲帧，从而避免滚动过程中的间歇性卡顿。
+	 * 已在 updateVisibleItems 中加载的图标会被跳过。
+	 */
+	private var _iconsWarmed:Bool = false;
+	private function warmupIcons():Void
+	{
+		if (_iconsWarmed || songs.length == 0 || iconArray == null || iconLoadStatus.length != songs.length)
+			return;
+
+		// 从 curSelected 向两侧逐圈扫描，每帧只创建 1 个图标，限制单帧开销
+		for (step in 0...songs.length)
+		{
+			var offset:Int = (step % 2 == 0) ? (step >> 1) : -((step + 1) >> 1);
+			var i:Int = curSelected + offset;
+			if (i < 0 || i >= songs.length)
+				continue;
+
+			if (!iconLoadStatus[i])
+			{
+				Mods.currentModDirectory = songs[i].folder;
+				iconArray[i] = new HealthIcon(songs[i].songCharacter);
+				iconArray[i].sprTracker = grpSongs.members[i];
+				iconArray[i].visible = false;
+				iconArray[i].active = false;
+				grpIcons.add(iconArray[i]);
+				iconLoadStatus[i] = true;
+				return; // 本帧只加载一个，余下留到后续空闲帧
+			}
 		}
+		_iconsWarmed = true; // 已全部预加载，后续帧不再扫描
 	}
 
 	private var lastSectionHit:Int = -1;
