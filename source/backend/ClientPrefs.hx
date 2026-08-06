@@ -308,8 +308,8 @@ import openfl.display.StageQuality;
 	public var simpleInfoShowMem:Bool = true; // SimpleInfoDisplay 显示内存
 	public var simpleInfoShowVersion:Bool = false; // SimpleInfoDisplay 显示版本
 
-	// KeyViewer 累计按键总数（跨游戏重启持久化）
-	public var keyViewerTotal:Int = 0;
+	// KeyViewer 累计按键总数（keyViewerTotal）已移至 objects.KeyViewer 内部独立存档，
+	// 不再存放在 ClientPrefs 主设置里，以免主设置文件损坏时把它一起清零。
 	// KeyViewer 轨迹方向：'auto' 跟随 downscroll，'up' 强制上升，'down' 强制下落
 	public var keyViewerTrail:String = 'auto';
 	// KeyViewer 位置偏移（像素，相对默认位置）：在设置内拖动校准，跨重启持久化

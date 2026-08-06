@@ -12,6 +12,8 @@ import flixel.util.FlxColor;
 import backend.Paths;
 import backend.Mods;
 import backend.ClientPrefs;
+import backend.CoolUtil;
+import flixel.util.FlxSave;
 import shaders.RoundedCornerShader;
 import backend.Controls;
 import states.PlayState;
@@ -41,6 +43,40 @@ import sys.FileSystem;
  */
 class KeyViewer extends FlxGroup
 {
+	// ---- 累计按键总数（独立存档，与主设置隔离，避免主设置损坏连累清零）----
+	public static var keyViewerTotal:Int = 0;
+	private static var keyViewerSave:FlxSave = null;
+
+	/** 绑定并加载独立存档；旧版值若仍留在主设置里则一次性迁移过来。惰性调用。 */
+	public static function initKeyViewerTotal():Void {
+		if (keyViewerSave == null) {
+			keyViewerSave = new FlxSave();
+			keyViewerSave.bind('keyviewer_v1', CoolUtil.getSavePath());
+		}
+		if (keyViewerSave.data != null && keyViewerSave.data.total != null) {
+			keyViewerTotal = keyViewerSave.data.total;
+		} else if (FlxG.save != null && Reflect.hasField(FlxG.save.data, 'keyViewerTotal')) {
+			// 兼容老存档：旧版曾把 keyViewerTotal 写进主设置，迁移到独立存档
+			keyViewerTotal = Reflect.field(FlxG.save.data, 'keyViewerTotal');
+			saveKeyViewerTotal(); // 落到独立存档，下一次就不再走迁移分支
+		}
+	}
+
+	/** 把当前 keyViewerTotal 写入独立存档，返回是否成功刷盘。 */
+	public static function saveKeyViewerTotal():Bool {
+		if (keyViewerSave == null) initKeyViewerTotal();
+		if (keyViewerSave.data == null) {
+			FlxG.log.error('KeyViewer Total 保存失败（存档未绑定）');
+			return false;
+		}
+		keyViewerSave.data.total = keyViewerTotal;
+		var ok:Bool = keyViewerSave.flush();
+		if (!ok) {
+			FlxG.log.error('KeyViewer Total 保存失败（flush 返回 false），本次累计可能丢失');
+		}
+		return ok;
+	}
+
 	// ---- 主题配色（dark-minimalistic-nano）----
 	static final BG_COLOR:FlxColor = 0xFF191919; // 25,25,25
 	static final TEXT_COLOR:FlxColor = 0xFFFFFFFF; // 白色
@@ -122,8 +158,9 @@ class KeyViewer extends FlxGroup
 	{
 		super();
 
-		// 累计按键总数：从持久存档读取，跨游戏重启保留
-		totalKeys = ClientPrefs.data.keyViewerTotal;
+		// 累计按键总数：从独立持久存档读取，跨游戏重启保留（惰性加载）
+		if (keyViewerSave == null) initKeyViewerTotal();
+		totalKeys = keyViewerTotal;
 
 		// 读取玩家实际键位（当前 mania 的 action 列表）；位置校准/预览态无 PlayState 时用默认 4K 布局
 		keysArray = (PlayState.instance != null)
@@ -591,10 +628,10 @@ class KeyViewer extends FlxGroup
 	// 将累计 Total 写入持久存档（ClientPrefs 会自动保存）
 	function flushTotal():Void
 	{
-		if (ClientPrefs.data.keyViewerTotal != totalKeys)
+		if (keyViewerTotal != totalKeys)
 		{
-			ClientPrefs.data.keyViewerTotal = totalKeys;
-			ClientPrefs.saveSettings();
+			keyViewerTotal = totalKeys;
+			saveKeyViewerTotal();
 		}
 		saveDirty = false;
 		lastSaveAt = FlxG.game.ticks;

@@ -1,6 +1,7 @@
 package options;
 
 import states.PlayState;
+import objects.KeyViewer;
 import backend.MusicBeatState;
 
 class GameplaySettingsSubState extends BaseOptionsMenu
@@ -39,8 +40,8 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 			BUTTON);
 		addOption(option);
 		option.onChange = function() {
-			ClientPrefs.data.keyViewerTotal = 0;
-			ClientPrefs.saveSettings();
+			KeyViewer.keyViewerTotal = 0;
+			KeyViewer.saveKeyViewerTotal();
 		};
 
 		var option:Option = new Option(
