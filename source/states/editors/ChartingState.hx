@@ -699,6 +699,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 		add(upperBox);
 
 		outputTxt = new FlxText(25, FlxG.height - 50, FlxG.width - 50, '', 20);
+		outputTxt.setFormat(Paths.font(Language.get('uitab_font')), 20);
 		outputTxt.borderSize = 2;
 		outputTxt.borderStyle = OUTLINE_FAST;
 		outputTxt.scrollFactor.set();
@@ -1766,7 +1767,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 						positionNoteYOnTime(event, secNum);
 					}
 					loadSection();
-					showOutput('Zoom: ${Math.round(curZoom * 100)}%');
+					showOutput(Language.get('charting_msg_zoom', [Std.string(Math.round(curZoom * 100))]));
 					updateScrollY();
 				}
 			}
@@ -1972,7 +1973,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 							if(selectedNotes.length > 0)
 								moveSelectedNotes(noteData, dummyArrow.y);
 							else
-								showOutput('You must select notes to move them!', true);
+								showOutput(Language.get('charting_msg_selectnotes'), true);
 						}
 						else if(touch.x >= gridLayout.startX && touch.x < gridLayout.startX + gridLayout.totalWidth)
 						{
@@ -2261,7 +2262,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 						if(selectedNotes.length > 0)
 							moveSelectedNotes(noteData, dummyArrow.y);
 						else
-							showOutput('You must select notes to move them!', true);
+							showOutput(Language.get('charting_msg_selectnotes'), true);
 					}
 					else if(FlxG.mouse.x >= gridLayout.startX && FlxG.mouse.x < gridLayout.startX + gridLayout.totalWidth)
 					{
@@ -4660,11 +4661,11 @@ for (i in 0...GRID_PLAYERS)
 		
 						note.updateHitbox();
 					}
-					if(noteTextureInputText.text.trim().length > 0) showOutput('Reloaded notes to: "$textureLoad"');
-					else showOutput('Reloaded notes to default texture');
+					if(noteTextureInputText.text.trim().length > 0) 					showOutput(Language.get('charting_msg_reload_notes', [textureLoad]));
+					else showOutput(Language.get('charting_msg_reload_notes_def'));
 					
 				}
-				else showOutput('ERROR: "$textureLoad" not found.', true);
+				else showOutput(Language.get('charting_msg_texture_notfound', [textureLoad]), true);
 			}
 		};
 
@@ -4744,9 +4745,9 @@ for (i in 0...GRID_PLAYERS)
 					func(event);
 					updateSelectedEventText();
 				}
-				else showOutput('Note selected must be an Event!', true);
+				else showOutput(Language.get('charting_msg_note_must_event'), true);
 			}
-			else showOutput('You must select a single event to press this button.', true);
+			else showOutput(Language.get('charting_msg_single_event'), true);
 		}
 
 		var objX2 = 140;
@@ -4764,7 +4765,7 @@ for (i in 0...GRID_PLAYERS)
 						curEventSelected--;
 						chartDataDirty = true;
 					}
-					else showOutput('No event is selected when you deleted it?? Weird.', true);
+					else showOutput(Language.get('charting_msg_event_del_weird'), true);
 				}
 				else
 				{
@@ -5019,7 +5020,7 @@ for (i in 0...GRID_PLAYERS)
 			{
 				if(notesCopyNum == 0 && eventsCopyNum == 0)
 				{
-					showOutput('Nothing to copy!', true);
+					showOutput(Language.get('charting_msg_nothingcopy'), true);
 					return;
 				}
 
@@ -5236,7 +5237,7 @@ for (i in 0...GRID_PLAYERS)
 				{
 					if(Math.floor(note.songData[1] / GRID_COLUMNS_PER_PLAYER) != side)
 					{
-						showOutput('You cannot press this button with notes on more than one side.');
+						showOutput(Language.get('charting_msg_morethanoneside'));
 						return;
 					}
 				}
@@ -5381,7 +5382,7 @@ for (i in 0...GRID_PLAYERS)
 		var curSectionTime:Null<Float> = cachedSectionTimes[curSec];
 		if(curSectionTime == null)
 		{
-			showOutput('ERROR: Unknown section??', true);
+			showOutput(Language.get('charting_msg_unknown_sec'), true);
 			return [];
 		}
 
@@ -5425,7 +5426,7 @@ for (i in 0...GRID_PLAYERS)
 		{
 			if(nts.length == 0 && evs.length == 0)
 			{
-				showOutput('Nothing to paste!', true);
+				showOutput(Language.get('charting_msg_nothingpaste'), true);
 				return [];
 			}
 
@@ -5489,7 +5490,7 @@ for (i in 0...GRID_PLAYERS)
 			}
 			if(loadedChart == null || !Reflect.hasField(loadedChart, 'song')) //Check if chart is ACTUALLY a chart and valid
 			{
-				showOutput('Error: File loaded is not a Psych Engine/FNF 0.2.x.x chart.', true);
+				showOutput(Language.get('charting_msg_notchart'), true);
 				return;
 			}
 
@@ -5499,7 +5500,7 @@ for (i in 0...GRID_PLAYERS)
 				Song.chartPath = diff ? curdiff : cur;
 				reloadNotesDropdowns();
 				prepareReload();
-				showOutput('Opened chart "${diff ? curdiff : cur}" successfully!');
+				showOutput(Language.get('charting_msg_chart_opened', [diff ? curdiff : cur]));
 			}
 					
 			if(!ignoreProgressCheckBox.checked) openSubState(new Prompt(Language.get('prompt_unsaved'), func));
@@ -5681,7 +5682,7 @@ for (i in 0...GRID_PLAYERS)
 					var loadedChart:SwagSong = Song.parseJSON(fileDialog.data, filePath.substr(filePath.lastIndexOf('/')));
 					if(loadedChart == null || !Reflect.hasField(loadedChart, 'song')) //Check if chart is ACTUALLY a chart and valid
 					{
-						showOutput('Error: File loaded is not a Psych Engine/FNF 0.2.x.x chart.', true);
+						showOutput(Language.get('charting_msg_notchart'), true);
 						return;
 					}
 
@@ -5691,7 +5692,7 @@ for (i in 0...GRID_PLAYERS)
 						Song.chartPath = fileDialog.path;
 						reloadNotesDropdowns();
 						prepareReload();
-						showOutput('Opened chart "${Song.chartPath}" successfully!');
+						showOutput(Language.get('charting_msg_chart_opened', [Song.chartPath]));
 					}
 					
 					if(!ignoreProgressCheckBox.checked) openSubState(new Prompt(Language.get('prompt_unsaved'), func));
@@ -5699,7 +5700,7 @@ for (i in 0...GRID_PLAYERS)
 				}
 				catch(e:Exception)
 				{
-					showOutput('Error: ${e.message}', true);
+					showOutput(Language.get('charting_msg_genericerr', [e.message]), true);
 					trace(e.stack);
 				}
 			});
@@ -5717,14 +5718,14 @@ for (i in 0...GRID_PLAYERS)
 
 			if(!FileSystem.exists('backups/'))
 			{
-				showOutput('The "backups" folder does not exist.', true);
+				showOutput(Language.get('charting_msg_autosave_nobackup'), true);
 				return;
 			}
 			
 			var fileList:Array<String> = Paths.readDirectory('backups/').filter((file:String) -> file.endsWith('.$BACKUP_EXT'));
 			if(fileList.length < 1)
 			{
-				showOutput('No autosave files found.', true);
+				showOutput(Language.get('charting_msg_autosave_none'), true);
 				return;
 			}
 
@@ -5761,7 +5762,7 @@ for (i in 0...GRID_PLAYERS)
 								var loadedChart:SwagSong = Song.parseJSON(File.getContent(path), autosaveName, null);
 								if(loadedChart == null || !Reflect.hasField(loadedChart, '__original_path'))
 								{
-									showOutput('Error: File loaded is not a valid Psych Engine autosave.', true);
+									showOutput(Language.get('charting_msg_autosave_invalid'), true);
 									return;
 	
 								}
@@ -5776,7 +5777,7 @@ for (i in 0...GRID_PLAYERS)
 									reloadNotesDropdowns();
 									prepareReload();
 	
-									showOutput('Opened autosave "$autosaveName" successfully!');
+									showOutput(Language.get('charting_msg_autosave_opened', [autosaveName]));
 								}
 								
 								if(!ignoreProgressCheckBox.checked) openSubState(new Prompt(Language.get('prompt_unsaved'), func));
@@ -5784,10 +5785,10 @@ for (i in 0...GRID_PLAYERS)
 							}
 							catch(e:Exception)
 							{
-								showOutput('Error on loading autosave: ${e.message}', true);
+								showOutput(Language.get('charting_msg_autosave_loaderr', [e.message]), true);
 							}
 						}
-						else showOutput('Error! Autosave file selected could not be found, huh??', true);
+						else showOutput(Language.get('charting_msg_autosave_notfound'), true);
 					});
 					btn.cameras = state.cameras;
 					btn.screenCenter(X);
@@ -5816,14 +5817,14 @@ for (i in 0...GRID_PLAYERS)
 						var eventsFile:SwagSong = Song.parseJSON(fileDialog.data, filePath.substr(filePath.lastIndexOf('/')));
 						if(eventsFile == null || Reflect.hasField(eventsFile, 'scrollSpeed') || eventsFile.events == null)
 						{
-							showOutput('Error: File loaded is not a Psych Engine chart/events file.', true);
+							showOutput(Language.get('charting_msg_noteventfile'), true);
 							return;
 						}
 	
 						var loadedEvents:Array<Dynamic> = eventsFile.events;
 						if(loadedEvents.length < 1)
 						{
-							showOutput('Events file loaded is empty.', true);
+							showOutput(Language.get('charting_msg_events_empty'), true);
 							return;
 						}
 	
@@ -5849,7 +5850,7 @@ for (i in 0...GRID_PLAYERS)
 	
 									softReloadNotes();
 									state.close();
-									showOutput('Events loaded successfully!');
+									showOutput(Language.get('charting_msg_events_loaded'));
 								});
 								btn.normalStyle.bgColor = FlxColor.RED;
 								btn.normalStyle.textColor = FlxColor.WHITE;
@@ -5865,7 +5866,7 @@ for (i in 0...GRID_PLAYERS)
 	
 									softReloadNotes();
 									state.close();
-									showOutput('Events added successfully!');
+									showOutput(Language.get('charting_msg_events_added'));
 								});
 								btn.screenCenter(X);
 								btn.cameras = state.cameras;
@@ -5881,7 +5882,7 @@ for (i in 0...GRID_PLAYERS)
 					}
 					catch(e:Exception)
 					{
-						showOutput('Error: ${e.message}', true);
+						showOutput(Language.get('charting_msg_genericerr', [e.message]), true);
 						trace(e.stack);
 					}
 				});
@@ -5955,24 +5956,24 @@ for (i in 0...GRID_PLAYERS)
 						fileDialog.save(specialEventsName, eventsData,
 							function() 
 							{
-								showOutput('Events saved successfully to: ' + regularEventsFileName + ' and ' + specialEventsName);
+								showOutput(Language.get('charting_msg_events_saved', [regularEventsFileName + ' and ' + specialEventsName]));
 							}, 
 							null,
 							function() 
 							{
-								showOutput('Events saved successfully to: ' + regularEventsFileName + ' (failed to save ' + specialEventsName + ')');
+								showOutput(Language.get('charting_msg_events_saved', [regularEventsFileName + ' (failed to save ' + specialEventsName + ')']));
 							}
 						);
 					}
 					else if(!hasSavedSpecialEvents)
 					{
-						showOutput('Events saved successfully to: ' + regularEventsFileName);
+						showOutput(Language.get('charting_msg_events_saved', [regularEventsFileName]));
 					}
 				};
 				
 				var saveEventsErrorCallback:Void->Void = function()
 				{
-					showOutput('Error on saving events!', true);
+					showOutput(Language.get('charting_msg_events_saveerr'), true);
 				};
 				
 				fileDialog.save(regularEventsFileName, eventsData, saveEventsCallback, null, saveEventsErrorCallback);
@@ -5982,6 +5983,20 @@ for (i in 0...GRID_PLAYERS)
 			tab_group.add(btn);
 		}
 
+		#if !mobile
+		btnY += 20;
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_savelegacy_tab1'), function()
+		{
+			if(!fileDialog.completed) return;
+			upperBox.isMinimized = true;
+			upperBox.bg.visible = false;
+
+			saveChartLegacy();
+		}, btnWid);
+		btn.text.alignment = LEFT;
+		tab_group.add(btn);
+		#end
+
 		btnY++;
 		btnY += 20;
 		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_reloadchart_tab1'), function()
@@ -5990,7 +6005,7 @@ for (i in 0...GRID_PLAYERS)
 			{
 				if(Song.chartPath == null)
 				{
-					showOutput('You must save/load a Chart first to Reload it!', true);
+					showOutput(Language.get('charting_msg_reload_noneed'), true);
 					return;
 				}
 	
@@ -6002,15 +6017,15 @@ for (i in 0...GRID_PLAYERS)
 						loadChart(reloadedChart);
 						reloadNotesDropdowns();
 						prepareReload();
-						showOutput('Chart reloaded successfully!');
+						showOutput(Language.get('charting_msg_reload_ok'));
 					}
 					catch(e:Exception)
 					{
-						showOutput('Error: ${e.message}', true);
+						showOutput(Language.get('charting_msg_genericerr', [e.message]), true);
 						trace(e.stack);
 					}
 				}
-				else showOutput('You must save/load a Chart first to Reload it!', true);
+				else showOutput(Language.get('charting_msg_reload_noneed'), true);
 			}
 
 			if(!ignoreProgressCheckBox.checked) openSubState(new Prompt(Language.get('prompt_unsaved'), func));
@@ -6061,7 +6076,7 @@ for (i in 0...GRID_PLAYERS)
 									overwriteCheck(metadataFile, '$chartName-metadata.json', PsychJsonPrinter.print(pack.metadata, ['characters', 'difficulties', 'timeChanges']), function()
 									{
 										if(overwriteSavedSomething)
-											showOutput('Files saved successfully to: $path!');
+											showOutput(Language.get('charting_msg_files_saved', [path]));
 									});
 								});
 								state.close();
@@ -6102,7 +6117,7 @@ for (i in 0...GRID_PLAYERS)
 				}
 				catch(e:Exception)
 				{
-					showOutput('Error: ${e.message}', true);
+					showOutput(Language.get('charting_msg_genericerr', [e.message]), true);
 					trace(e.stack);
 				}
 			});
@@ -6123,14 +6138,14 @@ for (i in 0...GRID_PLAYERS)
 				var loadedChart:SwagSong = Song.parseJSON(fileDialog.data, filePath.substr(filePath.lastIndexOf('/')));
 				if(loadedChart == null || !Reflect.hasField(loadedChart, 'song')) //Check if chart is ACTUALLY a chart and valid
 				{
-					showOutput('Error: File loaded is not a Psych Engine 0.x.x/FNF 0.2.x.x chart.', true);
+					showOutput(Language.get('charting_msg_notchart'), true);
 					return;
 				}
 
 				var pack:VSlicePackage = VSlice.export(loadedChart);
 				if(pack.chart == null || pack.metadata == null)
 				{
-					showOutput('Error: Chart loaded is invalid.', true);
+					showOutput(Language.get('charting_msg_chart_invalid'), true);
 					return;
 				}
 
@@ -6210,16 +6225,16 @@ for (i in 0...GRID_PLAYERS)
 											overwriteCheck('$path/$songName-metadata.json', '$songName-metadata.json', PsychJsonPrinter.print(pack.metadata, ['characters', 'difficulties', 'timeChanges']), function()
 											{
 												if(overwriteSavedSomething)
-													showOutput('Files saved successfully to: $path!');
+													showOutput(Language.get('charting_msg_files_saved', [path]));
 											});
 										});
 									});
 								}
-								else showOutput('Error: You need atleast one difficulty to export.', true);
+								else showOutput(Language.get('charting_msg_vslice_nodiff'), true);
 							}
 							catch(e:Exception)
 							{
-								showOutput('Error: ${e.message}', true);
+								showOutput(Language.get('charting_msg_genericerr', [e.message]), true);
 								trace(e.stack);
 							}
 							state.close();
@@ -6291,7 +6306,7 @@ for (i in 0...GRID_PLAYERS)
 				var chart:VSliceChart = cast Json.parse(fileDialog.data);
 				if(chart == null || chart.version == null || chart.notes == null || chart.scrollSpeed == null)
 				{
-					showOutput('Error: File loaded is not a valid FNF V-Slice chart.', true);
+					showOutput(Language.get('charting_msg_vslice_notchart'), true);
 					return;
 				}
 
@@ -6301,7 +6316,7 @@ for (i in 0...GRID_PLAYERS)
 					if(metadata == null || metadata.version == null || metadata.playData == null || metadata.songName == null ||
 						metadata.playData.difficulties == null || metadata.timeChanges == null || metadata.timeChanges.length < 1)
 					{
-						showOutput('Error: File loaded is not a valid FNF V-Slice metadata.', true);
+						showOutput(Language.get('charting_msg_vslice_notmeta'), true);
 						return;
 					}
 
@@ -6342,22 +6357,22 @@ for (i in 0...GRID_PLAYERS)
 										overwriteCheck(path + 'events.json', 'events.json', PsychJsonPrinter.print(pack.events, ['events']), function()
 										{
 											if(overwriteSavedSomething)
-												showOutput('Files saved successfully to: ${path}!');
+												showOutput(Language.get('charting_msg_files_saved', [path]));
 										}, true);
 									}
 									else if(overwriteSavedSomething)
-										showOutput('Files saved successfully to: ${path}!');
+										showOutput(Language.get('charting_msg_files_saved', [path]));
 								}
 								
 								overwriteSavedSomething = false;
 								nextChart();
 							});
 						}
-						else showOutput('Error: No difficulties found.');
+						else showOutput(Language.get('charting_msg_vslice_nodiff2'));
 					}
 					catch(e:Exception)
 					{
-						showOutput('Error: ${e.message}', true);
+						showOutput(Language.get('charting_msg_genericerr', [e.message]), true);
 						trace(e.stack);
 					}
 				});
@@ -6366,6 +6381,50 @@ for (i in 0...GRID_PLAYERS)
 		btn.text.alignment = LEFT;
 		tab_group.add(btn);
 		
+		btnY += 20;
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_conv2legacy_tab1'), function()
+		{
+			if(!fileDialog.completed) return;
+			upperBox.isMinimized = true;
+			upperBox.bg.visible = false;
+
+			// 选源文件（新版 Psych 谱面），转成 0.6.x 后另存到用户指定位置
+			fileDialog.open('song.json', 'Open a Psych Engine Chart JSON', function()
+			{
+				try
+				{
+					var filePath:String = fileDialog.path.replace('\\', '/');
+					var loadedChart:SwagSong = Song.parseJSON(fileDialog.data, filePath.substr(filePath.lastIndexOf('/')));
+					if(loadedChart == null || !Reflect.hasField(loadedChart, 'song'))
+					{
+						showOutput(Language.get('charting_legacy_notchart'), true);
+						return;
+					}
+
+					var chartData:String = convertSongToLegacy(loadedChart);
+					if(chartData == null) return; // 错误信息已在转换函数内提示
+
+					var chartName:String = Paths.formatToSongPath(loadedChart.song) + '.json';
+					#if mobile
+					StorageUtil.saveContent(chartName, chartData);
+					showOutput(Language.get('charting_legacy_saved_mobile', [chartName]));
+					#else
+					fileDialog.save(chartName, chartData,
+						function()
+						{
+							showOutput(Language.get('charting_legacy_saved', [fileDialog.path]));
+						}, null, function() showOutput(Language.get('charting_legacy_savefail'), true));
+					#end
+				}
+				catch(e:Dynamic)
+				{
+					showOutput(Language.get('charting_legacy_convertfail', [Std.string(e)]), true);
+				}
+			});
+		},btnWid);
+		btn.text.alignment = LEFT;
+		tab_group.add(btn);
+
 		btnY += 20;
 		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_upPold_tab1'), function()
 		{
@@ -6384,7 +6443,7 @@ for (i in 0...GRID_PLAYERS)
 					var loadedChart:SwagSong = Song.parseJSON(fileDialog.data, filePath, '');
 					if(loadedChart == null || !Reflect.hasField(loadedChart, 'song')) //Check if chart is ACTUALLY a chart and valid
 					{
-						showOutput('Error: File loaded is not a Psych Engine 0.x.x/FNF 0.2.x.x chart.', true);
+						showOutput(Language.get('charting_msg_notchart'), true);
 						return;
 					}
 
@@ -6397,13 +6456,13 @@ for (i in 0...GRID_PLAYERS)
 						loadedChart.format = 'psych_v1_convert';
 						Song.convert(loadedChart);
 						File.saveContent(fileDialog.path, PsychJsonPrinter.print(loadedChart, ['sectionNotes', 'events']));
-						showOutput('Updated "$filePath" from format "$fmt" to "psych_v1" successfully!');
+						showOutput(Language.get('charting_msg_updated', [filePath, fmt]));
 					}
-					else showOutput('Chart is already up-to-date! Format: "$fmt"', true);
+					else showOutput(Language.get('charting_msg_uptodate', [fmt]), true);
 				}
 				catch(e:Exception)
 				{
-					showOutput('Error: ${e.message}', true);
+					showOutput(Language.get('charting_msg_genericerr', [e.message]), true);
 					trace(e.stack);
 				}
 			});
@@ -7137,7 +7196,7 @@ for (i in 0...GRID_PLAYERS)
 			StorageUtil.saveContent(chartName, chartData);
 			#else
 			File.saveContent(Song.chartPath, chartData);
-			showOutput('Chart saved successfully to: ${Song.chartPath}');
+			showOutput(Language.get('charting_msg_chart_saved', [Song.chartPath]));
 			#end
 		}
 		else
@@ -7153,13 +7212,146 @@ for (i in 0...GRID_PLAYERS)
 					var newPath:String = fileDialog.path;
 					Song.chartPath = newPath.replace('\\', '/');
 					reloadNotesDropdowns();
-					showOutput('Chart saved successfully to: $newPath');
+					showOutput(Language.get('charting_msg_chart_saved', [newPath]));
 
-				}, null, function() showOutput('Error on saving chart!', true));
+				}, null, function() showOutput(Language.get('charting_msg_chart_saveerr'), true));
 			#end
 		}
 	}
 	
+	/**
+	 * 反向转谱核心：把当前 psych_v1 的 song 对象转成 Psych Engine 0.6.x 的 JSON 字符串。
+	 * 仅支持 4 键谱面；失败时返回 null（错误信息已通过 showOutput 提示）。
+	 * 规则：剥离自定义字段、noteType 转 Int 索引、事件截断为 [name,v1,v2]、强制 mustHitSection=true、补默认箭头皮肤、包裹为 {"song":{}}。
+	 */
+	function convertSongToLegacy(song:Dynamic):String
+	{
+		if(song == null) return null;
+
+		// 4 键校验
+		var mania = (song.mania != null) ? song.mania : 3;
+		if(mania != 3)
+		{
+			showOutput(Language.get('charting_legacy_only4key_cur', [Std.string(mania + 1)]), true);
+			return null;
+		}
+		if(song.notes != null)
+		{
+			var notes:Array<Dynamic> = song.notes;
+			for (sec in notes)
+			{
+				if(sec != null && sec.changeMania == true && sec.mania != null && sec.mania != 3)
+				{
+					showOutput(Language.get('charting_legacy_only4key_sec', [Std.string(sec.mania + 1)]), true);
+					return null;
+				}
+			}
+		}
+
+		try
+		{
+			// 深拷贝，避免污染传入对象
+			var raw:Dynamic = haxe.Json.parse(haxe.Json.stringify(song));
+
+			// 清理 song 级自定义字段
+			Reflect.deleteField(raw, 'format');
+			Reflect.deleteField(raw, 'mania');
+			Reflect.deleteField(raw, 'specialInst');
+			Reflect.deleteField(raw, 'specialVocal');
+			Reflect.deleteField(raw, 'specialEvents');
+			Reflect.deleteField(raw, '__original_path');
+
+			// 必填兜底（旧版 0.6.3 中 arrowSkin/splashSkin 为必填字符串）
+			if(raw.arrowSkin == null || raw.arrowSkin.length == 0) raw.arrowSkin = 'NOTE_assets';
+			if(raw.splashSkin == null || raw.splashSkin.length == 0) raw.splashSkin = 'noteSplashes';
+
+			// noteType：String -> Int 索引；mustHitSection 强制 true（配合归一化 noteData）
+			if(raw.notes != null)
+			{
+				var notes:Array<Dynamic> = raw.notes;
+				for (sec in notes)
+				{
+					if(sec == null) continue;
+					// 新版 noteData 已归一化（0-3=玩家 / 4-7=对手），与 mustHitSection 无关；
+					// 旧版 0.6.3 靠 mustHitSection 翻转归属，故强制 true 使其解读与归一化数据一致（音符归属 100% 正确）。
+					// 代价：旧版镜头会一直聚焦 BF，原谱对手镜头段丢失（纯视觉差异）。
+					sec.mustHitSection = true;
+					Reflect.deleteField(sec, 'changeMania');
+					Reflect.deleteField(sec, 'mania');
+					Reflect.deleteField(sec, 'bpmRamp');
+
+					if(sec.sectionNotes != null)
+					{
+						var sectionNotes:Array<Dynamic> = sec.sectionNotes;
+						for (note in sectionNotes)
+						{
+							if(note == null || note.length < 4) continue;
+							var nt:String = (note[3] != null) ? Std.string(note[3]) : '';
+							var idx:Int = noteTypes.indexOf(nt);
+							note[3] = (idx < 0) ? 0 : idx;
+						}
+					}
+				}
+			}
+
+			// events：截断为 [name, value1, value2]，丢弃 value3/value4；内联进谱面
+			if(raw.events != null)
+			{
+				var convertedEvents:Array<Dynamic> = [];
+				var events:Array<Dynamic> = raw.events;
+				for (ev in events)
+				{
+					if(ev == null || ev.length < 2) continue;
+					var evTime:Dynamic = ev[0];
+					var evList:Array<Dynamic> = [];
+					if(ev[1] != null)
+					{
+						var eList:Array<Dynamic> = ev[1];
+						for (e in eList)
+						{
+							if(e == null || e.length < 1) continue;
+							var trimmed:Array<Dynamic> = [e[0]];
+							trimmed.push((e.length > 1 && e[1] != null) ? e[1] : '');
+							trimmed.push((e.length > 2 && e[2] != null) ? e[2] : '');
+							evList.push(trimmed);
+						}
+					}
+					convertedEvents.push([evTime, evList]);
+				}
+				raw.events = convertedEvents;
+			}
+
+			var output:Dynamic = {song: raw};
+			return haxe.Json.stringify(output, "\t");
+		}
+		catch(e:Dynamic)
+		{
+			showOutput(Language.get('charting_legacy_convertfail', [Std.string(e)]), true);
+			return null;
+		}
+	}
+
+	function saveChartLegacy()
+	{
+		updateChartData();
+
+		// 反向转谱：当前编辑中的谱面 -> Psych Engine 0.6.x 格式并保存
+		var chartData:String = convertSongToLegacy(PlayState.SONG);
+		if(chartData == null) return;
+
+		var chartName:String = Paths.formatToSongPath(PlayState.SONG.song) + '.json';
+		#if mobile
+		StorageUtil.saveContent(chartName, chartData);
+		showOutput(Language.get('charting_legacy_saved_mobile', [chartName]));
+		#else
+		fileDialog.save(chartName, chartData,
+			function()
+			{
+				showOutput(Language.get('charting_legacy_saved', [fileDialog.path]));
+			}, null, function() showOutput(Language.get('charting_legacy_savefail'), true));
+		#end
+	}
+
 	inline function getCurChartSection()
 	{
 		return PlayState.SONG.notes != null ? PlayState.SONG.notes[curSec] : null;
@@ -7360,7 +7552,7 @@ function adaptNotesToNewTimes(oldTimes:Array<Float>)
 	{
 		if(FlxG.sound.music == null)
 		{
-			showOutput('Load a valid song to preview!', true);
+			showOutput(Language.get('charting_msg_loadvalid_preview'), true);
 			return;
 		}
 		setSongPlaying(false);
