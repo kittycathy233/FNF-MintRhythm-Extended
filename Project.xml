@@ -176,6 +176,11 @@
 	
 	<!-- Show debug traces for hxCodec -->
 	<haxedef name="HXC_DEBUG_TRACE" if="debug" />
+
+	<!-- 编译期打印 haxelib 版本解析日志（仅 debug 构建）。
+	     release/final 下想临时排查可手动加 -DHAXELIB_INFO_VERBOSE。
+	     注意：关掉的只是编译终端的 INFO 日志，FPS 计数器里的 Libs 列表不受影响。 -->
+	<haxedef name="HAXELIB_INFO_VERBOSE" if="debug" />
 	
 	<!--Disable the Flixel core debugger. Automatically gets set whenever you compile in release mode!-->
 	<haxedef name="FLX_NO_DEBUG" unless="debug" />

@@ -39,10 +39,12 @@ class HaxelibInfo {
 			}
 			
 			// 执行 haxelib list 命令获取全局库版本
+			// 注意：必须先把 stdout/stderr 读空再取 exitCode，
+			// 否则在 Windows 上输出量超过管道缓冲区时会死锁。
 			var process = new Process("haxelib", ["list"]);
-			var exitCode = process.exitCode();
 			var output = process.stdout.readAll().toString();
 			var error = process.stderr.readAll().toString();
+			var exitCode = process.exitCode();
 			process.close();
 			if (exitCode != 0) {
 				Context.warning("haxelib list failed: " + error, Context.currentPos());
@@ -50,13 +52,13 @@ class HaxelibInfo {
 			
 			// 记录原始输出用于调试（只记录前500个字符）
 			var debugOutput = output.length > 500 ? output.substring(0, 500) + "..." : output;
-			Context.info("haxelib list output (first 500 chars):\n" + debugOutput, Context.currentPos());
+			log("haxelib list output (first 500 chars):\n" + debugOutput);
 			
 			// 解析输出：每行格式 "libname: version"
 			var libInfoMap = new Map<String, String>();
 			var allLines = output.split("\n");
 			
-			Context.info("Parsing haxelib list output (" + allLines.length + " lines)", Context.currentPos());
+			log("Parsing haxelib list output (" + allLines.length + " lines)");
 			
 			for (i in 0...allLines.length) {
 				var rawLine = allLines[i];
@@ -121,17 +123,17 @@ class HaxelibInfo {
 					versionPart = "(no version)";
 				}
 				
-				Context.info("  Parsed: " + lib + " -> '" + versionPart + "'", Context.currentPos());
+				log("  Parsed: " + lib + " -> '" + versionPart + "'");
 				libInfoMap.set(lib, versionPart);
 			}
 			
 			// 调试信息：记录我们解析到了什么
-			Context.info("Found " + libNames.length + " haxelibs in Project.xml", Context.currentPos());
+			log("Found " + libNames.length + " haxelibs in Project.xml");
 			for (lib in libNames) {
 				if (libInfoMap.exists(lib)) {
-					Context.info("  " + lib + " -> " + libInfoMap.get(lib), Context.currentPos());
+					log("  " + lib + " -> " + libInfoMap.get(lib));
 				} else {
-					Context.info("  " + lib + " -> NOT FOUND in haxelib list", Context.currentPos());
+					log("  " + lib + " -> NOT FOUND in haxelib list");
 				}
 			}
 			
@@ -146,7 +148,7 @@ class HaxelibInfo {
 			}
 			
 			var result = infoLines.join("\n");
-			Context.info("Final haxelib info string:\n" + result, Context.currentPos());
+			log("Final haxelib info string:\n" + result);
 			return macro $v{result};
 		} catch (e:Dynamic) {
 			Context.warning("Failed to get haxelib info: " + Std.string(e), Context.currentPos());
@@ -156,4 +158,20 @@ class HaxelibInfo {
 		return macro $v{""};
 		#end
 	}
+
+	#if macro
+	/**
+	 * 编译期日志开关。
+	 *
+	 * 只影响「编译终端打印的 INFO 诊断信息」，不影响宏的返回值，
+	 * 因此 FPS 计数器里的 Libs 列表在任何构建配置下都照常显示。
+	 *
+	 * 注意：这里必须用运行时的 Context.defined()，不能用 #if debug ——
+	 * 宏体内的 #if 判断的是「编译宏本身」时的 define，而不是目标构建的 define。
+	 */
+	static function log(msg:String):Void {
+		if (Context.defined("debug") || Context.defined("HAXELIB_INFO_VERBOSE"))
+			Context.info(msg, Context.currentPos());
+	}
+	#end
 }
