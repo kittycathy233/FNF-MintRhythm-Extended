@@ -177,6 +177,13 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		var option:Option = new Option(Language.get("scoretextlanguage"),
+			Language.get("scoretextlanguage_desc"),
+			'scoreLanguage',
+			STRING,
+			['auto', 'en_us', 'zh_cn', 'zh_tw', 'ja', 'ko']);
+		addOption(option);
+
 		var option:Option = new Option("Health Bar Opacity",
 			Language.get("healthbaropacity_desc"),
 			'healthBarAlpha',

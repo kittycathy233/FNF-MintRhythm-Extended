@@ -1,0 +1,20 @@
+{
+	"score_font": "scoretxt/fusion-pixel-10px-monospaced-ko.ttf",
+	"score_label_score": "점수",
+	"score_label_nps": "NPS",
+	"score_label_miss": "미스",
+	"score_label_misses": "미스",
+	"score_label_acc": "정확도",
+	"score_label_combobreaks": "콤보 끊김",
+	"score_label_average": "평균",
+	"score_label_accuracy": "정확도",
+	"score_label_rating": "평가",
+	"ratingfc_?": "?",
+	"ratingfc_idk": "미상",
+	"ratingfc_pfc": "극한 풀콤보",
+	"ratingfc_fc": "풀콤보",
+	"ratingfc_gfc": "굿 풀콤보",
+	"ratingfc_sfc": "완벽 풀콤보",
+	"ratingfc_sdcb": "미스 적음",
+	"ratingfc_clear": "클리어"
+}

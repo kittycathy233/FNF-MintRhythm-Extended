@@ -1,6 +1,7 @@
 package options;
 
 import backend.StageData;
+import backend.ScoreLanguage;
 import objects.Character;
 import objects.Bar;
 import flixel.addons.display.shapes.FlxShapeCircle;
@@ -116,7 +117,8 @@ class NoteOffsetState extends MusicBeatState
 		add(healthBar);
 
 		scoreTxt = new FlxText(0, healthBar.y + 40, FlxG.width, "Score: 1145140 | Misses: 191 | Rating: Great (81%)", 20);
-		scoreTxt.setFormat(Paths.font("vcr.ttf"), 20, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		ScoreLanguage.load();
+		scoreTxt.setFormat(Paths.font(ScoreLanguage.getScoreFont()), 20, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		scoreTxt.scrollFactor.set();
 		scoreTxt.borderSize = 1.25;
 		scoreTxt.visible = !ClientPrefs.data.hideHud;

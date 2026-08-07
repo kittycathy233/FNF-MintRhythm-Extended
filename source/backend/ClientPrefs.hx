@@ -177,6 +177,7 @@ import openfl.display.StageQuality;
 	public var rmPerfect:String = 'off'; // 'off'=正常(Perfect独立判定), 'remove'=完全移除Perfect, 'sickPlus'=Perfect变为Sick+状态(算Sick但可选显示Perfect贴图,给Perfect分数)
 	public var ratbounce:Bool = true;
 	public var scoretxtstyle:String = 'Kathy';
+	public var scoreLanguage:String = 'auto'; // 分数文字（scoreTxt）显示语言：'auto' 跟随游戏语言，或指定 English/简体中文/繁體中文/日本語/한국어
 	public var rmmsTimeTxt:Bool = false;
 	public var showModeLabelInMsTxt:Bool = true;
 	public var scoretxtbounce:Bool = false;

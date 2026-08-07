@@ -33,6 +33,8 @@
 
     "game_font": "BlackSugarPlumCandy-Bold.ttf",
     "game_font2": "BlackSugarPlumCandy-Bold.ttf",
+    "scoretextlanguage": "分数文字语言",
+    "scoretextlanguage_desc": "分数文字（scoreTxt）显示的界面语言。Auto 表示跟随游戏语言。",
     "checkbox_font_size": 10,
     "charting_font_size": 12,
     "charting_tab_size": 12,

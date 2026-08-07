@@ -6,6 +6,7 @@ import backend.Highscore;
 import backend.StageData;
 import backend.WeekData;
 import backend.Song;
+import backend.ScoreLanguage;
 import backend.Rating;
 
 #if MODS_ALLOWED
@@ -1181,6 +1182,10 @@ isReplaying = false;
 		scoreTxt.borderSize = 1.25;
 		scoreTxt.visible = !ClientPrefs.data.hideHud;
 		}
+		// 依据设置载入分数文字语言（auto 时跟随游戏语言）
+		ScoreLanguage.load();
+		scoreTxt.setFormat(Paths.font(ScoreLanguage.getScoreFont()), scoreTxt.size, FlxColor.WHITE, scoreTxt.alignment, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+
 		uiGroup.add(scoreTxt);
 
 		botplayTxt = new FlxText(400, ClientPrefs.data.botplayStyle == 'Kade' ? healthBar.y - 120 : healthBar.y - 90, FlxG.width - 800, "BOTPLAY", 32);
@@ -1870,12 +1875,25 @@ isReplaying = false;
 
 	public dynamic function updateScoreText()
 	{
-		var str:String = LanguageBasic.getPhrase('rating_$ratingName', ratingName);
+		var lblScore:String = ScoreLanguage.get('score_label_score');
+		var lblNPS:String = ScoreLanguage.get('score_label_nps');
+		var lblMiss:String = ScoreLanguage.get('score_label_miss');
+		var lblMisses:String = ScoreLanguage.get('score_label_misses');
+		var lblAcc:String = ScoreLanguage.get('score_label_acc');
+		var lblComboBreaks:String = ScoreLanguage.get('score_label_combobreaks');
+		var lblAverage:String = ScoreLanguage.get('score_label_average');
+		var lblAccuracy:String = ScoreLanguage.get('score_label_accuracy');
+	var lblRating:String = ScoreLanguage.get('score_label_rating');
+
+	// 预计算本地化的 ratingFC 文本（缺失时 ScoreLanguage 会回退到原始 token，保证兼容）
+	var ratingFCText:String = ScoreLanguage.getRatingFC(ratingFC);
+
+	var str:String = LanguageBasic.getPhrase('rating_$ratingName', ratingName);
         var percent:Float = 0; // 提前声明并初始化
         if(totalPlayed != 0)
         {
             percent = CoolUtil.floorDecimal(ratingPercent * 100, 2);
-            str += ' (${percent}%) - ' + LanguageBasic.getPhrase(ratingFC);
+            str += ' (${percent}%) - ' + ratingFCText;
         }
 
         var tempScore:String;
@@ -1886,15 +1904,15 @@ isReplaying = false;
     			{
         			tempScore = '| ';
         			if (ClientPrefs.data.showNPS)
-            			tempScore += 'NPS: ${nps} (${maxNPS}) | ';
-        			tempScore += 'Score: ${songScore}';
+tempScore += '${lblNPS}: ${nps} (${maxNPS}) | ';
+tempScore += '${lblScore}: ${songScore}';
         			if (!instakillOnMiss)
-            			tempScore += ' | Miss: ${songMisses}';
-        			tempScore += ' | Acc: ${percent}% | ${ratingFC} |';
+tempScore += ' | ${lblMiss}: ${songMisses}';
+tempScore += ' | ${lblAcc}: ${percent}% | ${ratingFCText} |';
     			}
     			else {
         			if (ClientPrefs.data.showNPS)
-            			tempScore = '| NPS: ${nps} (${maxNPS}) |';
+            			tempScore = '| ${lblNPS}: ${nps} (${maxNPS}) |';
         			else
             			tempScore = ''; // 不显示竖线
     			}
@@ -1906,29 +1924,29 @@ isReplaying = false;
                 {
                     tempScore = '';
                     if (ClientPrefs.data.showNPS)
-                        tempScore += 'NPS: ${nps} (Max: ${maxNPS}) | ';
-                    tempScore += 'Score: ${songScore}';
+tempScore += '${lblNPS}: ${nps} (Max: ${maxNPS}) | ';
+tempScore += '${lblScore}: ${songScore}';
                     if (!instakillOnMiss)
-                        tempScore += ' | Combo Breaks: ${songMisses}';
-                    tempScore += ' | Accuracy: ${percent}% | (${ratingFC}) ${ratingNameKE}';
+                        tempScore += ' | ${lblComboBreaks}: ${songMisses}';
+                    tempScore += ' | ${lblAccuracy}: ${percent}% | (${ratingFCText}) ${ratingNameKE}';
                 } else {
-                    tempScore = ClientPrefs.data.showNPS ? 'NPS: ${nps} (Max: ${maxNPS})' : '';
+                    tempScore = ClientPrefs.data.showNPS ? '${lblNPS}: ${nps} (Max: ${maxNPS})' : '';
                 }
                 //if (cpuControlled) tempScore += ' | BOTPLAY';
             }
 			else if (ClientPrefs.data.scoretxtstyle == 'V-Slice')
             {
-                    tempScore = 'Score: ${songScore}';
+                    tempScore = '${lblScore}: ${songScore}';
             }
             else if (ClientPrefs.data.scoretxtstyle == 'OS')
             {
                 if (!cpuControlled || ClientPrefs.data.botplayScore)
                 {
                     if(ratingName == '?') {
-                        tempScore = 'Score: ${songScore} | Combo Breaks: ${songMisses} | Average: ? | Accuracy: ${ratingName}';
+                        tempScore = '${lblScore}: ${songScore} | ${lblComboBreaks}: ${songMisses} | ${lblAverage}: ? | ${lblAccuracy}: ${ratingName}';
                     } else {
                         var avgValue:Int = Std.int(Math.abs(Math.round(averageMs)));
-                        tempScore = 'Score: ${songScore} | Combo Breaks: ${songMisses} | Average: ${avgValue}ms | Accuracy: ${percent}% | ${ratingName} [${ratingFC}]';
+                        tempScore = '${lblScore}: ${songScore} | ${lblComboBreaks}: ${songMisses} | ${lblAverage}: ${avgValue}ms | ${lblAccuracy}: ${percent}% | ${ratingName} [${ratingFCText}]';
                     }
                 } else {
                     tempScore = '';
@@ -1942,24 +1960,24 @@ isReplaying = false;
                     var leatherAcc:Float = totalPlayed != 0 ? CoolUtil.floorDecimal(ratingPercent * 100, 2) : 100.0;
                     var leatherRank:String = getLeatherRank(leatherAcc, songMisses);
                     if (!instakillOnMiss)
-                        tempScore = '<  Score: ${songScore} ~ Misses: ${songMisses} ~ Accuracy: ${leatherAcc}% ~ ${leatherRank}  >';
+                        tempScore = '<  ${lblScore}: ${songScore} ~ ${lblMisses}: ${songMisses} ~ ${lblAccuracy}: ${leatherAcc}% ~ ${leatherRank}  >';
                     else
-                        tempScore = '<  Score: ${songScore} ~ Accuracy: ${leatherAcc}% ~ ${leatherRank}  >';
+                        tempScore = '<  ${lblScore}: ${songScore} ~ ${lblAccuracy}: ${leatherAcc}% ~ ${leatherRank}  >';
                 } else {
                     tempScore = '';
                 }
             }
             else
-                tempScore = LanguageBasic.getPhrase('score_text', 'Score: {1} | Misses: {2} | Rating: {3}', [songScore, songMisses, str]);
+                tempScore = '${lblScore}: ${songScore} | ${lblMisses}: ${songMisses} | ${lblRating}: ${str}';
         }
         else {
             // instakill 模式：根据不同样式显示不同格式
             if (ClientPrefs.data.scoretxtstyle == 'Leather') {
                 var leatherAcc:Float = totalPlayed != 0 ? CoolUtil.floorDecimal(ratingPercent * 100, 2) : 100.0;
                 var leatherRank:String = getLeatherRank(leatherAcc);
-                tempScore = '<  Score: ${songScore} ~ ${leatherRank}  >';
+                tempScore = '<  ${lblScore}: ${songScore} ~ ${leatherRank}  >';
             } else {
-                tempScore = LanguageBasic.getPhrase('score_text_instakill', 'Score: {1} | Rating: {2}', [songScore, str]);
+                tempScore = '${lblScore}: ${songScore} | ${lblRating}: ${str}';
             }
         }
         scoreTxt.text = tempScore;

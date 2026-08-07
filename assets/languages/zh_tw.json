@@ -34,6 +34,8 @@
     "charting_infobar": "MisansTC-Regular.ttf",
     "game_font": "BlackSugarPlumCandy-Bold.ttf",
     "game_font2": "BlackSugarPlumCandy-Bold.ttf",
+    "scoretextlanguage": "分數文字語言",
+    "scoretextlanguage_desc": "分數文字（scoreTxt）顯示的介面語言。Auto 表示跟隨遊戲語言。",
 
     "charting_mute_text": "Mute",
     "charting_playersound_hit_text": "玩家命中箭頭聲音：",

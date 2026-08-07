@@ -1,0 +1,20 @@
+{
+	"score_font": "scoretxt/fusion-pixel-10px-monospaced-zh_hant.ttf",
+	"score_label_score": "分數",
+	"score_label_nps": "NPS",
+	"score_label_miss": "漏擊",
+	"score_label_misses": "漏擊",
+	"score_label_acc": "準確率",
+	"score_label_combobreaks": "斷連",
+	"score_label_average": "平均",
+	"score_label_accuracy": "準確率",
+	"score_label_rating": "評級",
+	"ratingfc_?": "?",
+	"ratingfc_idk": "未知",
+	"ratingfc_pfc": "極致全連",
+	"ratingfc_fc": "全連",
+	"ratingfc_gfc": "優良全連",
+	"ratingfc_sfc": "完美全連",
+	"ratingfc_sdcb": "少量失誤",
+	"ratingfc_clear": "通關"
+}

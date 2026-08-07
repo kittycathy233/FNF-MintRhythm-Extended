@@ -40,6 +40,8 @@
 
     "game_font": "BlackSugarPlumCandy-Bold.ttf",
     "game_font2": "BlackSugarPlumCandy-Bold.ttf",
+    "scoretextlanguage": "Score Text Language",
+    "scoretextlanguage_desc": "The UI language used for score text (scoreTxt). 'Auto' follows the game language.",
     "checkbox_font_size": 8,
     "charting_font_size": 10,
     "charting_tab_size": 8,
