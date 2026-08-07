@@ -18,6 +18,7 @@ import openfl.display.StageQuality;
 	public var wideScreen:Bool = false;
 	public var hitboxType:String = "Gradient";
 	public var hitboxAnimation:Bool = true; // whether hitbox button animations are enabled
+	public var hitboxHideIdle:Bool = true; // hide the colored hitbox blocks while not being touched
 	public var popUpRating:Bool = true;
 	//public var vsync:Bool = false;
 	public var gameOverVibration:Bool = false;

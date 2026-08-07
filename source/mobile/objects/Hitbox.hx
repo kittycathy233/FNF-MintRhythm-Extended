@@ -224,8 +224,8 @@ class Hitbox extends MobileInputManager implements IMobileControls
 			{
 				// 性能优化：初始化动画状态
 				_animatingButtons.set(hint, false);
-				_targetAlphas.set(hint, 0.00001);
-				_targetLabelAlphas.set(hint, ClientPrefs.data.controlsAlpha);
+				_targetAlphas.set(hint, ClientPrefs.data.hitboxHideIdle ? 0 : 0.00001);
+				_targetLabelAlphas.set(hint, ClientPrefs.data.hitboxHideIdle ? 0 : ClientPrefs.data.controlsAlpha);
 
 				hint.onDown.callback = function()
 				{
@@ -240,16 +240,16 @@ class Hitbox extends MobileInputManager implements IMobileControls
 				{
 					onButtonUp.dispatch(hint);
 					// 性能优化：设置目标 alpha 值，由 update 循环中的 lerp 处理
-					_targetAlphas.set(hint, 0.00001);
-					_targetLabelAlphas.set(hint, ClientPrefs.data.controlsAlpha);
+					_targetAlphas.set(hint, ClientPrefs.data.hitboxHideIdle ? 0 : 0.00001);
+					_targetLabelAlphas.set(hint, ClientPrefs.data.hitboxHideIdle ? 0 : ClientPrefs.data.controlsAlpha);
 					_animatingButtons.set(hint, true);
 				}
 			}
 			else
 			{
 				// 禁用动画模式：直接设置 alpha
-				hint.alpha = 0.00001;
-				hint.label.alpha = ClientPrefs.data.controlsAlpha;
+				hint.alpha = ClientPrefs.data.hitboxHideIdle ? 0 : 0.00001;
+				hint.label.alpha = ClientPrefs.data.hitboxHideIdle ? 0 : ClientPrefs.data.controlsAlpha;
 
 				hint.onDown.callback = function()
 				{
@@ -263,8 +263,8 @@ class Hitbox extends MobileInputManager implements IMobileControls
 				{
 					onButtonUp.dispatch(hint);
 					// 直接设置，无动画
-					hint.alpha = 0.00001;
-					hint.label.alpha = ClientPrefs.data.controlsAlpha;
+					hint.alpha = ClientPrefs.data.hitboxHideIdle ? 0 : 0.00001;
+					hint.label.alpha = ClientPrefs.data.hitboxHideIdle ? 0 : ClientPrefs.data.controlsAlpha;
 				}
 			}
 		}
@@ -276,8 +276,8 @@ class Hitbox extends MobileInputManager implements IMobileControls
 
 		hint.immovable = hint.multiTouch = true;
 		hint.solid = hint.moves = false;
-		hint.alpha = 0.00001;
-		hint.label.alpha = (ClientPrefs.data.hitboxType != "Hidden") ? ClientPrefs.data.controlsAlpha : 0.00001;
+		hint.alpha = ClientPrefs.data.hitboxHideIdle ? 0 : 0.00001;
+		hint.label.alpha = (ClientPrefs.data.hitboxType != "Hidden" && !ClientPrefs.data.hitboxHideIdle) ? ClientPrefs.data.controlsAlpha : 0.00001;
 		hint.canChangeLabelAlpha = false;
 		hint.label.antialiasing = hint.antialiasing = ClientPrefs.data.antialiasing;
 		hint.color = Color;

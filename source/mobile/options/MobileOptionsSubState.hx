@@ -81,6 +81,15 @@ class MobileOptionsSubState extends BaseOptionsMenu
 			option = new Option('Hitbox Animation', Language.get("hitbox_animation_desc"),
 				'hitboxAnimation', BOOL);
 			addOption(option);
+
+			option = new Option('Hitbox Hide Idle', 'Hides the colored hitbox blocks while not being touched',
+				'hitboxHideIdle', BOOL);
+			option.onChange = () ->
+			{
+				removeMobileControls();
+				addMobileControls();
+			};
+			addOption(option);
 		}
 
 		option = new Option('Dynamic Controls Color',
