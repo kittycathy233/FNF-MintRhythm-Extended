@@ -1223,7 +1223,7 @@ isReplaying = false;
 		else
 		{
 			if (ClientPrefs.data.timebarStyle == 'Leather' || ClientPrefs.data.timebarStyle == 'Leather (Legacy)')
-				watermarkContent = 'KYE v${Application.current.meta.get('version')}';
+				watermarkContent = 'KYE v${MainMenuState.kathyEngineVersion}';
 			else
 				watermarkContent = '${SONG.song}-${Difficulty.getString().toUpperCase()} | KYE ${MainMenuState.kathyEngineVersion}';
 		}

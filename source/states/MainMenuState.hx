@@ -25,7 +25,11 @@ enum MainMenuColumn {
 class MainMenuState extends MusicBeatState
 {
 	public static var psychEngineVersion:String = '1.0.4';
-	public static var kathyEngineVersion:String = '1.1.0 dev';
+	public static var kathyEngineVersion(get, never):String;
+	static function get_kathyEngineVersion():String
+	{
+		return ((Application.current != null) ? Application.current.meta.get('version') : '1.0.0') + " dev";
+	}
 	public static var curSelected:Int = 0;
 	public static var curColumn:MainMenuColumn = CENTER;
 	var allowMouse:Bool = true;
