@@ -804,74 +804,100 @@ class FreeplayState extends MusicBeatState
 				bpmDisplayTime = 0;
 				lastBeatHit = -1; // 重置beat检测
 
-				if (PlayState.SONG.needsVoices)
+			// 先确定这首歌所属音频目录：优先用当前歌曲登记的 folder，缺失再用 findModWithSong 兜底，
+			// 与 PlayState 一致；Inst 与人声统一从 audioModDir 用 loadSongAudio 加载（不回退 funkin）。
+			function modHasAudio(mod:String, song:String, fileBase:String):Bool
+			{
+				return Paths.loadSongAudio(song, fileBase, mod) != null;
+			}
+
+			// 探测某 mod 是否含有该曲音频：含 SpecialInst/SpecialVocal 的带后缀文件也算。
+			function modHasSong(mod:String, song:String):Bool
+			{
+				if (modHasAudio(mod, song, 'Inst') || modHasAudio(mod, song, 'Voices')) return true;
+				var si:String = (PlayState.SONG.specialInst != null && PlayState.SONG.specialInst.length > 0) ? PlayState.SONG.specialInst : null;
+				var sv:String = (PlayState.SONG.specialVocal != null && PlayState.SONG.specialVocal.length > 0) ? PlayState.SONG.specialVocal : null;
+				if (si != null && modHasAudio(mod, song, 'Inst-$si')) return true;
+				if (sv != null && modHasAudio(mod, song, 'Voices-$sv')) return true;
+				return false;
+			}
+
+			function findModWithSong(song:String):String
+			{
+				var found:String = '';
+				#if MODS_ALLOWED
+				for (mod in Mods.getModDirectories())
 				{
-					var songFolder:String = Paths.formatToSongPath(PlayState.SONG.song);
-
-					// 严格判定：只检查当前模组目录自身是否真有该 vocal 文件，避免模组沿用 funkin 曲名时
-					// Paths.fileExists 因原生 assets/songs/<name> 存在而误判，进而播放 funkin 原生 vocal。
-					function modFolderHasAudio(song:String, file:String):Bool
+					if (modHasSong(mod, song))
 					{
-						var mod:String = Mods.currentModDirectory;
-						if (mod == null || mod.length == 0) return false;
-						return FileSystem.exists(Paths.mods('$mod/songs/${Paths.formatToSongPath(song)}/$file'));
+						found = mod;
+						break;
 					}
+				}
+				#end
+				return found;
+			}
 
-					function tryVoices(postfix:String):Sound
+			var audioModDir:String = songs[curSelected].folder;
+			if (!modHasSong(audioModDir, PlayState.SONG.song))
+				audioModDir = findModWithSong(PlayState.SONG.song);
+			if (audioModDir == null) audioModDir = '';
+
+			if (PlayState.SONG.needsVoices)
+			{
+
+				// 优先：角色指定(postfix) > Voices-Player / Voices-Opponent > 无后缀合并 Voices
+				function tryVoices(postfix:String):Sound
+				{
+					var fileBase:String = 'Voices';
+					if (postfix != null) fileBase += '-' + postfix;
+					// 追加 SpecialVocal 后缀，与 Inst 的 specialInst 对称：
+					// 优先 Voices-{角色}-SpecialVocal > Voices-Player/Opponent-SpecialVocal > Voices-SpecialVocal，命中即止（任一存在即可）。
+					if (PlayState.SONG.specialVocal != null && PlayState.SONG.specialVocal.length > 0)
+						fileBase += '-' + PlayState.SONG.specialVocal;
+					return Paths.loadSongAudio(PlayState.SONG.song, fileBase, audioModDir);
+				}
+
+				vocals = new FlxSound();
+				try
+				{
+					var playerVocalPostfix = getVocalFromCharacter(PlayState.SONG.player1);
+					// 使用character名称作为vocal postfix，而不是固定的'Player'
+					if (playerVocalPostfix == null || playerVocalPostfix.length < 1)
+						playerVocalPostfix = PlayState.SONG.player1;
+
+					var loadedVocals:Sound = tryVoices(playerVocalPostfix);
+					if (loadedVocals == null) loadedVocals = tryVoices('Player');
+					if (loadedVocals == null) loadedVocals = tryVoices(null);
+
+					if (loadedVocals != null && loadedVocals.length > 0)
 					{
-						if (postfix == null)
-						{
-							if (modFolderHasAudio(PlayState.SONG.song, 'Voices.${Paths.SOUND_EXT}'))
-								return Paths.voices(PlayState.SONG.song, null, PlayState.SONG.specialVocal);
-						}
-						else
-						{
-							if (modFolderHasAudio(PlayState.SONG.song, 'Voices-${postfix}.${Paths.SOUND_EXT}'))
-								return Paths.voices(PlayState.SONG.song, postfix, PlayState.SONG.specialVocal);
-						}
-						return null;
+						vocals.loadEmbedded(loadedVocals);
+						FlxG.sound.list.add(vocals);
+						vocals.persist = vocals.looped = true;
+						vocals.volume = 0.8;
+						vocals.play();
+						vocals.pause();
 					}
+					else
+						vocals = FlxDestroyUtil.destroy(vocals);
+				}
+				catch (e:Dynamic)
+				{
+					vocals = FlxDestroyUtil.destroy(vocals);
+				}
 
-					vocals = new FlxSound();
+				opponentVocals = new FlxSound();
 					try
 					{
-						var playerVocalPostfix = getVocalFromCharacter(PlayState.SONG.player1);
-						// 使用character名称作为vocal postfix，而不是固定的'Player'
-						if (playerVocalPostfix == null || playerVocalPostfix.length < 1)
-							playerVocalPostfix = PlayState.SONG.player1;
+						var oppVocalPostfix = getVocalFromCharacter(PlayState.SONG.player2);
+						// 使用character名称作为vocal postfix，而不是固定的'Opponent'
+						if (oppVocalPostfix == null || oppVocalPostfix.length < 1)
+							oppVocalPostfix = PlayState.SONG.player2;
 
-						var loadedVocals:Sound = tryVoices(playerVocalPostfix);
-						if (loadedVocals == null) loadedVocals = tryVoices('Player');
+						var loadedVocals:Sound = tryVoices(oppVocalPostfix);
+						if (loadedVocals == null) loadedVocals = tryVoices('Opponent');
 						if (loadedVocals == null) loadedVocals = tryVoices(null);
-
-						if (loadedVocals != null && loadedVocals.length > 0)
-						{
-							vocals.loadEmbedded(loadedVocals);
-							FlxG.sound.list.add(vocals);
-							vocals.persist = vocals.looped = true;
-							vocals.volume = 0.8;
-							vocals.play();
-							vocals.pause();
-						}
-						else
-							vocals = FlxDestroyUtil.destroy(vocals);
-					}
-					catch (e:Dynamic)
-					{
-						vocals = FlxDestroyUtil.destroy(vocals);
-					}
-
-					opponentVocals = new FlxSound();
-						try
-						{
-							var oppVocalPostfix = getVocalFromCharacter(PlayState.SONG.player2);
-							// 使用character名称作为vocal postfix，而不是固定的'Opponent'
-							if (oppVocalPostfix == null || oppVocalPostfix.length < 1)
-								oppVocalPostfix = PlayState.SONG.player2;
-
-							var loadedVocals:Sound = tryVoices(oppVocalPostfix);
-							if (loadedVocals == null) loadedVocals = tryVoices('Opponent');
-							if (loadedVocals == null) loadedVocals = tryVoices(null);
 
 							if (loadedVocals != null && loadedVocals.length > 0)
 							{
@@ -891,7 +917,8 @@ class FreeplayState extends MusicBeatState
 						}
 				}
 
-				FlxG.sound.playMusic(Paths.inst(PlayState.SONG.song, PlayState.SONG.specialInst), 0.8);
+				var instFileBase:String = (PlayState.SONG.specialInst != null && PlayState.SONG.specialInst.length > 0) ? 'Inst-${PlayState.SONG.specialInst}' : 'Inst';
+				FlxG.sound.playMusic(Paths.loadSongAudio(PlayState.SONG.song, instFileBase, audioModDir), 0.8);
 				FlxG.sound.music.pause();
 				instPlaying = curSelected;
 

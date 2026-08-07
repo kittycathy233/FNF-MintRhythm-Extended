@@ -3188,6 +3188,41 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		setSongPlaying(false);
 		var time:Float = Conductor.songPosition;
 
+		// 让音频从真正包含该歌曲的模组目录解析，避免模组沿用 funkin 曲名时误加载 funkin 内置资源。
+		// 逻辑与 PlayState 一致：优先用当前模组目录，缺失再扫描所有模组；用 loadSongAudio（不回退 funkin）判定。
+		var prevModDir:String = Mods.currentModDirectory;
+		var songModDir:String = Mods.currentModDirectory;
+		function modHasAudio(mod:String, song:String, fileBase:String):Bool
+		{
+			return Paths.loadSongAudio(song, fileBase, mod) != null;
+		}
+		// 探测某 mod 是否含有该曲音频：含 SpecialInst/SpecialVocal 的带后缀文件也算（与 FreeplayState 一致）。
+		function modHasSong(mod:String, song:String):Bool
+		{
+			var si:String = (PlayState.SONG.specialInst != null && PlayState.SONG.specialInst.length > 0) ? PlayState.SONG.specialInst : null;
+			var sv:String = (PlayState.SONG.specialVocal != null && PlayState.SONG.specialVocal.length > 0) ? PlayState.SONG.specialVocal : null;
+			if (modHasAudio(mod, song, 'Inst') || modHasAudio(mod, song, 'Voices')) return true;
+			if (si != null && modHasAudio(mod, song, 'Inst-$si')) return true;
+			if (sv != null && modHasAudio(mod, song, 'Voices-$sv')) return true;
+			return false;
+		}
+		#if MODS_ALLOWED
+		// 优先当前模组目录（与 PlayState 的 _lastLoadedModDirectory 语义一致），缺失再扫描所有模组以兜底同名曲冲突。
+		if (!modHasSong(songModDir, PlayState.SONG.song))
+		{
+			songModDir = '';
+			for (mod in Mods.getModDirectories())
+			{
+				if (modHasSong(mod, PlayState.SONG.song))
+				{
+					songModDir = mod;
+					break;
+				}
+			}
+		}
+		#end
+		Mods.currentModDirectory = songModDir;
+
 		if(killAudio)
 		{
 			var sndsToKill:Array<String> = [];
@@ -3211,7 +3246,8 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 
 		try
 		{
-			FlxG.sound.playMusic(Paths.inst(PlayState.SONG.song, PlayState.SONG.specialInst), 0);
+			var instFileBase:String = (PlayState.SONG.specialInst != null && PlayState.SONG.specialInst.length > 0) ? 'Inst-${PlayState.SONG.specialInst}' : 'Inst';
+			FlxG.sound.playMusic(Paths.loadSongAudio(PlayState.SONG.song, instFileBase, songModDir), 0);
 			FlxG.sound.music.pause();
 			FlxG.sound.music.time = time;
 			FlxG.sound.music.onComplete = (function() songFinished = true);
@@ -3219,6 +3255,7 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		catch(e:Exception)
 		{
 			FlxG.log.error('Error loading song: $e');
+			Mods.currentModDirectory = prevModDir;
 			return;
 		}
 
@@ -3228,16 +3265,29 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		{
 			try
 			{
+				// Inst 与人声统一从 songModDir 用 loadSongAudio 加载（不回退 funkin，缺失即 null）。
+				// 优先：角色指定(postfix) > Voices-Player / Voices-Opponent > 无后缀合并 Voices
+				function tryVoices(postfix:String):Sound
+				{
+					var fileBase:String = 'Voices';
+					if (postfix != null) fileBase += '-' + postfix;
+					// 追加 SpecialVocal 后缀，与 Inst 的 specialInst 对称：
+					// 优先 Voices-{角色}-SpecialVocal > Voices-Player/Opponent-SpecialVocal > Voices-SpecialVocal，命中即止（任一存在即可）。
+					if (PlayState.SONG.specialVocal != null && PlayState.SONG.specialVocal.length > 0)
+						fileBase += '-' + PlayState.SONG.specialVocal;
+					return Paths.loadSongAudio(PlayState.SONG.song, fileBase, songModDir);
+				}
+
 				// 加载玩家vocal
 				var playerVocalName:String = characterData.vocalsP1;
 				trace('Loading player vocal: name=$playerVocalName, specialVocal=${PlayState.SONG.specialVocal}');
-				var playerVocals:Sound = Paths.voices(PlayState.SONG.song, playerVocalName, PlayState.SONG.specialVocal);
+				var playerVocals:Sound = tryVoices(playerVocalName);
 				trace('Player vocal result: ${playerVocals != null ? "found" : "not found"}');
 				
 				// 如果指定的vocal不存在，尝试使用Player
 				if (playerVocals == null) {
 					trace('Trying Player fallback...');
-					playerVocals = Paths.voices(PlayState.SONG.song, 'Player', PlayState.SONG.specialVocal);
+					playerVocals = tryVoices('Player');
 					trace('Player fallback result: ${playerVocals != null ? "found" : "not found"}');
 				}
 				
@@ -3246,7 +3296,7 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 					vocals.loadEmbedded(playerVocals);
 				} else {
 					trace('Using default voices...');
-					vocals.loadEmbedded(Paths.voices(PlayState.SONG.song, null, PlayState.SONG.specialVocal));
+					vocals.loadEmbedded(tryVoices(null));
 				}
 				vocals.volume = 0;
 				vocals.play();
@@ -3256,13 +3306,13 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 				// 加载对手vocal
 				var oppVocalName:String = characterData.vocalsP2;
 				trace('Loading opponent vocal: name=$oppVocalName, specialVocal=${PlayState.SONG.specialVocal}');
-				var oppVocals:Sound = Paths.voices(PlayState.SONG.song, oppVocalName, PlayState.SONG.specialVocal);
+				var oppVocals:Sound = tryVoices(oppVocalName);
 				trace('Opponent vocal result: ${oppVocals != null ? "found" : "not found"}');
 				
 				// 如果指定的vocal不存在，尝试使用Opponent
 				if (oppVocals == null) {
 					trace('Trying Opponent fallback...');
-					oppVocals = Paths.voices(PlayState.SONG.song, 'Opponent', PlayState.SONG.specialVocal);
+					oppVocals = tryVoices('Opponent');
 					trace('Opponent fallback result: ${oppVocals != null ? "found" : "not found"}');
 				}
 				
@@ -3278,6 +3328,7 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 			}
 			catch (e:Dynamic) {}
 		}
+		Mods.currentModDirectory = prevModDir;
 
 		#if DISCORD_ALLOWED
 		DiscordClient.changePresence('Chart Editor', 'Song: ' + PlayState.SONG.song);

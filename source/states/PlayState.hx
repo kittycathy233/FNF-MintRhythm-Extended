@@ -2207,18 +2207,11 @@ tempScore += '${lblScore}: ${songScore}';
 		// loadTopMod 重置，这里直接在所有“真实存在的模组目录”中搜索实际包含该歌曲音频的模组。
 		var prevModDir:String = Mods.currentModDirectory;
 
-		// 严格判定：仅检查“该模组自身目录”是否真实存在音频文件，绝不回退到 funkin 内置 assets/songs。
-		// 否则对沿用 funkin 曲名的歌曲，Paths.fileExists 会因原生 assets/songs/<name> 存在而误判为“存在”，
-		// 导致 findModWithSong 选中错误的模组，进而加载到 funkin 原生 vocal。
-		function modFolderHasAudio(mod:String, song:String, file:String):Bool
+		// 用 loadSongAudio（不回退 funkin）判定该模组是否真有这首曲子的音频，避免被原生同名资源误导。
+		function modHasAudio(mod:String, song:String, fileBase:String):Bool
 		{
-			if (mod == null || mod.length == 0) return false;
-			return FileSystem.exists(Paths.mods('$mod/songs/${Paths.formatToSongPath(song)}/$file'));
-		}
-
-		function modHasSong(mod:String, song:String):Bool
-		{
-			return modFolderHasAudio(mod, song, 'Inst.${Paths.SOUND_EXT}');
+			// mod 为空 => 内置 base_game，绝不被原生同名资源误导（loadSongAudio 空 modDir 即查 assets/songs）。
+			return Paths.loadSongAudio(song, fileBase, mod) != null;
 		}
 
 		function findModWithSong(song:String):String
@@ -2227,8 +2220,7 @@ tempScore += '${lblScore}: ${songScore}';
 			#if MODS_ALLOWED
 			for (mod in Mods.getModDirectories())
 			{
-				// 严格判断该模组是否真有这首曲子的 Inst 或 Voices，避免被原生同名资源误导
-				if (modFolderHasAudio(mod, song, 'Inst.${Paths.SOUND_EXT}') || modFolderHasAudio(mod, song, 'Voices.${Paths.SOUND_EXT}'))
+				if (modHasAudio(mod, song, 'Inst') || modHasAudio(mod, song, 'Voices'))
 				{
 					found = mod;
 					break;
@@ -2239,7 +2231,7 @@ tempScore += '${lblScore}: ${songScore}';
 		}
 
 		var audioModDir:String = PlayState._lastLoadedModDirectory;
-		if (!modHasSong(audioModDir, songData.song))
+		if (!modHasAudio(audioModDir, songData.song, 'Inst') && !modHasAudio(audioModDir, songData.song, 'Voices'))
 			audioModDir = findModWithSong(songData.song);
 		if (audioModDir == null) audioModDir = '';
 
@@ -2248,24 +2240,17 @@ tempScore += '${lblScore}: ${songScore}';
 		{
 			if (songData.needsVoices)
 			{
-				var songFolder:String = Paths.formatToSongPath(songData.song);
-
+				// Inst 与人声统一从 audioModDir 加载（loadSongAudio 不回退 funkin，缺失即 null）。
 				// 优先：角色指定(postfix) > Voices-Player / Voices-Opponent > 无后缀合并 Voices
-				// 注意：Paths.voices 在文件不存在时会回退为 beep，因此必须先用 fileExists 判定真实存在，
-				// 否则下方回退链（== null）永远不成立，导致 split vocal 与合并 Voices 加载错乱或重复播放。
 				function tryVoices(postfix:String):Sound
 				{
-					if (postfix == null)
-					{
-						if (modFolderHasAudio(audioModDir, songData.song, 'Voices.${Paths.SOUND_EXT}'))
-							return Paths.voices(songData.song, null, songData.specialVocal);
-					}
-					else
-					{
-						if (modFolderHasAudio(audioModDir, songData.song, 'Voices-${postfix}.${Paths.SOUND_EXT}'))
-							return Paths.voices(songData.song, postfix, songData.specialVocal);
-					}
-					return null;
+					var fileBase:String = 'Voices';
+					if (postfix != null) fileBase += '-' + postfix;
+					// 追加 SpecialVocal 后缀，与 Inst 的 specialInst 对称：
+					// 优先 Voices-{角色}-SpecialVocal > Voices-Player/Opponent-SpecialVocal > Voices-SpecialVocal，命中即止（任一存在即可）。
+					if (songData.specialVocal != null && songData.specialVocal.length > 0)
+						fileBase += '-' + songData.specialVocal;
+					return Paths.loadSongAudio(songData.song, fileBase, audioModDir);
 				}
 
 				var playerVocalPostfix = (boyfriend.vocalsFile == null || boyfriend.vocalsFile.length < 1) ? boyfriend.curCharacter : boyfriend.vocalsFile;
@@ -2293,7 +2278,8 @@ tempScore += '${lblScore}: ${songScore}';
 		inst = new FlxSound();
 		try
 		{
-			inst.loadEmbedded(Paths.inst(songData.song, songData.specialInst));
+			var instFileBase:String = (songData.specialInst != null && songData.specialInst.length > 0) ? 'Inst-${songData.specialInst}' : 'Inst';
+			inst.loadEmbedded(Paths.loadSongAudio(songData.song, instFileBase, audioModDir));
 		}
 		catch (e:Dynamic) {}
 		FlxG.sound.list.add(inst);

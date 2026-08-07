@@ -264,6 +264,37 @@ inline static public function inst(song:String, ?specialInst:String = null, ?mod
 		return returnSound(songKey, 'songs', modsAllowed, false);
 	}
 
+	// 从单一明确目录加载歌曲音频（Inst / Voices-*），缺失即返回 null，绝不回退到 funkin 原生 assets/songs。
+	// 用于统一 Inst 与人声解析路径：二者共用同一个 modDir，从机制上消除"Inst 正常、人声串味 funkin 原声"的不对称。
+	//   modDir 非空 -> 仅查 mods/<modDir>/songs/<song>/<fileBase>.<SOUND_EXT>；
+	//   modDir 为空   -> 仅查 assets/songs/<song>/<fileBase>.<SOUND_EXT>（即 base_game，与原 getPath 回退结果一致）。
+	// 缓存 key 与 returnSound 经 getPath 解析出的绝对路径完全一致，故 currentTrackedSounds / killAudio / precache 不受影响。
+	static public function loadSongAudio(song:String, fileBase:String, ?modDir:String = ''):Sound
+	{
+		var key:String = '${formatToSongPath(song)}/$fileBase.${SOUND_EXT}';
+		var path:String = (modDir != null && modDir.length > 0)
+			? mods('$modDir/songs/$key')
+			: getFolderPath(key, 'songs');
+		return loadSoundAtPath(path);
+	}
+
+	// 与 returnSound 相同的加载/缓存逻辑，但仅按给定绝对路径判定，不触发模组与原生之间的回退链。
+	static function loadSoundAtPath(file:String):Sound
+	{
+		if (!currentTrackedSounds.exists(file))
+		{
+			#if sys
+			if (FileSystem.exists(file))
+				currentTrackedSounds.set(file, Sound.fromFile(file));
+			#else if (OpenFlAssets.exists(file, SOUND))
+				currentTrackedSounds.set(file, OpenFlAssets.getSound(file));
+			#end
+			else
+				currentTrackedSounds.set(file, null);
+		}
+		return currentTrackedSounds.get(file);
+	}
+
 	inline static public function soundRandom(key:String, min:Int, max:Int, ?modsAllowed:Bool = true)
 		return sound(key + FlxG.random.int(min, max), modsAllowed);
 
