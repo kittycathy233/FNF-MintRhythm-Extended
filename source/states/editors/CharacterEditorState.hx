@@ -59,8 +59,10 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 
 	var selectedFormat:FlxTextFormat = new FlxTextFormat(FlxColor.LIME);
 
-	var cameraPosition:Point = new Point();
+	var cameraPosition:Point = new Point(); // pointer position at the moment the touch started
+	var cameraStartScroll:Point = new Point(); // camera scroll captured at the moment the touch started
 	var isDragging:Bool = false;
+	var cameraDragSensitivity:Float = 0.5; // <1 reduces touch dragging sensitivity (still divided by zoom)
 
 	public function new(char:String = null, goToPlayState:Bool = true)
 	{
@@ -990,9 +992,9 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 
 		var lastZoom = FlxG.camera.zoom;
 		if(FlxG.keys.justPressed.R && !FlxG.keys.pressed.CONTROL || touchPad.buttonZ.justPressed) FlxG.camera.zoom = 1;
-		else if ((FlxG.keys.pressed.E || touchPad.buttonX.pressed) && FlxG.camera.zoom < 3) {
+		else if ((FlxG.keys.pressed.E || touchPad.buttonX.pressed) && FlxG.camera.zoom < 5) {
 			FlxG.camera.zoom += elapsed * FlxG.camera.zoom * shiftMult * ctrlMult;
-			if(FlxG.camera.zoom > 3) FlxG.camera.zoom = 3;
+			if(FlxG.camera.zoom > 5) FlxG.camera.zoom = 5;
 		}
 		else if ((FlxG.keys.pressed.Q || touchPad.buttonY.pressed) && FlxG.camera.zoom > 0.1) {
 			FlxG.camera.zoom -= elapsed * FlxG.camera.zoom * shiftMult * ctrlMult;
@@ -1436,22 +1438,43 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 
 	function onMouseEvent(e:MouseEvent):Void
 	{
-		if (touchPad != null && !touchPad.anyPressed([ANY]))
-			switch (e.type)
-			{
-				case MouseEvent.MOUSE_DOWN:
-					var mouse = new Point(e.stageX, e.stageY); // OpenFL mouse position
-					cameraPosition.x = FlxG.camera.scroll.x + mouse.x;
-					cameraPosition.y = FlxG.camera.scroll.y + mouse.y;
-					isDragging = true;
+		// skip (and cancel) the drag while any touch button is held down
+		if (touchPad != null && touchPad.anyPressed([ANY]))
+		{
+			isDragging = false;
+			return;
+		}
 
-				case MouseEvent.MOUSE_MOVE if (isDragging):
-					var mouse = new Point(e.stageX, e.stageY);
-					FlxG.camera.scroll.x = cameraPosition.x - mouse.x;
-					FlxG.camera.scroll.y = cameraPosition.y - mouse.y;
+		switch (e.type)
+		{
+			case MouseEvent.MOUSE_DOWN:
+				var mouse = new Point(e.stageX, e.stageY); // OpenFL mouse position
+				// capture the pointer position and the camera scroll at the moment the touch starts
+				cameraPosition.x = mouse.x;
+				cameraPosition.y = mouse.y;
+				cameraStartScroll.x = FlxG.camera.scroll.x;
+				cameraStartScroll.y = FlxG.camera.scroll.y;
+				isDragging = true;
 
-				case MouseEvent.MOUSE_UP:
-					isDragging = false;
-			}
+			case MouseEvent.MOUSE_MOVE if (isDragging):
+				var mouse = new Point(e.stageX, e.stageY);
+				// delta measured from the start of the touch, divided by zoom for the correct world delta,
+				// then scaled by the sensitivity factor to make it less twitchy
+				FlxG.camera.scroll.x = cameraStartScroll.x - (mouse.x - cameraPosition.x) / FlxG.camera.zoom * cameraDragSensitivity;
+				FlxG.camera.scroll.y = cameraStartScroll.y - (mouse.y - cameraPosition.y) / FlxG.camera.zoom * cameraDragSensitivity;
+
+			case MouseEvent.MOUSE_UP:
+				isDragging = false;
+		}
+	}
+
+	override function destroy():Void
+	{
+		// remove the stage listeners we registered so they don't leak into other states (e.g. PlayState)
+		FlxG.stage.removeEventListener(MouseEvent.MOUSE_DOWN, onMouseEvent);
+		FlxG.stage.removeEventListener(MouseEvent.MOUSE_MOVE, onMouseEvent);
+		FlxG.stage.removeEventListener(MouseEvent.MOUSE_UP, onMouseEvent);
+		isDragging = false;
+		super.destroy();
 	}
 }
