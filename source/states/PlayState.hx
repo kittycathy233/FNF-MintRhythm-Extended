@@ -3939,14 +3939,16 @@ tempScore += '${lblScore}: ${songScore}';
 
 						if(isPlayerNote(daNote))
 						{
-							if(cpuControlled && !daNote.blockHit && daNote.canBeHit && (daNote.isSustainNote || daNote.strumTime <= Conductor.songPosition))
-								goodNoteHit(daNote);
+						// 长条头部也必须在到达 strumTime 后才首次命中，避免提前窗口导致
+						// 对手箭头飞溅/holdcover 在真实判定点之前就触发（尾段 earlyHitMult=0 不受影响）。
+						if(cpuControlled && !daNote.blockHit && daNote.canBeHit && daNote.strumTime <= Conductor.songPosition)
+							goodNoteHit(daNote);
 						}
-							else if (!daNote.hitByOpponent && !daNote.ignoreNote && daNote.canBeHit && (daNote.isSustainNote || daNote.strumTime <= Conductor.songPosition))
-							{
-								opponentNoteHit(daNote);
-								if (!daNote.isSustainNote) daNote.wasGoodHit = true;
-							}
+						else if (!daNote.hitByOpponent && !daNote.ignoreNote && daNote.canBeHit && daNote.strumTime <= Conductor.songPosition)
+						{
+							opponentNoteHit(daNote);
+							if (!daNote.isSustainNote) daNote.wasGoodHit = true;
+						}
 							else if (daNote.wasGoodHit && !daNote.hitByOpponent && !daNote.ignoreNote)
 								opponentNoteHit(daNote);
 
