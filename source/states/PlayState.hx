@@ -23,7 +23,9 @@ import flixel.util.FlxSave;
 import flixel.input.keyboard.FlxKey;
 import flixel.animation.FlxAnimationController;
 import lime.utils.Assets;
+import openfl.utils.AssetType;
 import openfl.utils.Assets as OpenFlAssets;
+import flash.media.Sound;
 import openfl.events.KeyboardEvent;
 import openfl.events.Event;
 import haxe.Json;
@@ -2191,36 +2193,84 @@ tempScore += '${lblScore}: ${songScore}';
 
 		vocals = new FlxSound();
 		opponentVocals = new FlxSound();
+		// 让音频从真正包含该歌曲的模组目录解析，避免模组沿用 funkin 曲名时误加载 funkin 内置资源。
+		// 部分模组没有 runsGlobally，只能经由 Mods.currentModDirectory 访问；若 .folder 登记有误或被
+		// loadTopMod 重置，这里直接在所有“真实存在的模组目录”中搜索实际包含该歌曲音频的模组。
+		var prevModDir:String = Mods.currentModDirectory;
+
+		// 严格判定：仅检查“该模组自身目录”是否真实存在音频文件，绝不回退到 funkin 内置 assets/songs。
+		// 否则对沿用 funkin 曲名的歌曲，Paths.fileExists 会因原生 assets/songs/<name> 存在而误判为“存在”，
+		// 导致 findModWithSong 选中错误的模组，进而加载到 funkin 原生 vocal。
+		function modFolderHasAudio(mod:String, song:String, file:String):Bool
+		{
+			if (mod == null || mod.length == 0) return false;
+			return FileSystem.exists(Paths.mods('$mod/songs/${Paths.formatToSongPath(song)}/$file'));
+		}
+
+		function modHasSong(mod:String, song:String):Bool
+		{
+			return modFolderHasAudio(mod, song, 'Inst.${Paths.SOUND_EXT}');
+		}
+
+		function findModWithSong(song:String):String
+		{
+			var found:String = '';
+			#if MODS_ALLOWED
+			for (mod in Mods.getModDirectories())
+			{
+				// 严格判断该模组是否真有这首曲子的 Inst 或 Voices，避免被原生同名资源误导
+				if (modFolderHasAudio(mod, song, 'Inst.${Paths.SOUND_EXT}') || modFolderHasAudio(mod, song, 'Voices.${Paths.SOUND_EXT}'))
+				{
+					found = mod;
+					break;
+				}
+			}
+			#end
+			return found;
+		}
+
+		var audioModDir:String = PlayState._lastLoadedModDirectory;
+		if (!modHasSong(audioModDir, songData.song))
+			audioModDir = findModWithSong(songData.song);
+		if (audioModDir == null) audioModDir = '';
+
+		Mods.currentModDirectory = audioModDir;
 		try
 		{
 			if (songData.needsVoices)
+			{
+				var songFolder:String = Paths.formatToSongPath(songData.song);
+
+				// 优先：角色指定(postfix) > Voices-Player / Voices-Opponent > 无后缀合并 Voices
+				// 注意：Paths.voices 在文件不存在时会回退为 beep，因此必须先用 fileExists 判定真实存在，
+				// 否则下方回退链（== null）永远不成立，导致 split vocal 与合并 Voices 加载错乱或重复播放。
+				function tryVoices(postfix:String):Sound
 				{
-					// 使用character名称作为vocal postfix，而不是固定的'Player'和'Opponent'
-					var playerVocalPostfix = (boyfriend.vocalsFile == null || boyfriend.vocalsFile.length < 1) ? boyfriend.curCharacter : boyfriend.vocalsFile;
-					var playerVocals = Paths.voices(songData.song, playerVocalPostfix, songData.specialVocal);
-					
-					// 如果指定的vocal不存在，尝试使用默认值
-					if (playerVocals == null) {
-						playerVocals = Paths.voices(songData.song, 'Player', songData.specialVocal);
+					if (postfix == null)
+					{
+						if (modFolderHasAudio(audioModDir, songData.song, 'Voices.${Paths.SOUND_EXT}'))
+							return Paths.voices(songData.song, null, songData.specialVocal);
 					}
-					
-					// 如果仍然不存在，使用无postfix的版本
-					if (playerVocals != null) {
-						vocals.loadEmbedded(playerVocals);
-					} else {
-						vocals.loadEmbedded(Paths.voices(songData.song, null, songData.specialVocal));
+					else
+					{
+						if (modFolderHasAudio(audioModDir, songData.song, 'Voices-${postfix}.${Paths.SOUND_EXT}'))
+							return Paths.voices(songData.song, postfix, songData.specialVocal);
 					}
-					
-					var oppVocalPostfix = (dad.vocalsFile == null || dad.vocalsFile.length < 1) ? dad.curCharacter : dad.vocalsFile;
-					var oppVocals = Paths.voices(songData.song, oppVocalPostfix, songData.specialVocal);
-					
-					// 如果指定的vocal不存在，尝试使用默认值
-					if (oppVocals == null) {
-						oppVocals = Paths.voices(songData.song, 'Opponent', songData.specialVocal);
-					}
-					
-					if(oppVocals != null && oppVocals.length > 0) opponentVocals.loadEmbedded(oppVocals);
+					return null;
 				}
+
+				var playerVocalPostfix = (boyfriend.vocalsFile == null || boyfriend.vocalsFile.length < 1) ? boyfriend.curCharacter : boyfriend.vocalsFile;
+				var playerVocals:Sound = tryVoices(playerVocalPostfix);
+				if (playerVocals == null) playerVocals = tryVoices('Player');
+				if (playerVocals == null) playerVocals = tryVoices(null);
+				if (playerVocals != null && playerVocals.length > 0) vocals.loadEmbedded(playerVocals);
+
+				var oppVocalPostfix = (dad.vocalsFile == null || dad.vocalsFile.length < 1) ? dad.curCharacter : dad.vocalsFile;
+				var oppVocals:Sound = tryVoices(oppVocalPostfix);
+				if (oppVocals == null) oppVocals = tryVoices('Opponent');
+				if (oppVocals == null) oppVocals = tryVoices(null);
+				if (oppVocals != null && oppVocals.length > 0) opponentVocals.loadEmbedded(oppVocals);
+			}
 		}
 		catch (e:Dynamic) {}
 
@@ -2238,6 +2288,8 @@ tempScore += '${lblScore}: ${songScore}';
 		}
 		catch (e:Dynamic) {}
 		FlxG.sound.list.add(inst);
+
+		Mods.currentModDirectory = prevModDir;
 
 		notes = new FlxTypedGroup<Note>(); // 主组（用于 modchart 兼容性）
 		normalNotes = new FlxTypedGroup<Note>(); // 普通音符组

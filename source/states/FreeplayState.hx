@@ -13,7 +13,9 @@ import flixel.math.FlxMath;
 import flixel.util.FlxDestroyUtil;
 import flixel.tweens.FlxTween;
 import flixel.graphics.FlxGraphic;
+import openfl.utils.AssetType;
 import openfl.utils.Assets;
+import flash.media.Sound;
 import haxe.Json;
 import backend.ui.PsychUIInputText;
 #if FEATURE_FILESYSTEM
@@ -804,22 +806,43 @@ class FreeplayState extends MusicBeatState
 
 				if (PlayState.SONG.needsVoices)
 				{
+					var songFolder:String = Paths.formatToSongPath(PlayState.SONG.song);
+
+					// 严格判定：只检查当前模组目录自身是否真有该 vocal 文件，避免模组沿用 funkin 曲名时
+					// Paths.fileExists 因原生 assets/songs/<name> 存在而误判，进而播放 funkin 原生 vocal。
+					function modFolderHasAudio(song:String, file:String):Bool
+					{
+						var mod:String = Mods.currentModDirectory;
+						if (mod == null || mod.length == 0) return false;
+						return FileSystem.exists(Paths.mods('$mod/songs/${Paths.formatToSongPath(song)}/$file'));
+					}
+
+					function tryVoices(postfix:String):Sound
+					{
+						if (postfix == null)
+						{
+							if (modFolderHasAudio(PlayState.SONG.song, 'Voices.${Paths.SOUND_EXT}'))
+								return Paths.voices(PlayState.SONG.song, null, PlayState.SONG.specialVocal);
+						}
+						else
+						{
+							if (modFolderHasAudio(PlayState.SONG.song, 'Voices-${postfix}.${Paths.SOUND_EXT}'))
+								return Paths.voices(PlayState.SONG.song, postfix, PlayState.SONG.specialVocal);
+						}
+						return null;
+					}
+
 					vocals = new FlxSound();
 					try
 					{
-						var playerVocals:String = getVocalFromCharacter(PlayState.SONG.player1);
+						var playerVocalPostfix = getVocalFromCharacter(PlayState.SONG.player1);
 						// 使用character名称作为vocal postfix，而不是固定的'Player'
-						var playerVocalPostfix = (playerVocals != null && playerVocals.length > 0) ? playerVocals : PlayState.SONG.player1;
-						var loadedVocals = Paths.voices(PlayState.SONG.song, playerVocalPostfix, PlayState.SONG.specialVocal);
-						
-						// 如果指定的vocal不存在，尝试使用默认值
-						if (loadedVocals == null) {
-							loadedVocals = Paths.voices(PlayState.SONG.song, 'Player', PlayState.SONG.specialVocal);
-						}
-						
-						// 如果仍然不存在，使用无postfix的版本
-						if (loadedVocals == null)
-							loadedVocals = Paths.voices(PlayState.SONG.song, null, PlayState.SONG.specialVocal);
+						if (playerVocalPostfix == null || playerVocalPostfix.length < 1)
+							playerVocalPostfix = PlayState.SONG.player1;
+
+						var loadedVocals:Sound = tryVoices(playerVocalPostfix);
+						if (loadedVocals == null) loadedVocals = tryVoices('Player');
+						if (loadedVocals == null) loadedVocals = tryVoices(null);
 
 						if (loadedVocals != null && loadedVocals.length > 0)
 						{
@@ -841,16 +864,14 @@ class FreeplayState extends MusicBeatState
 					opponentVocals = new FlxSound();
 						try
 						{
-							// trace('please work...');
-							var oppVocals:String = getVocalFromCharacter(PlayState.SONG.player2);
+							var oppVocalPostfix = getVocalFromCharacter(PlayState.SONG.player2);
 							// 使用character名称作为vocal postfix，而不是固定的'Opponent'
-							var oppVocalPostfix = (oppVocals != null && oppVocals.length > 0) ? oppVocals : PlayState.SONG.player2;
-							var loadedVocals = Paths.voices(PlayState.SONG.song, oppVocalPostfix, PlayState.SONG.specialVocal);
-							
-							// 如果指定的vocal不存在，尝试使用默认值
-							if (loadedVocals == null) {
-								loadedVocals = Paths.voices(PlayState.SONG.song, 'Opponent', PlayState.SONG.specialVocal);
-							}
+							if (oppVocalPostfix == null || oppVocalPostfix.length < 1)
+								oppVocalPostfix = PlayState.SONG.player2;
+
+							var loadedVocals:Sound = tryVoices(oppVocalPostfix);
+							if (loadedVocals == null) loadedVocals = tryVoices('Opponent');
+							if (loadedVocals == null) loadedVocals = tryVoices(null);
 
 							if (loadedVocals != null && loadedVocals.length > 0)
 							{
@@ -860,14 +881,12 @@ class FreeplayState extends MusicBeatState
 								opponentVocals.volume = 0.8;
 								opponentVocals.play();
 								opponentVocals.pause();
-								// trace('yaaay!!');
 							}
 							else
 								opponentVocals = FlxDestroyUtil.destroy(opponentVocals);
 						}
 						catch (e:Dynamic)
 						{
-							// trace('FUUUCK');
 							opponentVocals = FlxDestroyUtil.destroy(opponentVocals);
 						}
 				}
