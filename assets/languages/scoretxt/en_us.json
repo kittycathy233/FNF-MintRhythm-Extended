@@ -1,5 +1,5 @@
 {
-	"score_font": "scoretxt/fusion-pixel-10px-monospaced-latin.ttf",
+	"score_font": "vcr.ttf",
 	"score_label_score": "Score",
 	"score_label_nps": "NPS",
 	"score_label_miss": "Miss",

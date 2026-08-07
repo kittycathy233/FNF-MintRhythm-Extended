@@ -31,7 +31,7 @@ class ScoreLanguage
 	// 原始引擎（英文）默认值：当 scoretxt JSON 缺失某 key 时回退到此，
 	// 从而尽可能保证原有兼容性（不会出现 score_label_xxx 这类裸 key）。
 	private static var DEFAULTS:Map<String, String> = [
-		'score_font'            => 'scoretxt/fusion-pixel-10px-monospaced-latin.ttf',
+		'score_font'            => 'vcr.ttf',
 		'score_label_score'     => 'Score',
 		'score_label_nps'       => 'NPS',
 		'score_label_miss'      => 'Miss',
@@ -95,12 +95,12 @@ class ScoreLanguage
 		return key;
 	}
 
-	// 获取分数文字字体（位于 assets/fonts/scoretxt/ 下）
+	// 获取分数文字字体（英文默认回退到引擎原生的 vcr.ttf）
 	public static function getScoreFont():String
 	{
 		var font:String = get('score_font');
 		if (font == null || font.length == 0)
-			font = 'scoretxt/fusion-pixel-10px-monospaced-latin.ttf';
+			font = 'vcr.ttf';
 		return font;
 	}
 

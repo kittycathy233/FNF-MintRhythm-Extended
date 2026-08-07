@@ -177,7 +177,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option(Language.get("scoretextlanguage"),
+		var option:Option = new Option("ScoreText Language",
 			Language.get("scoretextlanguage_desc"),
 			'scoreLanguage',
 			STRING,
