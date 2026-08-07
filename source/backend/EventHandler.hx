@@ -229,6 +229,7 @@ class EventHandler
                             playState.boyfriend = playState.boyfriendMap.get(value2);
                             playState.boyfriend.alpha = lastAlpha;
                             playState.iconP1.changeIcon(playState.boyfriend.healthIcon);
+                            playState.applyIconStates(); // 换图标后立刻按当前血量恢复 输/赢 状态，避免回到普通态
                         }
                         playState.setOnScripts('boyfriendName', playState.boyfriend.curCharacter);
 
@@ -251,6 +252,7 @@ class EventHandler
                             }
                             playState.dad.alpha = lastAlpha;
                             playState.iconP2.changeIcon(playState.dad.healthIcon);
+                            playState.applyIconStates(); // 换图标后立刻按当前血量恢复 输/赢 状态，避免回到普通态
                         }
                         playState.setOnScripts('dadName', playState.dad.curCharacter);
 

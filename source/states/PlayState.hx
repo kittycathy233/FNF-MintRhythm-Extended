@@ -4214,6 +4214,19 @@ tempScore += '${lblScore}: ${songScore}';
 		var newPercent:Null<Float> = FlxMath.remapToRange(FlxMath.bound(healthBar.valueFunction(), healthBar.bounds.min, healthBar.bounds.max), healthBar.bounds.min, healthBar.bounds.max, 0, 100);
 		healthBar.percent = (newPercent != null ? newPercent : 0);
 
+		applyIconStates();
+		return health;
+	}
+
+	/**
+	 * 根据当前血条百分比刷新双方图标的 输/赢/正常 三态。
+	 * 除了在 health 赋值时调用外，也在 Change Character 换图标后调用，
+	 * 防止 changeIcon 重置动画帧导致图标状态丢失（如高血量对手图标回到普通态）。
+	 */
+	public function applyIconStates():Void
+	{
+		if(!iconsAnimations || healthBar == null || !healthBar.enabled || healthBar.valueFunction == null) return;
+
 		// 三态图标：0=正常 1=输 2=赢（win 仅在开启 threeIcons 时生效；自动兼容仅含 0/1 帧的经典图标）
 		// 赢与输的判定区间正相反，且玩家(iconP1)/对手(iconP2)两侧都生效
 		var p1State:String = (healthBar.percent < 20) ? 'lose' : ((ClientPrefs.data.threeIcons && healthBar.percent > 80) ? 'win' : 'normal');
@@ -4231,7 +4244,6 @@ tempScore += '${lblScore}: ${songScore}';
 			iconP1.setIconState(p1State);
 			iconP2.setIconState(p2State);
 		}
-		return health;
 	}
 
 	function openPauseMenu()
