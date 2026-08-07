@@ -4710,11 +4710,14 @@ isReplaying = false;
 	{
 		// scoreGain=false 时（特性2 长条尾部判定）：显示评级/计入准度，但不加 songScore、不写回放数据
 		// 移除Math.abs()来允许显示负值
-		var noteDiff:Float = note.strumTime - Conductor.songPosition + ClientPrefs.data.ratingOffset;
+		// BotPlay 不是人类输入，不应套用 ratingOffset / 移动端补偿：这些校准值仅用于补偿玩家本人的手感，
+		// 否则会让 bot 的“完美命中”被系统性地偏移 ratingOffset 毫秒，导致整体爆 good/bad。
+		var noteDiff:Float = note.strumTime - Conductor.songPosition + (cpuControlled ? 0 : ClientPrefs.data.ratingOffset);
 
 		// 移动端判定补偿：触屏输入倾向于出现额外正向(偏晚) 延迟，
 		// 因此仅在 noteDiff < 0 时叠加偏移，避免把本来就偏早的按键推得更提前。
-		if (ClientPrefs.data.mobileJudgmentCompensation && noteDiff < 0)
+		// 同样不对 BotPlay 生效（见上方说明）。
+		if (!cpuControlled && ClientPrefs.data.mobileJudgmentCompensation && noteDiff < 0)
 			noteDiff += ClientPrefs.data.mobileJudgmentOffset;
 
 		// 在回放模式下，优先使用延迟覆盖值（最高优先级）
