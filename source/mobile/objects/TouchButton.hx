@@ -195,6 +195,14 @@ class TypedTouchButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 
 	public var canChangeLabelAlpha:Bool = true;
 
+	/**
+	 * 为 true 时，图标/字母保持自身颜色（不与底板同色）。
+	 * 默认 false：字母颜色跟随底板，并在 BRIGHTNESS 模式下一起被亮度 shader 提亮，
+	 * 以保持「字母与底板同色或偏亮」的传统观感（如默认 dpad/hitbox/extra）。
+	 * 仅需要独立配色的按钮（如暂停键的浅蓝 P）才置为 true。
+	 */
+	public var independentLabelColor:Bool = false;
+
 	// 性能优化：缓存上次检查的触摸点和时间
 	var _lastTouchCheckTime:Float = 0;
 	var _cachedTouchPositions:Array<FlxPoint> = [];
@@ -438,6 +446,15 @@ class TypedTouchButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 			_spriteLabel.scale.set(scale.x, scale.y);
 	}
 
+	/**
+	 * 重新缩放并居中标签（供外部在改完 scale 后手动调用）。
+	 */
+	public function refreshLabel():Void
+	{
+		updateLabelScale();
+		updateLabelPosition();
+	}
+
 	function indicateStatus()
 	{
 		switch (statusIndicatorType)
@@ -505,7 +522,8 @@ class TypedTouchButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 
 		updateLabelPosition();
 
-		if (statusIndicatorType == BRIGHTNESS && label != null && brightShader != null)
+		// 非独立配色时，字母应与底板同色/偏亮（传统观感）。
+		if (!independentLabelColor && statusIndicatorType == BRIGHTNESS && _spriteLabel != null)
 			_spriteLabel.shader = brightShader;
 
 		return Value;
@@ -550,7 +568,8 @@ class TypedTouchButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 
 	override function set_color(Value:FlxColor):Int
 	{
-		if (_spriteLabel != null)
+		// 非独立配色时，字母颜色跟随底板，保持「与底板同色/偏亮」的传统观感。
+		if (!independentLabelColor && _spriteLabel != null)
 			_spriteLabel.color = Value;
 		brightShader.color = Value;
 		super.set_color(Value);
@@ -595,8 +614,9 @@ class TypedTouchButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 		if (Value == BRIGHTNESS)
 		{
 			shader = brightShader;
+			// 非独立配色时字母也套亮度 shader，与底板一起被提亮（传统观感）。
 			if (_spriteLabel != null)
-				_spriteLabel.shader = brightShader;
+				_spriteLabel.shader = independentLabelColor ? null : brightShader;
 		}
 		else
 		{

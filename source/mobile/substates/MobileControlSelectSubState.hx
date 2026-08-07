@@ -216,7 +216,8 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		{
 			if (buttonBinded)
 			{
-				if (TouchUtil.justReleased)
+				// 触摸释放、按钮丢失或触摸点丢失时，结束拖拽
+				if (TouchUtil.justReleased || bindButton == null || TouchUtil.touch == null)
 				{
 					bindButton = null;
 					buttonBinded = false;
@@ -224,11 +225,11 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 				else
 					moveButton(TouchUtil.touch, bindButton);
 			}
-			else
+			else if (control.touchPad != null)
 			{
 				control.touchPad.forEachAlive((button:TouchButton) ->
 				{
-					if (button.justPressed)
+					if (button != null && button.justPressed && TouchUtil.touch != null)
 						moveButton(TouchUtil.touch, button);
 				});
 			}
@@ -237,7 +238,7 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 			{
 				control.touchPad.forEachAlive((button:TouchButton) ->
 				{
-					if (button != bindButton && buttonBinded)
+					if (button != null && button.visible && button != bindButton && buttonBinded)
 					{
 						bindButton.centerBounds();
 						button.bounds.immovable = true;
@@ -306,22 +307,22 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		if (curOption >= options.length)
 			curOption = 0;
 
-		switch (curOption)
+		switch (options[curOption])
 		{
-			case 0 | 1 | 3:
+			case 'Pad-Right' | 'Pad-Left' | 'Hitbox':
 				reset.visible = false;
 				snapCheckbox.visible = false;
 				snapLabel.visible = false;
 				changeControls();
-			case 2:
+			case 'Pad-Custom':
 				reset.visible = true;
 				snapCheckbox.visible = true;
 				snapLabel.visible = true;
 				changeControls();
-			case 5:
+			case 'Pad-Extra':
 				reset.visible = true;
-				snapCheckbox.visible = false;
-				snapLabel.visible = false;
+				snapCheckbox.visible = true;
+				snapLabel.visible = true;
 				changeControls(0, true);
 				control.touchPad.forEachAlive((button:TouchButton) ->
 				{
@@ -383,8 +384,15 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 
 	function moveButton(touch:FlxTouch, button:TouchButton):Void
 	{
+		if (touch == null || button == null)
+		{
+			bindButton = null;
+			buttonBinded = false;
+			return;
+		}
+
 		bindButton = button;
-		buttonBinded = bindButton == null ? false : true;
+		buttonBinded = true;
 		bindButton.x = touch.x - Std.int(bindButton.width / 2);
 		bindButton.y = touch.y - Std.int(bindButton.height / 2);
 		updatePosText();

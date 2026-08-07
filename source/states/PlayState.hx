@@ -402,6 +402,7 @@ class PlayState extends MusicBeatState
 	public var camGame:FlxCamera;
 	public var camOther:FlxCamera;
 	public var camArchived:FlxCamera;
+	private var mobilePauseBtn:TouchButton;
 	public var luaTpadCam:FlxCamera;
 	public var cameraSpeed:Float = 1;
 
@@ -1285,6 +1286,8 @@ isReplaying = false;
 		mobileControls.instance.visible = true;
 		mobileControls.onButtonDown.add(onButtonPress);
 		mobileControls.onButtonUp.add(onButtonRelease);
+
+		createMobilePauseButton();
 
 		if(eventNotes.length > 0)
 		{
@@ -3195,6 +3198,10 @@ isReplaying = false;
 			_deferredInitStep++;
 		}
 
+		// 移动端右上角暂停按钮：跟随移动控制整体可见性（暂停/结算时会自动隐藏）
+		if (mobilePauseBtn != null)
+			mobilePauseBtn.visible = controls.mobileC && mobileControls.instance.visible;
+
 		// 回放模式下的自动按键逻辑
 		if(isReplaying && startedCountdown && !paused && !endingSong)
 		{
@@ -4172,6 +4179,53 @@ isReplaying = false;
 		#if DISCORD_ALLOWED
 		if(autoUpdateRPC) DiscordClient.changePresence(detailsPausedText, SONG.song + " (" + storyDifficultyText + ")", iconP2.getCharacter());
 		#end
+	}
+
+	/**
+	 * 移动端游玩时，在屏幕右上角额外添加一个暂停按钮。
+	 * 底板颜色 rgba(20,40,80,0.4)，图标（字母 "P"）为浅蓝 #88ccff。
+	 */
+	private function createMobilePauseButton():Void
+	{
+		if (!controls.mobileC)
+			return;
+
+		mobilePauseBtn = new TouchButton(0, 0, null);
+		mobilePauseBtn.label = new FlxSprite();
+		mobilePauseBtn.loadGraphic(Paths.image('touchpad/bg', 'mobile'));
+		mobilePauseBtn.label.loadGraphic(Paths.image('touchpad/P', 'mobile'));
+
+		mobilePauseBtn.scale.set(0.22, 0.22);
+		mobilePauseBtn.updateHitbox();
+		mobilePauseBtn.refreshLabel();
+
+		mobilePauseBtn.statusIndicatorType = ALPHA;
+		mobilePauseBtn.independentLabelColor = true; // P 用独立浅蓝，不被底板色覆盖
+		mobilePauseBtn.statusAlphas = [0.4, 0.5, 0.3];
+		mobilePauseBtn.canChangeLabelAlpha = false; // 图标始终不透明，底板才有透明度
+		mobilePauseBtn.label.alpha = 1.0;
+
+		mobilePauseBtn.color = 0x88ccff;       // 底板用原来的字母浅蓝
+		mobilePauseBtn.label.color = 0xb0c4de; // 图标 #B0C4DE
+
+		mobilePauseBtn.antialiasing = ClientPrefs.data.antialiasing;
+		mobilePauseBtn.tag = 'P';
+		mobilePauseBtn.scrollFactor.set();
+
+		mobilePauseBtn.x = FlxG.width - mobilePauseBtn.width - 15;
+		mobilePauseBtn.y = 15;
+
+		mobilePauseBtn.cameras = [mobileControlsCam];
+		mobilePauseBtn.onDown.callback = () ->
+		{
+			mobilePauseBtn.visible = false;
+			if (startedCountdown && !paused && canPause)
+				openPauseMenu();
+		};
+
+		mobilePauseBtn.alpha = 0.4;
+		add(mobilePauseBtn);
+		mobilePauseBtn.visible = controls.mobileC;
 	}
 
 	public function openChartEditor()
