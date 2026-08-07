@@ -4667,6 +4667,9 @@ tempScore += '${lblScore}: ${songScore}';
 			spr = new FlxSprite();
 		}
 		FlxTween.cancelTweensOf(spr);
+		// scale 是独立的 FlxPoint，cancelTweensOf(spr) 无法取消作用于它的补间，
+		// 必须单独取消，否则残留的 scale 补间会在复用后继续篡改新精灵的大小。
+		FlxTween.cancelTweensOf(spr.scale);
 		spr.velocity.set(0, 0);
 		spr.acceleration.set(0, 0);
 		spr.angle = 0;
@@ -4685,12 +4688,59 @@ tempScore += '${lblScore}: ${songScore}';
 	{
 		if (spr == null) return;
 		FlxTween.cancelTweensOf(spr);
+		// 同上：scale 补间需单独取消并复位，避免污染对象池中的下一个使用者。
+		FlxTween.cancelTweensOf(spr.scale);
+		spr.scale.set(1, 1);
 		if (comboGroup != null && comboGroup.members.indexOf(spr) != -1) comboGroup.remove(spr, true);
 		if (comboSpritePool != null && comboSpritePool.members.indexOf(spr) != -1)
 			spr.kill();
 		else
 			spr.destroy();
 	}
+
+	// ===== Camellia 跳动风格（复刻自 VSCam 2.75）=====
+	// 原版参数：判定贴图 scale 0.45 → 0.4（0.2s cubeIn），停留 0.75s 后 0.35s 淡出
+	static inline var CAMELLIA_HOLD:Float = 0.75; // 淡出前的停留时长
+	static inline var CAMELLIA_FADE:Float = 0.35; // 淡出时长
+	static inline var CAMELLIA_BOUNCE_TIME:Float = 0.2; // 缩放回弹时长
+	static inline var CAMELLIA_SCALE_RATIO:Float = 1.125; // 0.45 / 0.4，按比例换算时的起始放大倍率
+	static inline var CAMELLIA_SCALE_FROM:Float = 0.45; // 照搬原数值时的起始缩放
+	static inline var CAMELLIA_SCALE_TO:Float = 0.4; // 照搬原数值时的目标缩放
+
+	inline function isKathyFallStyle():Bool
+		return ClientPrefs.data.ratingFallStyle == "Kathy" || ClientPrefs.data.ratingFallStyle == "Kathy(Legacy)";
+
+	inline function isCamelliaFallStyle():Bool
+		return ClientPrefs.data.ratingFallStyle == "Camellia";
+
+	// 对判定贴图施加 Camellia 的缩放回弹：出现时放大，随后 cubeIn 缓动收缩回目标大小。
+	// 必须在 updateHitbox() 之后调用，否则会因 scale 被放大而错算 offset。
+	function camelliaScaleBounce(spr:FlxSprite):Void
+	{
+		if (spr == null) return;
+
+		var toX:Float;
+		var toY:Float;
+		if (ClientPrefs.data.camelliaScaleMode == "Original")
+		{
+			// 照搬原版绝对数值；像素舞台下乘以 daPixelZoom 以免小到不可见
+			var mult:Float = PlayState.isPixelStage ? daPixelZoom : 1;
+			toX = toY = CAMELLIA_SCALE_TO * mult;
+			spr.scale.set(CAMELLIA_SCALE_FROM * mult, CAMELLIA_SCALE_FROM * mult);
+		}
+		else
+		{
+			// 按比例换算：以 setGraphicSize() 得到的当前 scale 为目标值，等比放大后回弹。
+			// 这样在像素/非像素舞台与自定义 UI 皮肤下都能正确工作。
+			toX = spr.scale.x;
+			toY = spr.scale.y;
+			spr.scale.set(toX * CAMELLIA_SCALE_RATIO, toY * CAMELLIA_SCALE_RATIO);
+		}
+
+		FlxTween.cancelTweensOf(spr.scale);
+		FlxTween.tween(spr.scale, {x: toX, y: toY}, CAMELLIA_BOUNCE_TIME / playbackRate, {ease: FlxEase.cubeIn});
+	}
+
 	// Stores HUD Objects in a Group
 	public var uiGroup:FlxSpriteGroup;
 	// Stores Note Objects in a Group
@@ -4975,6 +5025,12 @@ tempScore += '${lblScore}: ${songScore}';
 
 		if (ClientPrefs.data.popUpRating)
 		{
+			// 跳动风格只在此处求值一次，避免在下方多个分支里重复做字符串比较（热路径，一首歌可达数千次命中）
+			var isKathyStyle:Bool = isKathyFallStyle();
+			var isCamellia:Bool = isCamelliaFallStyle();
+			// Camellia 使用固定的 0.35s 淡出时长，其它风格维持原有的 0.2s
+			var fadeDuration:Float = isCamellia ? CAMELLIA_FADE : 0.2;
+
 			var rating:FlxSprite = recycleComboSprite();
 			var theEXrating:FlxSprite = recycleComboSprite();
 			// 直接复用 cachePopUpScore() 预存的 FlxGraphic 引用（已按 fallback 规则确定最终贴图），
@@ -5012,7 +5068,18 @@ tempScore += '${lblScore}: ${songScore}';
 			comboSpr.antialiasing = antialias;
 			comboSpr.y += 160;
 
-			if (ClientPrefs.data.comboStacking)
+			if (isCamellia)
+			{
+				// Camellia 风格：原地出现，不带任何下落速度或重力，动画完全交给下方的缩放回弹补间。
+				// 放在 comboStacking 判断之前，保证开关无论开或关，观感都一致。
+				rating.velocity.set(0, 0);
+				rating.acceleration.set(0, 0);
+				theEXrating.velocity.set(0, 0);
+				theEXrating.acceleration.set(0, 0);
+				comboSpr.velocity.set(0, 0);
+				comboSpr.acceleration.set(0, 0);
+			}
+			else if (ClientPrefs.data.comboStacking)
 			{
 				// 原版向上跳跃逻辑
 				rating.acceleration.y = 550 * playbackRate * playbackRate;
@@ -5049,7 +5116,7 @@ tempScore += '${lblScore}: ${songScore}';
 					comboSpr.acceleration.y = FlxG.random.int(200, 300) * playbackRate * playbackRate;
 					comboSpr.velocity.y -= FlxG.random.int(140, 160) * playbackRate;
 				}
-				else if (ClientPrefs.data.ratingFallStyle == "Kathy" || ClientPrefs.data.ratingFallStyle == "Kathy(Legacy)")
+				else if (isKathyStyle)
 				{
 					rating.velocity.y = 0;
 					theEXrating.velocity.y = 0;
@@ -5093,16 +5160,21 @@ tempScore += '${lblScore}: ${songScore}';
 			
 			comboGroup.add(rating);	
 
-			if (ClientPrefs.data.comboStacking)
+			if (isCamellia)
+			{
+				// Camellia 风格拥有自己固定的动画方案，不读取 ratbounce / exratbounce。
+				// 缩放回弹放在下方 updateHitbox() 之后统一处理，此处留空。
+			}
+			else if (ClientPrefs.data.comboStacking)
 			{
 				// 只有 Kathy/Kathy(Legacy) 风格才能用 bounce
-				if (ClientPrefs.data.ratbounce == true && !PlayState.isPixelStage && (ClientPrefs.data.ratingFallStyle == "Kathy" || ClientPrefs.data.ratingFallStyle == "Kathy(Legacy)"))
+				if (ClientPrefs.data.ratbounce == true && !PlayState.isPixelStage && isKathyStyle)
 				{
 					rating.scale.set(0.85, 0.8);
 					FlxTween.tween(rating.scale, {x: 0.7, y: 0.7}, 0.35, {ease: FlxEase.quartOut});
 				}
 
-				if(ClientPrefs.data.exratbounce == true && ClientPrefs.data.exratingDisplay && (ClientPrefs.data.ratingFallStyle == "Kathy" || ClientPrefs.data.ratingFallStyle == "Kathy(Legacy)"))
+				if(ClientPrefs.data.exratbounce == true && ClientPrefs.data.exratingDisplay && isKathyStyle)
 				{
 					theEXrating.angle = (Math.random() * 10) * (Math.random() > .5 ? 1 : -1);
 					theEXrating.scale.set(0.85, 0.85);
@@ -5113,17 +5185,17 @@ tempScore += '${lblScore}: ${songScore}';
 			else
 			{
 				// 只有 Kathy/Kathy(Legacy) 风格才能用 bounce
-				if (ClientPrefs.data.ratbounce == true && !PlayState.isPixelStage && (ClientPrefs.data.ratingFallStyle == "Kathy" || ClientPrefs.data.ratingFallStyle == "Kathy(Legacy)"))
+				if (ClientPrefs.data.ratbounce == true && !PlayState.isPixelStage && isKathyStyle)
 				{
 					rating.angle = (Math.random() * 7) * (Math.random() > .5 ? 1 : -1);
 				}
 
-				if(ClientPrefs.data.exratbounce == true && ClientPrefs.data.exratingDisplay && (ClientPrefs.data.ratingFallStyle == "Kathy" || ClientPrefs.data.ratingFallStyle == "Kathy(Legacy)"))
+				if(ClientPrefs.data.exratbounce == true && ClientPrefs.data.exratingDisplay && isKathyStyle)
 				{
 					theEXrating.angle = (Math.random() * 7) * (Math.random() > .5 ? 1 : -1);
 				}
 
-				if ((ClientPrefs.data.ratingFallStyle == "Kathy" || ClientPrefs.data.ratingFallStyle == "Kathy(Legacy)"))
+				if (isKathyStyle)
 				{
 					if (ClientPrefs.data.ratingFallStyle == "Kathy(Legacy)")
 					{
@@ -5153,6 +5225,14 @@ tempScore += '${lblScore}: ${songScore}';
 			rating.updateHitbox();
 			theEXrating.updateHitbox();
 
+			if (isCamellia)
+			{
+				// 缩放回弹必须放在 updateHitbox() 之后，否则 updateHitbox() 会依据被放大的 scale
+				// 重算 width/height 与 offset，导致贴图位置偏移。
+				camelliaScaleBounce(rating);
+				if (ClientPrefs.data.exratingDisplay) camelliaScaleBounce(theEXrating);
+			}
+
 			var daLoop:Int = 0;
 			var xThing:Float = 0;
 			if (showCombo)
@@ -5175,7 +5255,17 @@ tempScore += '${lblScore}: ${songScore}';
 					numScore.setGraphicSize(Std.int(numScore.width * daPixelZoom));
 				numScore.updateHitbox();
 
-				if (ClientPrefs.data.comboStacking)
+				if (isCamellia)
+				{
+					// Camellia 风格：数字原地出现，初始位置略高于最终位置，再落回原位。
+					// 注意方向与 Kathy 风格的「向下弹出」相反。
+					numScore.velocity.set(0, 0);
+					numScore.acceleration.set(0, 0);
+					var targetY:Float = numScore.y;
+					numScore.y -= 5;
+					FlxTween.tween(numScore, {y: targetY}, 0.1 / playbackRate, {ease: FlxEase.cubeIn});
+				}
+				else if (ClientPrefs.data.comboStacking)
 				{
 					// 原版向上跳跃逻辑
 					numScore.acceleration.y = FlxG.random.int(200, 300) * playbackRate * playbackRate;
@@ -5197,7 +5287,7 @@ tempScore += '${lblScore}: ${songScore}';
 						numScore.velocity.y -= FlxG.random.int(140, 160) * playbackRate;
 						numScore.velocity.x = FlxG.random.float(-5, 5) * playbackRate;
 					}
-					else if (ClientPrefs.data.ratingFallStyle == "Kathy" || ClientPrefs.data.ratingFallStyle == "Kathy(Legacy)")
+					else if (isKathyStyle)
 					{
 						numScore.velocity.y = 0;
 						numScore.velocity.x = 0;
@@ -5218,13 +5308,18 @@ tempScore += '${lblScore}: ${songScore}';
 
 				// 根据不同的跳动风格设置渐隐延迟
 				var numScoreFadeDelay:Float = Conductor.crochet * 0.002 / playbackRate;
-				if (!ClientPrefs.data.comboStacking && (ClientPrefs.data.ratingFallStyle == "Kathy" || ClientPrefs.data.ratingFallStyle == "Kathy(Legacy)"))
+				if (isCamellia)
+				{
+					// Camellia 使用固定时序：停留 0.75s 后淡出，不随 BPM 变化
+					numScoreFadeDelay = CAMELLIA_HOLD / playbackRate;
+				}
+				else if (!ClientPrefs.data.comboStacking && isKathyStyle)
 				{
 					// Kathy模式下，跳动完成后才开始渐隐
 					numScoreFadeDelay += 0.2;
 				}
 
-				FlxTween.tween(numScore, {alpha: 0}, 0.2 / playbackRate, {
+				FlxTween.tween(numScore, {alpha: 0}, fadeDuration / playbackRate, {
 					onComplete: function(tween:FlxTween)
 					{
 						killComboSprite(numScore);
@@ -5244,7 +5339,12 @@ tempScore += '${lblScore}: ${songScore}';
 			var comboFadeDelay:Float = Conductor.crochet * 0.0015 / playbackRate;
 
 
-			if (!ClientPrefs.data.comboStacking && (ClientPrefs.data.ratingFallStyle == "Kathy" || ClientPrefs.data.ratingFallStyle == "Kathy(Legacy)"))
+			if (isCamellia)
+			{
+				// Camellia 使用固定时序：三者统一停留 0.75s 后淡出，不随 BPM 变化
+				ratingFadeDelay = exRatingFadeDelay = comboFadeDelay = CAMELLIA_HOLD / playbackRate;
+			}
+			else if (!ClientPrefs.data.comboStacking && isKathyStyle)
 			{
 				// Kathy模式下，跳动完成后才开始渐隐
 				ratingFadeDelay += 0.2;
@@ -5252,14 +5352,14 @@ tempScore += '${lblScore}: ${songScore}';
 				comboFadeDelay += 0.2;
 			}
 
-			FlxTween.tween(rating, {alpha: 0}, 0.2 / playbackRate, {
+			FlxTween.tween(rating, {alpha: 0}, fadeDuration / playbackRate, {
 				onComplete: function(tween:FlxTween)
 				{
 					killComboSprite(rating);
 				},
 				startDelay: ratingFadeDelay
 			});
-			FlxTween.tween(theEXrating, {alpha: 0}, 0.2 / playbackRate, {
+			FlxTween.tween(theEXrating, {alpha: 0}, fadeDuration / playbackRate, {
 				onComplete: function(tween:FlxTween)
 				{
 					killComboSprite(theEXrating);
@@ -5267,7 +5367,7 @@ tempScore += '${lblScore}: ${songScore}';
 				startDelay: exRatingFadeDelay
 			});
 
-			FlxTween.tween(comboSpr, {alpha: 0}, 0.2 / playbackRate, {
+			FlxTween.tween(comboSpr, {alpha: 0}, fadeDuration / playbackRate, {
 				onComplete: function(tween:FlxTween)
 				{
 					killComboSprite(comboSpr);

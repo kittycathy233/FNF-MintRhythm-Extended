@@ -584,5 +584,6 @@
     "hitbox_animation_desc": "If checked, hitbox buttons will have animation when pressed/released.",
     "dynamic_controls_color_desc": "If checked, the mobile controls color is set to the notes color in your settings (effect during gameplay only).",
 
-    "rating_fall_style_desc": "Falling style of the rating/number popups when 'Combo Stacking' is disabled. Legacy: uses downward velocity (current default). Kathy: only drops a fixed distance (closer to the ms-number bounce feel)."
+    "rating_fall_style_desc": "Falling style of the rating/number popups when 'Combo Stacking' is disabled. Legacy: uses downward velocity (current default). Kathy: only drops a fixed distance (closer to the ms-number bounce feel). Camellia: pops in place with a scale rebound and a fixed fade rhythm (recreated from VSCam).",
+    "camellia_scale_mode_desc": "Scale basis for the Camellia style. Proportional: keeps the engine's current size and only adds the rebound animation. Original: uses VSCam's raw values, making the rating sprite noticeably smaller for the most faithful look."
 }

@@ -548,7 +548,8 @@
     "hitbox_animation_desc": "若勾選，Hitbox 按鈕在按下/鬆開時會有動畫。",
     "dynamic_controls_color_desc": "若勾選，移動端控制按鈕的顏色將設為你在設定中的音符顏色（僅在遊戲內生效）。",
 
-    "rating_fall_style_desc": "停用「Combo Stacking」時的跳動風格\nLegacy：使用向下速度（目前預設行為）\nKathy：僅向下移動一段距離（更接近 ms 數值的跳動效果）",
+    "rating_fall_style_desc": "停用「Combo Stacking」時的跳動風格\nLegacy：使用向下速度（目前預設行為）\nKathy：僅向下移動一段距離（更接近 ms 數值的跳動效果）\nCamellia：原地縮放回彈 + 固定節奏淡出（復刻自 VSCam）",
+    "camellia_scale_mode_desc": "Camellia 風格的縮放基準\nProportional：沿用引擎現有大小，僅額外加入回彈動畫\nOriginal：照搬 VSCam 原版數值，判定貼圖會明顯偏小，最大程度還原原版觀感",
     "enable_game_log_desc": "啟用遊戲內日誌顯示（按 F3 切換）",
     "resource_caching_desc": "重新載入歌曲時快取資源以加快載入速度",
     "simpleinfo_text_color_name": "文字顏色",

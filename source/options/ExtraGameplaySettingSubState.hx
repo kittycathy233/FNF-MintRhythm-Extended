@@ -21,6 +21,8 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 	var extraRatingBounceOptionIndex:Int = -1;
 	var ratingFallStyleOption:Option = null;
 	var ratingFallStyleOptionIndex:Int = -1;
+	var camelliaScaleOption:Option = null;
+	var camelliaScaleOptionIndex:Int = -1;
 
 	var healthOverflowOption:Option = null;
 	var healthOverflowOptionIndex:Int = -1;
@@ -197,12 +199,21 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			Language.get("rating_fall_style_desc"),
 			'ratingFallStyle',
 			STRING,
-			['Leather', 'Legacy', 'Kathy', 'Kathy(Legacy)']);
+			['Leather', 'Legacy', 'Kathy', 'Kathy(Legacy)', 'Camellia']);
 		option.onChange = function() {
 			updateBounceOptionsVisibility();
+			updateCamelliaScaleVisibility();
 		};
 		ratingFallStyleOption = addOption(option);
 		ratingFallStyleOptionIndex = optionsArray.length - 1;
+
+		option = new Option('Camellia Scale Mode',
+			Language.get("camellia_scale_mode_desc"),
+			'camelliaScaleMode',
+			STRING,
+			['Proportional', 'Original']);
+		camelliaScaleOption = addOption(option);
+		camelliaScaleOptionIndex = optionsArray.length - 1;
 
 		option = new Option('Show Event Information',
 			Language.get("events_debug_desc"),
@@ -681,6 +692,16 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			}
 		}
 
+		// 如果要选择的是 Camellia Scale Mode 选项，但当前不是 Camellia 风格，则跳过它
+		if (ClientPrefs.data.ratingFallStyle != 'Camellia' && camelliaScaleOptionIndex != -1 && newSelection == camelliaScaleOptionIndex) {
+			if (change > 0) {
+				newSelection++;
+			} else {
+				newSelection--;
+			}
+			newSelection = FlxMath.wrap(newSelection, 0, optionsArray.length - 1);
+		}
+
 		// 如果要选择的是 Bigger Info Text 选项，但当前不是 Leather 风格，则跳过它
 		if (!isLeatherStyle && biggerInfoTextOptionIndex != -1 && newSelection == biggerInfoTextOptionIndex) {
 			if (change > 0) {
@@ -716,6 +737,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		super.update(elapsed);
 		
 		updateBounceOptionsVisibility();
+		updateCamelliaScaleVisibility();
 		updateBiggerInfoTextVisibility();
 		
 		// 控制 Blue Archive Language 选项的可见性和禁用状态
@@ -771,6 +793,28 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 				if (checkbox.ID == extraRatingBounceOptionIndex) {
 					checkbox.alpha = isKathyStyle ? 1 : 0.3;
 				}
+			}
+		}
+	}
+
+	// Camellia Scale Mode 仅在 Camellia 风格下可用，其它风格变灰
+	function updateCamelliaScaleVisibility()
+	{
+		if (camelliaScaleOptionIndex == -1) return;
+
+		var isCamellia:Bool = ClientPrefs.data.ratingFallStyle == 'Camellia';
+		var targetAlpha:Float = isCamellia ? 1 : 0.3;
+
+		for (i in 0...grpOptions.length) {
+			var optText:Alphabet = grpOptions.members[i];
+			if (optText != null && i == camelliaScaleOptionIndex) {
+				optText.alpha = targetAlpha;
+			}
+		}
+
+		for (text in grpTexts) {
+			if (text.ID == camelliaScaleOptionIndex) {
+				text.alpha = targetAlpha;
 			}
 		}
 	}

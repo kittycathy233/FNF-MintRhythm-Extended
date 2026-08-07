@@ -226,7 +226,9 @@ import openfl.display.StageQuality;
 	public var showNPS:Bool = true; // Show NPS in the HUD
 	public var showResultScreen:Bool = true; // Show the result screen after finishing a song
 	public var comboSprDisplay:Bool = false; //据说这是官方废稿，我不确定
-	public var ratingFallStyle:String = "Legacy"; // 禁用Combo Stacking时的跳动风格：Legacy = 向下速度，Kathy = 向下移动一段距离
+	public var ratingFallStyle:String = "Legacy"; // 禁用Combo Stacking时的跳动风格：Legacy = 向下速度，Kathy = 向下移动一段距离，Camellia = 原地缩放回弹 + 固定节奏淡出（复刻自 VSCam）
+	// Camellia 风格的缩放基准：Proportional = 基于引擎现有 0.7 基准等比回弹，Original = 照搬原版 0.45 → 0.4 绝对数值
+	public var camelliaScaleMode:String = "Proportional";
 	
 	public var backgroundVolume:Bool = true; // 是否启用后台降音
 	public var backgroundVolumeLevel:Float = 0.2; // 后台音量级别
