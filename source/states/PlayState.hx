@@ -1889,8 +1889,10 @@ isReplaying = false;
 
 	// 预计算本地化的 ratingFC 文本（缺失时 ScoreLanguage 会回退到原始 token，保证兼容）
 	var ratingFCText:String = ScoreLanguage.getRatingFC(ratingFC);
+	// 评分名（ratingStuff）的展示用本地化文本；ratingName 本体仍保持英文 token，不影响判定/脚本
+	var ratingNameDisp:String = ScoreLanguage.getRatingName(ratingName);
 
-	var str:String = LanguageBasic.getPhrase('rating_$ratingName', ratingName);
+	var str:String = ratingNameDisp;
         var percent:Float = 0; // 提前声明并初始化
         if(totalPlayed != 0)
         {
@@ -1945,10 +1947,10 @@ tempScore += '${lblScore}: ${songScore}';
                 if (!cpuControlled || ClientPrefs.data.botplayScore)
                 {
                     if(ratingName == '?') {
-                        tempScore = '${lblScore}: ${songScore} | ${lblComboBreaks}: ${songMisses} | ${lblAverage}: ? | ${lblAccuracy}: ${ratingName}';
+                        tempScore = '${lblScore}: ${songScore} | ${lblComboBreaks}: ${songMisses} | ${lblAverage}: ? | ${lblAccuracy}: ${ratingNameDisp}';
                     } else {
                         var avgValue:Int = Std.int(Math.abs(Math.round(averageMs)));
-                        tempScore = '${lblScore}: ${songScore} | ${lblComboBreaks}: ${songMisses} | ${lblAverage}: ${avgValue}ms | ${lblAccuracy}: ${percent}% | ${ratingName} [${ratingFCText}]';
+                        tempScore = '${lblScore}: ${songScore} | ${lblComboBreaks}: ${songMisses} | ${lblAverage}: ${avgValue}ms | ${lblAccuracy}: ${percent}% | ${ratingNameDisp} [${ratingFCText}]';
                     }
                 } else {
                     tempScore = '';
@@ -2028,42 +2030,49 @@ tempScore += '${lblScore}: ${songScore}';
 			accuracy >= 5, // F
 			accuracy < 4, // G
 		];
-		var missesRating:String = "";
+		var rankNames:Array<String> = ["SSSS", "SSS", "SS", "S", "AA", "A", "B+", "B", "C", "D", "E", "F", "G"];
+
+		// 找到第一个满足条件的评级（原逻辑：首个为 true 即返回）
+		var rankIndex:Int = rankNames.length - 1;
+		for (i in 0...conditions.length) {
+			if (conditions[i]) { rankIndex = i; break; }
+		}
+
+		// 计算 Leather 前缀原始 token（FC / SDB / GFC / SDG / PFC / SDP / MFC / SDCB / CLEAR）
+		var prefixToken:String = '';
 		if (misses != null) {
 			if (misses == 0) {
-				missesRating = "FC ~ ";
-				
+				prefixToken = 'FC';
+
 				// 根据是否启用perfect来确定索引
 				var perfects:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[0].hits : 0;
 				var sicks:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[1].hits : ratingsData[0].hits;
 				var goods:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[2].hits : ratingsData[1].hits;
 				var bads:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[3].hits : ratingsData[2].hits;
 				var shits:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[4].hits : ratingsData[3].hits;
-				
+
 				if (bads < 10 && shits == 0)
-					missesRating = "SDB ~ ";
+					prefixToken = 'SDB';
 				if (bads == 0 && shits == 0)
-					missesRating = "GFC ~ ";
+					prefixToken = 'GFC';
 				if (goods < 10 && bads == 0 && shits == 0)
-					missesRating = "SDG ~ ";
+					prefixToken = 'SDG';
 				if (goods == 0 && bads == 0 && shits == 0)
-					missesRating = "PFC ~ ";
+					prefixToken = 'PFC';
 				if (sicks < 10 && goods == 0 && bads == 0 && shits == 0)
-					missesRating = "SDP ~ ";
+					prefixToken = 'SDP';
 				if (sicks == 0 && goods == 0 && bads == 0 && shits == 0)
-					missesRating = "MFC ~ ";
+					prefixToken = 'MFC';
 			}
 			if (misses > 0 && misses < 10)
-				missesRating = "SDCB ~ ";
+				prefixToken = 'SDCB';
 			if (misses >= 10)
-				missesRating = "CLEAR ~ ";
+				prefixToken = 'CLEAR';
 		}
-		var rankNames:Array<String> = ["SSSS", "SSS", "SS", "S", "AA", "A", "B+", "B", "C", "D", "E", "F", "G"];
-		for (i in 0...conditions.length) {
-			if (conditions[i])
-				return missesRating + rankNames[i];
-		}
-		return missesRating + "G";
+
+		// 本地化前缀与评级名（缺失时回退原始 token，保证兼容）
+		var prefix:String = (prefixToken == '') ? '' : ScoreLanguage.getLeatherRankPrefix(prefixToken) + ' ~ ';
+		return prefix + ScoreLanguage.getLeatherRankName(rankNames[rankIndex]);
 	}
 
 	public function doScoreBop():Void {

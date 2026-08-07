@@ -9,6 +9,16 @@
 	"score_label_average": "平均",
 	"score_label_accuracy": "精度",
 	"score_label_rating": "評価",
+	"You Suck!": "下手すぎ！",
+	"Shit": "ショボい",
+	"Bad": "バッド",
+	"Bruh": "まじか…",
+	"Meh": "まぁまぁ",
+	"Nice": "ナイス",
+	"Good": "グッド",
+	"Great": "グレイト",
+	"Sick!": "シック！",
+	"Perfect!!": "パーフェクト！！",
 	"ratingfc_?": "?",
 	"ratingfc_idk": "不明",
 	"ratingfc_pfc": "極限コンボ",
@@ -16,5 +26,9 @@
 	"ratingfc_gfc": "良コンボ",
 	"ratingfc_sfc": "完全コンボ",
 	"ratingfc_sdcb": "ミス少ない",
-	"ratingfc_clear": "クリア"
+	"ratingfc_clear": "クリア",
+	"lrank_sdb": "一桁不良",
+	"lrank_sdg": "一桁グッド",
+	"lrank_sdp": "一桁パーフェクト",
+	"lrank_mfc": "極限コンボ"
 }

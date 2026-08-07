@@ -9,6 +9,16 @@
 	"score_label_average": "평균",
 	"score_label_accuracy": "정확도",
 	"score_label_rating": "평가",
+	"You Suck!": "최악이야!",
+	"Shit": "구림",
+	"Bad": "나쁨",
+	"Bruh": "어라",
+	"Meh": "그저그럼",
+	"Nice": "나이스",
+	"Good": "굿",
+	"Great": "대박",
+	"Sick!": "시크!",
+	"Perfect!!": "퍼펙트!!",
 	"ratingfc_?": "?",
 	"ratingfc_idk": "미상",
 	"ratingfc_pfc": "극한 풀콤보",
@@ -16,5 +26,9 @@
 	"ratingfc_gfc": "굿 풀콤보",
 	"ratingfc_sfc": "완벽 풀콤보",
 	"ratingfc_sdcb": "미스 적음",
-	"ratingfc_clear": "클리어"
+	"ratingfc_clear": "클리어",
+	"lrank_sdb": "한 자릿수 배드",
+	"lrank_sdg": "한 자릿수 굿",
+	"lrank_sdp": "한 자릿수 퍼펙트",
+	"lrank_mfc": "극한 풀콤보"
 }

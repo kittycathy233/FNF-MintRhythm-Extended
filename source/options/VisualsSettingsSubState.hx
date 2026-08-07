@@ -181,7 +181,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 			Language.get("scoretextlanguage_desc"),
 			'scoreLanguage',
 			STRING,
-			['auto', 'en_us', 'zh_cn', 'zh_tw', 'ja', 'ko']);
+			['auto', 'en_us', 'zh_cn', 'zh_tw', 'ja', 'ko', 'kc_cn']);
 		addOption(option);
 
 		var option:Option = new Option("Health Bar Opacity",

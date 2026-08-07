@@ -9,6 +9,16 @@
 	"score_label_average": "平均",
 	"score_label_accuracy": "準確率",
 	"score_label_rating": "評級",
+	"You Suck!": "你太菜了！",
+	"Shit": "爛",
+	"Bad": "差",
+	"Bruh": "呃",
+	"Meh": "一般",
+	"Nice": "不錯",
+	"Good": "好",
+	"Great": "很好",
+	"Sick!": "爽！",
+	"Perfect!!": "完美！！",
 	"ratingfc_?": "?",
 	"ratingfc_idk": "未知",
 	"ratingfc_pfc": "極致全連",
@@ -16,5 +26,9 @@
 	"ratingfc_gfc": "優良全連",
 	"ratingfc_sfc": "完美全連",
 	"ratingfc_sdcb": "少量失誤",
-	"ratingfc_clear": "通關"
+	"ratingfc_clear": "通關",
+	"lrank_sdb": "個位數差",
+	"lrank_sdg": "個位數良",
+	"lrank_sdp": "個位數優",
+	"lrank_mfc": "極致全連"
 }

@@ -114,4 +114,40 @@ class ScoreLanguage
 			return scoreLang.get(key);
 		return token;
 	}
+
+	// 将 ratingStuff 的评分名（如 "You Suck!" / "Sick!" / "Perfect!!"）翻译为当前分数语言文本。
+	// 以英文原 token 作为 scoretxt JSON 的键；缺失时回退到原始 token 本身，保证兼容性。
+	// 注意：这里只用于显示层，ratingName 本体仍保持英文 token（不影响判定/脚本）。
+	public static function getRatingName(token:String):String
+	{
+		if (token == null) return '';
+		if (scoreLang.exists(token))
+			return scoreLang.get(token);
+		return token;
+	}
+
+	// 将 Leather 评级前缀（FC / SDB / GFC / SDG / PFC / SDP / MFC / SDCB / CLEAR）翻译为当前分数语言文本。
+	// 与 ratingFC 重叠的（fc/pfc/sdcb/clear）复用 ratingfc_ 键；
+	// Leather 专属的（sdb/gfc/sdg/sdp/mfc）使用 lrank_ 键；
+	// 缺失时回退到原始 token 本身，保证兼容性。
+	public static function getLeatherRankPrefix(token:String):String
+	{
+		if (token == null || token.length == 0) return '';
+		var lower:String = token.toLowerCase();
+		if (scoreLang.exists('ratingfc_' + lower))
+			return scoreLang.get('ratingfc_' + lower);
+		if (scoreLang.exists('lrank_' + lower))
+			return scoreLang.get('lrank_' + lower);
+		return token;
+	}
+
+	// 将 Leather 评级名（SSSS / SSS / SS / S / AA / A / B+ / B / C / D / E / F / G）翻译为当前分数语言文本。
+	// 以 lname_ + 原 token 作为键；音游中这些字母评级通常保留原样，缺失时回退到原始 token。
+	public static function getLeatherRankName(token:String):String
+	{
+		if (token == null) return '';
+		if (scoreLang.exists('lname_' + token))
+			return scoreLang.get('lname_' + token);
+		return token;
+	}
 }
