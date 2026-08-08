@@ -29,7 +29,7 @@ class VUICheckBox extends FlxSpriteGroup
 
 	public function boxGraphic()
 	{
-		box.loadGraphic(Paths.image('vanilla104-ui/checkbox', 'embed'), true, 16, 16);
+		box.loadGraphic(Paths.image('vanilla104-ui/checkbox', 'shared'), true, 16, 16);
 		box.animation.add('false', [0]);
 		box.animation.add('true', [1]);
 		box.animation.play('false');
