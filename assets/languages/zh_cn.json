@@ -435,6 +435,7 @@
     "fps_spacing_desc": "调整FPS计数器与屏幕边缘的间距",
     "camhud_zoom_desc": "调整HUD界面元素的缩放大小",
     "legacy_notepos_desc": "使用旧的音符位置系统",
+    "charting_version_desc": "选择打开哪个版本的制谱器\n0.7.3 与 0.6.3 为旧版复刻，仅支持 4 键谱面",
     "ratings_pos_desc": "设置评分在屏幕上的位置",
     "events_debug_desc": "（实验性功能）\n牺牲部分性能来显示事件信息，只有在制谱模式中有效！",
     "firstlaunch_select": "选择语言",

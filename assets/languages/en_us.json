@@ -424,6 +424,7 @@
     "fps_spacing_desc": "Adjust the spacing between FPS counter and screen edges",
     "camhud_zoom_desc": "Adjust the zoom level of HUD elements.",
     "legacy_notepos_desc": "Use the old note position system.",
+    "charting_version_desc": "Which Chart Editor to open.\n0.7.3 and 0.6.3 recreate the older editors and only support 4-key charts.",
     "ratings_pos_desc": "Set the position of the ratings on screen.",
     "events_debug_desc": "(Experimental Feature)\nSacrifices some performance to display event information. Only shows in Charting Mode!",
     "firstlaunch_select": "Select Language",

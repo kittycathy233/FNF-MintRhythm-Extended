@@ -255,9 +255,10 @@ class EditorPlayState extends MusicBeatSubstate
 						'\nBeat: $curBeat' +
 						'\nStep: $curStep';
 		// 手动更新ChartingState中的角色，防止动画卡住
-		var chartingState:ChartingState = cast FlxG.state;
-		if(chartingState != null)
+		// 旧版制谱器(0.6.3/0.7.3)也会打开本子状态，只有父状态确实是 1.0 ChartingState 时才更新角色
+		if (Std.isOfType(FlxG.state, ChartingState))
 		{
+			var chartingState:ChartingState = cast FlxG.state;
 			chartingState.updateCharacter(elapsed);
 		}
 
@@ -873,9 +874,13 @@ class EditorPlayState extends MusicBeatSubstate
 		note.hitByOpponent = true;
 
 		// 播放dad角色的sing动画
-		var chartingState:ChartingState = cast FlxG.state;
-		if(chartingState.dad != null && chartingState.dad.visible) {
-			chartingState.playCharacterSing(chartingState.dad, Std.int(Math.abs(note.noteData)));
+		// 仅当父状态是 1.0 ChartingState 才播放（旧版制谱器打开时不具有 dad 字段）
+		if (Std.isOfType(FlxG.state, ChartingState))
+		{
+			var chartingState:ChartingState = cast FlxG.state;
+			if(chartingState.dad != null && chartingState.dad.visible) {
+				chartingState.playCharacterSing(chartingState.dad, Std.int(Math.abs(note.noteData)));
+			}
 		}
 
 		if (!note.isSustainNote)
@@ -952,9 +957,14 @@ class EditorPlayState extends MusicBeatSubstate
 		vocals.volume = 1;
 
 		// 播放boyfriend角色的sing动画
-		var chartingState:ChartingState = cast FlxG.state;
-		if(chartingState.boyfriend != null && chartingState.boyfriend.visible) {
-			chartingState.playCharacterSing(chartingState.boyfriend, Std.int(Math.abs(note.noteData)));
+		// 仅当父状态是 1.0 ChartingState 才播放（旧版 0.6.3/0.7.3 制谱器打开时不具有 boyfriend 字段）
+		if (Std.isOfType(FlxG.state, ChartingState))
+		{
+			var chartingState:ChartingState = cast FlxG.state;
+			if (chartingState.boyfriend != null && chartingState.boyfriend.visible)
+			{
+				chartingState.playCharacterSing(chartingState.boyfriend, Std.int(Math.abs(note.noteData)));
+			}
 		}
 
 		if (!note.isSustainNote)

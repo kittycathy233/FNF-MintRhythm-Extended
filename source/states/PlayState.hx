@@ -4327,7 +4327,8 @@ tempScore += '${lblScore}: ${songScore}';
 		DiscordClient.resetClientID();
 		#end
 
-		MusicBeatState.switchState(new ChartingState());
+		// 跟随 chartingVersion 设置回到对应版本的制谱器（默认仍是 1.0）
+		MusicBeatState.switchState(states.editors.ChartingRouter.createChartingState());
 	}
 
 	function openCharacterEditor()

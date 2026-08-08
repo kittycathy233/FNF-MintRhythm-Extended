@@ -209,6 +209,7 @@ import openfl.display.StageQuality;
 	public var fpsFont:String = "Psych";
 	public var timebarStyle:String = "Psych";
 	public var legacynotepos:Bool = false;
+	public var chartingVersion:String = '1.0'; // 制谱器版本: '1.0' | '0.7.3' | '0.6.3'
 	public var ratingsPos:String = "camHUD";
 
 	public var fpsPosition:String = "TOP_LEFT"; // "TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT"

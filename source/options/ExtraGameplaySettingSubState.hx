@@ -177,6 +177,13 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		option = new Option('Charting Version',
+			Language.get("charting_version_desc"),
+			'chartingVersion',
+			STRING,
+			states.editors.ChartingRouter.VERSIONS.copy());
+		addOption(option);
+
 		option = new Option('Score Incrase When BotPlay',
 			Language.get("bot_addscore_desc"),
 			'botplayScore',
