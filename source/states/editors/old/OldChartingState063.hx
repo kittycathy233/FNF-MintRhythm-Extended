@@ -377,7 +377,7 @@ class OldChartingState063 extends OldEditorState
 		\nBackspace - Go back to Editor Menu
 		\nEnter - Play your chart
 		\nQ/E - Decrease/Increase Note Sustain Length
-		\nSpace - Stop/Resume song";
+		\nSpace - Stop/Resume song" + (controls.mobileC ? "\nTouch Pad: use on-screen buttons (Z button hides/shows the pad)" : "");
 
 		var tipTextArray:Array<String> = text.split('\n');
 		for (i in 0...tipTextArray.length) {
@@ -1531,6 +1531,12 @@ class OldChartingState063 extends OldEditorState
 		// `playbackSpeed` directly instead, which is what that code meant to do.
 
 		// FlxG.log.add(id + " WEED " + sender + " WEED " + data + " WEED " + params);
+
+		if(controls.mobileC)
+		{
+			addTouchPad('LEFT_FULL', 'CHART_EDITOR');
+			addTouchPadCamera();
+		}
 	}
 
 	var updatedSection:Bool = false;
@@ -1558,6 +1564,10 @@ class OldChartingState063 extends OldEditorState
 	override function update(elapsed:Float)
 	{
 		curStep = recalculateSteps();
+
+		var shiftHeld:Bool = FlxG.keys.pressed.SHIFT || (touchPad != null && touchPad.buttonY.pressed);
+		var altHeld:Bool = FlxG.keys.pressed.ALT || (touchPad != null && touchPad.buttonG.pressed);
+		var ctrlHeld:Bool = FlxG.keys.pressed.CONTROL || (touchPad != null && touchPad.buttonH.pressed);
 
 		if(FlxG.sound.music.time < 0) {
 			FlxG.sound.music.pause();
@@ -1602,7 +1612,7 @@ class OldChartingState063 extends OldEditorState
 		{
 			dummyArrow.visible = true;
 			dummyArrow.x = Math.floor(FlxG.mouse.x / GRID_SIZE) * GRID_SIZE;
-			if (FlxG.keys.pressed.SHIFT)
+			if (shiftHeld)
 				dummyArrow.y = FlxG.mouse.y;
 			else
 			{
@@ -1621,11 +1631,11 @@ class OldChartingState063 extends OldEditorState
 				{
 					if (FlxG.mouse.overlaps(note))
 					{
-						if (FlxG.keys.pressed.CONTROL)
+						if (ctrlHeld)
 						{
 							selectNote(note);
 						}
-						else if (FlxG.keys.pressed.ALT)
+						else if (altHeld)
 						{
 							selectNote(note);
 							curSelectedNote[3] = noteTypeIntMap.get(currentType);
@@ -1692,11 +1702,16 @@ class OldChartingState063 extends OldEditorState
 
 		if (!blockInput)
 		{
-			if (FlxG.keys.justPressed.ESCAPE)
+			if (touchPad != null && touchPad.buttonZ.justPressed)
+			{
+				touchPad.visible = !touchPad.visible;
+			}
+
+			if (FlxG.keys.justPressed.ESCAPE || (touchPad != null && touchPad.buttonC.justPressed))
 			{
 				openEditorPlayState();
 			}
-			if (FlxG.keys.justPressed.ENTER)
+			if (FlxG.keys.justPressed.ENTER || (touchPad != null && touchPad.buttonA.justPressed))
 			{
 				autosaveSong();
 				FlxG.mouse.visible = false;
@@ -1710,18 +1725,18 @@ class OldChartingState063 extends OldEditorState
 			}
 
 			if(curSelectedNote != null && curSelectedNote[1] > -1) {
-				if (FlxG.keys.justPressed.E)
+				if (FlxG.keys.justPressed.E || (touchPad != null && touchPad.buttonDown2.justPressed))
 				{
 					changeNoteSustain(Conductor.stepCrochet);
 				}
-				if (FlxG.keys.justPressed.Q)
+				if (FlxG.keys.justPressed.Q || (touchPad != null && touchPad.buttonUp2.justPressed))
 				{
 					changeNoteSustain(-Conductor.stepCrochet);
 				}
 			}
 
 
-			if (FlxG.keys.justPressed.BACKSPACE) {
+			if (FlxG.keys.justPressed.BACKSPACE || (touchPad != null && touchPad.buttonF.justPressed)) {
 				PlayState.chartingMode = false;
 				MusicBeatState.switchState(new MasterEditorMenu());
 				FlxG.sound.playMusic(Paths.music('freakyMenu'));
@@ -1729,24 +1744,24 @@ class OldChartingState063 extends OldEditorState
 				return;
 			}
 
-			if(FlxG.keys.justPressed.Z && FlxG.keys.pressed.CONTROL) {
+			if(FlxG.keys.justPressed.Z && ctrlHeld) {
 				undo();
 			}
 
 
 
-			if(FlxG.keys.justPressed.Z && curZoom > 0 && !FlxG.keys.pressed.CONTROL) {
+			if((FlxG.keys.justPressed.Z || (touchPad != null && touchPad.buttonV.justPressed)) && curZoom > 0 && !ctrlHeld) {
 				--curZoom;
 				updateZoom();
 			}
-			if(FlxG.keys.justPressed.X && curZoom < zoomList.length-1) {
+			if((FlxG.keys.justPressed.X || (touchPad != null && touchPad.buttonD.justPressed)) && curZoom < zoomList.length-1) {
 				curZoom++;
 				updateZoom();
 			}
 
 			if (FlxG.keys.justPressed.TAB)
 			{
-				if (FlxG.keys.pressed.SHIFT)
+				if (shiftHeld)
 				{
 					UI_box.selected_tab -= 1;
 					if (UI_box.selected_tab < 0)
@@ -1760,7 +1775,7 @@ class OldChartingState063 extends OldEditorState
 				}
 			}
 
-			if (FlxG.keys.justPressed.SPACE)
+			if (FlxG.keys.justPressed.SPACE || (touchPad != null && touchPad.buttonX.justPressed))
 			{
 				if (FlxG.sound.music.playing)
 				{
@@ -1779,9 +1794,9 @@ class OldChartingState063 extends OldEditorState
 				}
 			}
 
-			if (!FlxG.keys.pressed.ALT && FlxG.keys.justPressed.R)
+			if (!altHeld && FlxG.keys.justPressed.R)
 			{
-				if (FlxG.keys.pressed.SHIFT)
+				if (shiftHeld)
 					resetSection(true);
 				else
 					resetSection();
@@ -1817,17 +1832,17 @@ class OldChartingState063 extends OldEditorState
 
 
 
-			if (FlxG.keys.pressed.W || FlxG.keys.pressed.S)
+			if (FlxG.keys.pressed.W || FlxG.keys.pressed.S || (touchPad != null && (touchPad.buttonUp.pressed || touchPad.buttonDown.pressed)))
 			{
 				FlxG.sound.music.pause();
 
 				var holdingShift:Float = 1;
-				if (FlxG.keys.pressed.CONTROL) holdingShift = 0.25;
-				else if (FlxG.keys.pressed.SHIFT) holdingShift = 4;
+				if (ctrlHeld) holdingShift = 0.25;
+				else if (shiftHeld) holdingShift = 4;
 
 				var daTime:Float = 700 * FlxG.elapsed * holdingShift;
 
-				if (FlxG.keys.pressed.W)
+				if (FlxG.keys.pressed.W || (touchPad != null && touchPad.buttonUp.pressed))
 				{
 					FlxG.sound.music.time -= daTime;
 				}
@@ -1841,7 +1856,7 @@ class OldChartingState063 extends OldEditorState
 			}
 
 			if(!vortex){
-				if (FlxG.keys.justPressed.UP || FlxG.keys.justPressed.DOWN  )
+				if (FlxG.keys.justPressed.UP || FlxG.keys.justPressed.DOWN || (touchPad != null && (touchPad.buttonUp.justPressed || touchPad.buttonDown.justPressed)))
 				{
 					FlxG.sound.music.pause();
 					updateCurStep();
@@ -1862,7 +1877,7 @@ class OldChartingState063 extends OldEditorState
 
 			var style = currentType;
 
-			if (FlxG.keys.pressed.SHIFT){
+			if (shiftHeld){
 				style = 3;
 			}
 
@@ -1902,7 +1917,7 @@ class OldChartingState063 extends OldEditorState
 				}
 
 				var feces:Float;
-				if (FlxG.keys.justPressed.UP || FlxG.keys.justPressed.DOWN  )
+				if (FlxG.keys.justPressed.UP || FlxG.keys.justPressed.DOWN || (touchPad != null && (touchPad.buttonUp.justPressed || touchPad.buttonDown.justPressed)))
 				{
 					FlxG.sound.music.pause();
 
@@ -1957,19 +1972,19 @@ class OldChartingState063 extends OldEditorState
 				}
 			}
 			var shiftThing:Int = 1;
-			if (FlxG.keys.pressed.SHIFT)
+			if (shiftHeld)
 				shiftThing = 4;
 
-			if (FlxG.keys.justPressed.D)
+			if (FlxG.keys.justPressed.D || (touchPad != null && touchPad.buttonRight.justPressed))
 				changeSection(curSec + shiftThing);
-			if (FlxG.keys.justPressed.A) {
+			if (FlxG.keys.justPressed.A || (touchPad != null && touchPad.buttonLeft.justPressed)) {
 				if(curSec <= 0) {
 					changeSection(_song.notes.length-1);
 				} else {
 					changeSection(curSec - shiftThing);
 				}
 			}
-		} else if (FlxG.keys.justPressed.ENTER) {
+		} else if (FlxG.keys.justPressed.ENTER || (touchPad != null && touchPad.buttonA.justPressed)) {
 			for (i in 0...blockPressWhileTypingOn.length) {
 				if(blockPressWhileTypingOn[i].hasFocus) {
 					blockPressWhileTypingOn[i].hasFocus = false;
@@ -1999,7 +2014,7 @@ class OldChartingState063 extends OldEditorState
 		}
 
 		// PLAYBACK SPEED CONTROLS //
-		var holdingShift = FlxG.keys.pressed.SHIFT;
+		var holdingShift = shiftHeld;
 		var holdingLB = FlxG.keys.pressed.LBRACKET;
 		var holdingRB = FlxG.keys.pressed.RBRACKET;
 		var pressedLB = FlxG.keys.justPressed.LBRACKET;
@@ -2009,7 +2024,7 @@ class OldChartingState063 extends OldEditorState
 			playbackSpeed -= 0.01;
 		if (!holdingShift && pressedRB || holdingShift && holdingRB)
 			playbackSpeed += 0.01;
-		if (FlxG.keys.pressed.ALT && (pressedLB || pressedRB || holdingLB || holdingRB))
+		if (altHeld && (pressedLB || pressedRB || holdingLB || holdingRB))
 			playbackSpeed = 1;
 		//
 

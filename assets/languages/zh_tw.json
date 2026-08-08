@@ -438,7 +438,7 @@
     "show_haxelibs_desc": "在FPS計數器中顯示Haxelibs資訊",
     "camhud_zoom_desc": "調整HUD介面元素的縮放大小",
     "legacy_notepos_desc": "使用舊的音符位置系統",
-    "charting_version_desc": "選擇開啟哪個版本的製譜器\n0.7.3 與 0.6.3 為舊版復刻，僅支援 4 鍵譜面",
+    "charting_version_desc": "選擇開啟哪個版本的製譜器\n1.0.4-Kathy 為增強版（支援多鍵 + 觸控），為預設選項\n1.0.4-Official 為 PE 1.0.4 原版（僅 4 鍵、無觸控）\n0.7.3 與 0.6.3 為舊版復刻，僅支援 4 鍵譜面",
     "ratings_pos_desc": "設定評分在螢幕上的位置",
     "events_debug_desc": "（實驗性功能）\n犧牲部分效能來顯示事件資訊，只有在製譜模式中有效！",
     "firstlaunch_select": "選擇語言",
