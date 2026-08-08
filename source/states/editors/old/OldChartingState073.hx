@@ -2,6 +2,8 @@ package states.editors.old;
 
 import flash.geom.Rectangle;
 import haxe.Json;
+import mobile.backend.StorageUtil;
+import backend.CoolUtil;
 import haxe.format.JsonParser;
 import haxe.io.Bytes;
 
@@ -3242,11 +3244,19 @@ class OldChartingState073 extends OldEditorState
 
 		if ((data != null) && (data.length > 0))
 		{
+			#if mobile
+			// 移动端：静默写入外部存储，并提示保存路径
+			var saveName:String = Paths.formatToSongPath(_song.song) + "_073.json";
+			StorageUtil.saveContent(saveName, data.trim(), false);
+			CoolUtil.showPopUp('File saved successfully to: ' + StorageUtil.getExternalStorageDirectory() + 'saves/' + saveName, 'Success!');
+			#else
+			// 桌面/网页：文件选择框，保存后不弹信息（仅日志记录）
 			_file = new FileReference();
 			_file.addEventListener(#if desktop Event.SELECT #else Event.COMPLETE #end, onSaveComplete);
 			_file.addEventListener(Event.CANCEL, onSaveCancel);
 			_file.addEventListener(IOErrorEvent.IO_ERROR, onSaveError);
-			_file.save(data.trim(), Paths.formatToSongPath(_song.song) + ".json");
+			_file.save(data.trim(), Paths.formatToSongPath(_song.song) + "_073.json");
+			#end
 		}
 	}
 
@@ -3269,11 +3279,17 @@ class OldChartingState073 extends OldEditorState
 
 		if ((data != null) && (data.length > 0))
 		{
+			#if mobile
+			var saveName:String = "events_073.json";
+			StorageUtil.saveContent(saveName, data.trim(), false);
+			CoolUtil.showPopUp('File saved successfully to: ' + StorageUtil.getExternalStorageDirectory() + 'saves/' + saveName, 'Success!');
+			#else
 			_file = new FileReference();
 			_file.addEventListener(#if desktop Event.SELECT #else Event.COMPLETE #end, onSaveComplete);
 			_file.addEventListener(Event.CANCEL, onSaveCancel);
 			_file.addEventListener(IOErrorEvent.IO_ERROR, onSaveError);
-			_file.save(data.trim(), "events.json");
+			_file.save(data.trim(), "events_073.json");
+			#end
 		}
 	}
 
