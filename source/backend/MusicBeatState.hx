@@ -138,6 +138,7 @@ class MusicBeatState extends FlxState
 	}
 
 	public static var timePassedOnState:Float = 0;
+	private static var _lastFullscreen:Null<Bool> = null;
 	override function update(elapsed:Float)
 	{
 		//everyStep();
@@ -161,7 +162,15 @@ class MusicBeatState extends FlxState
 			}
 		}
 
-		if(FlxG.save.data != null) FlxG.save.data.fullscreen = FlxG.fullscreen;
+		// Only write to the save when the fullscreen state actually changes, to avoid
+		// dirtying the SharedObject every frame. (OpenFL auto-flushes all modified
+		// SharedObjects on exit, so per-frame writes would force a full funkin.sol
+		// rewrite on every normal quit — the direct cause of lost settings on exit.)
+		if(FlxG.save.data != null && FlxG.fullscreen != _lastFullscreen)
+		{
+			FlxG.save.data.fullscreen = FlxG.fullscreen;
+			_lastFullscreen = FlxG.fullscreen;
+		}
 		
 		stagesFunc(function(stage:BaseStage) {
 			stage.update(elapsed);

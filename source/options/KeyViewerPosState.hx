@@ -13,19 +13,42 @@ import objects.KeyViewer;
  * 仿照 NoteOffsetState 的拖动交互：进入后展示真实的 KeyViewer 覆盖层，
  * 通过鼠标或触摸拖动其面板即可调整位置，偏移量实时存入 ClientPrefs（跨重启持久化）。
  * 游戏内 PlayState 创建 KeyViewer 时会读取该偏移并应用到整块面板。
+ *
+ * 存档安全说明：
+ * ClientPrefs.saveSettings() 会把整个 funkin.sol 全量重写一遍（非原子写）。
+ * 如果在写盘瞬间进程被杀（Android 划掉后台 / 崩溃），.sol 会被截断，
+ * 下次启动反序列化失败 -> FlxG.save.data 为空 -> 所有设置回退默认值。
+ * 因此这里**不再每次松手就存盘**，改为「脏标记 + 延迟合并写入」，
+ * 并在退出 / destroy 时兜底提交，把整存次数从几十次压到 1~2 次。
  */
 class KeyViewerPosState extends MusicBeatState
 {
+	// 偏移量允许的最大绝对值，防止面板被拖到永远找不回来的地方
+	static inline var LIMIT_X:Float = 1280;
+	static inline var LIMIT_Y:Float = 720;
+
+	// 最后一次改动后延迟多久才真正写盘（秒）
+	static inline var SAVE_DELAY:Float = 1.5;
+
 	var viewer:KeyViewer;
 	var dragging:Bool = false;
 	var lastX:Float = 0;
 	var lastY:Float = 0;
 	var offsetText:FlxText;
 
+	// 延迟存盘
+	var pendingSave:Bool = false;
+	var saveCooldown:Float = 0;
+	var savedFlash:FlxText;
+
 	override function create()
 	{
 		FlxG.mouse.visible = true;
 		FlxG.camera.zoom = 1; // 让拖动用屏幕坐标，与游戏内偏移量单位一致
+
+		// 进来先修一遍可能已经被写坏的值（NaN / Infinity / 超范围）
+		ClientPrefs.data.keyViewerPosX = sanitize(ClientPrefs.data.keyViewerPosX, LIMIT_X);
+		ClientPrefs.data.keyViewerPosY = sanitize(ClientPrefs.data.keyViewerPosY, LIMIT_Y);
 
 		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
 		bg.antialiasing = ClientPrefs.data.antialiasing;
@@ -35,13 +58,13 @@ class KeyViewerPosState extends MusicBeatState
 		bg.scrollFactor.set(0, 0);
 		add(bg);
 
-		var title = new FlxText(0, 18, FlxG.width, 'Key Viewer 位置校准', 28);
+		var title = new FlxText(0, 18, FlxG.width, Language.get('keyviewer_cal_title'), 28);
 		title.setFormat(Paths.font("BlackSugarPlumCandy-Bold.ttf"), 28, FlxColor.WHITE, CENTER);
 		title.scrollFactor.set(0, 0);
 		add(title);
 
-		var hint = new FlxText(0, 58, FlxG.width,
-			'拖动下方面板调整 Key Viewer 位置（鼠标或触摸）\n按 R 重置为默认位置 · 按 ESC / BACK 返回并保存', 16);
+		var hintStr:String = #if mobile Language.get('keyviewer_cal_hint_mobile') #else Language.get('keyviewer_cal_hint_desktop') #end;
+		var hint = new FlxText(0, 58, FlxG.width, hintStr, 16);
 		hint.setFormat(Paths.font("BlackSugarPlumCandy-Bold.ttf"), 16, FlxColor.WHITE, CENTER);
 		hint.scrollFactor.set(0, 0);
 		add(hint);
@@ -51,8 +74,31 @@ class KeyViewerPosState extends MusicBeatState
 		offsetText.scrollFactor.set(0, 0);
 		add(offsetText);
 
+		savedFlash = new FlxText(0, 138, FlxG.width, '', 15);
+		savedFlash.setFormat(Paths.font("BlackSugarPlumCandy-Bold.ttf"), 15, FlxColor.LIME, CENTER);
+		savedFlash.scrollFactor.set(0, 0);
+		savedFlash.alpha = 0;
+		add(savedFlash);
+
 		rebuildViewer();
 		updateOffsetText();
+
+		// 移动端：B = 返回并保存，C = 重置
+		addTouchPad('NONE', 'B_C');
+		addTouchPadCamera();
+		if (touchPad != null)
+		{
+			if (touchPad.buttonB != null)
+			{
+				touchPad.buttonB.x = FlxG.width - 132;
+				touchPad.buttonB.y = FlxG.height - 135;
+			}
+			if (touchPad.buttonC != null)
+			{
+				touchPad.buttonC.x = 0;
+				touchPad.buttonC.y = FlxG.height - 135;
+			}
+		}
 
 		super.create();
 	}
@@ -72,31 +118,116 @@ class KeyViewerPosState extends MusicBeatState
 
 	function updateOffsetText():Void
 	{
-		offsetText.text = '当前偏移  X: ${Math.round(ClientPrefs.data.keyViewerPosX)}'
-			+ '  Y: ${Math.round(ClientPrefs.data.keyViewerPosY)}';
+		offsetText.text = Language.get('keyviewer_cal_offset',
+			[Std.string(Math.round(ClientPrefs.data.keyViewerPosX)), Std.string(Math.round(ClientPrefs.data.keyViewerPosY))])
+			+ (pendingSave ? Language.get('keyviewer_cal_pending') : '');
 	}
+
+	// ---------------- 存盘控制 ----------------
+
+	/** 标记有改动，重新开始倒计时；不立刻写盘 */
+	inline function markDirty():Void
+	{
+		pendingSave = true;
+		saveCooldown = SAVE_DELAY;
+	}
+
+	/** 真正写盘。整个界面生命周期内理想情况只会走 1~2 次 */
+	function commitSave():Void
+	{
+		if (!pendingSave)
+			return;
+
+		// 写盘前再兜一次底，绝不把 NaN / Infinity 写进存档
+		ClientPrefs.data.keyViewerPosX = sanitize(ClientPrefs.data.keyViewerPosX, LIMIT_X);
+		ClientPrefs.data.keyViewerPosY = sanitize(ClientPrefs.data.keyViewerPosY, LIMIT_Y);
+
+		pendingSave = false;
+		saveCooldown = 0;
+		ClientPrefs.saveSettings();
+
+		if (savedFlash != null)
+		{
+			savedFlash.text = Language.get('keyviewer_cal_saved');
+			savedFlash.alpha = 1;
+		}
+		updateOffsetText();
+	}
+
+	static inline function sanitize(v:Float, limit:Float):Float
+	{
+		if (Math.isNaN(v) || !Math.isFinite(v))
+			return 0;
+		if (v > limit)
+			return limit;
+		if (v < -limit)
+			return -limit;
+		return v;
+	}
+
+	// ---------------- 主循环 ----------------
 
 	override function update(elapsed:Float)
 	{
 		// 返回并保存
 		if (controls.BACK)
 		{
-			ClientPrefs.saveSettings();
+			commitSave();
 			MusicBeatState.switchState(new OptionsState());
 			return;
 		}
-		// 重置为默认位置
-		if (FlxG.keys.justPressed.R)
+
+		// 重置为默认位置（键盘 R / 移动端 C 键）
+		var resetPressed:Bool = FlxG.keys.justPressed.R;
+		if (!resetPressed && touchPad != null && touchPad.buttonC != null && touchPad.buttonC.justPressed)
+			resetPressed = true;
+
+		if (resetPressed)
 		{
 			ClientPrefs.data.keyViewerPosX = 0;
 			ClientPrefs.data.keyViewerPosY = 0;
 			rebuildViewer();
+			markDirty();
 			updateOffsetText();
-			ClientPrefs.saveSettings();
 		}
 
 		handleDrag();
+
+		// 延迟合并写入：停手 SAVE_DELAY 秒后才真正落盘
+		if (pendingSave && !dragging)
+		{
+			saveCooldown -= elapsed;
+			if (saveCooldown <= 0)
+				commitSave();
+		}
+
+		if (savedFlash != null && savedFlash.alpha > 0)
+			savedFlash.alpha = Math.max(0, savedFlash.alpha - elapsed * 0.8);
+
+		// 有些机型偶发不加载 touchPad，这里补一次
+		if (touchPad == null)
+		{
+			addTouchPad('NONE', 'B_C');
+			addTouchPadCamera();
+		}
+
 		super.update(elapsed);
+	}
+
+	/** 判断某屏幕坐标是否落在虚拟按键上，避免点按钮时误触发拖动 */
+	function overlapsTouchPad(x:Float, y:Float):Bool
+	{
+		if (touchPad == null)
+			return false;
+
+		for (btn in touchPad.members)
+		{
+			if (btn == null || !btn.visible)
+				continue;
+			if (x >= btn.x && x <= btn.x + btn.width && y >= btn.y && y <= btn.y + btn.height)
+				return true;
+		}
+		return false;
 	}
 
 	function handleDrag():Void
@@ -105,12 +236,30 @@ class KeyViewerPosState extends MusicBeatState
 			return;
 
 		var bg = viewer.bgSprite;
-		var mx:Float = 0;
-		var my:Float = 0;
+		var mx:Float = lastX;
+		var my:Float = lastY;
 		var pressed:Bool = false;
 		var justPressed:Bool = false;
 
-		// 鼠标
+		#if mobile
+		// 触摸：只认真正处于按下 / 刚抬起状态的触摸点，忽略落在虚拟按键上的
+		for (t in FlxG.touches.list)
+		{
+			if (t == null)
+				continue;
+			if (!t.pressed && !t.justPressed && !t.justReleased)
+				continue;
+			// 只在「还没开始拖」时过滤虚拟按键；已经在拖的时候手指滑过按钮不该断开
+			if (!dragging && overlapsTouchPad(t.x, t.y))
+				continue;
+
+			mx = t.x;
+			my = t.y;
+			pressed = t.pressed;
+			justPressed = t.justPressed;
+			break;
+		}
+		#else
 		if (FlxG.mouse != null)
 		{
 			var p = FlxG.mouse.getScreenPosition(FlxG.camera);
@@ -118,22 +267,16 @@ class KeyViewerPosState extends MusicBeatState
 			my = p.y;
 			pressed = FlxG.mouse.pressed;
 			justPressed = FlxG.mouse.justPressed;
-		}
-
-		// 触摸：取第一个活动触摸点
-		#if mobile
-		for (t in FlxG.touches.list)
-		{
-			if (t != null)
-			{
-				mx = t.x;
-				my = t.y;
-				pressed = t.pressed;
-				justPressed = t.justPressed;
-				break;
-			}
+			p.put();
 		}
 		#end
+
+		// 坐标本身脏了就直接放弃这一帧，别让 NaN 传染到存档
+		if (Math.isNaN(mx) || Math.isNaN(my) || !Math.isFinite(mx) || !Math.isFinite(my))
+		{
+			dragging = false;
+			return;
+		}
 
 		if (!dragging && justPressed)
 		{
@@ -151,16 +294,36 @@ class KeyViewerPosState extends MusicBeatState
 			var dy:Float = my - lastY;
 			lastX = mx;
 			lastY = my;
-			viewer.moveBy(dx, dy);
-			ClientPrefs.data.keyViewerPosX += dx;
-			ClientPrefs.data.keyViewerPosY += dy;
+
+			// 夹取到合法范围，并按实际生效的位移量同步移动画面，避免 UI 与存档值脱节
+			var newX:Float = sanitize(ClientPrefs.data.keyViewerPosX + dx, LIMIT_X);
+			var newY:Float = sanitize(ClientPrefs.data.keyViewerPosY + dy, LIMIT_Y);
+			var appliedX:Float = newX - ClientPrefs.data.keyViewerPosX;
+			var appliedY:Float = newY - ClientPrefs.data.keyViewerPosY;
+
+			ClientPrefs.data.keyViewerPosX = newX;
+			ClientPrefs.data.keyViewerPosY = newY;
+
+			if (appliedX != 0 || appliedY != 0)
+			{
+				viewer.moveBy(appliedX, appliedY);
+				markDirty();
+			}
 			updateOffsetText();
+
 			if (!pressed)
 			{
 				dragging = false;
-				ClientPrefs.saveSettings();
+				// 松手不再立刻整存，交给延迟合并写入
+				saveCooldown = SAVE_DELAY;
 			}
 		}
 	}
-}
 
+	override function destroy()
+	{
+		// 兜底：任何路径离开这个 State 都保证改动落盘
+		commitSave();
+		super.destroy();
+	}
+}

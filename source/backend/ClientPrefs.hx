@@ -441,7 +441,13 @@ class ClientPrefs {
 			Reflect.setField(FlxG.save.data, key, Reflect.field(data, key));
 
 		#if ACHIEVEMENTS_ALLOWED Achievements.save(); #end
-		FlxG.save.flush();
+
+		// flush the main save and check the return value; on failure only log, never throw
+		var ok = FlxG.save.flush();
+		if (ok != true)
+			FlxG.log.error('ClientPrefs: Failed to save main save (funkin.sol), flush returned ' + ok);
+		else
+			writeBackupSave(); // only write the backup after a successful main save, so the backup is always intact
 
 		//Placing this in a separate save so that it can be manually deleted without removing your Score and stuff
 		var save:FlxSave = new FlxSave();
@@ -451,6 +457,38 @@ class ClientPrefs {
 		save.data.mobile = mobileBinds;
 		save.flush();
 		FlxG.log.add("Settings saved!");
+	}
+
+	/**
+	 * Bind and return the backup SharedObject (funkin_backup) for the main save.
+	 * Returns null if binding fails or throws; caller must check.
+	 */
+	private static function getBackupSave():FlxSave {
+		try {
+			var backup:FlxSave = new FlxSave();
+			if (backup.bind('funkin_backup', CoolUtil.getSavePath()))
+				return backup;
+		} catch (e:Dynamic) {
+			FlxG.log.error('ClientPrefs: Failed to bind backup save: ' + e);
+		}
+		return null;
+	}
+
+	/**
+	 * Write all fields of the current ClientPrefs.data into the standalone backup save.
+	 * On failure only log; never interrupt the main flow.
+	 */
+	private static function writeBackupSave():Void {
+		var backup:FlxSave = getBackupSave();
+		if (backup == null) return;
+		try {
+			for (key in Reflect.fields(data))
+				Reflect.setField(backup.data, key, Reflect.field(data, key));
+			if (backup.flush() != true)
+				FlxG.log.error('ClientPrefs: Failed to save backup (funkin_backup)');
+		} catch (e:Dynamic) {
+			FlxG.log.error('ClientPrefs: Exception while writing backup save: ' + e);
+		}
 	}
 
 	/**
@@ -534,6 +572,26 @@ class ClientPrefs {
 
 	public static function loadPrefs() {
 		#if ACHIEVEMENTS_ALLOWED Achievements.load(); #end
+
+		// Corruption detection & auto-restore: if the main save is truncated/corrupted (zero fields),
+		// but the backup still holds data, restore the main save from it and self-heal via flush.
+		// On first run both are empty, so we fall through to defaults; no false trigger.
+		try {
+			if (FlxG.save.data != null && Reflect.fields(FlxG.save.data).length == 0) {
+				var backup:FlxSave = getBackupSave();
+				if (backup != null && Reflect.fields(backup.data).length > 0) {
+					for (key in Reflect.fields(backup.data))
+						Reflect.setField(FlxG.save.data, key, Reflect.field(backup.data, key));
+					if (FlxG.save.flush() != true)
+						FlxG.log.error('ClientPrefs: Failed to flush main save after restoring from backup');
+					else
+						FlxG.log.add('ClientPrefs: Main save was corrupted, auto-restored from backup (funkin_backup)');
+				}
+			}
+		} catch (e:Dynamic) {
+			// The restore process must never throw on the startup path; on failure silently fall back to defaults
+			FlxG.log.error('ClientPrefs: Exception during backup restore, skipped: ' + e);
+		}
 
 		for (key in Reflect.fields(data))
 			if (key != 'gameplaySettings' && Reflect.hasField(FlxG.save.data, key))
