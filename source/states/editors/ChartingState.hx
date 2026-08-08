@@ -851,7 +851,13 @@ if(_shouldReset) Conductor.songPosition = 0;
     		: Language.get("charting_desktop_tips").split('\n').join('\n');
 		fullTipText.screenCenter();
 		add(fullTipText);
+	// update() 中无条件引用 touchPad.*，所以桌面端也必须创建，仅隐藏即可。
+	// 触控板必须拥有独立摄像头，否则按钮会跟随制谱器网格摄像头滚动/错位，
+	// 并且触摸检测时会读取到其它状态残留的摄像头导致崩溃。
 	addTouchPad('LEFT_FULL', 'CHART_EDITOR');
+	addTouchPadCamera();
+	touchPad.visible = controls.mobileC;
+
 	super.create();
 
 	// 初始化角色显示
@@ -4628,8 +4634,9 @@ for (i in 0...GRID_PLAYERS)
 		tab_group.add(playbackSlider);
 		tab_group.add(mouseSnapCheckBox);
 		tab_group.add(ignoreProgressCheckBox);
-		tab_group.add(rightClickDeleteCheckBox);
-		tab_group.add(dragHoldCheckBox);
+		// 移动端不会创建这两个复选框，直接 add(null) 会在 FlxSpriteGroup.preAdd 中崩溃
+		if(rightClickDeleteCheckBox != null) tab_group.add(rightClickDeleteCheckBox);
+		if(dragHoldCheckBox != null) tab_group.add(dragHoldCheckBox);
 
 		tab_group.add(new FlxText(hitsoundPlayerStepper.x, hitsoundPlayerStepper.y - 15, 100, Language.get('charting_playersoundhit_text')).setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(new FlxText(hitsoundOpponentStepper.x, hitsoundOpponentStepper.y - 15, 100, Language.get('charting_opposoundhit_text')).setFormat(Paths.font(Language.get('uitab_font'))));

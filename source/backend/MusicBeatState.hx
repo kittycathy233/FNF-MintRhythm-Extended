@@ -95,6 +95,16 @@ class MusicBeatState extends FlxState
 			touchPadCam.bgColor.alpha = 0;
 			FlxG.cameras.add(touchPadCam, defaultDrawTarget);
 			touchPad.cameras = [touchPadCam];
+
+			// 组的 cameras 只会在绘制时通过 defaultCameras 向下传递，
+			// TouchButton 在 update 阶段读取自身 cameras 做触摸检测时会拿到
+			// 全局/残留的摄像头列表，从而引发空引用崩溃与渲染错位。
+			// 因此这里显式为每个按钮指定触控摄像头。
+			touchPad.forEach(function(button:TouchButton)
+			{
+				if (button != null)
+					button.cameras = [touchPadCam];
+			}, true);
 		}
 	}
 

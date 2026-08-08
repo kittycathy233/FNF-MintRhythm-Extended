@@ -344,9 +344,18 @@ class TypedTouchButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 	{
 		var overlap = false;
 
+		// cameras 在对象尚未加入任何状态、或状态正在销毁时可能为 null
+		if (cameras == null)
+			return false;
+
 		// 性能优化：优先使用第一个摄像头（大多数情况下只有一个）
 		for (camera in cameras)
 		{
+			// 防御性检查：摄像头可能为 null 或已被销毁（切换状态时残留），
+			// 直接传给 FlxPointer.getWorldPosition 会触发空引用崩溃
+			if (camera == null || camera.flashSprite == null)
+				continue;
+
 			#if mac
 			var button = FlxMouseButton.getByID(FlxMouseButtonID.LEFT);
 			if (checkInput(FlxG.mouse, button, button.justPressedPosition, camera))
@@ -378,6 +387,9 @@ class TypedTouchButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 
 	function checkInput(pointer:FlxPointer, input:IFlxInput, justPressedPosition:FlxPoint, camera:FlxCamera):Bool
 	{
+		if (pointer == null || camera == null)
+			return false;
+
 		var overlaps = overlapsPoint(pointer.getWorldPosition(camera, _point), true, camera);
 
 		if (maxInputMovement != Math.POSITIVE_INFINITY
