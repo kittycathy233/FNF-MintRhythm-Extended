@@ -3076,6 +3076,16 @@ class OldChartingState063 extends OldEditorState
 	private function saveLevel()
 	{
 		if(_song.events != null && _song.events.length > 1) _song.events.sort(sortByTime);
+		// 旧版制谱器（0.6.3）输出不含引擎扩展字段：format（版本标记）、mania / changeMania（多键）
+		Reflect.deleteField(_song, "format");
+		Reflect.deleteField(_song, "mania");
+		if (_song.notes != null)
+			for (section in _song.notes)
+			{
+				if (section == null) continue;
+				Reflect.deleteField(section, "mania");
+				Reflect.deleteField(section, "changeMania");
+			}
 		var json = {
 			"song": _song
 		};
