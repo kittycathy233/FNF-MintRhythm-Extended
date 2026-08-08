@@ -474,6 +474,12 @@ if(_shouldReset) Conductor.songPosition = 0;
 		if(chartEditorSave.data.dragCreateHoldNote == null) chartEditorSave.data.dragCreateHoldNote = true;
 		rightClickDeleteNote = chartEditorSave.data.rightClickDeleteNote;
 		dragCreateHoldNote = chartEditorSave.data.dragCreateHoldNote;
+		if (controls.mobileC)
+		{
+			// 移动端自动禁用右键移除箭头 / 拖动生成长条，避免影响触控游玩体验
+			rightClickDeleteNote = false;
+			dragCreateHoldNote = false;
+		}
 
 		// 音频相关设置（charting 选项卡需保存的项，播放速度除外）
 		if(chartEditorSave.data.hitsoundPlayerVol == null) chartEditorSave.data.hitsoundPlayerVol = 0;
@@ -4528,25 +4534,28 @@ for (i in 0...GRID_PLAYERS)
 		if(chartEditorSave.data.ignoreProgressWarns == null) chartEditorSave.data.ignoreProgressWarns = false;
 		ignoreProgressCheckBox.checked = chartEditorSave.data.ignoreProgressWarns;
 
-		objY += 30;
-		rightClickDeleteCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_rightclickdel_text'), 280, function()
+		if(!controls.mobileC)
 		{
-			rightClickDeleteNote = rightClickDeleteCheckBox.checked;
-			chartEditorSave.data.rightClickDeleteNote = rightClickDeleteNote;
-			chartEditorSave.flush();
-		});
-		if(chartEditorSave.data.rightClickDeleteNote == null) chartEditorSave.data.rightClickDeleteNote = false;
-		rightClickDeleteCheckBox.checked = chartEditorSave.data.rightClickDeleteNote;
+			objY += 30;
+			rightClickDeleteCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_rightclickdel_text'), 280, function()
+			{
+				rightClickDeleteNote = rightClickDeleteCheckBox.checked;
+				chartEditorSave.data.rightClickDeleteNote = rightClickDeleteNote;
+				chartEditorSave.flush();
+			});
+			if(chartEditorSave.data.rightClickDeleteNote == null) chartEditorSave.data.rightClickDeleteNote = false;
+			rightClickDeleteCheckBox.checked = chartEditorSave.data.rightClickDeleteNote;
 
-		objY += 30;
-		dragHoldCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_dragcreatesustain_text'), 280, function()
-		{
-			dragCreateHoldNote = dragHoldCheckBox.checked;
-			chartEditorSave.data.dragCreateHoldNote = dragCreateHoldNote;
-			chartEditorSave.flush();
-		});
-		if(chartEditorSave.data.dragCreateHoldNote == null) chartEditorSave.data.dragCreateHoldNote = true;
-		dragHoldCheckBox.checked = chartEditorSave.data.dragCreateHoldNote;
+			objY += 30;
+			dragHoldCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_dragcreatesustain_text'), 280, function()
+			{
+				dragCreateHoldNote = dragHoldCheckBox.checked;
+				chartEditorSave.data.dragCreateHoldNote = dragCreateHoldNote;
+				chartEditorSave.flush();
+			});
+			if(chartEditorSave.data.dragCreateHoldNote == null) chartEditorSave.data.dragCreateHoldNote = true;
+			dragHoldCheckBox.checked = chartEditorSave.data.dragCreateHoldNote;
+		}
 
 		objY += 50;
 		hitsoundPlayerStepper = new PsychUINumericStepper(objX, objY, 0.2, chartEditorSave.data.hitsoundPlayerVol, 0, 1, 1);
