@@ -4703,7 +4703,8 @@ tempScore += '${lblScore}: ${songScore}';
 	static inline var CAMELLIA_HOLD:Float = 0.75; // 淡出前的停留时长
 	static inline var CAMELLIA_FADE:Float = 0.35; // 淡出时长
 	static inline var CAMELLIA_BOUNCE_TIME:Float = 0.2; // 缩放回弹时长
-	static inline var CAMELLIA_SCALE_RATIO:Float = 1.125; // 0.45 / 0.4，按比例换算时的起始放大倍率
+	static inline var CAMELLIA_SCALE_RATIO:Float = 1.125; // 0.45 / 0.4，按比例换算时的起始放大倍率（预留）
+	static inline var CAMELLIA_SCALE_OFFSET:Float = 0.05; // 按比例换算时，判定贴图从“默认大小 + 0.05”回弹到默认大小
 	static inline var CAMELLIA_SCALE_FROM:Float = 0.45; // 照搬原数值时的起始缩放
 	static inline var CAMELLIA_SCALE_TO:Float = 0.4; // 照搬原数值时的目标缩放
 
@@ -4730,11 +4731,11 @@ tempScore += '${lblScore}: ${songScore}';
 		}
 		else
 		{
-			// 按比例换算：以 setGraphicSize() 得到的当前 scale 为目标值，等比放大后回弹。
-			// 这样在像素/非像素舞台与自定义 UI 皮肤下都能正确工作。
+			// 按比例换算：以 setGraphicSize() 得到的当前 scale 为默认大小，
+			// 起始临时放大 0.05（即 0.7 → 0.75）后回弹，幅度不受贴图基准影响。
 			toX = spr.scale.x;
 			toY = spr.scale.y;
-			spr.scale.set(toX * CAMELLIA_SCALE_RATIO, toY * CAMELLIA_SCALE_RATIO);
+			spr.scale.set(toX + CAMELLIA_SCALE_OFFSET, toY + CAMELLIA_SCALE_OFFSET);
 		}
 
 		FlxTween.cancelTweensOf(spr.scale);
