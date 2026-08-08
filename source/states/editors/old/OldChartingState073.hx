@@ -24,6 +24,9 @@ import openfl.events.IOErrorEvent;
 import openfl.media.Sound;
 import openfl.net.FileReference;
 import openfl.utils.Assets as OpenFlAssets;
+import android.FlxVirtualPad;
+import android.FlxVirtualPad.FlxDPadMode;
+import android.FlxVirtualPad.FlxActionMode;
 
 import backend.Song;
 import backend.StageData;
@@ -83,6 +86,7 @@ class OldChartingState073 extends OldEditorState
 	];
 
 	var _file:FileReference;
+	var _virtualpad:FlxVirtualPad;
 
 	var UI_box:FlxUITabMenu;
 
@@ -354,7 +358,7 @@ class OldChartingState073 extends OldEditorState
 		\nBackspace - Go back to Editor Menu
 		\nEnter - Play your chart
 		\nQ/E - Decrease/Increase Note Sustain Length
-		\nSpace - Stop/Resume song" + (controls.mobileC ? "\nTouch Pad: use on-screen buttons (Z button hides/shows the pad)" : "");
+		\nSpace - Stop/Resume song" + (controls.mobileC ? "\nTouch Pad: use on-screen buttons (B button exits to Editor Menu)" : "");
 
 		var tipTextArray:Array<String> = text.split('\n');
 		for (i in 0...tipTextArray.length) {
@@ -1693,8 +1697,11 @@ class OldChartingState073 extends OldEditorState
 
 		if(controls.mobileC)
 		{
-			addTouchPad('LEFT_FULL', 'CHART_EDITOR');
-			addTouchPadCamera();
+			if(_virtualpad == null)
+			{
+				_virtualpad = new FlxVirtualPad(FlxDPadMode.CHART_EDITOR, FlxActionMode.CHART_EDITOR);
+				add(_virtualpad);
+			}
 		}
 	}
 
@@ -1724,9 +1731,9 @@ class OldChartingState073 extends OldEditorState
 	{
 		curStep = recalculateSteps();
 
-		var shiftHeld:Bool = FlxG.keys.pressed.SHIFT || (touchPad != null && touchPad.buttonY.pressed);
-		var altHeld:Bool = FlxG.keys.pressed.ALT || (touchPad != null && touchPad.buttonG.pressed);
-		var ctrlHeld:Bool = FlxG.keys.pressed.CONTROL || (touchPad != null && touchPad.buttonH.pressed);
+		var shiftHeld:Bool = FlxG.keys.pressed.SHIFT || (_virtualpad != null && _virtualpad.buttonY.pressed);
+		var altHeld:Bool = FlxG.keys.pressed.ALT;
+		var ctrlHeld:Bool = FlxG.keys.pressed.CONTROL || (_virtualpad != null && _virtualpad.buttonZ.pressed);
 
 		if(FlxG.sound.music.time < 0) {
 			FlxG.sound.music.pause();
@@ -1854,16 +1861,13 @@ class OldChartingState073 extends OldEditorState
 
 		if (!blockInput)
 		{
-			if (touchPad != null && touchPad.buttonZ.justPressed)
-		{
-			touchPad.visible = !touchPad.visible;
-		}
+	
 
-		if (FlxG.keys.justPressed.ESCAPE || (touchPad != null && touchPad.buttonC.justPressed))
+		if (FlxG.keys.justPressed.ESCAPE || (_virtualpad != null && _virtualpad.buttonC.justPressed))
 			{
 				openEditorPlayState();
 			}
-			else if (FlxG.keys.justPressed.ENTER || (touchPad != null && touchPad.buttonA.justPressed))
+			else if (FlxG.keys.justPressed.ENTER || (_virtualpad != null && _virtualpad.buttonA.justPressed))
 			{
 				autosaveSong();
 				FlxG.mouse.visible = false;
@@ -1878,18 +1882,18 @@ class OldChartingState073 extends OldEditorState
 			}
 
 			if(curSelectedNote != null && curSelectedNote[1] > -1) {
-				if (FlxG.keys.justPressed.E || (touchPad != null && touchPad.buttonDown2.justPressed))
+				if (FlxG.keys.justPressed.E || (_virtualpad != null && _virtualpad.buttonCEDown.justPressed))
 				{
 					changeNoteSustain(Conductor.stepCrochet);
 				}
-				if (FlxG.keys.justPressed.Q || (touchPad != null && touchPad.buttonUp2.justPressed))
+				if (FlxG.keys.justPressed.Q || (_virtualpad != null && _virtualpad.buttonCEUp.justPressed))
 				{
 					changeNoteSustain(-Conductor.stepCrochet);
 				}
 			}
 
 
-			if (FlxG.keys.justPressed.BACKSPACE || (touchPad != null && touchPad.buttonF.justPressed)) {
+			if (FlxG.keys.justPressed.BACKSPACE || (_virtualpad != null && _virtualpad.buttonB.justPressed)) {
 				// Protect against lost data when quickly leaving the chart editor.
 				autosaveSong();
 				PlayState.chartingMode = false;
@@ -1903,11 +1907,11 @@ class OldChartingState073 extends OldEditorState
 				undo();
 			}
 
-			if((FlxG.keys.justPressed.Z || (touchPad != null && touchPad.buttonV.justPressed)) && curZoom > 0 && !ctrlHeld) {
+			if((FlxG.keys.justPressed.Z || (_virtualpad != null && _virtualpad.buttonV.justPressed)) && curZoom > 0 && !ctrlHeld) {
 				--curZoom;
 				updateZoom();
 			}
-			if((FlxG.keys.justPressed.X || (touchPad != null && touchPad.buttonD.justPressed)) && curZoom < zoomList.length-1) {
+			if((FlxG.keys.justPressed.X || (_virtualpad != null && _virtualpad.buttonD.justPressed)) && curZoom < zoomList.length-1) {
 				curZoom++;
 				updateZoom();
 			}
@@ -1928,7 +1932,7 @@ class OldChartingState073 extends OldEditorState
 				}
 			}
 
-			if (FlxG.keys.justPressed.SPACE || (touchPad != null && touchPad.buttonX.justPressed))
+			if (FlxG.keys.justPressed.SPACE || (_virtualpad != null && _virtualpad.buttonX.justPressed))
 			{
 				if(vocals != null) vocals.play();
 				if(opponentVocals != null) opponentVocals.play();
@@ -1975,7 +1979,7 @@ class OldChartingState073 extends OldEditorState
 
 			//ARROW VORTEX SHIT NO DEADASS
 
-			if (FlxG.keys.pressed.W || FlxG.keys.pressed.S || (touchPad != null && (touchPad.buttonUp.pressed || touchPad.buttonDown.pressed)))
+			if (FlxG.keys.pressed.W || FlxG.keys.pressed.S || (_virtualpad != null && (_virtualpad.buttonUp.pressed || _virtualpad.buttonDown.pressed)))
 			{
 				FlxG.sound.music.pause();
 
@@ -1985,13 +1989,13 @@ class OldChartingState073 extends OldEditorState
 
 				var daTime:Float = 700 * FlxG.elapsed * holdingShift;
 
-				FlxG.sound.music.time += daTime * ((FlxG.keys.pressed.W || (touchPad != null && touchPad.buttonUp.pressed)) ? -1 : 1);
+				FlxG.sound.music.time += daTime * ((FlxG.keys.pressed.W || (_virtualpad != null && _virtualpad.buttonUp.pressed)) ? -1 : 1);
 
 				pauseAndSetVocalsTime();
 			}
 
 			if(!vortex){
-				if (FlxG.keys.justPressed.UP || FlxG.keys.justPressed.DOWN || (touchPad != null && (touchPad.buttonUp.justPressed || touchPad.buttonDown.justPressed)))
+				if (FlxG.keys.justPressed.UP || FlxG.keys.justPressed.DOWN)
 				{
 					FlxG.sound.music.pause();
 					updateCurStep();
@@ -2052,7 +2056,7 @@ class OldChartingState073 extends OldEditorState
 				}
 
 				var feces:Float;
-				if (FlxG.keys.justPressed.UP || FlxG.keys.justPressed.DOWN || (touchPad != null && (touchPad.buttonUp.justPressed || touchPad.buttonDown.justPressed)))
+				if (FlxG.keys.justPressed.UP || FlxG.keys.justPressed.DOWN)
 				{
 					FlxG.sound.music.pause();
 
@@ -2107,9 +2111,9 @@ class OldChartingState073 extends OldEditorState
 			if (shiftHeld)
 				shiftThing = 4;
 
-			if (FlxG.keys.justPressed.D || (touchPad != null && touchPad.buttonRight.justPressed))
+			if (FlxG.keys.justPressed.D || (_virtualpad != null && _virtualpad.buttonRight.justPressed))
 				changeSection(curSec + shiftThing);
-			if (FlxG.keys.justPressed.A || (touchPad != null && touchPad.buttonLeft.justPressed)) {
+			if (FlxG.keys.justPressed.A || (_virtualpad != null && _virtualpad.buttonLeft.justPressed)) {
 				if(curSec <= 0) {
 					changeSection(_song.notes.length-1);
 				} else {
