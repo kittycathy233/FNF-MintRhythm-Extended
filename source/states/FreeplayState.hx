@@ -139,6 +139,8 @@ class FreeplayState extends MusicBeatState
 	// 每帧预热图标数量上限：把“滚动时才加载纹理”的开销摊到空闲帧，
 	// 同时让可见窗口在被滚到后能较快填充满，减少图标缺帧。
 	private static inline var ICON_WARM_PER_FRAME:Int = 3;
+	// 选中曲目上下各显示/预热多少个小图标（共 ±ICON_RADIUS）
+	private static inline var ICON_RADIUS:Int = 8;
 
 	function updateChartPrefetch(elapsed:Float):Void
 	{
@@ -502,7 +504,7 @@ class FreeplayState extends MusicBeatState
 		grpIcons.clear();
 		iconArray = new Array<HealthIcon>();
 		iconLoadStatus = new Array<Bool>();
-		_iconsWarmed = false; // 列表重建后需要重新预加载图标
+		_lastIconVisibles = []; // 列表重建后清空图标可见缓存
 
 		for (i in 0...songs.length)
 		{
@@ -1534,6 +1536,7 @@ class FreeplayState extends MusicBeatState
 
 	var _drawDistance:Int = 4;
 	var _lastVisibles:Array<Int> = [];
+	var _lastIconVisibles:Array<Int> = []; // 上一帧显示过的小图标索引，用于隐藏
 	private var lastLerpSelected:Float = -9999; // 用于检测lerpSelected是否变化
 
 	public function updateTexts(elapsed:Float = 0.0)
@@ -1548,22 +1551,19 @@ class FreeplayState extends MusicBeatState
 
 	private function updateVisibleItems():Void
 	{
-		// 隐藏之前的可见对象
+		// 隐藏上一帧可见的文本对象
 		for (i in _lastVisibles)
 		{
-			grpSongs.members[i].visible = grpSongs.members[i].active = false;
-			if (iconArray[i] != null)
-			{
-				iconArray[i].visible = iconArray[i].active = false;
-			}
+			if (grpSongs.members[i] != null)
+				grpSongs.members[i].visible = grpSongs.members[i].active = false;
 		}
 		_lastVisibles = [];
 
-		// 计算当前可见范围（基于lerpSelected而不是curSelected，使过渡更平滑）
+		// 计算当前可见文本范围（基于lerpSelected而不是curSelected，使过渡更平滑）
 		var min:Int = Math.round(Math.max(0, Math.min(songs.length, lerpSelected - _drawDistance)));
 		var max:Int = Math.round(Math.max(0, Math.min(songs.length, lerpSelected + _drawDistance)));
-		
-		// 只显示可见范围内的对象
+
+		// 只显示可见范围内的文本对象
 		for (i in min...max)
 		{
 			var item:Alphabet = grpSongs.members[i];
@@ -1571,46 +1571,70 @@ class FreeplayState extends MusicBeatState
 			item.x = ((item.targetY - lerpSelected) * item.distancePerItem.x) + item.startPosition.x;
 			item.y = ((item.targetY - lerpSelected) * 1.3 * item.distancePerItem.y) + item.startPosition.y;
 			item.alpha = (i == curSelected) ? 1.0 : 0.6; // 设置选中项的透明度（选中不透明，未选中半透明）
+			_lastVisibles.push(i);
+		}
 
-			// 延迟加载图标：滚动到远处尚未预热的图标不再在主线程同步创建（避免 PNG 解码卡顿），
-			// 改由 warmupIcons 在空闲帧预创建；这里只使用已存在的图标。
-			// 仅对“当前选中项”做一次同步创建，保证焦点图标始终可见（最多 1 次解码，可接受）。
+		// 小图标显示：独立于文本可视窗口，显示 curSelected 附近 ±ICON_RADIUS 的图标。
+		// 位置用与文本相同的投影公式手动计算（不再依赖 sprTracker），
+		// 这样即使文本行未渲染，附近小图标也能正确显示，避免“只有选中项才显示图标”的问题。
+		hideLastIcons();
+		var iconMin:Int = Math.round(Math.max(0, Math.min(songs.length, lerpSelected - ICON_RADIUS)));
+		var iconMax:Int = Math.round(Math.max(0, Math.min(songs.length, lerpSelected + ICON_RADIUS)));
+		for (i in iconMin...iconMax)
+		{
+			var songItem:Alphabet = grpSongs.members[i];
+
+			// 选中项若尚未预热，做一次同步创建（最多 1 次解码，保证焦点图标始终可见）
 			if (iconArray[i] == null && i == curSelected && !iconLoadStatus[i])
 			{
 				Mods.currentModDirectory = songs[i].folder;
 				var selIcon:HealthIcon = new HealthIcon(songs[i].songCharacter);
-				selIcon.sprTracker = item;
+				selIcon.sprTracker = null; // 位置在下方用投影公式手动设置
 				iconArray[i] = selIcon;
 				iconLoadStatus[i] = true;
 				grpIcons.add(selIcon);
 			}
 
 			var icon:HealthIcon = iconArray[i];
-			if (icon != null)
-			{
-				icon.visible = icon.active = true;
-				icon.alpha = (i == curSelected) ? 1.0 : 0.6; // 设置选中项的透明度
-			}
-			
-		_lastVisibles.push(i);
+			if (icon == null)
+				continue;
+
+			// 与 HealthIcon.update 中跟随 sprTracker 的偏移一致：(sprTracker.x + width + 12, sprTracker.y - 30)
+			var sx:Float = ((songItem.targetY - lerpSelected) * songItem.distancePerItem.x) + songItem.startPosition.x;
+			var sy:Float = ((songItem.targetY - lerpSelected) * 1.3 * songItem.distancePerItem.y) + songItem.startPosition.y;
+			icon.setPosition(sx + songItem.width + 12, sy - 30);
+			icon.visible = icon.active = true;
+			icon.alpha = (i == curSelected) ? 1.0 : 0.6; // 设置选中项的透明度
+			_lastIconVisibles.push(i);
+		}
 	}
-}
+
+	// 隐藏上一帧显示过的小图标（含超出文本可视窗口的邻近图标）
+	private function hideLastIcons():Void
+	{
+		for (i in _lastIconVisibles)
+		{
+			if (iconArray[i] != null)
+				iconArray[i].visible = iconArray[i].active = false;
+		}
+		_lastIconVisibles = [];
+	}
 
 	/**
-	 * 空闲时预加载图标：每帧最多创建 1 个尚未加载的图标（从当前选中项向两侧扩展），
-	 * 把“滚入可见窗口才加载纹理”的开销摊到空闲帧，从而避免滚动过程中的间歇性卡顿。
-	 * 已在 updateVisibleItems 中加载的图标会被跳过。
+	 * 空闲时预加载“选中项附近 ±ICON_RADIUS”的小图标：每帧最多创建 ICON_WARM_PER_FRAME 个，
+	 * 把 PNG 解码/纹理上传开销摊到空闲帧，避免滚动过程中的间歇性卡顿。
+	 * 跟随 curSelected 形成一个滑动预热窗口（而非一次性预热整张列表），
+	 * 因此滚动或跳转后，新进入附近的图标会在后续帧被补建，始终及时显示。
 	 */
-	private var _iconsWarmed:Bool = false;
 	private function warmupIcons():Void
 	{
-		if (_iconsWarmed || songs.length == 0 || iconArray == null || iconLoadStatus.length != songs.length)
+		if (songs.length == 0 || iconArray == null || iconLoadStatus.length != songs.length)
 			return;
 
-		// 从 curSelected 向两侧逐圈扫描，每帧最多创建 ICON_WARM_PER_FRAME 个图标，
-		// 把“滚入可见窗口才加载纹理”的开销摊到空闲帧，避免滚动过程中的间歇性卡顿。
 		var warmedThisFrame:Int = 0;
-		for (step in 0...songs.length)
+		// 仅扫描 curSelected ± ICON_RADIUS 的滑动窗口，开销极小；
+		// 已加载的会被跳过，未加载的按预算补建。
+		for (step in 0...(ICON_RADIUS * 2 + 1))
 		{
 			var offset:Int = (step % 2 == 0) ? (step >> 1) : -((step + 1) >> 1);
 			var i:Int = curSelected + offset;
@@ -1620,18 +1644,20 @@ class FreeplayState extends MusicBeatState
 			if (!iconLoadStatus[i])
 			{
 				Mods.currentModDirectory = songs[i].folder;
-				iconArray[i] = new HealthIcon(songs[i].songCharacter);
-				iconArray[i].sprTracker = grpSongs.members[i];
-				iconArray[i].visible = false;
-				iconArray[i].active = false;
-				grpIcons.add(iconArray[i]);
+				var ic:HealthIcon = new HealthIcon(songs[i].songCharacter);
+				// 不绑定 sprTracker：位置由 updateVisibleItems 用投影公式统一设置，
+				// 使图标能独立于文本可视窗口、在选中项附近 ±ICON_RADIUS 显示。
+				ic.sprTracker = null;
+				ic.visible = false;
+				ic.active = false;
+				iconArray[i] = ic;
 				iconLoadStatus[i] = true;
+				grpIcons.add(ic);
 				warmedThisFrame++;
 				if (warmedThisFrame >= ICON_WARM_PER_FRAME)
 					return; // 本帧达到预算上限，余下留到后续空闲帧
 			}
 		}
-		_iconsWarmed = true; // 已全部预加载，后续帧不再扫描
 	}
 
 	/**
