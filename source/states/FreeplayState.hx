@@ -34,10 +34,19 @@ class FreeplayState extends MusicBeatState
 
 	// 后台预解析：在玩家还在浏览列表时就把选中曲目的谱面 JSON 解析好，
 	// 这样按下确认键时不需要在主线程做 File.getContent + Json.parse，避免掉帧卡顿。
+	// 采用“单个常驻工作线程 + 任务队列”取代原来“每首歌新建一个线程”的方式，
+	// 避免频繁创建/销毁 OS 线程带来的开销与 GC（原来每首歌都会 spawn 一个短命线程，
+	// 在歌曲较多时会造成不定时卡顿）。
 	#if (sys && FEATURE_FILESYSTEM)
 	private static var _prefetchMutex:sys.thread.Mutex = new sys.thread.Mutex();
 	private static var _prefetchDone:Map<String, SwagSong> = new Map(); // 仅在持锁时访问
 	private static var _prefetchBusy:Map<String, Bool> = new Map(); // 仅主线程访问
+
+	// 任务队列：主线程投递，工作线程消费（用独立锁保护，避免与 _prefetchMutex 互相阻塞）
+	private static var _prefetchQueueMutex:sys.thread.Mutex = new sys.thread.Mutex();
+	private static var _prefetchQueue:Array<{key:String, path:String, poop:String}> = new Array();
+	private static var _prefetchWorker:sys.thread.Thread = null;
+	private static var _prefetchWorkerRunning:Bool = false;
 	#end
 
 	// 把后台线程解析好的谱面并入主缓存（只在主线程调用）
@@ -53,6 +62,51 @@ class FreeplayState extends MusicBeatState
 		}
 		_prefetchDone.clear();
 		_prefetchMutex.release();
+		#end
+	}
+
+	// 懒启动一个常驻后台线程，循环消费 _prefetchQueue。
+	// 空闲时短暂 sleep 让出 CPU，避免忙等占满核心；销毁时由 destroy() 置
+	// _prefetchWorkerRunning=false 让线程在下一轮循环退出。
+	private static function startPrefetchWorker():Void
+	{
+		#if (sys && FEATURE_FILESYSTEM)
+		if (_prefetchWorker != null)
+			return;
+
+		_prefetchWorkerRunning = true;
+		_prefetchWorker = sys.thread.Thread.create(() ->
+		{
+			while (_prefetchWorkerRunning)
+			{
+				var job:{key:String, path:String, poop:String} = null;
+				_prefetchQueueMutex.acquire();
+				if (_prefetchQueue.length > 0)
+					job = _prefetchQueue.shift();
+				_prefetchQueueMutex.release();
+
+				if (job != null)
+				{
+					var parsed:SwagSong = null;
+					try
+					{
+						parsed = Song.parseJSON(File.getContent(job.path), job.poop);
+					}
+					catch (e:Dynamic)
+					{
+						parsed = null;
+					}
+
+					_prefetchMutex.acquire();
+					_prefetchDone.set(job.key, parsed);
+					_prefetchMutex.release();
+				}
+				else
+				{
+					Sys.sleep(0.05); // 空闲时让出 CPU，避免忙等
+				}
+			}
+		});
 		#end
 	}
 
@@ -82,6 +136,9 @@ class FreeplayState extends MusicBeatState
 	var prefetchKey:String = null;
 	var prefetchDelay:Float = 0;
 	private static inline var PREFETCH_DELAY:Float = 1.0;
+	// 每帧预热图标数量上限：把“滚动时才加载纹理”的开销摊到空闲帧，
+	// 同时让可见窗口在被滚到后能较快填充满，减少图标缺帧。
+	private static inline var ICON_WARM_PER_FRAME:Int = 3;
 
 	function updateChartPrefetch(elapsed:Float):Void
 	{
@@ -126,22 +183,11 @@ class FreeplayState extends MusicBeatState
 		_prefetchBusy.set(cacheKey, true);
 		_songPathCache.set(cacheKey, path);
 
-		sys.thread.Thread.create(() ->
-		{
-			var parsed:SwagSong = null;
-			try
-			{
-				parsed = Song.parseJSON(File.getContent(path), poop);
-			}
-			catch (e:Dynamic)
-			{
-				parsed = null;
-			}
-
-			_prefetchMutex.acquire();
-			_prefetchDone.set(cacheKey, parsed);
-			_prefetchMutex.release();
-		});
+		// 把任务投到队列，交给常驻工作线程处理（不在主线程新建线程）
+		_prefetchQueueMutex.acquire();
+		_prefetchQueue.push({key: cacheKey, path: path, poop: poop});
+		_prefetchQueueMutex.release();
+		startPrefetchWorker();
 		#end
 	}
 
@@ -197,6 +243,7 @@ class FreeplayState extends MusicBeatState
 	// BPM变化提示相关
 	private var bpmText:FlxText;
 	private var bpmTextBG:FlxSprite;
+	private var _scorePrefix:String = null; // 缓存评分前缀文本，避免每帧 Language.get 分配字符串
 	private var lastBPM:Float = -1;
 	private var bpmDisplayTime:Float = 0;
 
@@ -341,6 +388,9 @@ class FreeplayState extends MusicBeatState
 
 		// 创建BPM变化提示背景（先创建，渲染在底层）
 		bpmTextBG = new FlxSprite(0, 0); // 初始位置为0,0
+		// 预建一张小尺寸纯色底图，之后只通过缩放调整尺寸，
+		// 避免每 250ms 用 FlxGraphic.fromRectangle 新建 BitmapData 造成 GC 尖刺。
+		bpmTextBG.makeGraphic(8, 8, 0xFF000000);
 		bpmTextBG.alpha = 0;
 		bpmTextBG.scrollFactor.set(); // 固定位置
 
@@ -349,6 +399,9 @@ class FreeplayState extends MusicBeatState
 		bpmText.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, RIGHT);
 		bpmText.alpha = 0;
 		bpmText.scrollFactor.set(); // 固定位置
+
+		// 缓存评分前缀文本，避免每帧 Language.get 分配字符串
+		_scorePrefix = Language.get('score_best_desc');
 
 		// 现在添加所有UI元素到正确的层级（在歌曲和图标之上）
 		add(scoreBG);
@@ -577,10 +630,8 @@ class FreeplayState extends MusicBeatState
 					bpmText.x = FlxG.width - bpmText.width - 10;
 					bpmText.y = (FlxG.height - bpmText.height) / 2; // 垂直居中
 
-					// 重新创建背景图形以确保正确的大小和位置
-					bpmTextBG.loadGraphic(FlxGraphic.fromRectangle(Std.int(bpmText.width + 20), Std.int(bpmText.height + 10), 0xFF000000));
-					bpmTextBG.x = bpmText.x - 10;
-					bpmTextBG.y = bpmText.y - 5;
+					// 复用底图仅缩放，避免每 250ms 新建 BitmapData 造成 GC 尖刺
+					refreshBpmBackground();
 
 					bpmDisplayTime = 0;
 				}
@@ -646,12 +697,8 @@ class FreeplayState extends MusicBeatState
 		if (Math.abs(lerpRating - intendedRating) <= 0.01)
 			lerpRating = intendedRating;
 
-		var ratingSplit:Array<String> = Std.string(CoolUtil.floorDecimal(lerpRating * 100, 2)).split('.');
-		if (ratingSplit.length < 2) // No decimals, add an empty space
-			ratingSplit.push('');
-
-		while (ratingSplit[1].length < 2) // Less than 2 decimals in it, add decimals then
-			ratingSplit[1] += '0';
+		// 用无临时数组的方式格式化评分百分比，减少每帧 GC 压力
+		var ratingStr:String = buildRatingString(lerpRating);
 
 		var shiftMult:Int = 1;
 		if ((FlxG.keys.pressed.SHIFT || touchPad.buttonZ.pressed) && !player.playingMusic)
@@ -661,7 +708,7 @@ class FreeplayState extends MusicBeatState
 		{
 			// scoreText.text = LanguageBasic.getPhrase('personal_best', 'PERSONAL BEST: {1} ({2}%)', [lerpScore, ratingSplit.join('.')]);
 			// 值未变化时不要重设 text，避免每帧重建 FlxText 位图（主要 GC / 重绘来源）
-			var scoreStr:String = Language.get('score_best_desc') + ' ' + lerpScore + ' (' + ratingSplit.join('.') + '%)';
+			var scoreStr:String = _scorePrefix + ' ' + lerpScore + ' (' + ratingStr + '%)';
 			if (scoreText.text != scoreStr)
 				scoreText.text = scoreStr;
 			positionHighscore();
@@ -796,10 +843,8 @@ class FreeplayState extends MusicBeatState
 				bpmText.x = FlxG.width - bpmText.width - 10;
 				bpmText.y = (FlxG.height - bpmText.height) / 2; // 垂直居中
 
-				// 创建背景图形
-				bpmTextBG.loadGraphic(FlxGraphic.fromRectangle(Std.int(bpmText.width + 20), Std.int(bpmText.height + 10), 0xFF000000));
-				bpmTextBG.x = bpmText.x - 10;
-				bpmTextBG.y = bpmText.y - 5;
+				// 复用底图仅缩放，避免新建 BitmapData 造成 GC 尖刺
+				refreshBpmBackground();
 
 				bpmDisplayTime = 0;
 				lastBeatHit = -1; // 重置beat检测
@@ -1496,24 +1541,9 @@ class FreeplayState extends MusicBeatState
 		// 每帧更新lerp位置
 		lerpSelected = FlxMath.lerp(curSelected, lerpSelected, Math.exp(-elapsed * 9.6));
 		
-		// 检测lerpSelected是否变化足够大，需要重新计算可见范围
-		var lerpChanged:Bool = Math.abs(lerpSelected - lastLerpSelected) > 0.5;
-		
-		if (lerpChanged)
-		{
-			updateVisibleItems();
-			lastLerpSelected = lerpSelected;
-		}
-		else
-		{
-			// 只更新已可见的对象位置，不遍历所有对象
-			for (i in _lastVisibles)
-			{
-				var item:Alphabet = grpSongs.members[i];
-				item.x = ((item.targetY - lerpSelected) * item.distancePerItem.x) + item.startPosition.x;
-				item.y = ((item.targetY - lerpSelected) * 1.3 * item.distancePerItem.y) + item.startPosition.y;
-			}
-		}
+		// updateVisibleItems 每帧都会刷新可见窗口（含对象位置），
+		// 因此无需再用 lerpChanged 区分“重建”与“仅更新位置”两条分支。
+		updateVisibleItems();
 	}
 
 	private function updateVisibleItems():Void
@@ -1542,18 +1572,19 @@ class FreeplayState extends MusicBeatState
 			item.y = ((item.targetY - lerpSelected) * 1.3 * item.distancePerItem.y) + item.startPosition.y;
 			item.alpha = (i == curSelected) ? 1.0 : 0.6; // 设置选中项的透明度（选中不透明，未选中半透明）
 
-			// 延迟加载图标：只在需要显示时才创建
-			if (!iconLoadStatus[i])
+			// 延迟加载图标：滚动到远处尚未预热的图标不再在主线程同步创建（避免 PNG 解码卡顿），
+			// 改由 warmupIcons 在空闲帧预创建；这里只使用已存在的图标。
+			// 仅对“当前选中项”做一次同步创建，保证焦点图标始终可见（最多 1 次解码，可接受）。
+			if (iconArray[i] == null && i == curSelected && !iconLoadStatus[i])
 			{
 				Mods.currentModDirectory = songs[i].folder;
-				iconArray[i] = new HealthIcon(songs[i].songCharacter);
-				iconArray[i].sprTracker = item;
-				iconArray[i].visible = false;
-				iconArray[i].active = false;
-				grpIcons.add(iconArray[i]);
+				var selIcon:HealthIcon = new HealthIcon(songs[i].songCharacter);
+				selIcon.sprTracker = item;
+				iconArray[i] = selIcon;
 				iconLoadStatus[i] = true;
+				grpIcons.add(selIcon);
 			}
-			
+
 			var icon:HealthIcon = iconArray[i];
 			if (icon != null)
 			{
@@ -1576,7 +1607,9 @@ class FreeplayState extends MusicBeatState
 		if (_iconsWarmed || songs.length == 0 || iconArray == null || iconLoadStatus.length != songs.length)
 			return;
 
-		// 从 curSelected 向两侧逐圈扫描，每帧只创建 1 个图标，限制单帧开销
+		// 从 curSelected 向两侧逐圈扫描，每帧最多创建 ICON_WARM_PER_FRAME 个图标，
+		// 把“滚入可见窗口才加载纹理”的开销摊到空闲帧，避免滚动过程中的间歇性卡顿。
+		var warmedThisFrame:Int = 0;
 		for (step in 0...songs.length)
 		{
 			var offset:Int = (step % 2 == 0) ? (step >> 1) : -((step + 1) >> 1);
@@ -1593,10 +1626,37 @@ class FreeplayState extends MusicBeatState
 				iconArray[i].active = false;
 				grpIcons.add(iconArray[i]);
 				iconLoadStatus[i] = true;
-				return; // 本帧只加载一个，余下留到后续空闲帧
+				warmedThisFrame++;
+				if (warmedThisFrame >= ICON_WARM_PER_FRAME)
+					return; // 本帧达到预算上限，余下留到后续空闲帧
 			}
 		}
 		_iconsWarmed = true; // 已全部预加载，后续帧不再扫描
+	}
+
+	/**
+	 * 复用同一张底图仅做缩放来适配 BPM 文本尺寸，避免在 BPM 变化时反复
+	 * 新建 BitmapData（FlxGraphic.fromRectangle）造成不定时 GC 尖刺。
+	 */
+	private function refreshBpmBackground():Void
+	{
+		bpmTextBG.setGraphicSize(Std.int(bpmText.width + 20), Std.int(bpmText.height + 10));
+		bpmTextBG.updateHitbox();
+		bpmTextBG.x = bpmText.x - 10;
+		bpmTextBG.y = bpmText.y - 5;
+	}
+
+	/**
+	 * 把评分百分比格式化为固定 2 位小数的字符串，避免每帧使用
+	 * split('.') + while 循环拼接产生的临时字符串数组（GC 来源）。
+	 */
+	private function buildRatingString(r:Float):String
+	{
+		var v:Int = Std.int(Math.round(r * 100));
+		var dec:Int = v % 100;
+		if (dec < 0) dec = -dec;
+		var intPart:Int = Std.int(v / 100);
+		return intPart + '.' + (dec < 10 ? '0' + dec : '' + dec);
 	}
 
 	private var lastSectionHit:Int = -1;
@@ -1666,6 +1726,12 @@ class FreeplayState extends MusicBeatState
 		_songDataCache.clear();
 		_songPathCache.clear();
 		#if (sys && FEATURE_FILESYSTEM)
+		// 停止后台预解析工作线程并清空队列，避免线程泄漏
+		_prefetchWorkerRunning = false;
+		_prefetchWorker = null;
+		_prefetchQueueMutex.acquire();
+		_prefetchQueue = new Array();
+		_prefetchQueueMutex.release();
 		_prefetchMutex.acquire();
 		_prefetchDone.clear();
 		_prefetchMutex.release();
