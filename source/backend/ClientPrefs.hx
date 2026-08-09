@@ -553,6 +553,20 @@ class ClientPrefs {
 			// 若已是 String ('off'/'remove'/'sickPlus') 则保持不变
 		}
 
+		// 多键功能已移除，arrowRGB / arrowRGBPixel 固定为 4 个方向。
+		// 旧的多键存档可能残留多余条目，这里截断为 4 并补齐空缺，
+		// 避免音符颜色界面显示一排多余箭头，也防止 HSV 模式下下标越界。
+		if (data.arrowRGB != null)
+		{
+			if (data.arrowRGB.length > 4) data.arrowRGB.resize(4);
+			while (data.arrowRGB.length < 4) data.arrowRGB.push([147, 0, 220]);
+		}
+		if (data.arrowRGBPixel != null)
+		{
+			if (data.arrowRGBPixel.length > 4) data.arrowRGBPixel.resize(4);
+			while (data.arrowRGBPixel.length < 4) data.arrowRGBPixel.push([195, 75, 75]);
+		}
+
 		// 确保 Fake OS 标题从预设中正确初始化
 		if (data.fakeWindowTitlePreset != null) {
 			data.fakeWindowTitle = data.fakeWindowTitlePreset;

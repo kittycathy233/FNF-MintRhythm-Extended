@@ -52,6 +52,8 @@ class OptionsState extends MusicBeatState
 
 	private var itemSpacing:Int = 72; // 减小垂直间距
 	private var startY:Float = 0;
+	private var gridCols:Int = 2; // 双栏布局列数
+	private var gridRows:Int = 0; // 每列行数（运行时计算）
 
 	private var hideSelectors:Bool = false; // 是否隐藏选择器
 
@@ -145,19 +147,27 @@ class OptionsState extends MusicBeatState
 		add(grpOptions);
 
 		itemSpacing = OptionsConfig.ITEM_SPACING;
-		var totalHeight = itemSpacing * options.length;
+		// 双栏布局：窄屏（如手机）退化为单栏
+		gridCols = (FlxG.width < 900) ? 1 : 2;
+		gridRows = Std.int(Math.ceil(options.length / gridCols));
+		var totalHeight = itemSpacing * gridRows;
 		startY = (FlxG.height - totalHeight) / 2 + itemSpacing / 2;
 
-		var leftMargin = OptionsConfig.LEFT_MARGIN;
+		var leftColX = OptionsConfig.LEFT_MARGIN;
+		var rightColX = (gridCols > 1) ? (Math.floor(FlxG.width * 0.5) + 40) : OptionsConfig.LEFT_MARGIN;
 
 		for (num => option in options)
 		{
-			var optionText:FlxText = new FlxText(leftMargin, 0, 0, LanguageBasic.getPhrase('options_$option', option), 48);
+			var col:Int = Std.int(num / gridRows);
+			var row:Int = num % gridRows;
+			var itemX = (col == 0) ? leftColX : rightColX;
+
+			var optionText:FlxText = new FlxText(itemX, 0, 0, LanguageBasic.getPhrase('options_$option', option), 48);
 			optionText.setFormat(Paths.font(Language.get('game_font')), 48, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			optionText.borderSize = 2;
 			optionText.antialiasing = ClientPrefs.data.antialiasing;
-			optionText.x = leftMargin;
-			optionText.y = startY + num * itemSpacing;
+			optionText.x = itemX;
+			optionText.y = startY + row * itemSpacing;
 			grpOptions.add(optionText);
 		}
 
@@ -173,9 +183,9 @@ class OptionsState extends MusicBeatState
 		selectorRight.antialiasing = ClientPrefs.data.antialiasing;
 		add(selectorRight);
 
-		// 添加描述文本
-		descriptionText = new FlxText(300, FlxG.height - 300, FlxG.width - 400, optionDescriptions[curSelected], 24);
-		descriptionText.setFormat(Paths.font(Language.get('game_font')), 24, FlxColor.WHITE, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		// 添加描述文本（水平居中、垂直偏下）
+		descriptionText = new FlxText(100, FlxG.height - 120, FlxG.width - 200, optionDescriptions[curSelected], 24);
+		descriptionText.setFormat(Paths.font(Language.get('game_font')), 24, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		descriptionText.borderSize = 1;
 		descriptionText.antialiasing = ClientPrefs.data.antialiasing;
 		descriptionText.scrollFactor.set();
@@ -205,7 +215,7 @@ class OptionsState extends MusicBeatState
 
 		ClientPrefs.saveSettings();
 
-		addTouchPad('UP_DOWN', 'A_B_C');
+		addTouchPad('LEFT_FULL', 'A_B_C');
 
 		super.create();
 		FlxG.mouse.visible = true;
@@ -224,7 +234,7 @@ class OptionsState extends MusicBeatState
 		#end
 		controls.isInSubstate = false;
 		removeTouchPad();
-		addTouchPad('UP_DOWN', 'A_B_C');
+		addTouchPad('LEFT_FULL', 'A_B_C');
 		persistentUpdate = true;
 		allowInput = true;
 		_inSubState = false; // 退出子状态
@@ -270,12 +280,20 @@ class OptionsState extends MusicBeatState
 		if (allowInput) {
 			if (!exiting) {
 				if (controls.UI_UP_P) {
-					changeSelection(-1);
+					changeSelection(0, -1);
 					hideSelectors = false; // 键盘输入恢复显示
 				}
 				if (controls.UI_DOWN_P) {
-					changeSelection(1);
+					changeSelection(0, 1);
 					hideSelectors = false; // 键盘输入恢复显示
+				}
+				if (controls.UI_LEFT_P || (touchPad != null && touchPad.buttonLeft.justPressed)) {
+					changeSelection(-1, 0);
+					hideSelectors = false;
+				}
+				if (controls.UI_RIGHT_P || (touchPad != null && touchPad.buttonRight.justPressed)) {
+					changeSelection(1, 0);
+					hideSelectors = false;
 				}
 
 				if (touchPad.buttonC.justPressed || FlxG.keys.justPressed.CONTROL && controls.mobileC)
@@ -308,6 +326,7 @@ class OptionsState extends MusicBeatState
 		// 检查虚拟按键是否被按下（除了C按钮，它有单独的功能）
 		if (touchPad != null) {
 			var anyButtonPressed = touchPad.buttonUp.pressed || touchPad.buttonDown.pressed ||
+			                       touchPad.buttonLeft.pressed || touchPad.buttonRight.pressed ||
 			                       touchPad.buttonA.pressed || touchPad.buttonB.pressed;
 			if (anyButtonPressed) {
 				hideSelectors = true; // 虚拟按键按下时隐藏选择器
@@ -331,7 +350,11 @@ class OptionsState extends MusicBeatState
 		// 鼠标单击选项自动更改选中项
 		if (mouseOverOption != -1 && mouse.justPressed) {
 			if (curSelected != mouseOverOption) {
-				changeSelection(mouseOverOption - curSelected);
+				var targetCol:Int = Std.int(mouseOverOption / gridRows);
+				var targetRow:Int = mouseOverOption % gridRows;
+				var curCol:Int = Std.int(curSelected / gridRows);
+				var curRow:Int = curSelected % gridRows;
+				changeSelection(targetCol - curCol, targetRow - curRow);
 			}
 			hideSelectors = true; // 点击选项时隐藏选择器
 			// 双击检测
@@ -381,20 +404,53 @@ class OptionsState extends MusicBeatState
 		selectorRight.y = FlxMath.lerp(selectorRightTargetY, selectorRight.y, Math.exp(-elapsed * OptionsConfig.SELECTOR_LERP_SPEED));
 	}
 
-	function changeSelection(change:Int = 0)
+	function changeSelection(dx:Int = 0, dy:Int = 0)
 	{
-		curSelected = FlxMath.wrap(curSelected + change, 0, options.length - 1);
+		var col:Int = Std.int(curSelected / gridRows);
+		var row:Int = curSelected % gridRows;
+
+		// 左右切换列：在列之间环绕（左栏按左键跳到最右栏，右栏按右键跳到最左栏，与上下一致）
+		col = Std.int(FlxMath.wrap(col + dx, 0, gridCols - 1));
+		// 切列后把 row 钳制到目标列有效行内（最后一列可能不满整列）
+		if (dx != 0)
+		{
+			var rowsInTargetCol:Int = (col < gridCols - 1) ? gridRows : (options.length - (gridCols - 1) * gridRows);
+			if (rowsInTargetCol < 1) rowsInTargetCol = 1;
+			row = Std.int(FlxMath.bound(row, 0, rowsInTargetCol - 1));
+		}
+
+		// 上下：在当前列内环绕（到顶/底可继续绕回）
+		if (dy != 0)
+		{
+			var rowsInCol:Int = (col < gridCols - 1) ? gridRows : (options.length - (gridCols - 1) * gridRows);
+			if (rowsInCol < 1) rowsInCol = 1;
+			row = FlxMath.wrap(row + dy, 0, rowsInCol - 1);
+		}
+
+		var target = col * gridRows + row;
+		// 目标位置在最后一列可能不存在（该项不足整列），夹到列表末项
+		if (target >= options.length)
+		{
+			target = options.length - 1;
+		}
+		curSelected = target;
 
 		// 记住当前选中项，下次进入主设置界面时恢复（仅本次会话，重启游戏后重置）
-		if (change != 0)
+		if (dx != 0 || dy != 0)
 		{
 			lastOptionsSelection = curSelected;
 		}
 
+		var leftColX = OptionsConfig.LEFT_MARGIN;
+		var rightColX = (gridCols > 1) ? (Math.floor(FlxG.width * 0.5) + 40) : OptionsConfig.LEFT_MARGIN;
+
 		for (i in 0...grpOptions.length)
 		{
+			var icol:Int = Std.int(i / gridRows);
+			var irow:Int = i % gridRows;
 			var item = grpOptions.members[i];
-			item.y = startY + i * itemSpacing;
+			item.x = (icol == 0) ? leftColX : rightColX;
+			item.y = startY + irow * itemSpacing;
 			item.alpha = (i == curSelected) ? 1 : 0.6;
 		}
 

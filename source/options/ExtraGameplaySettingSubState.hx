@@ -540,10 +540,17 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 					Language.get("graphics"),
 					Language.get("visuals"), 
 					Language.get("gameplay"),
+					#if cpp
+					#if windows
+					#if !mobile
+					Language.get("window_manager"),
+					#end
+					#end
+					#end
 					Language.get("extra_options")
 					#if mobile , Language.get("mobile_options") #end
 				];
-				
+			
 				parentState.optionDescriptions = [
 					Language.get("note_colors_desc"),
 					Language.get("controls_desc"),
@@ -552,6 +559,13 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 					Language.get("graphics_desc"),
 					Language.get("visuals_desc"),
 					Language.get("gameplay_desc"),
+					#if cpp
+					#if windows
+					#if !mobile
+					Language.get("window_manager_desc"),
+					#end
+					#end
+					#end
 					Language.get("extra_options_desc")
 					#if mobile , Language.get("mobile_options_desc") #end
 				];

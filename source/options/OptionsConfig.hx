@@ -23,9 +23,9 @@ class OptionsConfig
 	public static final INPUT_COOLDOWN:Float = 0.5;
 	public static final TWEEN_DURATION:Float = 0.3;
 
-	// Description box
-	public static final DESC_Y_START:Float = -250;
-	public static final DESC_Y_END:Float = -200;
+	// Description box（负值为距屏幕底部偏移，越小越靠下）
+	public static final DESC_Y_START:Float = -170;
+	public static final DESC_Y_END:Float = -120;
 
 	// Keybind settings
 	public static final HOLD_THRESHOLD:Float = 0.5;
