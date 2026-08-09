@@ -1007,12 +1007,26 @@ isReplaying = false;
 			timeBar.y = timeTxt.y + (timeTxt.height / 4);
 		}
 
+		// Kade (Legacy)：让 timeTxt 在时间条内垂直居中（水平居中已由 screenCenter(X) 处理）
+		if (ClientPrefs.data.timebarStyle == "Kade (Legacy)") {
+			timeTxt.y = timeBar.y;
+			timeTxt.x = timeBar.x;
+		}
+
 		// 先添加条再添加文本，确保文本在上面
 		uiGroup.add(timeBar);
 		uiGroup.add(timeTxt);
 		// 对于 Leather (Legacy) 样式，设置为青色
 		if (ClientPrefs.data.timebarStyle == "Leather (Legacy)") {
 			timeBar.setColors(FlxColor.CYAN, FlxColor.BLACK);
+		}
+		// 对于 Kade (Legacy) 样式：保留 barKEL.png 边框纹理
+		// 填充为 LIME，空白为 GRAY（填充色从贴图透明中心透出）
+		if (ClientPrefs.data.timebarStyle == "Kade (Legacy)") {
+			timeBar.setColors(FlxColor.LIME, FlxColor.GRAY);
+			// 沿用 songName 样式：字号16、白色、居中、黑色描边，描边粗细1
+			timeTxt.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			timeTxt.borderSize = 1;
 		}
 
 		// Psych样式下的渐变时间条：对手色→玩家色
