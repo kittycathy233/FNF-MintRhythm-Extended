@@ -202,6 +202,13 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		option = new Option('Combo Number Display',
+			Language.get("combo_num_display_desc"),
+			'comboNumDisplay',
+			STRING,
+			['Psych', 'Default', 'OG Funkin']);
+		addOption(option);
+
 		option = new Option('Rating Fall Style',
 			Language.get("rating_fall_style_desc"),
 			'ratingFallStyle',

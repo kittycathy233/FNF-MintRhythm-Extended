@@ -360,6 +360,7 @@ class PlayState extends MusicBeatState
 	public var gfSpeed:Int = 1;
 	public var health(default, set):Float = 1;
 	public var combo:Int = 0;
+	public var comboJustBroke:Bool = false; // 断连(失手)后首次命中标记，供 OG Funkin 显示模式强制显示 000
 
 	public var healthBar:Bar;
 	public var timeBar:Bar;
@@ -4974,14 +4975,43 @@ tempScore += '${lblScore}: ${songScore}';
 			theEXrating.angle = 0;
 
 	
-			var comboSpr:FlxSprite = recycleComboSprite();
+			// combo 数字纹理显示模式：Psych / Default / OG Funkin
+		var showThisCombo:Bool = showCombo;
+		var showThisComboNum:Bool = showComboNum;
+		var separatedScore:String = Std.string(combo).lpad('0', 3); // 默认(Psych)：补0到3位
+		switch (ClientPrefs.data.comboNumDisplay)
+		{
+			case 'OG Funkin':
+				if (comboJustBroke)
+				{
+					separatedScore = '000'; // 断连后首次命中强制显示 000
+					showThisComboNum = true;
+				}
+				else if (combo >= 10)
+				{
+					separatedScore = Std.string(combo).lpad('0', 3);
+					showThisComboNum = true;
+				}
+				else
+				{
+					separatedScore = '';
+					showThisCombo = false;
+					showThisComboNum = false;
+				}
+			case 'Default':
+				separatedScore = Std.string(combo); // 类似Psych但不补0
+			default: // 'Psych'
+				separatedScore = Std.string(combo).lpad('0', 3);
+		}
+
+		var comboSpr:FlxSprite = recycleComboSprite();
 			comboSpr.loadGraphic(_comboGfx != null ? _comboGfx : Paths.image(uiFolder + 'combo' + uiPostfix));
 			comboSpr.screenCenter();
 			comboSpr.x = placement;
 			//comboSpr.acceleration.y = FlxG.random.int(200, 300) * playbackRate * playbackRate;
 			//comboSpr.velocity.y -= FlxG.random.int(140, 160) * playbackRate;
 			//comboSpr.velocity.x += FlxG.random.int(1, 10) * playbackRate;
-			comboSpr.visible = (!ClientPrefs.data.hideHud && showCombo);
+			comboSpr.visible = (!ClientPrefs.data.hideHud && showThisCombo);
 			comboSpr.x += ClientPrefs.data.comboOffset[0] + 60;
 			comboSpr.y -= ClientPrefs.data.comboOffset[1];
 			comboSpr.antialiasing = antialias;
@@ -5154,10 +5184,9 @@ tempScore += '${lblScore}: ${songScore}';
 
 			var daLoop:Int = 0;
 			var xThing:Float = 0;
-			if (showCombo)
+			if (showThisCombo)
 				comboGroup.add(comboSpr);
 
-			var separatedScore:String = Std.string(combo).lpad('0', 3);
 			for (i in 0...separatedScore.length)
 			{
 				var numScore:FlxSprite = recycleComboSprite();
@@ -5222,7 +5251,7 @@ tempScore += '${lblScore}: ${songScore}';
 				numScore.antialiasing = antialias;
 
 				// if (combo >= 10 || combo == 0)
-				if (showComboNum)
+				if (showThisComboNum)
 					comboGroup.add(numScore);
 
 				// 根据不同的跳动风格设置渐隐延迟
@@ -5251,6 +5280,7 @@ tempScore += '${lblScore}: ${songScore}';
 					xThing = numScore.x;
 			}
 			comboSpr.x = xThing + 50;
+		comboJustBroke = false; // 本次命中已消费断连标记
 
 			// 根据不同的跳动风格设置渐隐延迟
 			var ratingFadeDelay:Float = Conductor.crochet * 0.001 / playbackRate;
@@ -5878,6 +5908,7 @@ tempScore += '${lblScore}: ${songScore}';
 
 		var lastCombo:Int = combo;
 		combo = 0;
+		if (lastCombo > 0) comboJustBroke = true; // 仅在真正断连(此前有combo)时置位
 
 		health -= subtract * healthLoss;
 		songScore -= 10;
