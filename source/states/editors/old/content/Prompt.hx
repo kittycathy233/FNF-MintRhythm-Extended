@@ -1,4 +1,4 @@
-package states.editors.old;
+package states.editors.old.content;
 
 import flixel.FlxSprite;
 import flixel.text.FlxText;

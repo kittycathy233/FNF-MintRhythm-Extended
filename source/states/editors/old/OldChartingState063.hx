@@ -23,6 +23,12 @@ import states.PlayState;
 import states.LoadingState;
 import states.editors.MasterEditorMenu;
 import states.editors.content.EditorPlayState;
+import states.editors.old.content.AttachedFlxText;
+import states.editors.old.content.FlxUIDropDownMenuCustom;
+import states.editors.old.content.LegacyChartFormat;
+import states.editors.old.content.OldEditorState;
+import states.editors.old.content.OldSlider;
+import states.editors.old.content.Prompt;
 import android.FlxVirtualPad;
 import android.FlxVirtualPad.FlxDPadMode;
 import android.FlxVirtualPad.FlxActionMode;
@@ -153,6 +159,12 @@ class OldChartingState063 extends OldEditorState
 	var curEventSelected:Int = 0;
 	var curUndoIndex = 0;
 	var curRedoIndex = 0;
+
+	// 保存谱面时写入的出处标记
+	static var GENERATED_BY(get, never):String;
+	static function get_GENERATED_BY():String
+		return 'KathyEngine - Chart Editor Legacy v0.6.3';
+
 	var _song:SwagSong;
 	/*
 	 * WILL BE THE CURRENT / LAST PLACED NOTE
@@ -3076,6 +3088,8 @@ class OldChartingState063 extends OldEditorState
 	private function saveLevel()
 	{
 		if(_song.events != null && _song.events.length > 1) _song.events.sort(sortByTime);
+		// 标记谱面出处（仅元信息，不参与玩法逻辑）
+		_song.generatedBy = GENERATED_BY;
 		// 旧版制谱器（0.6.3）输出不含引擎扩展字段：format（版本标记）、mania / changeMania（多键）
 		Reflect.deleteField(_song, "format");
 		Reflect.deleteField(_song, "mania");

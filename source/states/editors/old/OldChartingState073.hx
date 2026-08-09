@@ -12,7 +12,7 @@ import flixel.addons.display.FlxGridOverlay;
 import flixel.addons.ui.FlxUI;
 import flixel.addons.ui.FlxUICheckBox;
 import flixel.addons.ui.FlxUIInputText;
-import flixel.addons.ui.FlxUIDropDownMenu;
+
 import flixel.addons.ui.FlxUINumericStepper;
 import flixel.addons.ui.FlxUITabMenu;
 import flixel.group.FlxGroup;
@@ -34,6 +34,12 @@ import backend.Song;
 import backend.StageData;
 import states.PlayState;
 import states.editors.content.EditorPlayState;
+import states.editors.old.content.AttachedFlxText;
+import states.editors.old.content.FlxUIDropDownMenuCustom;
+import states.editors.old.content.LegacyChartFormat;
+import states.editors.old.content.OldEditorState;
+import states.editors.old.content.OldSlider;
+import states.editors.old.content.Prompt;
 import states.LoadingState;
 
 import objects.Note;
@@ -132,6 +138,12 @@ class OldChartingState073 extends OldEditorState
 	var curEventSelected:Int = 0;
 	var curUndoIndex = 0;
 	var curRedoIndex = 0;
+
+	// 保存谱面时写入的出处标记
+	static var GENERATED_BY(get, never):String;
+	static function get_GENERATED_BY():String
+		return 'KathyEngine - Chart Editor Legacy v0.7.3';
+
 	var _song:SwagSong;
 	/*
 	 * WILL BE THE CURRENT / LAST PLACED NOTE
@@ -169,7 +181,7 @@ class OldChartingState073 extends OldEditorState
 
 	private var blockPressWhileTypingOn:Array<FlxUIInputText> = [];
 	private var blockPressWhileTypingOnStepper:Array<FlxUINumericStepper> = [];
-	private var blockPressWhileScrolling:Array<FlxUIDropDownMenu> = [];
+	private var blockPressWhileScrolling:Array<FlxUIDropDownMenuCustom> = [];
 
 	var waveformSprite:FlxSprite;
 	var gridLayer:FlxTypedGroup<FlxSprite>;
@@ -410,7 +422,7 @@ class OldChartingState073 extends OldEditorState
 	var playSoundBf:FlxUICheckBox = null;
 	var playSoundDad:FlxUICheckBox = null;
 	var UI_songTitle:FlxUIInputText;
-	var stageDropDown:FlxUIDropDownMenu;
+	var stageDropDown:FlxUIDropDownMenuCustom;
 	#if FLX_PITCH
 	var sliderRate:OldSlider;
 	#end
@@ -541,7 +553,7 @@ class OldChartingState073 extends OldEditorState
 		#end
 		tempArray = [];
 
-		var player1DropDown = new FlxUIDropDownMenu(10, stepperSpeed.y + 45, FlxUIDropDownMenu.makeStrIdLabelArray(characters, true), function(character:String)
+		var player1DropDown = new FlxUIDropDownMenuCustom(10, stepperSpeed.y + 45, FlxUIDropDownMenuCustom.makeStrIdLabelArray(characters, true), function(character:String)
 		{
 			_song.player1 = characters[Std.parseInt(character)];
 			updateJsonData();
@@ -550,7 +562,7 @@ class OldChartingState073 extends OldEditorState
 		player1DropDown.selectedLabel = _song.player1;
 		blockPressWhileScrolling.push(player1DropDown);
 
-		var gfVersionDropDown = new FlxUIDropDownMenu(player1DropDown.x, player1DropDown.y + 40, FlxUIDropDownMenu.makeStrIdLabelArray(characters, true), function(character:String)
+		var gfVersionDropDown = new FlxUIDropDownMenuCustom(player1DropDown.x, player1DropDown.y + 40, FlxUIDropDownMenuCustom.makeStrIdLabelArray(characters, true), function(character:String)
 		{
 			_song.gfVersion = characters[Std.parseInt(character)];
 			updateJsonData();
@@ -559,7 +571,7 @@ class OldChartingState073 extends OldEditorState
 		gfVersionDropDown.selectedLabel = _song.gfVersion;
 		blockPressWhileScrolling.push(gfVersionDropDown);
 
-		var player2DropDown = new FlxUIDropDownMenu(player1DropDown.x, gfVersionDropDown.y + 40, FlxUIDropDownMenu.makeStrIdLabelArray(characters, true), function(character:String)
+		var player2DropDown = new FlxUIDropDownMenuCustom(player1DropDown.x, gfVersionDropDown.y + 40, FlxUIDropDownMenuCustom.makeStrIdLabelArray(characters, true), function(character:String)
 		{
 			_song.player2 = characters[Std.parseInt(character)];
 			updateJsonData();
@@ -604,7 +616,7 @@ class OldChartingState073 extends OldEditorState
 
 		if(stages.length < 1) stages.push('stage');
 
-		stageDropDown = new FlxUIDropDownMenu(player1DropDown.x + 140, player1DropDown.y, FlxUIDropDownMenu.makeStrIdLabelArray(stages, true), function(character:String)
+		stageDropDown = new FlxUIDropDownMenuCustom(player1DropDown.x + 140, player1DropDown.y, FlxUIDropDownMenuCustom.makeStrIdLabelArray(stages, true), function(character:String)
 		{
 			_song.stage = stages[Std.parseInt(character)];
 		});
@@ -914,7 +926,7 @@ class OldChartingState073 extends OldEditorState
 
 	var stepperSusLength:FlxUINumericStepper;
 	var strumTimeInputText:FlxUIInputText; //I wanted to use a stepper but we can't scale these as far as i know :(
-	var noteTypeDropDown:FlxUIDropDownMenu;
+	var noteTypeDropDown:FlxUIDropDownMenuCustom;
 	var currentType:Int = 0;
 
 	function addNoteUI():Void
@@ -964,7 +976,7 @@ class OldChartingState073 extends OldEditorState
 			displayNameList[i] = i + '. ' + displayNameList[i];
 		}
 
-		noteTypeDropDown = new FlxUIDropDownMenu(10, 105, FlxUIDropDownMenu.makeStrIdLabelArray(displayNameList, true), function(character:String)
+		noteTypeDropDown = new FlxUIDropDownMenuCustom(10, 105, FlxUIDropDownMenuCustom.makeStrIdLabelArray(displayNameList, true), function(character:String)
 		{
 			currentType = Std.parseInt(character);
 			if(curSelectedNote != null && curSelectedNote[1] > -1) {
@@ -984,7 +996,7 @@ class OldChartingState073 extends OldEditorState
 		UI_box.addGroup(tab_group_note);
 	}
 
-	var eventDropDown:FlxUIDropDownMenu;
+	var eventDropDown:FlxUIDropDownMenuCustom;
 	var descText:FlxText;
 	var selectedEventText:FlxText;
 	function addEventsUI():Void
@@ -1031,7 +1043,7 @@ class OldChartingState073 extends OldEditorState
 
 		var text:FlxText = new FlxText(20, 30, 0, "Event:");
 		tab_group_event.add(text);
-		eventDropDown = new FlxUIDropDownMenu(20, 50, FlxUIDropDownMenu.makeStrIdLabelArray(leEvents, true), function(pressed:String) {
+		eventDropDown = new FlxUIDropDownMenuCustom(20, 50, FlxUIDropDownMenuCustom.makeStrIdLabelArray(leEvents, true), function(pressed:String) {
 			var selectedEvent:Int = Std.parseInt(pressed);
 			descText.text = eventStuff[selectedEvent][1];
 				if (curSelectedNote != null &&  eventStuff != null) {
@@ -3236,6 +3248,8 @@ class OldChartingState073 extends OldEditorState
 	private function saveLevel()
 	{
 		if(_song.events != null && _song.events.length > 1) _song.events.sort(sortByTime);
+		// 标记谱面出处（仅元信息，不参与玩法逻辑）
+		_song.generatedBy = GENERATED_BY;
 		// 旧版制谱器（0.7.3）输出不含引擎扩展字段：format（版本标记）、mania / changeMania（多键）
 		Reflect.deleteField(_song, "format");
 		Reflect.deleteField(_song, "mania");

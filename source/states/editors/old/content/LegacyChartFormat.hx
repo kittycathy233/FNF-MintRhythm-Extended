@@ -1,4 +1,4 @@
-package states.editors.old;
+package states.editors.old.content;
 
 import backend.Song;
 import backend.Song.SwagSong;

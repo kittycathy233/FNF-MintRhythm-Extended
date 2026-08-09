@@ -21,6 +21,9 @@ typedef SwagSong =
 	var stage:String;
 	var format:String;
 
+	// 谱面由哪个编辑器/引擎生成，仅作元信息展示，不参与任何玩法逻辑
+	@:optional var generatedBy:String;
+
 	@:optional var gameOverChar:String;
 	@:optional var gameOverSound:String;
 	@:optional var gameOverLoop:String;
@@ -74,6 +77,7 @@ class Song
 	public var player2:String = 'dad';
 	public var gfVersion:String = 'gf';
 	public var format:String = 'psych_v1';
+	public var generatedBy:String;
 	public var specialInst:String;
 	public var specialVocal:String;
 	public var specialEvents:String;

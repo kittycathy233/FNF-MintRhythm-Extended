@@ -1,4 +1,4 @@
-package states.editors.old;
+package states.editors.old.content;
 
 import flixel.addons.ui.FlxUITooltipManager;
 import flixel.addons.ui.interfaces.IEventGetter;
