@@ -178,10 +178,6 @@ class FreeplayState extends MusicBeatState
 		if (path == null || !FileSystem.exists(path))
 			return; // 打包进 assets 的谱面走原来的同步分支
 
-		// 先在主线程触发 ExtraKeysHandler 的懒初始化，保证后台线程里只做只读访问
-		if (backend.ExtraKeysHandler.instance == null)
-			return;
-
 		_prefetchBusy.set(cacheKey, true);
 		_songPathCache.set(cacheKey, path);
 

@@ -428,7 +428,7 @@ class PlayState extends MusicBeatState
 	public static var daPixelZoom:Float = 6;
 	private var singAnimations:Array<String> = ['singLEFT', 'singDOWN', 'singUP', 'singRIGHT'];
 
-	// 多键：当前 mania（= 键数 - 1）与每键缩放；4 键时 strumScale == 1（保持原布局）。
+	// 当前键数配置与每键缩放；原生 4 键下 curMania==3、strumScale==1（保持原布局）。
 	public static var strumScale:Float = 1;
 	public var curMania:Int = 3;
 	private var startArrowSkin:String = null;
@@ -1689,9 +1689,9 @@ isReplaying = false;
 			if (skipCountdown || startOnTime > 0) skipArrowStartTween = true;
 
 			canPause = true;
-			applyMania(SONG.mania);
-		generateStaticArrows(0);
-		generateStaticArrows(1);
+			applyMania(3);
+			generateStaticArrows(0);
+			generateStaticArrows(1);
 		createLaneCovers();
 		createHoldCovers();
 		for (i in 0...playerStrums.length) {
@@ -2450,9 +2450,8 @@ tempScore += '${lblScore}: ${songScore}';
 			if (section.changeBPM != null && section.changeBPM && section.bpm != null && daBpm != section.bpm)
 				daBpm = section.bpm;
 
-			// 小节级 mania：该小节的音符按小节自身键数取模（4 键小节与全局一致）
-			var sectMania:Int = (section.mania != null) ? backend.ExtraKeysHandler.instance.clampMania(section.mania) : curMania;
-			var sectCols:Int = sectMania + 1;
+			// 小节列数（回退原生4键：固定4列，按4取模）
+			var sectCols:Int = 4;
 
 			// 防御：个别 section 可能缺 sectionNotes 字段，避免 Null Object Reference 崩溃
 			if (section.sectionNotes == null)
@@ -2490,7 +2489,7 @@ tempScore += '${lblScore}: ${songScore}';
 				}
 
 			var swagNote:Note = new Note(spawnTime, noteColumn, oldNote);
-			// 存储原始谱面列号，供 Change Mania 时按当前 mania 重映射 noteData（4 键下等于 noteColumn）
+			// 存储原始谱面列号（4 键下等于 noteColumn），供需要时重映射 noteData。
 			swagNote.noteColumnRaw = Std.int(songNotes[1]);
 			swagNote.noteData = noteColumn;
 
@@ -2608,9 +2607,8 @@ tempScore += '${lblScore}: ${songScore}';
 			if (section.changeBPM != null && section.changeBPM && section.bpm != null && daBpm != section.bpm)
 				daBpm = section.bpm;
 
-			// 小节级 mania：该小节的音符按小节自身键数取模
-			var sectMania:Int = (section.mania != null) ? backend.ExtraKeysHandler.instance.clampMania(section.mania) : curMania;
-			var sectCols:Int = sectMania + 1;
+			// 小节列数（回退原生4键：固定4列，按4取模）
+			var sectCols:Int = 4;
 
 			// 防御：个别 section 可能缺 sectionNotes 字段，避免 Null Object Reference 崩溃
 			if (section.sectionNotes == null)
@@ -2885,7 +2883,7 @@ tempScore += '${lblScore}: ${songScore}';
 	}
 
 	/** 根据当前 strum 的实际位置，为每个 strum 组（对手/玩家）生成 Track 上的黑色半透明覆盖层（阴影）。 */
-	/** 为两侧每列 strum 创建 Hold Cover（长条按住光效），mania 变化时重建。 */
+	/** 为两侧每列 strum 创建 Hold Cover（长条按住光效）。 */
 	public function createHoldCovers():Void
 	{
 		playerHoldCovers = [];
@@ -3021,12 +3019,9 @@ tempScore += '${lblScore}: ${songScore}';
 		return cover;
 	}
 
-	/** 应用某 mania 的多键配置：键数、缩放、配色前缀、sing 动画、键位 action。 */
+	/** 应用键位配置：键数、缩放、配色前缀、sing 动画、键位 action（原生固定 4 键）。 */
 	public function applyMania(mania:Int):Void
 	{
-		var ek = backend.ExtraKeysHandler.instance;
-		mania = ek.clampMania(mania);
-
 		if (startArrowSkin == null)
 		{
 			startArrowSkin = PlayState.SONG.arrowSkin;
@@ -3035,119 +3030,16 @@ tempScore += '${lblScore}: ${songScore}';
 
 		curMania = mania;
 		totalColumns = mania + 1;
-		strumScale = computeStrumScale(mania);
+		strumScale = 1;
 
-		// 基础键数（minKeys）沿用歌曲自身皮肤；其余键数（多键）使用 extrakeys.json 的 skin。
-		// 注意：皮肤 key 必须带 noteSkins/ 前缀与具体 atlas 名，否则 getSparrowAtlas
-		// 会去 images/ek.png 找不到而抛异常卡死。飞溅无 ek 专属资源，沿用歌曲默认。
-		var isBaseKeys:Bool = (mania == ek.minKeys - 1);
-		if (isBaseKeys)
-		{
-			PlayState.SONG.arrowSkin = startArrowSkin;
-		}
-		else
-		{
-			PlayState.SONG.arrowSkin = ek.skinPath();
-		}
-		// 飞溅始终沿用歌曲默认：飞溅为共享白色纹理，按音符颜色着色即可。
-		PlayState.SONG.splashSkin = startSplashSkin;
+		// colArray：noteData -> 颜色前缀（标准4键）
+		Note.colArray = ['purple', 'blue', 'green', 'red'];
 
-		// colArray：noteData -> 颜色前缀（purple/blue/green/red/rombus/circle）
-		// 完全取自 extrakeys.json 的 animations[].rgb，像素台也跟随配置。
-		var newCol:Array<String> = [];
-		for (i in 0...totalColumns)
-		{
-			var style:Int = ek.styleOf(mania, i);
-			newCol[i] = ek.colorPrefixOf(style);
-		}
-		Note.colArray = newCol;
+		// sing 动画映射（标准4键）
+		singAnimations = ['singLEFT', 'singDOWN', 'singUP', 'singRIGHT'];
 
-		// sing 动画映射
-		singAnimations = [];
-		for (i in 0...totalColumns)
-		{
-			var style:Int = ek.styleOf(mania, i);
-			singAnimations[i] = 'sing' + ek.singOf(style);
-		}
-
-		// 动态键位 action 名
-		keysArray = buildKeysArray(mania);
-	}
-
-	public function buildKeysArray(mania:Int):Array<String>
-	{
-		var ek = backend.ExtraKeysHandler.instance;
-		if (mania == ek.minKeys - 1) return ['note_left', 'note_down', 'note_up', 'note_right'];
-		var arr:Array<String> = [];
-		for (i in 0...(mania + 1)) arr.push('extrakey_${mania}_$i');
-		return arr;
-	}
-
-	private function computeStrumScale(mania:Int):Float
-	{
-		var ek = backend.ExtraKeysHandler.instance;
-		var keyCount:Int = mania + 1;
-		var jsonScale:Float = ek.scaleFor(mania);
-		var groupSpan:Float = (keyCount - 1) * Note.swagWidth;
-		var avail:Float = ClientPrefs.data.middleScroll ? (FlxG.width - 120) : (FlxG.width * 0.5 - 80);
-		var scale:Float = Math.min(jsonScale, avail / groupSpan);
-		return Math.max(scale, 0.3);
-	}
-
-	/** Change Mania：重建箭头与键位（小节属性或事件触发）。 */
-	public function changeMania(mania:Int):Void
-	{
-		mania = backend.ExtraKeysHandler.instance.clampMania(mania);
-		if (mania == curMania) return;
-		applyMania(mania);
-
-		// 皮肤已切换，递增版本号。音符仅在 spawn 或已在屏时按版本懒加载，
-		// 避免对 unspawnNotes 里整首谱面的音符做批量 reloadNote（卡死根源）。
-		Note.noteSkinVersion++;
-
-		strumLineNotes.clear();
-		opponentStrums.clear();
-		playerStrums.clear();
-
-		generateStaticArrows(0, true);
-		generateStaticArrows(1, true);
-
-		remapNotesForMania();
-
-		for (i in 0...playerStrums.length)
-		{
-			setOnScripts('defaultPlayerStrumX' + i, playerStrums.members[i].x);
-			setOnScripts('defaultPlayerStrumY' + i, playerStrums.members[i].y);
-		}
-		createLaneCovers();
-		createHoldCovers();
-	}
-
-	/** Change Mania 时按当前 mania 重映射已有音符的列号；列号超出新键数的音符会由 followStrumNote 隐藏。 */
-	private function remapNotesForMania():Void
-	{
-		var tc:Int = curMania + 1;
-		var remapNote = function(note:Note):Void
-		{
-			note.noteData = note.noteColumnRaw % tc;
-			note.mustPress = note.noteColumnRaw < tc;
-		};
-		// 尚未出现的音符（unspawnNotes）只重映射列号，不在此处 reloadNote：
-		// 它们会在 spawn 时按当前皮肤版本懒加载一次，避免对整首谱面批量重载导致卡死。
-		for (note in unspawnNotes)
-		{
-			if (Std.isOfType(note, Note)) remapNote(cast note);
-			// 优化路径的 PreloadedChartNote 在实例化时会用 rawColumn 与当前 totalColumns 重算 noteData
-		}
-		// 已在屏幕上的音符立即按新皮肤版本刷新（数量有限，不会卡顿）
-		for (note in notes)
-		{
-			if (Std.isOfType(note, Note))
-			{
-				remapNote(cast note);
-				cast(note, Note).ensureCurrentSkin();
-			}
-		}
+		// 键位 action 名（固定4键）
+		keysArray = ['note_left', 'note_down', 'note_up', 'note_right'];
 	}
 
 	override function openSubState(SubState:FlxSubState)
@@ -3695,7 +3587,7 @@ tempScore += '${lblScore}: ${songScore}';
 				}
 					
 					// 创建 Note 对象，完全按照传统模式！
-					// noteData 按当前 mania 重映射（兼容 Change Mania），4 键下等价于原值
+					// noteData 按当前列数取模（原生 4 键下等价于原值）
 					var remappedData:Int = noteData.rawColumn % totalColumns;
 					var note:Note = spawnNote(noteData.strumTime, remappedData, oldNote, noteData.isSustainNote);
 					
@@ -3785,7 +3677,7 @@ tempScore += '${lblScore}: ${songScore}';
 					if (ClientPrefs.data.noteOptimization) notes.add(note);
 					else notes.insert(0, note);
 					}
-					note.ensureCurrentSkin(); // Change Mania 后按当前皮肤懒加载一次
+					note.ensureCurrentSkin(); // 按当前皮肤懒加载一次
 					note.spawned = true;
 					
 					// 调用回调（关闭逐音符脚本时跳过）
@@ -3845,7 +3737,7 @@ tempScore += '${lblScore}: ${songScore}';
 					// 保持原来的行为
 					notes.insert(0, dunceNote);
 				}
-				dunceNote.ensureCurrentSkin(); // Change Mania 后按当前皮肤懒加载一次
+				dunceNote.ensureCurrentSkin(); // 按当前皮肤懒加载一次
 				dunceNote.spawned = true;
 
 
@@ -3936,7 +3828,7 @@ tempScore += '${lblScore}: ${songScore}';
 						var strum:StrumNote = strumGroup.members[daNote.noteData];
 						if (strum == null)
 						{
-							// Change Mania 后键数减少：该轨已无对应箭头，隐藏音符避免报错。
+							// 该轨已无对应箭头（异常谱面），隐藏音符避免报错。
 							daNote.visible = false;
 							i++;
 							continue;
@@ -6872,13 +6764,6 @@ tempScore += '${lblScore}: ${songScore}';
             setOnScripts('crochet', Conductor.crochet);
             setOnScripts('stepCrochet', Conductor.stepCrochet);
         }
-
-        // 小节级 Change Mania（可勾选，类似 change BPM）：
-        // 仅当该小节显式勾选 changeMania 时才按小节自身键数重建箭头与键位；
-        // 否则保持当前 mania，使 Change Mania 事件（或上一小节的设置）得以延续，
-        // 不会在下一小节被强制回落到歌曲默认键数。
-        if (SONG.notes[curSection].changeMania == true && SONG.notes[curSection].mania != null)
-            changeMania(backend.ExtraKeysHandler.instance.clampMania(SONG.notes[curSection].mania));
 
         setOnScripts('mustHitSection', SONG.notes[curSection].mustHitSection);
         setOnScripts('altAnim', SONG.notes[curSection].altAnim);

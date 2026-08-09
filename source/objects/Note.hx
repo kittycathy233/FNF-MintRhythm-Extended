@@ -2,7 +2,6 @@ package objects;
 
 import backend.animation.PsychAnimationController;
 import backend.NoteTypesConfig;
-import backend.ExtraKeysHandler;
 
 import shaders.RGBPalette;
 import shaders.RGBPalette.RGBShaderReference;
@@ -34,7 +33,7 @@ typedef EventNote = {
 @:structInit final class PreloadedChartNote {
 	public var strumTime:Float;
 	public var noteData:Int;
-	public var rawColumn:Int; // 原始谱面列号，未取模，供 Change Mania 时重映射
+	public var rawColumn:Int; // 原始谱面列号，未取模，供重映射时使用
 	public var mustPress:Bool;
 	public var noteType:String;
 	public var animSuffix:String;
@@ -87,7 +86,7 @@ class Note extends FlxSprite
 
 	public var strumTime:Float = 0;
 	public var noteData:Int = 0;
-	/** 原始谱面列号（未经 % 取模），用于 Change Mania 时重映射 noteData。4 键下等于 noteData。 */
+	/** 原始谱面列号（未经 % 取模），用于重映射 noteData。4 键下等于 noteData。 */
 	public var noteColumnRaw:Int = 0;
 	// 记录 construct/reloadNote 后普通音符的基准 scale，供对象池 prepareForReuse 复位
 	// （避免被前驱 sustain 改过的 scale.y 在复用普通音符时累积错乱）。
@@ -132,7 +131,7 @@ class Note extends FlxSprite
 	public static var globalColorSwapShaders:Array<ColorSwap> = [];
 
 	/**
-	 * 皮肤版本号：每次 Change Mania 改变当前皮肤（如切到 ek 皮肤）时自增。
+	 * 皮肤版本号：每次切换当前皮肤（如切到不同 note skin）时自增。
 	 * 音符通过 lastSkinVersion 记录自己加载时的版本，仅在版本不匹配时（即皮肤已变）
 	 * 才重新加载帧，从而避免对“尚未出现的音符”做无谓的 reloadNote 卡死整局。
 	 */
@@ -151,16 +150,11 @@ class Note extends FlxSprite
 	public static var colArray:Array<String> = ['purple', 'blue', 'green', 'red'];
 
 	/**
-	 * 把 noteData 映射到样式索引（style，0..8）。
-	 * 4 键（非像素）时 style == noteData，行为与旧引擎一致；多键时查 extrakeys.json。
-	 * 像素舞台只支持四向，强制 style = noteData % 4。
+	 * 把 noteData 映射到样式索引（style）。标准4键下 style == noteData % 4。
 	 */
 	public static function styleIndex(noteData:Int):Int
 	{
-		if (PlayState.SONG == null || PlayState.isPixelStage) return noteData % 4;
-		// 使用当前活动 mania（可能由小节/事件 Change Mania 改变），而非 SONG 级默认
-		var mania:Int = (PlayState.instance != null) ? PlayState.instance.curMania : PlayState.SONG.mania;
-		return ExtraKeysHandler.instance.styleOf(mania, noteData);
+		return noteData % 4;
 	}
 	public static var defaultNoteSkin(default, never):String = 'noteSkins/NOTE_assets';
 
@@ -452,7 +446,7 @@ class Note extends FlxSprite
 		}
 		x += offsetX;
 
-		// 记录加载时的皮肤版本，供 Change Mania 后懒加载判定
+		// 记录加载时的皮肤版本，供皮肤变更后懒加载判定
 		lastSkinVersion = noteSkinVersion;
 	}
 
@@ -507,7 +501,7 @@ class Note extends FlxSprite
 	var _lastNoteOffX:Float = 0;
 	static var _lastValidChecked:String; //optimization
 	static var _skinPathCache:Map<String, String> = new Map();
-	// 按皮肤 key 缓存 Sparrow atlas 帧数据：Change Mania 重映射时会对大量音符调用
+	// 按皮肤 key 缓存 Sparrow atlas 帧数据：重映射时会对大量音符调用
 	// reloadNote，若不缓存则每颗音符都重新解析 XML，大谱面会卡死。缓存后同一皮肤
 	// 仅解析一次，重映射只重建每颗音符的动画帧（廉价）。
 	static var _atlasCache:Map<String, FlxAtlasFrames> = new Map();
@@ -646,10 +640,10 @@ class Note extends FlxSprite
 	 *
 	 * 安全前提：仅当 `noteOptimization && notePooling`（玩家显式开启对象池）时由 PlayState 池化工厂调用。
 	 * 默认（notePooling=false）下走原始 new/destroy，每个音符都是独立新对象，脚本语义不变。
-	 * Change Mania 皮肤变更时帧仍可通过 ensureCurrentSkin/updateManiaStyle 显式重载，不受此处跳过 reloadNote 影响。
+	 * 皮肤变更时帧仍可通过 ensureCurrentSkin/updateManiaStyle 显式重载，不受此处跳过 reloadNote 影响。
 	 *
 	 * @param strumTime   音符命中时间
-	 * @param noteData    重映射后的列号（已兼容 Change Mania）
+	 * @param noteData    重映射后的列号
 	 * @param prevNote    前一个音符（用于 sustain 连接链；为 null 时自引用）
 	 * @param isSustain   是否为长条音符
 	 */
@@ -790,7 +784,7 @@ class Note extends FlxSprite
 	}
 
 	/**
-	 * Change Mania 重映射后刷新音符：重新从当前皮肤加载帧（atlas 已按皮肤缓存，不会
+	 * 皮肤变更后刷新音符：重新从当前皮肤加载帧（atlas 已按皮肤缓存，不会
 	 * 重复解析），并按当前 styleIndex 刷新配色。必须重加载帧，否则音符仍使用旧皮肤的
 	 * atlas，而新颜色前缀（rombus/circle 等）在旧 atlas 中不存在，会导致长条/音符显示异常。
 	 */
@@ -813,7 +807,7 @@ class Note extends FlxSprite
 	}
 
 	/**
-	 * Change Mania 后按需要在“当前皮肤版本”下重载音符帧：
+	 * 按需要在“当前皮肤版本”下重载音符帧：
 	 * 仅当皮肤版本已变化（lastSkinVersion != noteSkinVersion）时才真正 reloadNote，
 	 * 否则直接跳过。这样未出现的音符不会在切换瞬间被批量 reload（那是卡死的根源），
 	 * 而是在它们真正 spawn 时各加载一次，开销被均摊到逐帧生成预算中。

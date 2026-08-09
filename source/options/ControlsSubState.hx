@@ -79,16 +79,6 @@ class ControlsSubState extends MusicBeatSubstate
 		options.push([true]);
 		options.push([true, defaultKey]);
 
-		// 动态多键 action：当前歌曲 mania（菜单中回落到最大键数以便预先重绑）对应的 extrakey_* 项
-		var ek = backend.ExtraKeysHandler.instance;
-		var activeMania:Int = (states.PlayState.SONG != null) ? ek.clampMania(states.PlayState.SONG.mania) : (ek.maxKeys - 1);
-		var extraOpts:Array<Dynamic> = [];
-		for (i in 4...(activeMania + 1))
-			extraOpts.push([true, 'Key ' + (i + 1), 'extrakey_${activeMania}_${i}', 'Note Key ' + (i + 1)]);
-		// 插入到 NOTES 分组内（note_right 之后、分隔行之前）
-		var insertAt:Int = 5; // 0=NOTES 头, 1-4=note L/D/U/R, 5=分隔行
-		for (j in 0...extraOpts.length) options.insert(insertAt + j, extraOpts[j]);
-
 		bg = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
 		bg.color = keyboardColor;
 		bg.antialiasing = ClientPrefs.data.antialiasing;

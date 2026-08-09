@@ -31,9 +31,6 @@ typedef SwagSong =
 	
 	@:optional var disableNoteRGB:Bool;
 
-	// 多键：曲库级 mania（= 键数 - 1）。缺省 3 即标准 4 键，向上兼容旧谱。
-	@:optional var mania:Int;
-
 	@:optional var arrowSkin:String;
 	@:optional var splashSkin:String;
 	@:optional var specialInst:String;
@@ -51,10 +48,6 @@ typedef SwagSection =
 	@:optional var bpm:Float;
 	@:optional var changeBPM:Bool;
 	@:optional var bpmRamp:Float; // 线性 BPM 过渡持续的步数（0/缺省 = 瞬时跳变，保持旧行为）
-
-	// 多键：小节级 Change Mania。进入该小节时生效（类似 bpm 的 per-section 语义）。
-	@:optional var changeMania:Bool;
-	@:optional var mania:Int;
 }
 
 class Song
@@ -255,10 +248,6 @@ class Song
 		if (songJson.notes == null)
 			songJson.notes = [];
 
-		// 多键兼容：旧谱缺 mania 时默认 4 键（mania = 3），并 clamp 到合法范围。
-		if (songJson.mania == null)
-			songJson.mania = 3;
-		songJson.mania = backend.ExtraKeysHandler.instance.clampMania(songJson.mania);
 		return songJson;
 	}
 }

@@ -162,10 +162,9 @@ class StrumNote extends FlxSprite
 			antialiasing = ClientPrefs.data.antialiasing;
 			setGraphicSize(Std.int(width * 0.7));
 
-			// 多键：按 style 索引决定 strum 前缀（LEFT/DOWN/UP/RIGHT/ROMBUS/CIRCLE）。
-			// 若当前皮肤缺少对应箭头帧，则回退到标准 UP 箭头，避免空帧（普通 strumnote）。
+			// 标准4键：按颜色方向决定 strum 前缀（LEFT/DOWN/UP/RIGHT）。
 			var style:Int = Note.styleIndex(noteData);
-			var strumName:String = backend.ExtraKeysHandler.instance.strumOf(style);
+			var strumName:String = ['LEFT', 'DOWN', 'UP', 'RIGHT'][style];
 			if (!hasFrame('arrow' + strumName)) strumName = 'UP';
 
 			var pressName:String = strumName.toLowerCase() + ' press';

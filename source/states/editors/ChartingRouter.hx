@@ -30,14 +30,13 @@ class ChartingRouter
 	public static final VERSIONS:Array<String> =
 		[VERSION_1_0, VERSION_1_0_4_VANILLA, VERSION_0_7_3, VERSION_0_6_3];
 
-	/** 旧版制谱器只认 4 键谱面（mania == 3，缺省视为 4 键）。 */
+	/** 引擎已回退为原生 4 键，所有谱面均按 4 键处理。 */
 	public static function currentChartIsFourKey():Bool
 	{
-		var song = PlayState.SONG;
-		return song == null || song.mania == null || song.mania == 3;
+		return true;
 	}
 
-	/** 解析出实际可用的制谱器版本，必要时回落到 1.0。 */
+	/** 解析出实际可用的制谱器版本。 */
 	public static function resolveVersion():String
 	{
 		var version:String = ClientPrefs.data.chartingVersion;
@@ -48,12 +47,6 @@ class ChartingRouter
 		if (version == null || VERSIONS.indexOf(version) < 0)
 			return VERSION_1_0;
 
-		if (version != VERSION_1_0 && !currentChartIsFourKey())
-		{
-			trace('ChartingRouter: "${PlayState.SONG.song}" is a ${PlayState.SONG.mania + 1}K chart, '
-				+ 'the $version editor only supports 4K -> falling back to the $VERSION_1_0 editor.');
-			return VERSION_1_0;
-		}
 		return version;
 	}
 

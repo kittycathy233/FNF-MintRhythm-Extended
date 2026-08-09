@@ -3250,16 +3250,8 @@ class OldChartingState073 extends OldEditorState
 		if(_song.events != null && _song.events.length > 1) _song.events.sort(sortByTime);
 		// 标记谱面出处（仅元信息，不参与玩法逻辑）
 		_song.generatedBy = GENERATED_BY;
-		// 旧版制谱器（0.7.3）输出不含引擎扩展字段：format（版本标记）、mania / changeMania（多键）
+		// 旧版制谱器（0.7.3）输出不含引擎扩展字段：format（版本标记）
 		Reflect.deleteField(_song, "format");
-		Reflect.deleteField(_song, "mania");
-		if (_song.notes != null)
-			for (section in _song.notes)
-			{
-				if (section == null) continue;
-				Reflect.deleteField(section, "mania");
-				Reflect.deleteField(section, "changeMania");
-			}
 		var json = {
 			"song": _song
 		};

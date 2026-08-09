@@ -98,9 +98,8 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		['Change Opponent Scroll Speed', "same as Change Scroll Speed, but only for Opponent"],
 		['Change Player Scroll Speed', "same as Change Scroll Speed, but only for Player"],
 		['Toggle IconBop', "Enable or disable icon bopping.\nValue 1: on/off/true/false/0/1 (default: on)"],
-		['Add IconBop', "Make the health icons bop once immediately."],
-		['Change Mania', "Change Mania（动态键数）。\nValue 1: 键数 (1-9)，进入事件即按目标键数重建箭头与键位\nValue 2: 预留（暂未使用）"]
-	];
+		['Add IconBop', "Make the health icons bop once immediately."]
+		];
 	
 	public static var keysArray:Array<FlxKey> = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]; //Used for Vortex Editor
 	public static var SHOW_EVENT_COLUMN = true;
@@ -593,7 +592,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 		var startY:Float = FlxG.height/2;
 		vortexIndicator.visible = strumLineNotes.visible = strumLineNotes.active = vortexEnabled;
 
-		// 漩涡编辑器静态箭头：数量随当前小节 mania 动态变化（9 键时显示 9 列箭头）
+		// 漩涡编辑器静态箭头：固定 4 列
 		rebuildStrumLineNotes();
 
 
@@ -3031,39 +3030,25 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		};
 	}
 
-	// 取某小节的 mania（小节勾选 Change Mania 且有值则用小节值，否则用歌曲默认）
+	// 小节键数（原生 4 键，固定返回 3 = 4 键）
 	public static function getSectionMania(secNum:Int):Int
 	{
-		var ek = backend.ExtraKeysHandler.instance;
-		var notes = PlayState.SONG != null ? PlayState.SONG.notes : null;
-		if (notes == null || secNum < 0 || secNum >= notes.length) return ek.clampMania(PlayState.SONG != null ? PlayState.SONG.mania : 3);
-		var sec = notes[secNum];
-		var mania = (sec != null && sec.changeMania && sec.mania != null) ? sec.mania : PlayState.SONG.mania;
-		return ek.clampMania(mania);
+		return 3;
 	}
 
-	// 某小节的轨道列数（= mania + 1）
+	// 某小节的轨道列数（回退原生4键，固定4列）
 	public static function getSectionColumns(secNum:Int):Int
 	{
-		return getSectionMania(secNum) + 1;
+		return 4;
 	}
 
-	// 根据当前小节 mania 同步：Note.colArray（颜色前缀）、网格列数、网格与箭头、轨道色块。
-	// 仅当列数变化时重建网格，避免每次切换小节都重建（开销大）。
+	// 根据小节（固定4列）同步：Note.colArray（颜色前缀）、网格列数、网格与箭头、轨道色块。
 	function applySectionColumns(secNum:Int):Void
 	{
 		var cols = getSectionColumns(secNum);
-		var ek = backend.ExtraKeysHandler.instance;
-		var mania = getSectionMania(secNum);
 
-		// 重建 Note.colArray：音符颜色前缀按当前 mania 的 style 解析（完全取自 extrakeys.json）
-		var newCol:Array<String> = [];
-		for (i in 0...cols)
-		{
-			var style:Int = ek.styleOf(mania, i);
-			newCol[i] = ek.colorPrefixOf(style);
-		}
-		Note.colArray = newCol;
+		// 标准4键颜色前缀
+		Note.colArray = ['purple', 'blue', 'green', 'red'];
 
 		if (cols != GRID_COLUMNS_PER_PLAYER)
 		{
@@ -3415,8 +3400,7 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 
 	function reloadNotes()
 	{
-		// 在创建音符前先按当前小节 mania 重建颜色前缀与网格列数，
-		// 否则多键音符会因 colArray 长度不足而拿不到正确的颜色前缀。
+		// 在创建音符前先同步颜色前缀与网格列数（固定 4 键）。
 		applySectionColumns(curSec);
 		selectedNotes = [];
 		for (note in notes) if(note != null) note.destroy();
@@ -3472,10 +3456,7 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		if(secNum == null) secNum = curSec;
 		var section = PlayState.SONG.notes[secNum];
 
-		// 关键修复：用音符所属小节（secNum）的列数解码 note[1]，而不是当前显示小节（curSec）
-		// 对应的全局 GRID_COLUMNS_PER_PLAYER。否则在多键谱面里，当“当前小节 mania”与
-		// “音符所在小节 mania”不同（例如 re-enter 制谱器后停在 4 键的 0 号小节、却要解码
-		// 6 键小节里的音符）时，玩家侧音符会被 % / < 判定错，跑到对手侧（本次 bug 根源）。
+		// 用音符所属小节的列数解码 note[1]，避免按当前显示小节的列数误判归属。
 		var cols:Int = getSectionColumns(secNum);
 		var daStrumTime:Float = note[0];
 		var daNoteData:Int = Std.int(note[1] % cols);
@@ -3715,7 +3696,7 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 	{
 		if(sec != null) curSec = sec;
 		curSec = Std.int(FlxMath.bound(curSec, 0, PlayState.SONG.notes.length-1));
-		// 同步当前小节的 mania（列数 / 颜色前缀 / 网格），列数变化时才重建网格
+		// 同步当前小节的列数 / 颜色前缀 / 网格（固定 4 键）
 		applySectionColumns(curSec);
 		Conductor.bpm = cachedSectionBPMs[curSec];
 
@@ -3831,9 +3812,6 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		changeBpmStepper.value = (sec.changeBPM && sec.bpm != null) ? sec.bpm : Conductor.bpm;
 		bpmRampStepper.value = (sec.bpmRamp != null) ? sec.bpmRamp : 0;
 		beatsPerSecStepper.value = sec.sectionBeats;
-		// 小节级 Change Mania：仅当勾选时才强制小节键数；否则显示歌曲默认键数供编辑
-		changeManiaCheckBox.checked = sec.changeMania;
-		maniaStepper.value = (sec.changeMania && sec.mania != null) ? sec.mania : backend.ExtraKeysHandler.instance.clampMania(PlayState.SONG.mania);
 
 			strumTimeStepper.step = Conductor.stepCrochet;
 			susLengthStepper.step = cachedSectionCrochets[curSec] / 4 / 2;
@@ -3917,9 +3895,7 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 			if(note != null && curSecFilter(note))
 			{
 				if(!firstNote) sectionFirstNoteID = num;
-				// 当前小节的音符按当前网格重新定位 X：LEGACY 模式下音符在 reload 时（curSec=0）
-				// 就已创建并定位，导航到其它 mania 的小节后不会重新定位，会残留错误 X；
-				// 此处用当前小节列数重算，保证多键谱面导航后音符列号正确对齐。
+				// 当前小节的音符按当前网格重新定位 X，保证导航后列号正确对齐。
 				positionNoteXByData(note);
 				curRenderedNotes.add(note);
 				note.alpha = (note.strumTime >= Conductor.songPosition) ? 1 : 0.6;
@@ -4301,8 +4277,7 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 	function positionNoteXByData(note:MetaNote, ?data:Null<Int> = null, ?cols:Null<Int> = null)
 	{
 		if(data == null) data = note.songData[1];
-		// cols：音符所属小节的列数。默认回落到全局（当前小节）列数，保持既有调用行为；
-		// createNote 会显式传入音符所在小节的列数，避免多键谱面跨 mania 小节时列号错位。
+		// cols：音符所属小节的列数。默认回落到全局（当前小节）列数，保持既有调用行为。
 		if(cols == null) cols = GRID_COLUMNS_PER_PLAYER;
 		var gridLayout = getGridLayout();
 
@@ -5026,10 +5001,8 @@ for (i in 0...GRID_PLAYERS)
 
 	var changeBpmCheckBox:PsychUICheckBox;
 	var changeBpmStepper:PsychUINumericStepper;
-	var changeManiaCheckBox:PsychUICheckBox;
 	var bpmRampStepper:PsychUINumericStepper;
 	var beatsPerSecStepper:PsychUINumericStepper;
-	var maniaStepper:PsychUINumericStepper;
 
 	function addSectionTab()
 	{
@@ -5178,45 +5151,6 @@ for (i in 0...GRID_PLAYERS)
 			}
 		};
 
-		var ek = backend.ExtraKeysHandler.instance;
-		objY += 25;
-		// 小节级 Change Mania（可勾选，类似 change BPM）：勾选后进入该小节即按小节键数重建。
-		changeManiaCheckBox = new PsychUICheckBox(changeBpmStepper.x, objY, 'Change Mania', 80, function()
-		{
-			var sec = getCurChartSection();
-			if(sec != null)
-			{
-			sec.changeMania = changeManiaCheckBox.checked;
-			if(sec.changeMania && !Reflect.hasField(sec, 'mania')) sec.mania = Std.int(maniaStepper.value);
-			// 勾选/取消会影响该小节使用的键数，需同步网格列数
-			applySectionColumns(curSec);
-			softReloadNotes();
-			chartDataDirty = true;
-			}
-		});
-
-		objY += 25;
-		var maniaLabel = new FlxText(changeBpmStepper.x, objY - 15, 220, 'Mania (Keys: ' + (ek.minKeys) + '-' + (ek.maxKeys) + ')');
-		maniaLabel.setFormat(Paths.font(Language.get('uitab_font')), 12);
-		tab_group.add(maniaLabel);
-		// 小节级 Change Mania：键数 = mania + 1，默认 4 键（mania 3）
-		maniaStepper = new PsychUINumericStepper(changeBpmStepper.x, objY, 1, ek.clampMania(3), ek.minKeys - 1, ek.maxKeys - 1, 0);
-		maniaStepper.onValueChange = function()
-		{
-			var sec = getCurChartSection();
-			if(sec != null)
-			{
-			sec.mania = ek.clampMania(Std.int(maniaStepper.value));
-			// 调整键数即视为勾选 Change Mania（与 changeBpm 一致：改值自动勾选）
-			sec.changeMania = true;
-			changeManiaCheckBox.checked = true;
-			// 键数变化会触发网格重建（列数改变）并刷新音符
-			applySectionColumns(curSec);
-			softReloadNotes();
-			chartDataDirty = true;
-			}
-		};
-
 
 		beatsPerSecStepper = new PsychUINumericStepper(objX + 150, objY, 1, 4, 1, 16, 2);
 		beatsPerSecStepper.onValueChange = function()
@@ -5354,9 +5288,7 @@ for (i in 0...GRID_PLAYERS)
 		tab_group.add(new FlxText(beatsPerSecStepper.x, beatsPerSecStepper.y - 15, 100, Language.get('charting_beatspersec_text')).setFormat(Paths.font(Language.get('uitab_font'))));
 		tab_group.add(changeBpmCheckBox);
 		tab_group.add(changeBpmStepper);
-		tab_group.add(changeManiaCheckBox);
 		tab_group.add(bpmRampStepper);
-		tab_group.add(maniaStepper);
 		tab_group.add(beatsPerSecStepper);
 		
 		tab_group.add(copyButton);
@@ -5595,6 +5527,7 @@ for (i in 0...GRID_PLAYERS)
 			Conductor.offset = audioOffsetStepper.value;
 			updateWaveform();
 		};
+
 
 		specialInstInputText = new PsychUIInputText(objX + 200, objY + 80, 100, '', 8);
 		specialInstInputText.onChange = function(old:String, cur:String)
@@ -7295,25 +7228,7 @@ for (i in 0...GRID_PLAYERS)
 	{
 		if(song == null) return null;
 
-		// 4 键校验
-		var mania = (song.mania != null) ? song.mania : 3;
-		if(mania != 3)
-		{
-			showOutput(Language.get('charting_legacy_only4key_cur', [Std.string(mania + 1)]), true);
-			return null;
-		}
-		if(song.notes != null)
-		{
-			var notes:Array<Dynamic> = song.notes;
-			for (sec in notes)
-			{
-				if(sec != null && sec.changeMania == true && sec.mania != null && sec.mania != 3)
-				{
-					showOutput(Language.get('charting_legacy_only4key_sec', [Std.string(sec.mania + 1)]), true);
-					return null;
-				}
-			}
-		}
+		// 引擎已回退为原生 4 键，所有谱面均为 4 键，无需多键校验。
 
 		try
 		{
@@ -7322,7 +7237,6 @@ for (i in 0...GRID_PLAYERS)
 
 			// 清理 song 级自定义字段
 			Reflect.deleteField(raw, 'format');
-			Reflect.deleteField(raw, 'mania');
 			Reflect.deleteField(raw, 'specialInst');
 			Reflect.deleteField(raw, 'specialVocal');
 			Reflect.deleteField(raw, 'specialEvents');
@@ -7343,8 +7257,6 @@ for (i in 0...GRID_PLAYERS)
 					// 旧版 0.6.3 靠 mustHitSection 翻转归属，故强制 true 使其解读与归一化数据一致（音符归属 100% 正确）。
 					// 代价：旧版镜头会一直聚焦 BF，原谱对手镜头段丢失（纯视觉差异）。
 					sec.mustHitSection = true;
-					Reflect.deleteField(sec, 'changeMania');
-					Reflect.deleteField(sec, 'mania');
 					Reflect.deleteField(sec, 'bpmRamp');
 
 					if(sec.sectionNotes != null)

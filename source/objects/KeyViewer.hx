@@ -39,7 +39,7 @@ import sys.FileSystem;
  *   - 显示 KPS / Total / Max
  *   - 可选资料条（ClientPrefs.keyViewerProfile）：左侧放圆角裁剪的自定义图标，底部显示自定义名字；
  *     没有图标（或选项关闭）时左侧不留空缺，按键在背景中垂直居中
- * 按键布局跟随玩家实际键位（multikey / mania），全部用矢量代码绘制，不依赖贴图。
+ * 按键布局跟随玩家实际键位（原生 4 键），全部用矢量代码绘制，不依赖贴图。
  */
 class KeyViewer extends FlxGroup
 {
@@ -162,7 +162,7 @@ class KeyViewer extends FlxGroup
 		if (keyViewerSave == null) initKeyViewerTotal();
 		totalKeys = keyViewerTotal;
 
-		// 读取玩家实际键位（当前 mania 的 action 列表）；位置校准/预览态无 PlayState 时用默认 4K 布局
+		// 读取玩家实际键位（固定 4 键 action 列表）；位置校准/预览态无 PlayState 时用默认 4K 布局
 		keysArray = (PlayState.instance != null)
 			? PlayState.instance.keysArray.copy()
 			: ['note_left', 'note_down', 'note_up', 'note_right'];
