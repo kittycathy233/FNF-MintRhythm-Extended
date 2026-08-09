@@ -28,7 +28,11 @@ class MainMenuState extends MusicBeatState
 	public static var kathyEngineVersion(get, never):String;
 	static function get_kathyEngineVersion():String
 	{
-		return ((Application.current != null) ? Application.current.meta.get('version') : '1.0.0') + " dev";
+		var ver:String = (Application.current != null) ? Application.current.meta.get('version') : '1.0.0';
+		#if debug
+		ver += " dev";
+		#end
+		return ver;
 	}
 	public static var curSelected:Int = 0;
 	public static var curColumn:MainMenuColumn = CENTER;

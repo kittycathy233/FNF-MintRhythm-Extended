@@ -17,13 +17,13 @@ class CoolUtil
 	
 	public static function checkForUpdates(?onComplete:(latestVersion:String, isOutdated:Bool)->Void, url:String = null):Void {
 		if (url == null || url.length == 0)
-			url = "https://raw.gitmirror.com/kittycathy233/FNF-KathyEngine/main/gitVersion.txt";
+			url = "https://cdn.jsdelivr.net/gh/kittycathy114/FNF-KathyEngine@main/gitVersion.txt";
 		var version:String = states.MainMenuState.kathyEngineVersion;
 		if(!ClientPrefs.data.checkForUpdates) {
 			if(onComplete != null) onComplete(version, false);
 			return;
 		}
-		trace('checking for updates...');
+		trace('checking for updates... ($url)');
 		Network.httpGet(url,
 			function (data:String) {
 				var newVersion:String = data.split('\n')[0].trim();
@@ -32,11 +32,12 @@ class CoolUtil
 					trace('a new version is available!');
 					if(onComplete != null) onComplete(newVersion, true);
 				} else {
+					trace('you are on the latest version');
 					if(onComplete != null) onComplete(version, false);
 				}
 			},
 			function (error) {
-				trace('error: $error');
+				trace('failed to check for updates: $error');
 				if(onComplete != null) onComplete(version, false);
 			});
 	}
