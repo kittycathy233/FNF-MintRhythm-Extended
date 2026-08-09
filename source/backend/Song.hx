@@ -119,6 +119,10 @@ class Song
 
 		for (section in sectionsData)
 		{
+			// 防御：个别 section 可能缺 sectionNotes 字段，避免 Null Object Reference 崩溃
+			if (section.sectionNotes == null)
+				section.sectionNotes = [];
+
 			var beats:Null<Float> = cast section.sectionBeats;
 			if (beats == null || Math.isNaN(beats))
 			{
@@ -241,6 +245,15 @@ class Song
 					}
 			}
 		}
+
+		// 防御：谱面可能完全没有 events 字段（常见于已是 psych_v1 的自定义/旧谱），
+		// 不补默认空数组会导致 PlayState 遍历 songData.events 时 Null Object Reference 崩溃。
+		if (songJson.events == null)
+			songJson.events = [];
+
+		// 防御：谱面可能完全没有 notes 字段，避免 PlayState 遍历 SONG.notes 时 Null Object Reference 崩溃。
+		if (songJson.notes == null)
+			songJson.notes = [];
 
 		// 多键兼容：旧谱缺 mania 时默认 4 键（mania = 3），并 clamp 到合法范围。
 		if (songJson.mania == null)

@@ -2328,10 +2328,11 @@ tempScore += '${lblScore}: ${songScore}';
 				catch(e:Dynamic) {}
 			}
 			
-			if(eventsChart != null)
+			if(eventsChart != null && eventsChart.events != null)
 				for (event in eventsChart.events) //Event Notes
-					for (i in 0...event[1].length)
-						makeEvent(event, i);
+					if (event != null && event[1] != null)
+						for (i in 0...event[1].length)
+							makeEvent(event, i);
 		}
 		catch(e:Dynamic) {}
 
@@ -2368,9 +2369,11 @@ tempScore += '${lblScore}: ${songScore}';
 			generateSongLegacy(sectionsData, daBpm, oldNote, ghostNotesCaught);
 		}
 	
-		for (event in songData.events) //Event Notes
-			for (i in 0...event[1].length)
-				makeEvent(event, i);
+		if (songData.events != null) //Event Notes（防御：psych_v1 谱面可能无 events 字段，避免 Null Object Reference 崩溃）
+			for (event in songData.events)
+				if (event != null && event[1] != null)
+					for (i in 0...event[1].length)
+						makeEvent(event, i);
 
 		if (useOptimizedLoading) {
 			// 优化模式：保持原来的顺序，不排序
@@ -2450,6 +2453,10 @@ tempScore += '${lblScore}: ${songScore}';
 			// 小节级 mania：该小节的音符按小节自身键数取模（4 键小节与全局一致）
 			var sectMania:Int = (section.mania != null) ? backend.ExtraKeysHandler.instance.clampMania(section.mania) : curMania;
 			var sectCols:Int = sectMania + 1;
+
+			// 防御：个别 section 可能缺 sectionNotes 字段，避免 Null Object Reference 崩溃
+			if (section.sectionNotes == null)
+				continue;
 
 			for (i in 0...section.sectionNotes.length)
 			{
@@ -2604,6 +2611,10 @@ tempScore += '${lblScore}: ${songScore}';
 			// 小节级 mania：该小节的音符按小节自身键数取模
 			var sectMania:Int = (section.mania != null) ? backend.ExtraKeysHandler.instance.clampMania(section.mania) : curMania;
 			var sectCols:Int = sectMania + 1;
+
+			// 防御：个别 section 可能缺 sectionNotes 字段，避免 Null Object Reference 崩溃
+			if (section.sectionNotes == null)
+				continue;
 
 			for (i in 0...section.sectionNotes.length)
 			{
