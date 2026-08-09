@@ -16,13 +16,15 @@ class CoolUtil
 	private static var _gridCache:Map<String, FlxGraphic> = null;
 	
 	public static function checkForUpdates(?onComplete:(latestVersion:String, isOutdated:Bool)->Void, url:String = null):Void {
-		if (url == null || url.length == 0)
-			url = "https://cdn.jsdelivr.net/gh/kittycathy114/FNF-KathyEngine@main/gitVersion.txt";
 		var version:String = states.MainMenuState.kathyEngineVersion;
 		if(!ClientPrefs.data.checkForUpdates) {
 			if(onComplete != null) onComplete(version, false);
 			return;
 		}
+		if (url == null || url.length == 0)
+			url = "https://raw.githubusercontent.com/kittycathy114/FNF-KathyEngine/main/gitVersion.txt";
+		final fallbackUrl:String = "https://cdn.jsdelivr.net/gh/kittycathy114/FNF-KathyEngine@main/gitVersion.txt";
+
 		trace('checking for updates... ($url)');
 		Network.httpGet(url,
 			function (data:String) {
@@ -37,8 +39,14 @@ class CoolUtil
 				}
 			},
 			function (error) {
-				trace('failed to check for updates: $error');
-				if(onComplete != null) onComplete(version, false);
+				// 官方 GitHub 不可用时，回退到 jsDelivr CDN
+				if (url != fallbackUrl) {
+					trace('failed to check (official github): $error, fallback to jsdelivr');
+					checkForUpdates(onComplete, fallbackUrl);
+				} else {
+					trace('failed to check for updates: $error');
+					if(onComplete != null) onComplete(version, false);
+				}
 			});
 	}
 
@@ -63,26 +71,32 @@ class CoolUtil
 		return 0;
 	}
 
-	public static function tipsShow(url:String = null, forceReload:Bool = false):String {
-		if (!forceReload && cachedTips != null)
-			return cachedTips;
+	public static function tipsShow(?onComplete:String->Void, url:String = null, forceReload:Bool = false):Void {
+		if (!forceReload && cachedTips != null) {
+			if (onComplete != null) onComplete(cachedTips);
+			return;
+		}
 
 		if (url == null || url.length == 0)
-			url = "https://raw.gitmirror.com/kittycathy233/FNF-Kathy-Things/main/engine/menu/tips/zh_cn.txt";
+			url = "https://raw.githubusercontent.com/kittycathy332/FNF-Kathy-Things/main/engine/menu/tips/" + ClientPrefs.data.language + ".txt";
 
-		var tipContent:String = "";
-		trace('searching for tips...');
+		trace('searching for tips... ($url)');
 		Network.httpGet(url,
 			function (data:String)
 			{
-				tipContent = data.trim();
-				cachedTips = tipContent; // 缓存结果
+				cachedTips = data.trim(); // 缓存结果
+				if (onComplete != null) onComplete(cachedTips);
 			},
 			function (error) {
-				trace('error: $error');
+				// 语言专属文件不存在时，回退到简体中文
+				if (url.indexOf("zh_cn.txt") == -1) {
+					trace('tip file for current language unavailable, fallback to zh_cn: $error');
+					tipsShow(onComplete, "https://raw.githubusercontent.com/kittycathy332/FNF-Kathy-Things/main/engine/menu/tips/zh_cn.txt", forceReload);
+				} else {
+					trace('error: $error');
+					if (onComplete != null) onComplete('');
+				}
 			});
-
-		return tipContent;
 	}
 
 	inline public static function quantize(f:Float, snap:Float){

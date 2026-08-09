@@ -58,6 +58,7 @@ class MainMenuState extends MusicBeatState
 	static var showOutdatedWarning:Bool = true;
 	var dropFileHandler:Dynamic = null;
 	private var tipText:FlxText;
+	private var destroyed:Bool = false;
 	var selectedSomethin:Bool = false;
 	var timeNotMoving:Float = 0;
 
@@ -136,28 +137,37 @@ class MainMenuState extends MusicBeatState
 		fnfVer.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(fnfVer);
 		
-		var tipsContent = CoolUtil.tipsShow();
-		if(tipsContent != null && tipsContent.length > 0) {
-			var tipsArray = tipsContent.split('\n');
-			var randomTip = StringTools.replace(
-				tipsArray[FlxG.random.int(0, tipsArray.length - 1)].trim(),
-				"\\n",
-				"\n"
-			);
-			
-			tipText = new FlxText(30, 30, FlxG.width - 60, randomTip);
-			tipText.scrollFactor.set();
-			tipText.setFormat(
-				Paths.font(Language.get('game_font')), 
-				22, 
-				FlxColor.WHITE, 
-				RIGHT, 
-				FlxTextBorderStyle.OUTLINE, 
-				FlxColor.BLACK
-			);
-			tipText.height = tipText.textField.textHeight + 8;
-			add(tipText);
-		}
+		CoolUtil.tipsShow(function (tipsContent:String) {
+			if (destroyed) return;
+			if (tipsContent != null && tipsContent.length > 0) {
+				var tipsArray = tipsContent.split('\n');
+				var randomTip = StringTools.replace(
+					tipsArray[FlxG.random.int(0, tipsArray.length - 1)].trim(),
+					"\\n",
+					"\n"
+				);
+
+				tipText = new FlxText(30, 30, FlxG.width - 60, randomTip);
+				tipText.scrollFactor.set();
+				tipText.setFormat(
+					Paths.font(Language.get('tip_font')),
+					34,
+					FlxColor.WHITE,
+					RIGHT,
+					FlxTextBorderStyle.OUTLINE,
+					FlxColor.BLACK
+				);
+				tipText.borderSize = 2;
+				tipText.height = tipText.textField.textHeight + 8;
+				tipText.alpha = 0;
+				add(tipText);
+
+				// 进入主界面 0.5s 后渐显，5s 后渐隐
+				FlxTween.tween(tipText, {alpha: 1}, 0.5, {startDelay: 0.5, ease: FlxEase.quadOut});
+				FlxTween.tween(tipText, {alpha: 0}, 0.5, {startDelay: 5.0, ease: FlxEase.quadIn,
+					onComplete: function (_) { if (!destroyed && tipText != null) tipText.visible = false; }});
+				}
+				});
 
 		changeItem();
 
@@ -796,6 +806,7 @@ class MainMenuState extends MusicBeatState
 
 	override function destroy()
 	{
+		destroyed = true;
 		#if desktop
 		if (dropFileHandler != null) {
 			Application.current.window.onDropFile.remove(dropFileHandler);

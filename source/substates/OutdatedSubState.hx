@@ -5,6 +5,7 @@ import flixel.tweens.FlxEase;
 
 import states.MainMenuState;
 import states.TitleState;
+import backend.Language;
 
 class OutdatedSubState extends MusicBeatSubstate
 {
@@ -33,28 +34,38 @@ class OutdatedSubState extends MusicBeatSubstate
 		bg.alpha = 0.0;
 		add(bg);
 
-		warnText = new FlxText(0, 0, FlxG.width,
-			'Sup bro, looks like you\'re running an outdated version of\nKathy (${MainMenuState.kathyEngineVersion})\n
-			-----------------------------------------------\n
-			Press $enter to update to the latest version ${updateVersion}\n
-			Press $back to proceed anyway.\n
-			You can disable this warning by unchecking the
-			"Check for Updates" setting in the Options Menu\n
-			-----------------------------------------------\n
-			THX for using the Customized Engine!',
-			32);
-		warnText.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, CENTER);
+		final warningHeader:String = Language.get('outdated_header', [MainMenuState.kathyEngineVersion]);
+		final warningUpdate:String = Language.get('outdated_update', [enter, updateVersion]);
+		final warningProceed:String = Language.get('outdated_proceed', [back]);
+		final warningDisable:String = Language.get('outdated_disable');
+		final warningFooter:String = Language.get('outdated_footer');
+
+		final warningLines:Array<String> = [
+			warningHeader,
+			'-----------------------------------------------',
+			warningUpdate,
+			warningProceed,
+			warningDisable,
+			'-----------------------------------------------',
+			warningFooter
+		];
+
+		warnText = new FlxText(0, 0, FlxG.width, warningLines.join('\n'), 32);
+		warnText.setFormat(Paths.font(Language.get('game_font')), 32, FlxColor.WHITE, CENTER);
 		warnText.scrollFactor.set();
 		warnText.screenCenter(Y);
 		warnText.alpha = 0.0;
 		add(warnText);
 
 		addTouchPad("NONE", "A_B");
+		addTouchPadCamera();
 		touchPad.alpha = 0;
+		touchPad.visible = controls.mobileC; // 仅在移动端显示触摸板
 
 		FlxTween.tween(bg, { alpha: 0.8 }, 0.6, { ease: FlxEase.sineIn });
 		FlxTween.tween(warnText, { alpha: 1.0 }, 0.6, { ease: FlxEase.sineIn });
-		FlxTween.tween(touchPad, { alpha: 1.0 }, 0.6, { ease: FlxEase.sineIn });
+		if (controls.mobileC)
+			FlxTween.tween(touchPad, { alpha: 1.0 }, 0.6, { ease: FlxEase.sineIn });
 	}
 
 	override function update(elapsed:Float)

@@ -21,16 +21,20 @@ class Network
 	}
 
 	/**
-	 * 统一的 HTTP GET 封装。
+	 * 统一的 HTTP GET 封装（异步，不阻塞主线程）。
+	 *
+	 * 使用 `lime.net.HTTPRequest` 而非 `haxe.Http`：后者在 native(cpp) 平台
+	 * 上的 `request()` 是同步阻塞的，会导致每次进主界面时主线程卡住等待网络响应。
+	 * `HTTPRequest.load()` 在 native 上由后台线程 + 事件循环驱动，不会阻塞 UI。
 	 *
 	 * 当联网被禁用时不会发起任何请求，并会调用一次 `onError('networking disabled')`（若提供）。
 	 *
 	 * @param url     请求地址
-	 * @param onData  成功回调（被拦截时不会触发）
+	 * @param onData  成功回调（被拦截时不会触发，参数为响应文本）
 	 * @param onError 失败回调（被拦截时会以原因字符串调用一次）
-	 * @return 实际发起的 `haxe.Http`，被拦截时返回 null
+	 * @return 实际发起的 `lime.net.HTTPRequest`，被拦截时返回 null
 	 */
-	public static function httpGet(url:String, ?onData:String->Void, ?onError:Dynamic->Void):haxe.Http
+	public static function httpGet(url:String, ?onData:String->Void, ?onError:Dynamic->Void):lime.net.HTTPRequest<Dynamic>
 	{
 		if (isNetworkingDisabled())
 		{
@@ -39,11 +43,13 @@ class Network
 			return null;
 		}
 
-		final http = new haxe.Http(url);
-		if (onData != null) http.onData = onData;
-		if (onError != null) http.onError = onError;
-		http.request();
-		return http;
+		final req = new lime.net.HTTPRequest<Dynamic>();
+		req.load(url).onComplete(function(data:Dynamic) {
+			if (onData != null) onData(Std.string(data));
+		}).onError(function(error:Dynamic) {
+			if (onError != null) onError(error);
+		});
+		return req;
 	}
 
 	/**

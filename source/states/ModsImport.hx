@@ -79,28 +79,30 @@ class ModsImport extends MusicBeatState
 		importDoneText.visible = false;
 		add(importDoneText);
 
-		var tipsContent = CoolUtil.tipsShow();
-		if(tipsContent != null && tipsContent.length > 0) {
-			var tipsArray = tipsContent.split('\n');
-			var randomTip = StringTools.replace(
-				tipsArray[FlxG.random.int(0, tipsArray.length - 1)].trim(),
-				"\\n",
-				"\n"
-			);
-			
-			tipText = new FlxText(30, 30, FlxG.width - 60, randomTip);
-			tipText.scrollFactor.set();
-			tipText.setFormat(
-				Paths.font(Language.get('game_font')), 
-				22, 
-				FlxColor.WHITE, 
-				RIGHT, 
-				FlxTextBorderStyle.OUTLINE, 
-				FlxColor.BLACK
-			);
-			tipText.height = tipText.textField.textHeight + 8;
-			add(tipText);
-		}
+		CoolUtil.tipsShow(function (tipsContent:String) {
+			if (tipsContent != null && tipsContent.length > 0) {
+				var tipsArray = tipsContent.split('\n');
+				var randomTip = StringTools.replace(
+					tipsArray[FlxG.random.int(0, tipsArray.length - 1)].trim(),
+					"\\n",
+					"\n"
+				);
+
+				tipText = new FlxText(30, 30, FlxG.width - 60, randomTip);
+				tipText.scrollFactor.set();
+				tipText.setFormat(
+					Paths.font(Language.get('tip_font')),
+					34,
+					FlxColor.WHITE,
+					RIGHT,
+					FlxTextBorderStyle.OUTLINE,
+					FlxColor.BLACK
+				);
+				tipText.borderSize = 2;
+				tipText.height = tipText.textField.textHeight + 8;
+				add(tipText);
+			}
+		});
 
 		checkZipContent();
 	}

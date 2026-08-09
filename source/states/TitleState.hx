@@ -144,7 +144,7 @@ class TitleState extends MusicBeatState
 		Mods.loadTopMod();
 
 		// 预加载tips内容
-		CoolUtil.tipsShow();
+		CoolUtil.tipsShow(function (_:String) {});
 		FlxG.mouse.useSystemCursor = ClientPrefs.data.systemCursor;
 	}
 
