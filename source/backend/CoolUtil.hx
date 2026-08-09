@@ -15,27 +15,51 @@ class CoolUtil
 	private static var _coolTextFileCache:Map<String, Array<String>> = null;
 	private static var _gridCache:Map<String, FlxGraphic> = null;
 	
-	public static function checkForUpdates(url:String = null):String {
+	public static function checkForUpdates(?onComplete:(latestVersion:String, isOutdated:Bool)->Void, url:String = null):Void {
 		if (url == null || url.length == 0)
 			url = "https://raw.gitmirror.com/kittycathy233/FNF-KathyEngine/main/gitVersion.txt";
-		var version:String = states.MainMenuState.kathyEngineVersion.trim();
-		if(ClientPrefs.data.checkForUpdates) {
-			trace('checking for updates...');
-			Network.httpGet(url,
-				function (data:String)
-				{
-					var newVersion:String = data.split('\n')[0].trim();
-					trace('version online: $newVersion, your version: $version');
-					if(newVersion != version) {
-						trace('versions arent matching! please update');
-						version = newVersion;
-					}
-				},
-				function (error) {
-					trace('error: $error');
-				});
+		var version:String = states.MainMenuState.kathyEngineVersion;
+		if(!ClientPrefs.data.checkForUpdates) {
+			if(onComplete != null) onComplete(version, false);
+			return;
 		}
-		return version;
+		trace('checking for updates...');
+		Network.httpGet(url,
+			function (data:String) {
+				var newVersion:String = data.split('\n')[0].trim();
+				trace('version online: $newVersion, your version: $version');
+				if(versionCompare(newVersion, version) > 0) {
+					trace('a new version is available!');
+					if(onComplete != null) onComplete(newVersion, true);
+				} else {
+					if(onComplete != null) onComplete(version, false);
+				}
+			},
+			function (error) {
+				trace('error: $error');
+				if(onComplete != null) onComplete(version, false);
+			});
+	}
+
+	/**
+	 * 语义化版本比较。会自动忽略 " dev" 之类的附加后缀，只比较主.次.修订号。
+	 * @return >0 表示 a 比 b 新，<0 表示 a 比 b 旧，0 表示相等
+	 */
+	public static function versionCompare(a:String, b:String):Int
+	{
+		var va:String = a.split(' ')[0].trim();
+		var vb:String = b.split(' ')[0].trim();
+		var pa:Array<String> = va.split('.');
+		var pb:Array<String> = vb.split('.');
+		var len:Int = Std.int(Math.max(pa.length, pb.length));
+		for (i in 0...len)
+		{
+			var na:Int = (i < pa.length) ? Std.parseInt(pa[i]) : 0;
+			var nb:Int = (i < pb.length) ? Std.parseInt(pb[i]) : 0;
+			if (na > nb) return 1;
+			if (na < nb) return -1;
+		}
+		return 0;
 	}
 
 	public static function tipsShow(url:String = null, forceReload:Bool = false):String {

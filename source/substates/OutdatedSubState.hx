@@ -8,8 +8,14 @@ import states.TitleState;
 
 class OutdatedSubState extends MusicBeatSubstate
 {
-	public static var updateVersion:String = CoolUtil.checkForUpdates();
+	var updateVersion:String;
 	var leftState:Bool = false;
+
+	public function new(updateVersion:String)
+	{
+		super();
+		this.updateVersion = updateVersion;
+	}
 
 	var bg:FlxSprite;
 	var warnText:FlxText;
@@ -56,7 +62,7 @@ class OutdatedSubState extends MusicBeatSubstate
 		if(!leftState) {
 			if (controls.ACCEPT) {
 				leftState = true;
-				CoolUtil.browserLoad("https://github.com/kittycathy233/FNF-Kathy/releases");
+				CoolUtil.browserLoad("https://github.com/kittycathy114/FNF-KathyEngine/releases");
 			}
 			else if(controls.BACK) {
 				leftState = true;

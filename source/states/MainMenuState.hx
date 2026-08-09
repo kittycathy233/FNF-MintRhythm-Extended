@@ -168,11 +168,13 @@ class MainMenuState extends MusicBeatState
 		#end
 
 		#if CHECK_FOR_UPDATES
-		if (showOutdatedWarning && ClientPrefs.data.checkForUpdates && substates.OutdatedSubState.updateVersion != kathyEngineVersion) {
-			persistentUpdate = false;
-			showOutdatedWarning = false;
-			openSubState(new substates.OutdatedSubState());
-		}
+		CoolUtil.checkForUpdates(function (latestVersion:String, isOutdated:Bool) {
+			if (showOutdatedWarning && isOutdated && FlxG.state == this && this.subState == null) {
+				showOutdatedWarning = false;
+				persistentUpdate = false;
+				openSubState(new substates.OutdatedSubState(latestVersion));
+			}
+		});
 		#end
 
 		FlxG.camera.follow(camFollow, null, 0.15);
