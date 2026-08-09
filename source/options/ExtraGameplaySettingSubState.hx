@@ -263,12 +263,6 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		addOption(option);
 
 		// ===== rating/combo 精灵对象池 =====
-		option = new Option('Combo Sprite Pooling',
-			Language.get("combo_sprite_pooling_desc"),
-			'comboSpritePooling',
-			BOOL);
-		addOption(option);
-
 		option = new Option('Combo Sprite Pool Size',
 			Language.get("combo_sprite_pool_size_desc"),
 			'comboSpritePoolSize',
@@ -283,54 +277,6 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			Language.get("auto_song_resync_desc"),
 			'autoResync',
 			BOOL);
-		addOption(option);
-
-		option = new Option('Hide Missed Notes (Cull)',
-			Language.get("hide_missed_notes_desc"),
-			'hideMissedNotes',
-			BOOL);
-		addOption(option);
-
-		option = new Option('Low-Latency Mode',
-			Language.get("low_latency_desc"),
-			'lowLatency',
-			BOOL);
-		addOption(option);
-
-		// ===== 高密度谱面（SPAM）性能优化 =====
-		option = new Option('Instant-Resolve Expired Notes',
-			Language.get("instant_resolve_expired_desc"),
-			'instantResolveExpired',
-			BOOL);
-		addOption(option);
-
-		option = new Option('Disable Per-Note Scripts',
-			Language.get("disable_note_lua_desc"),
-			'disableNoteLua',
-			BOOL);
-		addOption(option);
-
-		option = new Option('Note Performance Optimization',
-			Language.get("note_optimization_desc"),
-			'noteOptimization',
-			BOOL);
-		addOption(option);
-
-		option = new Option('Note Object Pooling',
-			Language.get("note_pooling_desc"),
-			'notePooling',
-			BOOL);
-		addOption(option);
-
-		option = new Option('Max Notes Spawned / Frame',
-			Language.get("max_notes_per_frame_desc"),
-			'maxNotesPerFrame',
-			INT);
-		option.scrollSpeed = 60;
-		option.minValue = 0;
-		option.maxValue = 300;
-		option.changeValue = 5;
-		option.decimals = 0;
 		addOption(option);
 
 		option = new Option('Background Volume Level',
@@ -555,10 +501,11 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 					#end
 					#end
 					Language.get("extra_options")
+					, Language.get("spam_chart")
 					#if mobile , Language.get("mobile_options") #end
-				];
-			
-				parentState.optionDescriptions = [
+					];
+		
+					parentState.optionDescriptions = [
 					Language.get("note_colors_desc"),
 					Language.get("controls_desc"),
 					Language.get("adjust_delay_combo_desc"),
@@ -574,10 +521,11 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 					#end
 					#end
 					Language.get("extra_options_desc")
+					, Language.get("spam_chart_desc")
 					#if mobile , Language.get("mobile_options_desc") #end
-				];
-				
-				parentState.refreshTexts();
+					];
+			
+					parentState.refreshTexts();
 			}
 		};
 		addOption(option);
