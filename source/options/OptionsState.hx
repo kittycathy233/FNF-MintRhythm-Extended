@@ -247,6 +247,9 @@ class OptionsState extends MusicBeatState
 	override function update(elapsed:Float) {
 		super.update(elapsed);
 
+		// 按住 Shift 时快速滚动（每次跳 4 项，与 LanguageSubState 一致）
+		var mult:Int = (FlxG.keys.pressed.SHIFT) ? 4 : 1;
+
 		// 在子状态中，淡出选择器，但保持位置更新
 		if (_inSubState) {
 			// 更新选择器位置到当前选中项
@@ -283,19 +286,19 @@ class OptionsState extends MusicBeatState
 		if (allowInput) {
 			if (!exiting) {
 				if (controls.UI_UP_P) {
-					changeSelection(0, -1);
+					changeSelection(0, -1 * mult);
 					hideSelectors = false; // 键盘输入恢复显示
 				}
 				if (controls.UI_DOWN_P) {
-					changeSelection(0, 1);
+					changeSelection(0, 1 * mult);
 					hideSelectors = false; // 键盘输入恢复显示
 				}
 				if (controls.UI_LEFT_P || (touchPad != null && touchPad.buttonLeft.justPressed)) {
-					changeSelection(-1, 0);
+					changeSelection(-1 * mult, 0);
 					hideSelectors = false;
 				}
 				if (controls.UI_RIGHT_P || (touchPad != null && touchPad.buttonRight.justPressed)) {
-					changeSelection(1, 0);
+					changeSelection(1 * mult, 0);
 					hideSelectors = false;
 				}
 

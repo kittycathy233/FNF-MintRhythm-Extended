@@ -403,11 +403,12 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 	}
 
 	var notesShown:Bool = false;
-	override function changeSelection(change:Int = 0)
+	override function changeSelection(change:Int = 0, skipRefresh:Bool = false, skipDesc:Bool = false)
 	{
-		super.changeSelection(change);
+		super.changeSelection(change, skipRefresh, skipDesc);
 		
-		var isSkinMode:Bool = (curOption.variable == 'noteSkin' || curOption.variable == 'splashSkin');
+		// 样式面板已统一到 BaseOptionsMenu 的通用 STRING 候选面板，这里不再单独显示
+		var isSkinMode:Bool = false;
 
 		switch(curOption.variable)
 		{

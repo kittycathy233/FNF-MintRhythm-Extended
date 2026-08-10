@@ -1,5 +1,7 @@
 package options;
 
+import flixel.text.FlxText;
+
 typedef Keybind = {
 	keyboard:String,
 	gamepad:String
@@ -19,7 +21,7 @@ enum OptionType {
 
 class Option
 {
-	public var child:Alphabet;
+	public var child:FlxText;
 	public var text(get, set):String;
 	public var onChange:Void->Void = null;
 	public var type:OptionType = BOOL;
@@ -38,6 +40,8 @@ class Option
 	public var displayFormat:String = '%v';
 	public var description:String = '';
 	public var name:String = 'Unknown';
+	// 选项被禁用时的前提条件说明（如"需要 Kathy 评价下落风格"），选中禁用项时显示在描述框
+	public var requirement:String = null;
 
 	public var defaultKeys:Keybind = null;
 	public var keys:Keybind = null;
@@ -130,6 +134,8 @@ class Option
 	var _name:String = null;
 	var _text:String = null;
 	var _translationKey:String = null;
+	public var translationKey(get, never):String;
+	private function get_translationKey():String return _translationKey;
 	private function get_text()
 		return _text;
 

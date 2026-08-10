@@ -6,13 +6,16 @@ import flixel.input.gamepad.FlxGamepadInputID;
 import flixel.input.gamepad.FlxGamepadManager;
 
 import objects.CheckboxThingie;
-import objects.AttachedText;
+import objects.AttachedFlxText;
 import options.Option;
 import backend.InputFormatter;
+import flixel.text.FlxText;
 
 import flixel.addons.display.FlxBackdrop;
 import flixel.addons.display.FlxGridOverlay;
 import backend.CoolUtil;
+import flixel.input.touch.FlxTouch;
+import mobile.backend.TouchUtil;
 
 class BaseOptionsMenu extends MusicBeatSubstate
 {
@@ -20,12 +23,31 @@ class BaseOptionsMenu extends MusicBeatSubstate
 	private var curSelected:Int = 0;
 	private var optionsArray:Array<Option>;
 
-	private var grpOptions:FlxTypedGroup<Alphabet>;
+	private var grpOptions:FlxTypedGroup<FlxText>;
 	private var checkboxGroup:FlxTypedGroup<CheckboxThingie>;
-	private var grpTexts:FlxTypedGroup<AttachedText>;
+	private var grpTexts:FlxTypedGroup<AttachedFlxText>;
+
+	private var listCenterY:Float = 0;
+	private var itemSpacing:Float = 56;
+	private var listBaseX:Float = 0;
+
+	// STRING 候选值面板（屏幕右侧列出可切换的选项）
+	private var candidateBG:FlxSprite;
+	private var candidateLines:FlxTypedGroup<FlxText>;
+	private var candidatePanelVisible:Bool = false;
+	private var candidateForSelected:Int = -1;
+	private var _flashDummy:Float = 0; // 仅供重置闪红 tween 补间用的占位字段
+	private var candidateLineH:Float = 32;
+	private var candidatePadX:Float = 18;
+	private var candidatePadY:Float = 12;
+	private var candidateMargin:Float = 20;
+	private var _lastBgW:Int = -1; // 候选面板背景上次尺寸（避免每次刷新都重建位图）
+	private var _lastBgH:Int = -1;
 
 	private var descBox:FlxSprite;
 	private var descText:FlxText;
+	private var _lastDesc:String = null;   // 上次描述文本，避免重复赋值导致重复光栅化
+	private var _descBoxDirty:Bool = true;  // 描述文本/位置变化时才重算背景框尺寸
 
 	private var _optionsBuildIndex:Int = 0;
 	private var _optionsBuilt:Bool = false;
@@ -66,18 +88,31 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		add(_grid);
 
 		// avoids lagspikes while scrolling through menus!
-		grpOptions = new FlxTypedGroup<Alphabet>();
+		grpOptions = new FlxTypedGroup<FlxText>();
 		add(grpOptions);
 
-		grpTexts = new FlxTypedGroup<AttachedText>();
+		grpTexts = new FlxTypedGroup<AttachedFlxText>();
 		add(grpTexts);
 
 		checkboxGroup = new FlxTypedGroup<CheckboxThingie>();
 		add(checkboxGroup);
 
+		listCenterY = FlxG.height * OptionsConfig.SUBMENU_SELECTED_Y_RATIO;
+		itemSpacing = OptionsConfig.SUBMENU_ITEM_SPACING;
+		listBaseX = OptionsConfig.SUBMENU_ITEM_X;
+
 		descBox = new FlxSprite().makeGraphic(1, 1, FlxColor.BLACK);
 		descBox.alpha = 0.6;
 		add(descBox);
+
+		// STRING 候选值面板（默认隐藏，选中 STRING 项时飞入右侧）
+		candidateLines = new FlxTypedGroup<FlxText>();
+		candidateBG = new FlxSprite();
+		candidateBG.makeGraphic(1, 1, FlxColor.BLACK);
+		candidateBG.alpha = 0;
+		candidateBG.scrollFactor.set();
+		add(candidateBG);
+		add(candidateLines);
 
 		var titleText:Alphabet = new Alphabet(75, 45, title, true);
 		titleText.setScale(0.6);
@@ -118,35 +153,46 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		while (_optionsBuildIndex < optionsArray.length && count < _buildPerFrame)
 		{
 			var i:Int = _optionsBuildIndex;
-			var optionText:Alphabet = new Alphabet(220, 260, optionsArray[i].name, false);
-			optionText.isMenuItem = true;
-			optionText.targetY = i;
+			var optionText:FlxText = new FlxText(0, 0, 0, optionsArray[i].name, OptionsConfig.SUBMENU_ITEM_SIZE);
+			optionText.setFormat(Paths.font(Language.get('game_font')), OptionsConfig.SUBMENU_ITEM_SIZE, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			optionText.borderSize = 2;
+			optionText.antialiasing = ClientPrefs.data.antialiasing;
+			optionText.ID = i;
+			optionText.scrollFactor.set();
+
+			// 所有类型统一从 SUBMENU_ITEM_X 起始，保证左对齐
+			optionText.x = OptionsConfig.SUBMENU_ITEM_X;
+			optionText.y = listCenterY + i * itemSpacing;
 			grpOptions.add(optionText);
 
 			if(optionsArray[i].type == BOOL)
 			{
-				var checkbox:CheckboxThingie = new CheckboxThingie(optionText.x - 105, optionText.y, Std.string(optionsArray[i].getValue()) == 'true');
-				checkbox.sprTracker = optionText;
-				checkbox.ID = i;
-				if (optionsArray[i].disabled) checkbox.alpha = 0.3;
-				checkboxGroup.add(checkbox);
-			}
-			else if (optionsArray[i].type != BUTTON)
-			{
-				optionText.x -= 80;
-				optionText.startPosition.x -= 80;
-				var valueText:AttachedText = new AttachedText('' + optionsArray[i].getValue(), optionText.width + 60);
+				var on:Bool = (optionsArray[i].getValue() == true);
+				var valueText:AttachedFlxText = new AttachedFlxText(optionText.x, optionText.y, 0, on ? 'Enabled' : 'Disabled', OptionsConfig.SUBMENU_VALUE_SIZE);
+				valueText.setFormat(Paths.font(Language.get('game_font')), OptionsConfig.SUBMENU_VALUE_SIZE, on ? OptionsConfig.OPTION_ON_COLOR : OptionsConfig.OPTION_OFF_COLOR, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+				valueText.borderSize = 2;
+				valueText.antialiasing = ClientPrefs.data.antialiasing;
 				valueText.sprTracker = optionText;
+				valueText.offsetX = optionText.width + 60;
 				valueText.copyAlpha = true;
 				valueText.ID = i;
-				if (optionsArray[i].disabled) valueText.alpha = 0.3;
+				valueText.scrollFactor.set();
 				grpTexts.add(valueText);
 				optionsArray[i].child = valueText;
 			}
-			else
+			else if (optionsArray[i].type != BUTTON)
 			{
-				optionText.x -= 80;
-				optionText.startPosition.x -= 80;
+				var valueText:AttachedFlxText = new AttachedFlxText(optionText.x, optionText.y, 0, '' + optionsArray[i].getValue(), OptionsConfig.SUBMENU_VALUE_SIZE);
+				valueText.setFormat(Paths.font(Language.get('game_font')), OptionsConfig.SUBMENU_VALUE_SIZE, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+				valueText.borderSize = 2;
+				valueText.antialiasing = ClientPrefs.data.antialiasing;
+				valueText.sprTracker = optionText;
+				valueText.offsetX = optionText.width + 60;
+				valueText.copyAlpha = true;
+				valueText.ID = i;
+				valueText.scrollFactor.set();
+				grpTexts.add(valueText);
+				optionsArray[i].child = valueText;
 			}
 			if (optionsArray[i].type != BUTTON) {
 				updateTextFrom(optionsArray[i]);
@@ -160,6 +206,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		{
 			_optionsBuilt = true;
 			changeSelection();
+			scrollVisual = curSelected; // 构建完成即对齐，避免首帧滑动
 			reloadCheckboxes();
 			onOptionsBuilt();
 		}
@@ -201,6 +248,22 @@ class BaseOptionsMenu extends MusicBeatSubstate
 	var keybindManager:KeybindManager;
 	var lastMouseClickTime:Float = 0;
 	var lastMouseClickIndex:Int = -1;
+
+	// 平滑滚动位置（浮点索引）：整列作为整体一起缓动滚动，快速滚动/触屏拖拽时所有项目统一滑动，
+	// 避免出现“只有选中项及相邻几项有动效、其余瞬移”的不一致观感
+	private var scrollVisual:Float = 0;
+	private var touchScrollActive:Bool = false; // 触屏拖拽进行中（updateItemLayout 据此跳过缓动，改为手指直接驱动 scrollVisual）
+
+	// 滚动提示音最小间隔（秒）：快速滚动（Shift / 触屏拖拽）时限制音效频率，避免叠加过多声音实例导致卡顿
+	private static inline var SCROLL_SND_INTERVAL:Float = 0.04;
+	private var _lastScrollSndT:Float = 0;
+
+#if mobile
+	// 触屏拖拽滚动（仅移动端 / 设置子界面）：以连续浮点位置 1:1 跟随手指，松手吸附到最近项，避免瞬移
+	private var touchScrollTouch:FlxTouch = null;
+	private var touchScrollStartY:Float = 0;       // 拖拽起点手指 Y
+	private var touchScrollStartVisual:Float = 0;  // 拖拽起点平滑滚动位置
+#end
 	override function update(elapsed:Float)
 	{
 		if (!_optionsBuilt)
@@ -210,12 +273,16 @@ class BaseOptionsMenu extends MusicBeatSubstate
 			return;
 		}
 
+		updateItemLayout(elapsed);
 		super.update(elapsed);
 
+		// 按住 Shift 时快速滚动（每次跳 4 项，与 LanguageSubState 一致）
+		var mult:Int = (FlxG.keys.pressed.SHIFT) ? 4 : 1;
+
 #if !mobile
-		// 鼠标滚轮切换选项
+		// 鼠标滚轮切换选项（按住 Shift 快速滚动 ×4）
 		if (FlxG.mouse.wheel != 0) {
-			changeSelection(FlxG.mouse.wheel > 0 ? -1 : 1);
+			changeSelection((FlxG.mouse.wheel > 0 ? -1 : 1) * mult);
 		}
 
 		// 检测鼠标左右键
@@ -224,23 +291,12 @@ class BaseOptionsMenu extends MusicBeatSubstate
 			if (lastMouseClickIndex == curSelected && (now - lastMouseClickTime) < OptionsConfig.DOUBLE_CLICK_THRESHOLD) {
 				// 双击，什么都不做（交由右键或其它逻辑处理）
 			} else {
-				// 单击，BOOL类型切换
+				// 单击，BOOL类型切换：点击选项文本区域即切换（复选框已改为右侧 Enabled/Disabled 文本）
 				if (curOption != null && curOption.type == BOOL && !curOption.disabled) {
-					// 检查鼠标是否点击在复选框区域内
-					var checkbox:CheckboxThingie = null;
-					for (cb in checkboxGroup) {
-						if (cb.ID == curSelected) {
-							checkbox = cb;
-							break;
-						}
-					}
-					
-					// 只有在复选框内点击才切换状态
-					if (checkbox != null && 
-						FlxG.mouse.x >= checkbox.x && 
-						FlxG.mouse.x <= checkbox.x + checkbox.width &&
-						FlxG.mouse.y >= checkbox.y && 
-						FlxG.mouse.y <= checkbox.y + checkbox.height) {
+					var opt = grpOptions.members[curSelected];
+					if (opt != null &&
+						FlxG.mouse.x >= opt.x && FlxG.mouse.x <= opt.x + opt.width &&
+						FlxG.mouse.y >= opt.y && FlxG.mouse.y <= opt.y + opt.height) {
 						FlxG.sound.play(Paths.sound('scrollMenu'));
 						curOption.setValue((curOption.getValue() == true) ? false : true);
 						curOption.change();
@@ -258,6 +314,11 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		}
 #end
 
+#if mobile
+		// 触屏拖拽滚动列表（按住方向键触摸板时不触发，避免冲突）
+		handleTouchScroll();
+#end
+
 		// Handle keybinding
 		if (keybindManager != null && keybindManager.isBinding) {
 			if (keybindManager.update(elapsed)) {
@@ -268,11 +329,11 @@ class BaseOptionsMenu extends MusicBeatSubstate
 
 		if (controls.UI_UP_P)
 		{
-			changeSelection(-1);
+			changeSelection(-1 * mult);
 		}
 		if (controls.UI_DOWN_P)
 		{
-			changeSelection(1);
+			changeSelection(1 * mult);
 		}
 
 		if (controls.BACK) {
@@ -360,11 +421,12 @@ class BaseOptionsMenu extends MusicBeatSubstate
 											curOption.curOption = num;
 											curOption.setValue(curOption.options[num]);
 
-										default:
-									}
-									updateTextFrom(curOption);
-									curOption.change();
-									FlxG.sound.play(Paths.sound('scrollMenu'));
+											default:
+											}
+											updateTextFrom(curOption);
+											refreshCandidatePanel();
+											curOption.change();
+											FlxG.sound.play(Paths.sound('scrollMenu'));
 								}
 								else if(curOption.type != STRING)
 								{
@@ -422,7 +484,8 @@ class BaseOptionsMenu extends MusicBeatSubstate
 					leOption.change();
 					FlxG.sound.play(Paths.sound('cancelMenu'));
 					reloadCheckboxes();
-				}
+					refreshCandidatePanel(true);
+					}
 			}
 		}
 
@@ -440,6 +503,23 @@ class BaseOptionsMenu extends MusicBeatSubstate
 			return;
 		}
 
+		if(option.type == BOOL) {
+			var on:Bool = (option.getValue() == true);
+			if (option.child != null) {
+				option.child.text = on ? 'Enabled' : 'Disabled';
+				option.child.color = on ? OptionsConfig.OPTION_ON_COLOR : OptionsConfig.OPTION_OFF_COLOR;
+			}
+			return;
+		}
+
+		if(option.type == STRING) {
+			// 类似 noteskin 选择器：用箭头包住当前可选值，并着强调色，提示可左右切换
+			var val:Dynamic = option.getValue();
+			option.text = '${OptionsConfig.SUBMENU_STRING_ARROW.charAt(0)}$val${OptionsConfig.SUBMENU_STRING_ARROW.charAt(2)}';
+			if (option.child != null) option.child.color = OptionsConfig.SUBMENU_STRING_COLOR;
+			return;
+		}
+
 		var text:String = option.displayFormat;
 		var val:Dynamic = option.getValue();
 		if(option.type == PERCENT) val *= 100;
@@ -447,55 +527,321 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		option.text = text.replace('%v', val).replace('%d', def);
 	}
 	
-	function changeSelection(change:Int = 0)
-	{
-		curSelected = FlxMath.wrap(curSelected + change, 0, optionsArray.length - 1);
+#if mobile
+	private function handleTouchScroll():Void {
+		if (!touchScrollActive) {
+			// 仅在“列表区域”的非触摸板触摸按下时开始滚动，避免与方向键触摸板冲突
+			for (t in FlxG.touches.list) {
+				if (t.justPressed && !(touchPad != null && touchPadCam != null && t.overlaps(touchPad, touchPadCam))) {
+					touchScrollActive = true;
+					touchScrollTouch = t;
+					touchScrollStartY = t.y;
+					touchScrollStartVisual = scrollVisual; // 从当前平滑位置起算，避免突跳
+					prevTouchSel = curSelected;
+					break;
+				}
+			}
+			if (!touchScrollActive) return;
+		}
 
-		descText.text = optionsArray[curSelected].description;
-		descText.screenCenter(Y);
-		descText.y += 270;
-
-		for (num => item in grpOptions.members)
-		{
-			item.targetY = num - curSelected;
-			item.alpha = 0.6;
-			if (item.targetY == 0) item.alpha = 1;
-			// 禁用选项淡化（即便选中状态也会变淡）
-			if (optionsArray[num].disabled)
-			{
-				if (item.targetY == 0) item.alpha = 0.55;
-				else item.alpha = 0.3;
+		// 找回当前活动的触摸（FlxTouch 对象在同一根手指按下期间保持稳定引用）
+		var active:FlxTouch = null;
+		for (t in FlxG.touches.list) {
+			if (t == touchScrollTouch) {
+				active = t;
+				break;
 			}
 		}
-		for (text in grpTexts)
-		{
-			text.alpha = 0.6;
-			if(text.ID == curSelected) text.alpha = 1;
-			if (optionsArray[text.ID].disabled)
-			{
-				if (text.ID == curSelected) text.alpha = 0.55;
-				else text.alpha = 0.3;
+
+		if (active == null || active.justReleased || active.released) {
+			// 松手：选中项吸附到最近整数项；scrollVisual 不立即跳变，
+			// 交由 updateItemLayout 的 lerp 平滑收尾（避免松手瞬间整列突然移动）
+			touchScrollActive = false;
+			touchScrollTouch = null;
+			curSelected = Math.round(scrollVisual);
+			curOption = optionsArray[curSelected];
+			prevTouchSel = curSelected;
+			updateDescText();
+			refreshCandidatePanel();
+			return;
+		}
+
+		// 连续模型：手指向上拖（y 减小）→ 列表内容上移 → 选中项增大。
+		// 以浮点 scrollVisual 1:1 跟随手指，整列统一滑动，绝不瞬移；
+		// 顶/底夹住不回环（仅移动端，键盘仍保留回环）。
+		var dragPx:Float = touchScrollStartY - active.y; // 向上为正
+		var targetVisual:Float = touchScrollStartVisual + dragPx / itemSpacing;
+		var lastIdx:Int = optionsArray.length - 1;
+		if (targetVisual < 0) targetVisual = 0;
+		else if (targetVisual > lastIdx) targetVisual = lastIdx;
+		scrollVisual = targetVisual;
+
+		var newSel:Int = Math.round(scrollVisual);
+		if (newSel != prevTouchSel) {
+			curSelected = newSel;
+			curOption = optionsArray[curSelected];
+			prevTouchSel = newSel;
+			// 限频滚动音效
+			var tnow:Float = FlxG.game.ticks / 1000.0;
+			if (tnow - _lastScrollSndT >= SCROLL_SND_INTERVAL) {
+				FlxG.sound.play(Paths.sound('scrollMenu'));
+				_lastScrollSndT = tnow;
 			}
+			// 描述/候选面板在松手时才刷新（见上面 release 分支）
 		}
-		for (checkbox in checkboxGroup)
-		{
-			if (optionsArray[checkbox.ID].disabled)
-				checkbox.alpha = 0.3;
-			else
-				checkbox.alpha = 1;
-		}
-
-		descBox.setPosition(descText.x - 10, descText.y - 10);
-		descBox.setGraphicSize(Std.int(descText.width + 20), Std.int(descText.height + 25));
-		descBox.updateHitbox();
-
-		curOption = optionsArray[curSelected]; //shorter lol
-		FlxG.sound.play(Paths.sound('scrollMenu'));
 	}
 
-	function reloadCheckboxes()
+	private var prevTouchSel:Int = 0; // 触屏拖拽中上一帧的选中项（用于检测跨项与限频音效）
+#end
+
+	function changeSelection(change:Int = 0, skipRefresh:Bool = false, skipDesc:Bool = false)
+	{
+		curSelected = FlxMath.wrap(curSelected + change, 0, optionsArray.length - 1);
+		curOption = optionsArray[curSelected]; //shorter lol
+
+		// skipDesc=true 时由调用方统一刷新描述（触摸拖拽期间冻结、松手才同步，避免每步重算）
+		if (!skipDesc) updateDescText();
+		// skipRefresh=true 时由调用方统一刷新（快速滚动时每帧只重建一次候选面板，避免卡顿）
+		if (!skipRefresh) refreshCandidatePanel();
+		// 快速滚动时限制提示音频率，避免一帧内多次调用叠加大量音效实例造成卡顿
+		var t:Float = FlxG.game.ticks / 1000.0;
+		if (t - _lastScrollSndT >= SCROLL_SND_INTERVAL) {
+			FlxG.sound.play(Paths.sound('scrollMenu'));
+			_lastScrollSndT = t;
+		}
+	}
+
+	// 仅当描述文本真正变化时，才更新 descText 并重算背景框（避免快速滚动中重复光栅化）
+	private function updateDescText():Void
+	{
+		var sel:Option = optionsArray[curSelected];
+		var desc:String = sel.description;
+		// 禁用项在描述后追加前提条件说明，指明为何不可用
+		if (sel.disabled && sel.requirement != null && sel.requirement.length > 0)
+			desc += '\n[' + OptionsLanguage.get('requirement_prefix', '需要: ') + sel.requirement + ']';
+
+		if (desc != _lastDesc) {
+			_lastDesc = desc;
+			descText.text = desc;
+			descText.screenCenter(Y);
+			descText.y += 270;
+			_descBoxDirty = true;
+		}
+	}
+
+	// 若当前选中项是有候选值的 STRING 选项，在右侧列出所有可选项并高亮当前值；否则隐藏面板
+	// flashDefault=true 时，理论默认项会闪红一下（用于重置反馈）
+	private function refreshCandidatePanel(flashDefault:Bool = false):Void
+	{
+		var opt:Option = optionsArray[curSelected];
+		var list:Array<String> = (opt != null && opt.type == STRING && opt.options != null) ? opt.options : null;
+		var shouldShow:Bool = (list != null && list.length > 0);
+		var defaultVal:String = (opt != null) ? Std.string(opt.defaultValue) : null;
+
+		if (!shouldShow)
+		{
+			if (candidatePanelVisible)
+			{
+				candidatePanelVisible = false;
+				candidateForSelected = -1;
+				hideCandidatePanel();
+			}
+			return;
+		}
+
+		var wasVisible:Bool = candidatePanelVisible;
+		candidatePanelVisible = true;
+
+		// 取消可能仍在进行的重置闪红补间（作用于 this），避免与后续重新着色冲突
+		FlxTween.cancelTweensOf(this);
+
+		var current:String = Std.string(opt.getValue());
+
+		// 复用候选行对象池：仅在行数不足时新建，切换选项时仅更新文本/颜色/位置，避免频繁分配与销毁对象
+		var needed:Int = list.length;
+		for (i in candidateLines.members.length...needed)
+		{
+			var t:FlxText = new FlxText(0, 0, 0, '', OptionsConfig.SUBMENU_VALUE_SIZE);
+			t.setFormat(Paths.font(Language.get('game_font')), OptionsConfig.SUBMENU_VALUE_SIZE, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			t.borderSize = 2;
+			t.antialiasing = ClientPrefs.data.antialiasing;
+			t.scrollFactor.set();
+			candidateLines.add(t);
+		}
+		// 多余的行隐藏，等待下次需要时复用
+		for (i in needed...candidateLines.members.length)
+			candidateLines.members[i].visible = false;
+
+		var lineW:Float = 0.0;
+		for (i => val in list)
+		{
+			var line:FlxText = candidateLines.members[i];
+			line.visible = true;
+			FlxTween.cancelTweensOf(line); // 清掉可能残留的淡入/闪红补间
+			var display:String = LanguageBasic.getPhrase('setting_${opt.translationKey}-$val', val);
+			if (line.text != display) line.text = display;
+			lineW = Math.max(lineW, line.width);
+		}
+
+		var bgW:Float = lineW + candidatePadX * 2;
+		var bgH:Float = list.length * candidateLineH + candidatePadY * 2;
+		var targetX:Float = FlxG.width - candidateMargin - bgW;
+		var targetY:Float = (FlxG.height - bgH) / 2;
+
+		// 仅在尺寸变化时重建背景图，避免每次刷新都分配新位图导致卡顿
+		if (Math.ceil(bgW) != _lastBgW || Math.ceil(bgH) != _lastBgH) {
+			candidateBG.makeGraphic(Math.ceil(bgW), Math.ceil(bgH), FlxColor.BLACK);
+			_lastBgW = Math.ceil(bgW);
+			_lastBgH = Math.ceil(bgH);
+		}
+
+		var defaultIndex:Int = -1;
+		for (i => val in list)
+		{
+			var line:FlxText = candidateLines.members[i];
+			line.setPosition(targetX + candidatePadX, targetY + candidatePadY + i * candidateLineH + (candidateLineH - line.height) / 2);
+			if (val == defaultVal) defaultIndex = i;
+			line.color = (val == current) ? OptionsConfig.SUBMENU_STRING_COLOR : FlxColor.WHITE;
+		}
+
+		if (!wasVisible)
+		{
+			var finalX:Float = targetX + candidatePadX;
+			// 背景从屏幕右侧飞入 + 淡入
+			FlxTween.cancelTweensOf(candidateBG);
+			candidateBG.setPosition(FlxG.width, targetY);
+			candidateBG.alpha = 0;
+			FlxTween.tween(candidateBG, {x: targetX, alpha: 0.55}, 0.3, {ease: FlxEase.quartOut});
+
+			// 候选文本从右侧滑入 + 淡入（逐行 stagger）
+			for (i in 0...needed)
+			{
+				var line:FlxText = candidateLines.members[i];
+				line.x = finalX + 30;
+				line.alpha = 0;
+				FlxTween.cancelTweensOf(line);
+				FlxTween.tween(line, {x: finalX, alpha: 1}, 0.28, {startDelay: 0.06 + i * 0.03, ease: FlxEase.quartOut});
+			}
+		}
+		else if (candidateForSelected != curSelected)
+		{
+			// 已显示但切换到不同 STRING 选项：保持面板位置，直接就位（不再逐行淡入，
+			// 避免快速滚动时每帧都创建大量补间对象造成卡顿）
+			candidateBG.setPosition(targetX, targetY);
+			candidateBG.alpha = 0.55;
+			for (i in 0...needed)
+			{
+				var line:FlxText = candidateLines.members[i];
+				FlxTween.cancelTweensOf(line);
+				line.alpha = 1;
+			}
+		}
+		else
+		{
+			candidateBG.setPosition(targetX, targetY);
+			candidateBG.alpha = 0.55;
+			for (i in 0...needed) candidateLines.members[i].alpha = 1;
+		}
+
+		// 重置反馈：理论默认项先变红，再平滑过渡回正常高亮色（红→蓝/白）
+		if (flashDefault && defaultIndex >= 0)
+		{
+			var defLine:FlxText = candidateLines.members[defaultIndex];
+			if (defLine != null)
+			{
+				FlxTween.cancelTweensOf(defLine);
+				var targetColor:Int = (defaultVal == current) ? OptionsConfig.SUBMENU_STRING_COLOR : FlxColor.WHITE;
+				_flashDummy = 0;
+				defLine.color = FlxColor.RED;
+				FlxTween.tween(this, {_flashDummy: 1}, 0.4, {
+					onUpdate: function(twn:FlxTween) {
+						if (defLine != null && defLine.alive)
+							defLine.color = FlxColor.interpolate(targetColor, FlxColor.RED, 1 - _flashDummy);
+					},
+					onComplete: function(twn:FlxTween) {
+						if (defLine != null && defLine.alive)
+							defLine.color = targetColor;
+					}
+				});
+			}
+		}
+
+		candidateForSelected = curSelected;
+	}
+
+	// 面板飞出右侧 + 淡出（背景与候选文本一起滑出）
+	private function hideCandidatePanel():Void
+	{
+		// 取消可能仍在进行中的重置闪红补间，避免在隐藏时继续改色
+		FlxTween.cancelTweensOf(this);
+		// 背景飞出右侧 + 淡出
+		FlxTween.cancelTweensOf(candidateBG);
+		FlxTween.tween(candidateBG, {x: FlxG.width, alpha: 0}, 0.25, {ease: FlxEase.quartIn});
+		// 候选文本滑出右侧 + 淡出
+		for (line in candidateLines.members)
+		{
+			FlxTween.cancelTweensOf(line);
+			FlxTween.tween(line, {x: line.x + 30, alpha: 0}, 0.2, {ease: FlxEase.quadIn});
+		}
+	}
+
+	// 每帧根据 curSelected 平滑计算列表项的位置/缩放/透明度，实现滚动效果。
+	// 数值文本与复选框通过各自的 sprTracker 跟随 optionText，无需在此处理。
+	private function updateItemLayout(elapsed:Float):Void
+	{
+		var lerp:Float = Math.exp(-elapsed * OptionsConfig.SUBMENU_LAYOUT_LERP);
+		// 触屏拖拽时 scrollVisual 已由手指直接驱动（见 handleTouchScroll），此处不再缓动，避免与手指抢位置；
+		// 非拖拽时（键盘/滚轮/松手后）才平滑缓动到 curSelected
+		if (!touchScrollActive) scrollVisual = FlxMath.lerp(curSelected, scrollVisual, lerp);
+		for (num => item in grpOptions.members)
+		{
+			var offset:Int = num - curSelected;
+			// Y 位置由平滑滚动位置驱动，全列一致缓动/跟手，无需逐行吸附
+			item.y = listCenterY + (num - scrollVisual) * itemSpacing;
+
+			var targetX:Float = listBaseX + (offset == 0 ? OptionsConfig.SUBMENU_SELECTED_OFFSET_X : 0);
+			item.x = FlxMath.lerp(targetX, item.x, lerp);
+
+			var targetAlpha:Float = (offset == 0) ? OptionsConfig.SUBMENU_SELECTED_ALPHA : OptionsConfig.SUBMENU_UNSELECTED_ALPHA;
+			if (optionsArray[num].disabled) targetAlpha *= OptionsConfig.SUBMENU_DISABLED_ALPHA_MULT;
+			item.alpha = FlxMath.lerp(targetAlpha, item.alpha, lerp);
+
+			var targetScale:Float = (offset == 0) ? OptionsConfig.SUBMENU_SELECTED_SCALE : OptionsConfig.SUBMENU_NORMAL_SCALE;
+			item.scale.x = FlxMath.lerp(targetScale, item.scale.x, lerp);
+			item.scale.y = item.scale.x;
+		}
+
+		// 右侧数值/Enabled 文本跟随选中项一起缩放，保持视觉一致
+		for (text in grpTexts) {
+			var isSelected:Bool = (text.ID == curSelected);
+			var targetScale:Float = isSelected ? OptionsConfig.SUBMENU_SELECTED_SCALE : OptionsConfig.SUBMENU_NORMAL_SCALE;
+			text.scale.x = FlxMath.lerp(targetScale, text.scale.x, lerp);
+			text.scale.y = text.scale.x;
+		}
+
+		// 描述背景框仅在描述文本/位置变化时才重算尺寸，避免每帧空算
+		if (_descBoxDirty) {
+			descBox.setPosition(descText.x - 10, descText.y - 10);
+			descBox.setGraphicSize(Std.int(descText.width + 20), Std.int(descText.height + 25));
+			descBox.updateHitbox();
+			_descBoxDirty = false;
+		}
+	}
+
+	function reloadCheckboxes() {
 		for (checkbox in checkboxGroup)
 			checkbox.daValue = Std.string(optionsArray[checkbox.ID].getValue()) == 'true'; //Do not take off the Std.string() from this, it will break a thing in Mod Settings Menu
+
+		// BOOL 选项已改为右侧 "Enabled/Disabled" 文本，随状态刷新颜色
+		for (text in grpTexts) {
+			var opt = optionsArray[text.ID];
+			if (opt != null && opt.type == BOOL) {
+				var on:Bool = (opt.getValue() == true);
+				text.text = on ? 'Enabled' : 'Disabled';
+				text.color = on ? OptionsConfig.OPTION_ON_COLOR : OptionsConfig.OPTION_OFF_COLOR;
+			}
+		}
+	}
 	
 	function refreshAllTexts() {
 		// 刷新标题
@@ -504,11 +850,19 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		// 刷新选项文本
 		for (i in 0...grpOptions.length) {
 			var opt = grpOptions.members[i];
-			opt.text = optionsArray[i].name;
+			var optData = optionsArray[i];
+			// 禁用项在标签后追加前提条件，指明为何不可用（无需选中即可看到）
+			if (optData.disabled && optData.requirement != null && optData.requirement.length > 0)
+				opt.text = optData.name + ' (' + OptionsLanguage.get('requirement_prefix', '需要: ') + optData.requirement + ')';
+			else
+				opt.text = optData.name;
+			// 标签变长后，把右侧数值/状态文本推开，避免重叠
+			if (optData.child != null)
+				cast(optData.child, AttachedFlxText).offsetX = opt.width + 60;
 		}
 
-		// 刷新描述
-		descText.text = optionsArray[curSelected].description;
+		// 刷新描述（走统一逻辑，保持缓存与背景框一致）
+		updateDescText();
 	}
 
 	override function destroy()

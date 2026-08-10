@@ -201,7 +201,7 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		super.destroy();
 	}
 
-	override function changeSelection(change:Int = 0)
+	override function changeSelection(change:Int = 0, skipRefresh:Bool = false, skipDesc:Bool = false)
 	{
 		// 安全清理之前的tween
 		if (arisTween != null)
@@ -211,7 +211,7 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 			arisTween = null;
 		}
 
-		super.changeSelection(change);
+		super.changeSelection(change, skipRefresh, skipDesc);
 
 		// 确保aris存在再创建tween
 		if (aris != null && aris.exists)

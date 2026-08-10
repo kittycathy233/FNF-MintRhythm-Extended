@@ -21,6 +21,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 	var extraRatingBounceOptionIndex:Int = -1;
 	var ratingFallStyleOption:Option = null;
 	var ratingFallStyleOptionIndex:Int = -1;
+	var ratingFallStyleDescBase:String = '';
 	var camelliaScaleOption:Option = null;
 	var camelliaScaleOptionIndex:Int = -1;
 
@@ -220,6 +221,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		};
 		ratingFallStyleOption = addOption(option);
 		ratingFallStyleOptionIndex = optionsArray.length - 1;
+		ratingFallStyleDescBase = ratingFallStyleOption.description;
 
 		option = new Option('Camellia Scale Mode',
 			Language.get("camellia_scale_mode_desc"),
@@ -600,6 +602,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			#else
 			var shouldDisable:Bool = !ClientPrefs.data.enableConsoleLog;
 			enableGameLogOption.disabled = shouldDisable;
+			enableGameLogOption.requirement = OptionsLanguage.get('enable_game_log_requirement', '启用 控制台日志');
 			if (shouldDisable && ClientPrefs.data.enableGameLog)
 			{
 				ClientPrefs.data.enableGameLog = false;
@@ -617,92 +620,28 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 	if (healthOverflowOption != null)
 	{
 		healthOverflowOption.disabled = !smoothHPActive;
+		healthOverflowOption.requirement = OptionsLanguage.get('health_overflow_requirement', '启用 丝滑血条');
 		if (!smoothHPActive && ClientPrefs.data.healthOverflow)
 			{
 				// 丝滑血条关闭时强制关闭超满血，回到原生血量上限
 				ClientPrefs.data.healthOverflow = false;
 			}
 		}
-		if (healthOverflowDrainOption != null)
+		if (healthOverflowDrainOption != null) {
 			healthOverflowDrainOption.disabled = !overflowActive;
-		if (smoothHPSpeedOption != null)
+			healthOverflowDrainOption.requirement = OptionsLanguage.get('health_overflow_drain_requirement', '启用 丝滑血条 且 超满血');
+		}
+		if (smoothHPSpeedOption != null) {
 			smoothHPSpeedOption.disabled = !ClientPrefs.data.smoothHP;
+			smoothHPSpeedOption.requirement = OptionsLanguage.get('smooth_hp_speed_requirement', '启用 丝滑血条');
+		}
 	}
 
-	override function changeSelection(change:Int = 0)
+	override function changeSelection(change:Int = 0, skipRefresh:Bool = false, skipDesc:Bool = false)
 	{
-		var newSelection = FlxMath.wrap(curSelected + change, 0, optionsArray.length - 1);
-		var isKathyStyle:Bool = ClientPrefs.data.ratingFallStyle == 'Kathy' || ClientPrefs.data.ratingFallStyle == 'Kathy(Legacy)';
-		var isLeatherStyle:Bool = ClientPrefs.data.timebarStyle == 'Leather' || ClientPrefs.data.timebarStyle == 'Leather (Legacy)';
-		
-		// 如果要选择的是 Blue Archive Language 选项，但当前 loading 样式不是 Blue Archive，则跳过它
-		if (blueArchiveLanguageOptionIndex != -1 && newSelection == blueArchiveLanguageOptionIndex && ClientPrefs.data.customFadeStyle != 'Blue Archive') {
-			// 决定要跳的方向
-			if (change > 0) {
-				newSelection++;
-			} else {
-				newSelection--;
-			}
-			// 确保不会越界
-			newSelection = FlxMath.wrap(newSelection, 0, optionsArray.length - 1);
-		}
-		
-		// 如果要选择的是 Rating Bounce 或 Extra-Rating Bounce 选项，但当前不是 Kathy 风格，则跳过它们
-		if (!isKathyStyle) {
-			if (ratingBounceOptionIndex != -1 && newSelection == ratingBounceOptionIndex) {
-				if (change > 0) {
-					newSelection++;
-				} else {
-					newSelection--;
-				}
-				newSelection = FlxMath.wrap(newSelection, 0, optionsArray.length - 1);
-			}
-			
-			if (extraRatingBounceOptionIndex != -1 && newSelection == extraRatingBounceOptionIndex) {
-				if (change > 0) {
-					newSelection++;
-				} else {
-					newSelection--;
-				}
-				newSelection = FlxMath.wrap(newSelection, 0, optionsArray.length - 1);
-			}
-		}
-
-		// 如果要选择的是 Camellia Scale Mode 选项，但当前不是 Camellia 风格，则跳过它
-		if (ClientPrefs.data.ratingFallStyle != 'Camellia' && camelliaScaleOptionIndex != -1 && newSelection == camelliaScaleOptionIndex) {
-			if (change > 0) {
-				newSelection++;
-			} else {
-				newSelection--;
-			}
-			newSelection = FlxMath.wrap(newSelection, 0, optionsArray.length - 1);
-		}
-
-		// 如果要选择的是 Bigger Info Text 选项，但当前不是 Leather 风格，则跳过它
-		if (!isLeatherStyle && biggerInfoTextOptionIndex != -1 && newSelection == biggerInfoTextOptionIndex) {
-			if (change > 0) {
-				newSelection++;
-			} else {
-				newSelection--;
-			}
-			newSelection = FlxMath.wrap(newSelection, 0, optionsArray.length - 1);
-		}
-
-		// 如果要选择的是 Health Overflow Icons 选项，但丝滑血条未开启，则跳过它
-		if (!ClientPrefs.data.smoothHP && healthOverflowOptionIndex != -1 && newSelection == healthOverflowOptionIndex) {
-			if (change > 0) newSelection++; else newSelection--;
-			newSelection = FlxMath.wrap(newSelection, 0, optionsArray.length - 1);
-		}
-
-		// 如果要选择的是 Overflow Return Speed 选项，但超满血未开启，则跳过它
-		if (!ClientPrefs.data.healthOverflow && healthOverflowDrainOptionIndex != -1 && newSelection == healthOverflowDrainOptionIndex) {
-			if (change > 0) newSelection++; else newSelection--;
-			newSelection = FlxMath.wrap(newSelection, 0, optionsArray.length - 1);
-		}
-
-		// 调用父类的 changeSelection，但直接修改 curSelected 来改变位置
-		curSelected = newSelection - change;
-		super.changeSelection(change);
+		// 不再跳过禁用项：禁用项仍可选中（父类会阻止其被修改），
+		// 选中后描述框会显示 "[需要: ...]" 前提条件，列表里也会行内标注。
+		super.changeSelection(change, skipRefresh, skipDesc);
 	}
 	
 	function onChangeAutoPause()
@@ -715,61 +654,33 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		updateBounceOptionsVisibility();
 		updateCamelliaScaleVisibility();
 		updateBiggerInfoTextVisibility();
+		updateRatingFallStyleNote();
 		
 		// 控制 Blue Archive Language 选项的可见性和禁用状态
 		if (blueArchiveLanguageOptionIndex != -1) {
 			var isBlueArchiveActive:Bool = ClientPrefs.data.customFadeStyle == 'Blue Archive';
-			
-			// 找到选项的视觉元素并调整其透明度
-			for (i in 0...grpOptions.length) {
-				var optText:Alphabet = grpOptions.members[i];
-				if (optText != null && i == blueArchiveLanguageOptionIndex) {
-					optText.alpha = isBlueArchiveActive ? 1 : 0.3;
-				}
-			}
-			
-			for (text in grpTexts) {
-				if (text.ID == blueArchiveLanguageOptionIndex) {
-					text.alpha = isBlueArchiveActive ? 1 : 0.3;
-				}
-			}
+			optionsArray[blueArchiveLanguageOptionIndex].disabled = !isBlueArchiveActive;
+			optionsArray[blueArchiveLanguageOptionIndex].requirement = OptionsLanguage.get('ba_language_requirement', '使用 Blue Archive 淡入风格');
 		}
 	}
 	
 	function updateBounceOptionsVisibility()
 	{
 		var isKathyStyle:Bool = ClientPrefs.data.ratingFallStyle == 'Kathy' || ClientPrefs.data.ratingFallStyle == 'Kathy(Legacy)';
-		
-		// 更新 Rating Bounce 选项的可见性
+
 		if (ratingBounceOptionIndex != -1) {
-			for (i in 0...grpOptions.length) {
-				var optText:Alphabet = grpOptions.members[i];
-				if (optText != null && i == ratingBounceOptionIndex) {
-					optText.alpha = isKathyStyle ? 1 : 0.3;
-				}
-			}
-			
-			for (checkbox in checkboxGroup) {
-				if (checkbox.ID == ratingBounceOptionIndex) {
-					checkbox.alpha = isKathyStyle ? 1 : 0.3;
-				}
-			}
+			optionsArray[ratingBounceOptionIndex].disabled = !isKathyStyle;
+			optionsArray[ratingBounceOptionIndex].requirement = OptionsLanguage.get('rating_bounce_requirement', '使用 Kathy 评价下落风格');
 		}
-		
-		// 更新 Extra-Rating Bounce 选项的可见性
+
 		if (extraRatingBounceOptionIndex != -1) {
-			for (i in 0...grpOptions.length) {
-				var optText:Alphabet = grpOptions.members[i];
-				if (optText != null && i == extraRatingBounceOptionIndex) {
-					optText.alpha = isKathyStyle ? 1 : 0.3;
-				}
-			}
-			
-			for (checkbox in checkboxGroup) {
-				if (checkbox.ID == extraRatingBounceOptionIndex) {
-					checkbox.alpha = isKathyStyle ? 1 : 0.3;
-				}
-			}
+			// 额外评价回弹不仅要求 Kathy 风格，还要求已开启“显示额外评价”（见 PlayState.hx:5126）
+			var exratingOn:Bool = ClientPrefs.data.exratingDisplay;
+			optionsArray[extraRatingBounceOptionIndex].disabled = !isKathyStyle || !exratingOn;
+			if (!isKathyStyle)
+				optionsArray[extraRatingBounceOptionIndex].requirement = OptionsLanguage.get('rating_bounce_requirement', '使用 Kathy 评价下落风格');
+			else
+				optionsArray[extraRatingBounceOptionIndex].requirement = OptionsLanguage.get('exrating_bounce_requirement', '启用 显示额外评价');
 		}
 	}
 
@@ -779,48 +690,29 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		if (camelliaScaleOptionIndex == -1) return;
 
 		var isCamellia:Bool = ClientPrefs.data.ratingFallStyle == 'Camellia';
-		var targetAlpha:Float = isCamellia ? 1 : 0.3;
-
-		for (i in 0...grpOptions.length) {
-			var optText:Alphabet = grpOptions.members[i];
-			if (optText != null && i == camelliaScaleOptionIndex) {
-				optText.alpha = targetAlpha;
-			}
-		}
-
-		for (text in grpTexts) {
-			if (text.ID == camelliaScaleOptionIndex) {
-				text.alpha = targetAlpha;
-			}
-		}
+		optionsArray[camelliaScaleOptionIndex].disabled = !isCamellia;
+		optionsArray[camelliaScaleOptionIndex].requirement = OptionsLanguage.get('camellia_scale_mode_requirement', '使用 Camellia 评价下落风格');
 	}
 
 	function updateBiggerInfoTextVisibility()
 	{
 		var isLeatherStyle:Bool = ClientPrefs.data.timebarStyle == 'Leather' || ClientPrefs.data.timebarStyle == 'Leather (Legacy)';
-		
+
 		if (biggerInfoTextOptionIndex != -1) {
-			// 更新选项文本的透明度
-			for (i in 0...grpOptions.length) {
-				var optText:Alphabet = grpOptions.members[i];
-				if (optText != null && i == biggerInfoTextOptionIndex) {
-					optText.alpha = isLeatherStyle ? 1 : 0.3;
-				}
-			}
-			
-			// 更新值文本的透明度
-			for (text in grpTexts) {
-				if (text.ID == biggerInfoTextOptionIndex) {
-					text.alpha = isLeatherStyle ? 1 : 0.3;
-				}
-			}
-			
-			// 更新复选框的透明度（针对 BOOL 类型）
-			for (checkbox in checkboxGroup) {
-				if (checkbox.ID == biggerInfoTextOptionIndex) {
-					checkbox.alpha = isLeatherStyle ? 1 : 0.3;
-				}
-			}
+			optionsArray[biggerInfoTextOptionIndex].disabled = !isLeatherStyle;
+			optionsArray[biggerInfoTextOptionIndex].requirement = OptionsLanguage.get('bigger_info_text_requirement', '使用 Leather 时间轴风格');
 		}
+	}
+
+	// Rating Fall Style 中 Leather/Legacy/Kathy 仅在「Combo Stacking」关闭时生效（Camellia 始终生效）。
+	// 当 Combo Stacking 开启时，给描述追加提示，指明该隐藏前提。
+	function updateRatingFallStyleNote()
+	{
+		if (ratingFallStyleOption == null) return;
+		var note:String = OptionsLanguage.get('rating_fall_style_combostacking_note',
+			'（仅 Leather 样式依赖禁用 Combo Stacking：开启时 Leather 会回退为默认上跳表现、失去下落特效；Legacy 表现不变，Camellia 始终生效）');
+		ratingFallStyleOption.description = ClientPrefs.data.comboStacking
+			? ratingFallStyleDescBase + '\n' + note
+			: ratingFallStyleDescBase;
 	}
 }

@@ -1,7 +1,8 @@
 package options;
 
-import objects.AttachedText;
+import objects.AttachedFlxText;
 import objects.CheckboxThingie;
+import flixel.text.FlxText;
 
 import options.Option.OptionType;
 
@@ -10,9 +11,13 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 	private var curSelected:Int = 0;
 	private var optionsArray:Array<Dynamic> = [];
 
-	private var grpOptions:FlxTypedGroup<Alphabet>;
+	private var grpOptions:FlxTypedGroup<FlxText>;
 	private var checkboxGroup:FlxTypedGroup<CheckboxThingie>;
-	private var grpTexts:FlxTypedGroup<AttachedText>;
+	private var grpTexts:FlxTypedGroup<AttachedFlxText>;
+
+	private var listCenterY:Float = 360;
+	private var itemSpacing:Float = 56;
+	private var listBaseX:Float = 150;
 
 	private var curOption(get, never):GameplayOption;
 	function get_curOption() return optionsArray[curSelected]; //shorter lol
@@ -94,44 +99,53 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 		add(bg);
 
 		// avoids lagspikes while scrolling through menus!
-		grpOptions = new FlxTypedGroup<Alphabet>();
+		grpOptions = new FlxTypedGroup<FlxText>();
 		add(grpOptions);
 
-		grpTexts = new FlxTypedGroup<AttachedText>();
+		grpTexts = new FlxTypedGroup<AttachedFlxText>();
 		add(grpTexts);
 
 		checkboxGroup = new FlxTypedGroup<CheckboxThingie>();
 		add(checkboxGroup);
-		
+
 		getOptions();
 
 		for (i in 0...optionsArray.length)
 		{
-			var optionText:Alphabet = new Alphabet(150, 360, optionsArray[i].name, true);
-			optionText.isMenuItem = true;
-			optionText.setScale(0.8);
-			optionText.targetY = i;
+			var optionText:FlxText = new FlxText(150, listCenterY + i * itemSpacing, 0, optionsArray[i].name, OptionsConfig.SUBMENU_ITEM_SIZE);
+			optionText.setFormat(Paths.font(Language.get('game_font')), OptionsConfig.SUBMENU_ITEM_SIZE, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			optionText.borderSize = 2;
+			optionText.antialiasing = ClientPrefs.data.antialiasing;
+			optionText.ID = i;
+			optionText.scrollFactor.set();
 			grpOptions.add(optionText);
 
 			if(optionsArray[i].type == BOOL)
 			{
-				optionText.x += 60;
-				optionText.startPosition.x += 60;
-				optionText.snapToPosition();
-				var checkbox:CheckboxThingie = new CheckboxThingie(optionText.x - 105, optionText.y, optionsArray[i].getValue() == true);
-				checkbox.sprTracker = optionText;
-				checkbox.offsetX -= 20;
-				checkbox.offsetY = -52;
-				checkbox.ID = i;
-				checkboxGroup.add(checkbox);
+				var on:Bool = (optionsArray[i].getValue() == true);
+				var valueText:AttachedFlxText = new AttachedFlxText(optionText.x, optionText.y, 0, on ? 'Enabled' : 'Disabled', OptionsConfig.SUBMENU_VALUE_SIZE);
+				valueText.setFormat(Paths.font(Language.get('game_font')), OptionsConfig.SUBMENU_VALUE_SIZE, on ? OptionsConfig.OPTION_ON_COLOR : OptionsConfig.OPTION_OFF_COLOR, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+				valueText.borderSize = 2;
+				valueText.antialiasing = ClientPrefs.data.antialiasing;
+				valueText.sprTracker = optionText;
+				valueText.offsetX = optionText.width + 60;
+				valueText.copyAlpha = true;
+				valueText.ID = i;
+				valueText.scrollFactor.set();
+				grpTexts.add(valueText);
+				optionsArray[i].setChild(valueText);
 			}
 			else
 			{
-				optionText.snapToPosition();
-				var valueText:AttachedText = new AttachedText(Std.string(optionsArray[i].getValue()), optionText.width + 40, 0, true, 0.8);
+				var valueText:AttachedFlxText = new AttachedFlxText(optionText.x, optionText.y, 0, Std.string(optionsArray[i].getValue()), OptionsConfig.SUBMENU_VALUE_SIZE);
+				valueText.setFormat(Paths.font(Language.get('game_font')), OptionsConfig.SUBMENU_VALUE_SIZE, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+				valueText.borderSize = 2;
+				valueText.antialiasing = ClientPrefs.data.antialiasing;
 				valueText.sprTracker = optionText;
+				valueText.offsetX = optionText.width + 40;
 				valueText.copyAlpha = true;
 				valueText.ID = i;
+				valueText.scrollFactor.set();
 				grpTexts.add(valueText);
 				optionsArray[i].setChild(valueText);
 			}
@@ -315,10 +329,54 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 			addTouchPad('LEFT_FULL', 'A_B_C');
 			addTouchPadCamera();
 		}
+		updateGCItemLayout(elapsed);
 		super.update(elapsed);
 	}
 
+	private function updateGCItemLayout(elapsed:Float):Void
+	{
+		var lerp:Float = Math.exp(-elapsed * OptionsConfig.SUBMENU_LAYOUT_LERP);
+		for (num => item in grpOptions.members)
+		{
+			var offset:Int = num - curSelected;
+			var targetY:Float = listCenterY + offset * itemSpacing;
+			item.y = FlxMath.lerp(targetY, item.y, lerp);
+
+			var targetX:Float = listBaseX + (offset == 0 ? OptionsConfig.SUBMENU_SELECTED_OFFSET_X : 0);
+			item.x = FlxMath.lerp(targetX, item.x, lerp);
+
+			var targetAlpha:Float = (offset == 0) ? OptionsConfig.SUBMENU_SELECTED_ALPHA : OptionsConfig.SUBMENU_UNSELECTED_ALPHA;
+			item.alpha = FlxMath.lerp(targetAlpha, item.alpha, lerp);
+
+			var targetScale:Float = (offset == 0) ? OptionsConfig.SUBMENU_SELECTED_SCALE : OptionsConfig.SUBMENU_NORMAL_SCALE;
+			item.scale.x = FlxMath.lerp(targetScale, item.scale.x, lerp);
+			item.scale.y = item.scale.x;
+		}
+
+		// 右侧数值/Enabled 文本跟随选中项一起缩放，保持视觉一致
+		for (text in grpTexts) {
+			var isSelected:Bool = (text.ID == curSelected);
+			var targetScale:Float = isSelected ? OptionsConfig.SUBMENU_SELECTED_SCALE : OptionsConfig.SUBMENU_NORMAL_SCALE;
+			text.scale.x = FlxMath.lerp(targetScale, text.scale.x, lerp);
+			text.scale.y = text.scale.x;
+		}
+	}
+
 	function updateTextFrom(option:GameplayOption) {
+		if(option.type == BOOL) {
+			var on:Bool = (option.getValue() == true);
+			if (option.child != null) {
+				option.child.text = on ? 'Enabled' : 'Disabled';
+				option.child.color = on ? OptionsConfig.OPTION_ON_COLOR : OptionsConfig.OPTION_OFF_COLOR;
+			}
+			return;
+		}
+		if(option.type == STRING) {
+			var val:Dynamic = option.getValue();
+			option.text = '${OptionsConfig.SUBMENU_STRING_ARROW.charAt(0)}$val${OptionsConfig.SUBMENU_STRING_ARROW.charAt(2)}';
+			if (option.child != null) option.child.color = OptionsConfig.SUBMENU_STRING_COLOR;
+			return;
+		}
 		var text:String = option.displayFormat;
 		var val:Dynamic = option.getValue();
 		if(option.type == PERCENT) val *= 100;
@@ -337,19 +395,6 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 	function changeSelection(change:Int = 0)
 	{
 		curSelected = FlxMath.wrap(curSelected + change, 0, optionsArray.length - 1);
-		for (num => item in grpOptions.members)
-		{
-			item.targetY = num - curSelected;
-			item.alpha = 0.6;
-			if (item.targetY == 0)
-				item.alpha = 1;
-		}
-		for (text in grpTexts)
-		{
-			text.alpha = 0.6;
-			if(text.ID == curSelected)
-				text.alpha = 1;
-		}
 		FlxG.sound.play(Paths.sound('scrollMenu'));
 	}
 
@@ -357,12 +402,21 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 		for (checkbox in checkboxGroup) {
 			checkbox.daValue = (optionsArray[checkbox.ID].getValue() == true);
 		}
+		// BOOL 选项已改为右侧 "Enabled/Disabled" 文本，随状态刷新颜色
+		for (text in grpTexts) {
+			var opt = optionsArray[text.ID];
+			if (opt != null && opt.type == BOOL) {
+				var on:Bool = (opt.getValue() == true);
+				text.text = on ? 'Enabled' : 'Disabled';
+				text.color = on ? OptionsConfig.OPTION_ON_COLOR : OptionsConfig.OPTION_OFF_COLOR;
+			}
+		}
 	}
 }
 
 class GameplayOption
 {
-	private var child:Alphabet;
+	public var child:FlxText;
 	public var text(get, set):String;
 	public var onChange:Void->Void = null; //Pressed enter (on Bool type options) or pressed/held left/right (on other types)
 	public var type:OptionType = BOOL;
@@ -446,7 +500,7 @@ class GameplayOption
 	public function setValue(value:Dynamic)
 		ClientPrefs.data.gameplaySettings.set(variable, value);
 
-	public function setChild(child:Alphabet)
+	public function setChild(child:FlxText)
 		this.child = child;
 
 	var _name:String = null;

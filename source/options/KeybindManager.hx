@@ -5,8 +5,9 @@ import flixel.input.gamepad.FlxGamepadInputID;
 import flixel.input.gamepad.FlxGamepad;
 import flixel.FlxG;
 import flixel.tweens.FlxTween;
+import flixel.util.FlxColor;
 import objects.Alphabet;
-import objects.AttachedText;
+import objects.AttachedFlxText;
 import backend.InputFormatter;
 
 /**
@@ -282,7 +283,7 @@ class KeybindManager
 	 * Update the displayed key text
 	 * Note: This should be called from BaseOptionsMenu with access to grpTexts
 	 */
-	public function updateBindDisplay(?text:String = null, ?option:Option = null, ?grpTexts:FlxTypedGroup<AttachedText>):Void
+	public function updateBindDisplay(?text:String = null, ?option:Option = null, ?grpTexts:FlxTypedGroup<AttachedFlxText>):Void
 	{
 		if (option == null) option = curOption;
 		if (text == null)
@@ -299,14 +300,20 @@ class KeybindManager
 
 		if (grpTexts == null) return; // Cannot update without grpTexts reference
 
-		var bind:AttachedText = cast option.child;
-		var attach:AttachedText = new AttachedText(text, bind.offsetX);
+		var bind:AttachedFlxText = cast option.child;
+		var attach:AttachedFlxText = new AttachedFlxText(bind.x, bind.y, 0, text, OptionsConfig.SUBMENU_VALUE_SIZE);
+		attach.setFormat(Paths.font(Language.get('game_font')), OptionsConfig.SUBMENU_VALUE_SIZE, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		attach.borderSize = 2;
+		attach.antialiasing = ClientPrefs.data.antialiasing;
 		attach.sprTracker = bind.sprTracker;
 		attach.copyAlpha = true;
+		attach.offsetX = bind.offsetX;
+		attach.offsetY = bind.offsetY;
 		attach.ID = bind.ID;
 
 		checkPlaystationModel(attach);
-		attach.scaleX = Math.min(1, OptionsConfig.MAX_KEYBIND_WIDTH / attach.width);
+		var targetScale:Float = Math.min(1, OptionsConfig.MAX_KEYBIND_WIDTH / attach.width);
+		attach.scale.set(targetScale);
 		attach.x = bind.x;
 		attach.y = bind.y;
 
@@ -319,7 +326,7 @@ class KeybindManager
 	/**
 	 * Check if gamepad is PlayStation model and adjust icons
 	 */
-	private function checkPlaystationModel(alpha:Alphabet):Void
+	private function checkPlaystationModel(sprite:AttachedFlxText):Void
 	{
 		var controllerMode = Controls.instance.controllerMode;
 		if (!controllerMode) return;
