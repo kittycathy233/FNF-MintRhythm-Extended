@@ -343,7 +343,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(softEdgeOption);
 
-		presetDependentOptions = [perfectWindowOption, sickWindowOption, goodWindowOption, badWindowOption];
+		presetDependentOptions = [perfectWindowOption, sickWindowOption, goodWindowOption, badWindowOption, shitWindowOption];
 
 		super();
 	}
