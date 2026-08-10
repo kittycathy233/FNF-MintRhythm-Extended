@@ -49,6 +49,7 @@ class OptionsState extends MusicBeatState
 	var selectorRight:FlxText;
 	var descriptionText:FlxText;
 	var adminButton:FlxButton;
+	var sideGif:FlxGifSprite = null;
 
 	private var _inSubState:Bool = false;
 
@@ -136,6 +137,26 @@ class OptionsState extends MusicBeatState
 		bg.screenCenter();
 		add(bg);
 
+		// 顶部居中大标题（跟随语言），使用自动尺寸以便精确测量文本宽度来定位 GIF
+		var titleText:FlxText = new FlxText(0, 40, 0, Language.get('options_title'), 48);
+		titleText.setFormat(Paths.font(Language.get('game_font')), 48, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		titleText.borderSize = 2;
+		titleText.scrollFactor.set();
+		titleText.antialiasing = ClientPrefs.data.antialiasing;
+		titleText.x = (FlxG.width - titleText.width) / 2;
+		add(titleText);
+
+		// 标题左侧固定 GIF（minispeaki），由资源管理系统直接加载（兼容模组），尺寸稍大、静态显示
+		sideGif = new FlxGifSprite(0, 0);
+		sideGif.loadGif('assets/shared/images/gifs/minispeaki.gif');
+		sideGif.setGraphicSize(96);
+		sideGif.updateHitbox();
+		sideGif.x = titleText.x - sideGif.width - 12;
+		sideGif.y = titleText.y + (titleText.height - sideGif.height) / 2;
+		sideGif.antialiasing = ClientPrefs.data.antialiasing;
+		sideGif.scrollFactor.set();
+		add(sideGif);
+
 		if (controls.mobileC)
 		{
 			var keyLabel:String = FlxG.onMobile ? 'C' : 'CTRL or C';
@@ -157,8 +178,16 @@ class OptionsState extends MusicBeatState
 		var totalHeight = itemSpacing * gridRows;
 		startY = (FlxG.height - totalHeight) / 2 + itemSpacing / 2;
 
+		// 启用虚拟方向键（移动端或桌面开启移动控制）时，左侧 LEFT_FULL 方向键会覆盖约 x∈[0,330] 区域，
+		// 将选项列整体右移到方向键之外，并适当缩小字号以适配窄屏，避免选项被虚拟键盖住。
 		var leftColX = OptionsConfig.LEFT_MARGIN;
-		var rightColX = (gridCols > 1) ? (Math.floor(FlxG.width * 0.5) + 40) : OptionsConfig.LEFT_MARGIN;
+		var itemFontSize:Int = 48;
+		if (controls.mobileC)
+		{
+			leftColX = 340;
+			itemFontSize = 40;
+		}
+		var rightColX = (gridCols > 1) ? (Math.floor(FlxG.width * 0.5) + 40) : leftColX;
 
 		for (num => option in options)
 		{
@@ -166,8 +195,8 @@ class OptionsState extends MusicBeatState
 			var row:Int = num % gridRows;
 			var itemX = (col == 0) ? leftColX : rightColX;
 
-			var optionText:FlxText = new FlxText(itemX, 0, 0, LanguageBasic.getPhrase('options_$option', option), 48);
-			optionText.setFormat(Paths.font(Language.get('game_font')), 48, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			var optionText:FlxText = new FlxText(itemX, 0, 0, LanguageBasic.getPhrase('options_$option', option), itemFontSize);
+			optionText.setFormat(Paths.font(Language.get('game_font')), itemFontSize, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			optionText.borderSize = 2;
 			optionText.antialiasing = ClientPrefs.data.antialiasing;
 			optionText.x = itemX;
@@ -175,14 +204,14 @@ class OptionsState extends MusicBeatState
 			grpOptions.add(optionText);
 		}
 
-		selectorLeft = new FlxText(0, 0, 0, ">", 48);
-		selectorLeft.setFormat(Paths.font(Language.get('game_font')), 48, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		selectorLeft = new FlxText(0, 0, 0, ">", itemFontSize);
+		selectorLeft.setFormat(Paths.font(Language.get('game_font')), itemFontSize, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		selectorLeft.borderSize = 2;
 		selectorLeft.antialiasing = ClientPrefs.data.antialiasing;
 		add(selectorLeft);
 
-		selectorRight = new FlxText(0, 0, 0, "<", 48);
-		selectorRight.setFormat(Paths.font(Language.get('game_font')), 48, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		selectorRight = new FlxText(0, 0, 0, "<", itemFontSize);
+		selectorRight.setFormat(Paths.font(Language.get('game_font')), itemFontSize, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		selectorRight.borderSize = 2;
 		selectorRight.antialiasing = ClientPrefs.data.antialiasing;
 		add(selectorRight);
@@ -354,8 +383,18 @@ class OptionsState extends MusicBeatState
 			}
 		}
 
-		// 鼠标单击选项自动更改选中项
-		if (mouseOverOption != -1 && mouse.justPressed) {
+		// 移动端：本次触摸若落在虚拟按键上，则不应被当作对选项的点击，避免误触选中
+		var touchPadJustPressed:Bool = false;
+		#if mobile
+		if (touchPad != null) {
+			touchPadJustPressed = touchPad.buttonUp.justPressed || touchPad.buttonDown.justPressed ||
+				touchPad.buttonLeft.justPressed || touchPad.buttonRight.justPressed ||
+				touchPad.buttonA.justPressed || touchPad.buttonB.justPressed || touchPad.buttonC.justPressed;
+		}
+		#end
+
+		// 鼠标单击选项自动更改选中项（虚拟按键按下时跳过）
+		if (mouseOverOption != -1 && mouse.justPressed && !touchPadJustPressed) {
 			if (curSelected != mouseOverOption) {
 				var targetCol:Int = Std.int(mouseOverOption / gridRows);
 				var targetRow:Int = mouseOverOption % gridRows;
@@ -448,8 +487,13 @@ class OptionsState extends MusicBeatState
 			lastOptionsSelection = curSelected;
 		}
 
+		// 与 create 保持一致：启用虚拟方向键时选项列右移，避免被 LEFT_FULL 盖住
 		var leftColX = OptionsConfig.LEFT_MARGIN;
-		var rightColX = (gridCols > 1) ? (Math.floor(FlxG.width * 0.5) + 40) : OptionsConfig.LEFT_MARGIN;
+		if (controls.mobileC)
+		{
+			leftColX = 340;
+		}
+		var rightColX = (gridCols > 1) ? (Math.floor(FlxG.width * 0.5) + 40) : leftColX;
 
 		for (i in 0...grpOptions.length)
 		{
@@ -545,6 +589,11 @@ class OptionsState extends MusicBeatState
 		{
 			descriptionTween.cancel();
 			descriptionTween.destroy();
+		}
+		if (sideGif != null)
+		{
+			sideGif.destroy();
+			sideGif = null;
 		}
 		ClientPrefs.loadPrefs();
 		super.destroy();

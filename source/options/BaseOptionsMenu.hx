@@ -168,7 +168,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 			if(optionsArray[i].type == BOOL)
 			{
 				var on:Bool = (optionsArray[i].getValue() == true);
-				var valueText:AttachedFlxText = new AttachedFlxText(optionText.x, optionText.y, 0, on ? 'Enabled' : 'Disabled', OptionsConfig.SUBMENU_VALUE_SIZE);
+				var valueText:AttachedFlxText = new AttachedFlxText(optionText.x, optionText.y, 0, on ? Language.get('enabled') : Language.get('disabled'), OptionsConfig.SUBMENU_VALUE_SIZE);
 				valueText.setFormat(Paths.font(Language.get('game_font')), OptionsConfig.SUBMENU_VALUE_SIZE, on ? OptionsConfig.OPTION_ON_COLOR : OptionsConfig.OPTION_OFF_COLOR, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 				valueText.borderSize = 2;
 				valueText.antialiasing = ClientPrefs.data.antialiasing;
@@ -506,7 +506,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		if(option.type == BOOL) {
 			var on:Bool = (option.getValue() == true);
 			if (option.child != null) {
-				option.child.text = on ? 'Enabled' : 'Disabled';
+				option.child.text = on ? Language.get('enabled') : Language.get('disabled');
 				option.child.color = on ? OptionsConfig.OPTION_ON_COLOR : OptionsConfig.OPTION_OFF_COLOR;
 			}
 			return;
@@ -837,7 +837,7 @@ class BaseOptionsMenu extends MusicBeatSubstate
 			var opt = optionsArray[text.ID];
 			if (opt != null && opt.type == BOOL) {
 				var on:Bool = (opt.getValue() == true);
-				text.text = on ? 'Enabled' : 'Disabled';
+				text.text = on ? Language.get('enabled') : Language.get('disabled');
 				text.color = on ? OptionsConfig.OPTION_ON_COLOR : OptionsConfig.OPTION_OFF_COLOR;
 			}
 		}

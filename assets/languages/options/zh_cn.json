@@ -82,6 +82,7 @@
     "safeframes_desc": "调整提前/延后判定音符的帧数",
     "error_title": "错误",
     "note_colors": "调整音符颜色",
+    "options_title": "设置",
     "controls": "键位调整",
     "adjust_delay_combo": "延迟与连击",
     "adjust_rating_offset": "调整打击延迟",
@@ -452,5 +453,7 @@
     "disable_per_note_scripts": "禁用逐音符脚本",
     "note_performance_optimization": "音符性能优化",
     "note_object_pooling": "音符对象池化",
-    "max_notes_spawned_frame": "每帧最大生成音符数"
+    "max_notes_spawned_frame": "每帧最大生成音符数",
+    "enabled": "已启用",
+    "disabled": "已禁用"
 }

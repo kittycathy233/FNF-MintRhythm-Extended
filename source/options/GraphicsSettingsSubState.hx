@@ -19,7 +19,7 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 
 		// 初始化Aris动画
 		aris = new FlxGifSprite(0, 0);
-		aris.loadGif('assets/shared/images/aris.gif');
+		aris.loadGif('assets/shared/images/gifs/aris.gif');
 		aris.setGraphicSize(Std.int(aris.width * 2.5));
 		aris.screenCenter();
 		aris.x = 1500;

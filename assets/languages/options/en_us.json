@@ -81,6 +81,7 @@
     "safeframes_desc": "Changes how many frames you have for\nhitting a note earlier or late.",
     "error_title": "Error",
     "note_colors": "Note Colors",
+    "options_title": "Options",
     "controls": "Controls",
     "adjust_delay_combo": "Delay & Combo",
     "adjust_rating_offset": "Hit Delay",
@@ -447,5 +448,7 @@
     "disable_per_note_scripts": "Disable Per-Note Scripts",
     "note_performance_optimization": "Note Performance Optimization",
     "note_object_pooling": "Note Object Pooling",
-    "max_notes_spawned_frame": "Max Notes Spawned / Frame"
+    "max_notes_spawned_frame": "Max Notes Spawned / Frame",
+    "enabled": "Enabled",
+    "disabled": "Disabled"
 }

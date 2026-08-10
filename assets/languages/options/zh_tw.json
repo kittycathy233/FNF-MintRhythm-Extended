@@ -80,6 +80,7 @@
     "safeframes_desc": "調整提前/延後判定音符的幀數",
     "error_title": "錯誤",
     "note_colors": "調整音符顏色",
+    "options_title": "設定",
     "controls": "鍵位調整",
     "adjust_delay_combo": "延遲與連擊",
     "adjust_rating_offset": "調整打擊延遲",
@@ -447,5 +448,7 @@
     "note_performance_optimization": "音符效能最佳化",
     "note_object_pooling": "音符物件池化",
     "max_notes_spawned_frame": "每幀最大生成音符數",
-    "arrow_colormode_desc": "RGB = 新調色板顏色\nHSV = 舊版Psych v0.6.3色相/飽和度/亮度偏移"
+    "arrow_colormode_desc": "RGB = 新調色板顏色\nHSV = 舊版Psych v0.6.3色相/飽和度/亮度偏移",
+    "enabled": "已啟用",
+    "disabled": "已停用"
 }
