@@ -7,6 +7,9 @@ import flixel.util.FlxColor;
 import backend.Paths;
 import backend.ClientPrefs;
 import objects.KeyViewer;
+import android.FlxVirtualPad;
+import android.FlxVirtualPad.FlxDPadMode;
+import android.FlxVirtualPad.FlxActionMode;
 
 /**
  * Key Viewer 位置校准界面。
@@ -31,6 +34,7 @@ class KeyViewerPosState extends MusicBeatState
 	static inline var SAVE_DELAY:Float = 1.5;
 
 	var viewer:KeyViewer;
+	var _virtualpad:FlxVirtualPad;
 	var dragging:Bool = false;
 	var lastX:Float = 0;
 	var lastY:Float = 0;
@@ -84,21 +88,16 @@ class KeyViewerPosState extends MusicBeatState
 		updateOffsetText();
 
 		// 移动端：B = 返回并保存，C = 重置
-		addTouchPad('NONE', 'B_C');
-		addTouchPadCamera();
-		if (touchPad != null)
-		{
-			if (touchPad.buttonB != null)
-			{
-				touchPad.buttonB.x = FlxG.width - 132;
-				touchPad.buttonB.y = FlxG.height - 135;
-			}
-			if (touchPad.buttonC != null)
-			{
-				touchPad.buttonC.x = 0;
-				touchPad.buttonC.y = FlxG.height - 135;
-			}
-		}
+		// 改用 FlxVirtualPad（直接 add 进 state，始终渲染在最上层，无需独立相机，避免 touchPadCam 在完整 MusicBeatState 下失效）
+		// FlxActionMode 枚举没有 B_C 组合，故以 NONE 构造后手动添加 B / C 两个按钮（沿用 virtualpad 图集的 b / c 帧）
+		_virtualpad = new FlxVirtualPad(FlxDPadMode.NONE, FlxActionMode.NONE);
+		_virtualpad.buttonB = _virtualpad.createButton(FlxG.width - 86 * 3, FlxG.height - 45 * 3, 44 * 3, 127, "b", 0xFFCB00);
+		_virtualpad.buttonC = _virtualpad.createButton(FlxG.width - 128 * 3, FlxG.height - 45 * 3, 44 * 3, 127, "c", 0x44FF00);
+		_virtualpad.actions.add(_virtualpad.buttonB);
+		_virtualpad.actions.add(_virtualpad.buttonC);
+		_virtualpad.add(_virtualpad.buttonB);
+		_virtualpad.add(_virtualpad.buttonC);
+		add(_virtualpad);
 
 		super.create();
 	}
@@ -169,8 +168,13 @@ class KeyViewerPosState extends MusicBeatState
 
 	override function update(elapsed:Float)
 	{
-		// 返回并保存
-		if (controls.BACK)
+		// 返回并保存（桌面 BACK 键 / 移动端 B 虚拟键）
+		// 拖动期间虚拟键已隐藏并禁用，这里也跳过其判定，避免松手瞬间误触发
+		var backPressed:Bool = controls.BACK;
+		if (!backPressed && !dragging && _virtualpad != null && _virtualpad.buttonB != null && _virtualpad.buttonB.justPressed)
+			backPressed = true;
+
+		if (backPressed)
 		{
 			commitSave();
 			MusicBeatState.switchState(new OptionsState());
@@ -179,7 +183,7 @@ class KeyViewerPosState extends MusicBeatState
 
 		// 重置为默认位置（键盘 R / 移动端 C 键）
 		var resetPressed:Bool = FlxG.keys.justPressed.R;
-		if (!resetPressed && touchPad != null && touchPad.buttonC != null && touchPad.buttonC.justPressed)
+		if (!resetPressed && !dragging && _virtualpad != null && _virtualpad.buttonC != null && _virtualpad.buttonC.justPressed)
 			resetPressed = true;
 
 		if (resetPressed)
@@ -204,23 +208,19 @@ class KeyViewerPosState extends MusicBeatState
 		if (savedFlash != null && savedFlash.alpha > 0)
 			savedFlash.alpha = Math.max(0, savedFlash.alpha - elapsed * 0.8);
 
-		// 有些机型偶发不加载 touchPad，这里补一次
-		if (touchPad == null)
-		{
-			addTouchPad('NONE', 'B_C');
-			addTouchPadCamera();
-		}
-
 		super.update(elapsed);
 	}
 
 	/** 判断某屏幕坐标是否落在虚拟按键上，避免点按钮时误触发拖动 */
-	function overlapsTouchPad(x:Float, y:Float):Bool
+	function overlapsVirtualPad(x:Float, y:Float):Bool
 	{
-		if (touchPad == null)
+		if (_virtualpad == null)
+			return false;
+		// 拖动期间按钮已隐藏且不吃输入，无需再挡；同时避免按钮隐藏后坐标误判
+		if (dragging)
 			return false;
 
-		for (btn in touchPad.members)
+		for (btn in [_virtualpad.buttonB, _virtualpad.buttonC])
 		{
 			if (btn == null || !btn.visible)
 				continue;
@@ -250,7 +250,7 @@ class KeyViewerPosState extends MusicBeatState
 			if (!t.pressed && !t.justPressed && !t.justReleased)
 				continue;
 			// 只在「还没开始拖」时过滤虚拟按键；已经在拖的时候手指滑过按钮不该断开
-			if (!dragging && overlapsTouchPad(t.x, t.y))
+			if (!dragging && overlapsVirtualPad(t.x, t.y))
 				continue;
 
 			mx = t.x;
@@ -285,6 +285,9 @@ class KeyViewerPosState extends MusicBeatState
 				dragging = true;
 				lastX = mx;
 				lastY = my;
+				// 拖动期间临时禁用虚拟键操控（隐藏且不吃输入），避免手指滑过 B/C 误触返回/重置
+				if (_virtualpad != null)
+					_virtualpad.visible = false;
 			}
 		}
 
@@ -314,6 +317,9 @@ class KeyViewerPosState extends MusicBeatState
 			if (!pressed)
 			{
 				dragging = false;
+				// 松手恢复虚拟键操控
+				if (_virtualpad != null)
+					_virtualpad.visible = true;
 				// 松手不再立刻整存，交给延迟合并写入
 				saveCooldown = SAVE_DELAY;
 			}
