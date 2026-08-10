@@ -306,5 +306,6 @@
     "time_bar_stripes_name": "时间条条纹",
     "resource_caching_name": "资源缓存",
     "enable_game_log_name": "启用游戏日志",
-    "hold_score_bonus_desc": "长条命中期间持续加分，直到长条结束（参考原版 Funkin，约每秒 250 分）。"
+    "hold_score_bonus_desc": "长条命中期间持续加分，直到长条结束（参考原版 Funkin，约每秒 250 分）。",
+    "mobile_controls_menu_tip": "按 {0} 打开移动端控制菜单"
 }

@@ -299,5 +299,6 @@
     "time_bar_stripes_name": "Time Bar Stripes",
     "resource_caching_name": "Resource Caching",
     "enable_game_log_name": "Enable Game Log",
-    "hold_score_bonus_desc": "Continue gaining score while holding a sustain note until it ends (similar to vanilla Funkin, roughly 250 score per second)."
+    "hold_score_bonus_desc": "Continue gaining score while holding a sustain note until it ends (similar to vanilla Funkin, roughly 250 score per second).",
+    "mobile_controls_menu_tip": "Press {0} to Go Mobile Controls Menu"
 }

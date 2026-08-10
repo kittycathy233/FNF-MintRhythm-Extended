@@ -38,11 +38,11 @@ class Conductor
 		var absDiff:Float = Math.abs(diff);
 
 		// Perfect判定逻辑 (现在在第一位)
-		if (ClientPrefs.data.rmPerfect == 'off' && absDiff <= data[0].hitWindow)
+		if (ClientPrefs.data.rmPerfect == 'enable' && absDiff <= data[0].hitWindow)
 			return data[0];
 
 		// 确定起始索引
-		var startIndex:Int = (ClientPrefs.data.rmPerfect == 'off') ? 1 : 0;
+		var startIndex:Int = (ClientPrefs.data.rmPerfect == 'enable') ? 1 : 0;
 
 		// 按时间差匹配判定等级
 		var useSoftEdge:Bool = ClientPrefs.data.softJudgmentEdge;

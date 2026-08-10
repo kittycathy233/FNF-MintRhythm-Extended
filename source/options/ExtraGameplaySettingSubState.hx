@@ -80,7 +80,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			Language.get("rm_perfect_judge_desc"),
 			'rmPerfect',
 			STRING,
-			['off', 'remove', 'sickPlus']);
+			['enable', 'remove', 'sickPlus']);
 		addOption(option);
 
 		option = new Option(Language.get('remove_the_ms_offset'),

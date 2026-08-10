@@ -19,7 +19,7 @@
     "rating_bounce_desc": "Enhance the bounce animation of rating sprites",
     "exrating_bounce_desc": "Enhance the bounce animation of extra rating sprites\nWhen 'Combo Stacking' is enabled, adds an additional angled effect",
     "rating_opac_desc": "Adjust the opacity of rating sprites (100% = opaque)",
-    "rm_perfect_judge_desc": "Perfect judgement mode\noff = keep current (use Perfect judgement)\nremove = completely remove Perfect judgement\nsickPlus = Perfect becomes Sick+ state (Sick rating, but Perfect score. Optional Perfect sprite)",
+    "rm_perfect_judge_desc": "Perfect judgement mode\nenable = keep current (use Perfect judgement)\nremove = completely remove Perfect judgement\nsickPlus = Perfect becomes Sick+ state (Sick rating, but Perfect score. Optional Perfect sprite)",
     "timebar_style_desc": "Change the appearance of the in-game time bar",
     "request_admin_button": "Click to get admin privileges",
     "wintitle_dynamic": "Update the window title with the current screen, loaded mod and (while playing) the current song. Disabled automatically when Fake OS Mode is on.",

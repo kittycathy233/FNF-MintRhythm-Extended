@@ -282,5 +282,6 @@
     "fallback_experfect_to_sick_name": "用Sick代替ExPerfect",
     "sound_tray_style_name": "音訊面板風格",
     "hold_note_behind_name": "長按音符在後",
-    "hold_score_bonus_desc": "長條命中期間持續加分，直到長條結束（參考原版 Funkin，約每秒 250 分）。"
+    "hold_score_bonus_desc": "長條命中期間持續加分，直到長條結束（參考原版 Funkin，約每秒 250 分）。",
+    "mobile_controls_menu_tip": "按 {0} 打開移動端控制選單"
 }

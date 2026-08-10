@@ -138,7 +138,8 @@ class OptionsState extends MusicBeatState
 
 		if (controls.mobileC)
 		{
-			var tipText:FlxText = new FlxText(150, FlxG.height - 24, 0, 'Press ' + (FlxG.onMobile ? 'C' : 'CTRL or C') + ' to Go Mobile Controls Menu', 16);
+			var keyLabel:String = FlxG.onMobile ? 'C' : 'CTRL or C';
+			var tipText:FlxText = new FlxText(150, FlxG.height - 24, 0, Language.get('mobile_controls_menu_tip', [keyLabel]), 16);
 			tipText.setFormat(Paths.font(Language.get('game_font')), 17, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			tipText.borderSize = 1.25;
 			tipText.scrollFactor.set();

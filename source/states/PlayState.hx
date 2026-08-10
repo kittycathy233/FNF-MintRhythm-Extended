@@ -2005,11 +2005,11 @@ tempScore += '${lblScore}: ${songScore}';
 	public dynamic function fullComboFunction()
 	{
 		// 根据是否启用perfect来确定索引
-		var perfects:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[0].hits : 0;
-		var sicks:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[1].hits : ratingsData[0].hits;
-		var goods:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[2].hits : ratingsData[1].hits;
-		var bads:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[3].hits : ratingsData[2].hits;
-		var shits:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[4].hits : ratingsData[3].hits;
+		var perfects:Int = ClientPrefs.data.rmPerfect == 'enable' ? ratingsData[0].hits : 0;
+		var sicks:Int = ClientPrefs.data.rmPerfect == 'enable' ? ratingsData[1].hits : ratingsData[0].hits;
+		var goods:Int = ClientPrefs.data.rmPerfect == 'enable' ? ratingsData[2].hits : ratingsData[1].hits;
+		var bads:Int = ClientPrefs.data.rmPerfect == 'enable' ? ratingsData[3].hits : ratingsData[2].hits;
+		var shits:Int = ClientPrefs.data.rmPerfect == 'enable' ? ratingsData[4].hits : ratingsData[3].hits;
 
 		//ratingFC = "";
 		ratingFC = /*ClientPrefs.data.scoretxtstyle == 'Psych' ? "?" : */"?";
@@ -2060,11 +2060,11 @@ tempScore += '${lblScore}: ${songScore}';
 				prefixToken = 'FC';
 
 				// 根据是否启用perfect来确定索引
-				var perfects:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[0].hits : 0;
-				var sicks:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[1].hits : ratingsData[0].hits;
-				var goods:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[2].hits : ratingsData[1].hits;
-				var bads:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[3].hits : ratingsData[2].hits;
-				var shits:Int = ClientPrefs.data.rmPerfect == 'off' ? ratingsData[4].hits : ratingsData[3].hits;
+				var perfects:Int = ClientPrefs.data.rmPerfect == 'enable' ? ratingsData[0].hits : 0;
+				var sicks:Int = ClientPrefs.data.rmPerfect == 'enable' ? ratingsData[1].hits : ratingsData[0].hits;
+				var goods:Int = ClientPrefs.data.rmPerfect == 'enable' ? ratingsData[2].hits : ratingsData[1].hits;
+				var bads:Int = ClientPrefs.data.rmPerfect == 'enable' ? ratingsData[3].hits : ratingsData[2].hits;
+				var shits:Int = ClientPrefs.data.rmPerfect == 'enable' ? ratingsData[4].hits : ratingsData[3].hits;
 
 				if (bads < 10 && shits == 0)
 					prefixToken = 'SDB';

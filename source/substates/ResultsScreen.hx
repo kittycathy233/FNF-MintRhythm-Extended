@@ -145,7 +145,7 @@ class ResultsScreen extends FlxSubState
 		// 组合文本
 		var sickPlus:Int = PlayState.instance.songSickPlus;
 		var comboStr = 'Judgements:\n'
-			+ (ClientPrefs.data.rmPerfect == 'off' ? 'Perfects - ${perfects}\n' : "")
+			+ (ClientPrefs.data.rmPerfect == 'enable' ? 'Perfects - ${perfects}\n' : "")
 			+ 'Sicks - ${sicks}' + (ClientPrefs.data.rmPerfect == 'sickPlus' && sickPlus > 0 ? ' (Sick+ : ${sickPlus})' : '') + '\n'
 			+ 'Goods - ${goods}\n'
 			+ 'Bads - ${bads}\n'
@@ -164,7 +164,7 @@ class ResultsScreen extends FlxSubState
 
 		// 为每个判定添加不同颜色
 		var idx = 0;
-		if (ClientPrefs.data.rmPerfect == 'off')
+		if (ClientPrefs.data.rmPerfect == 'enable')
 		{
 			idx = comboStr.indexOf('Perfects');
 			comboText.setTextFormat(new TextFormat("assets/fonts/vcr.ttf", Math.floor(32 * scale), 0xFFFFC0CB), idx, idx + ('Perfects - ${perfects}'.length));
@@ -222,7 +222,7 @@ class ResultsScreen extends FlxSubState
 
 		settingsText = createTextField(Math.floor(20 * scale), Math.floor(stageHeight + 60 * scale), Math.floor(stageWidth - 300 * scale), FlxColor.WHITE,
 			Math.floor(18 * scale));
-		settingsText.text = 'Avg: ${Math.round(averageMs * 100) / 100}ms (${ClientPrefs.data.rmPerfect == 'off' ? "PERFECT:" + ClientPrefs.data.perfectWindow + "ms," : ""}SICK:${ClientPrefs.data.sickWindow}ms,GOOD:${ClientPrefs.data.goodWindow}ms,BAD:${ClientPrefs.data.badWindow}ms)';
+		settingsText.text = 'Avg: ${Math.round(averageMs * 100) / 100}ms (${ClientPrefs.data.rmPerfect == 'enable' ? "PERFECT:" + ClientPrefs.data.perfectWindow + "ms," : ""}SICK:${ClientPrefs.data.sickWindow}ms,GOOD:${ClientPrefs.data.goodWindow}ms,BAD:${ClientPrefs.data.badWindow}ms)';
 		overlaySprite.addChild(settingsText);
 
 		/*var sicks = PlayState.sicks;

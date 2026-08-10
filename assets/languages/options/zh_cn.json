@@ -19,7 +19,7 @@
     "rating_bounce_desc": "增强 评级精灵 的弹跳动画效果",
     "exrating_bounce_desc": "增强 额外评级精灵 的弹跳动画\n启用“连击堆叠”时会额外为其增加角度上的动效",
     "rating_opac_desc": "调整 评级精灵 的不透明度（100%为不透明）",
-    "rm_perfect_judge_desc": "Perfect判定模式\noff=保持当前（使用Perfect判定）\nremove=完全移除Perfect判定\nsickPlus=Perfect变为Sick+状态（Sick评级，但Perfect分数。可选显示Perfect贴图）",
+    "rm_perfect_judge_desc": "Perfect判定模式\nenable=保持当前（使用Perfect判定）\nremove=完全移除Perfect判定\nsickPlus=Perfect变为Sick+状态（Sick评级，但Perfect分数。可选显示Perfect贴图）",
     "timebar_style_desc": "更改游戏内时间条的外观",
     "request_admin_button": "点我获取管理员权限",
     "scoretextlanguage_desc": "分数文字（scoreTxt）显示的语言。Auto 表示跟随游戏语言。",

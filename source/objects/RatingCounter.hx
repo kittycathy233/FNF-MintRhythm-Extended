@@ -85,7 +85,7 @@ class RatingCounter extends FlxBasic
 		maText = new FlxText(baseX, baseY, 0, '', 18);
 		maText.setFormat(Paths.font("vcr.ttf"), 18, COLOR_DEFAULT, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		maText.scrollFactor.set();
-		maText.visible = ClientPrefs.data.rmPerfect == 'off';
+		maText.visible = ClientPrefs.data.rmPerfect == 'enable';
 		
 		// 创建PA文本
 		paText = new FlxText(baseX, baseY, 0, '', 18);
@@ -160,7 +160,7 @@ class RatingCounter extends FlxBasic
 	 */
 	public function updateCounters():Void
 	{
-		var hasPerfect:Bool = ClientPrefs.data.rmPerfect == 'off';
+		var hasPerfect:Bool = ClientPrefs.data.rmPerfect == 'enable';
 		var perfects:Int = 0;
 		var sicks:Int = 0;
 		var goods:Int = 0;
@@ -350,7 +350,7 @@ class RatingCounter extends FlxBasic
 		{
 			ratingText.text.visible = visible;
 		}
-		maText.visible = visible && ClientPrefs.data.rmPerfect == 'off';
+		maText.visible = visible && ClientPrefs.data.rmPerfect == 'enable';
 		paText.visible = visible;
 		// Sick+ 行：sickPlus 模式下显示，且依赖 updateCounters 中设定的可见性
 		if (visible && ClientPrefs.data.rmPerfect == 'sickPlus')
@@ -370,7 +370,7 @@ class RatingCounter extends FlxBasic
 	{
 		// 计算显示的总行数（评分 + MA + PA + 可能的 Sick+）
 		var totalLines:Int = ratingTexts.length;
-		if (ClientPrefs.data.rmPerfect == 'off') totalLines += 2;
+		if (ClientPrefs.data.rmPerfect == 'enable') totalLines += 2;
 		else totalLines += 1;
 		if (ClientPrefs.data.rmPerfect == 'sickPlus') totalLines += 1;
 		
@@ -389,7 +389,7 @@ class RatingCounter extends FlxBasic
 		
 		// 更新MA文本位置
 		maText.y = currentY;
-		if (ClientPrefs.data.rmPerfect == 'off') currentY += LINE_HEIGHT;
+		if (ClientPrefs.data.rmPerfect == 'enable') currentY += LINE_HEIGHT;
 
 		// 更新 Sick+ 文本位置（sickPlus 模式下，位于评分与 PA 之间）
 		sickPlusText.y = currentY;

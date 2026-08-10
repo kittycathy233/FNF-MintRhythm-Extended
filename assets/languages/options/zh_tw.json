@@ -19,7 +19,7 @@
     "rating_bounce_desc": "增強 評級精靈 的彈跳動畫效果",
     "exrating_bounce_desc": "增強 額外評級精靈 的彈跳動畫\n啓用“連擊堆疊”時會額外為其增加角度上的動效",
     "rating_opac_desc": "調整 評級精靈 的不透明度（100%為不透明）",
-    "rm_perfect_judge_desc": "Perfect判定模式\noff=保持當前（使用Perfect判定）\nremove=完全移除Perfect判定\nsickPlus=Perfect變為Sick+狀態（Sick評級，但Perfect分數。可選顯示Perfect貼圖）",
+    "rm_perfect_judge_desc": "Perfect判定模式\nenable=保持當前（使用Perfect判定）\nremove=完全移除Perfect判定\nsickPlus=Perfect變為Sick+狀態（Sick評級，但Perfect分數。可選顯示Perfect貼圖）",
     "timebar_style_desc": "更改遊戲內時間條的外觀",
     "request_admin_button": "點我獲取管理員權限",
     "scoretextlanguage_desc": "分數文字（scoreTxt）顯示的語言。Auto 表示跟隨遊戲語言。",
