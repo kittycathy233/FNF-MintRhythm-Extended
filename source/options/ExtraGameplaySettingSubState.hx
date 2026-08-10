@@ -540,6 +540,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		addOption(option);
 		#end
 
+		#if !mobile
 		option = new Option(Language.get('use_system_cursor'),
 			Language.get("use_system_cursor_desc"),
 			'systemCursor',
@@ -549,6 +550,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			ClientPrefs.saveSettings();
 		};
 		addOption(option);
+		#end
 
 		option = new Option(Language.get('startup_splash'),
 			Language.get("startup_splash_desc"),

@@ -335,6 +335,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 	addOption(option);
 	option.onChange = onChangeFakeOSMode;
 
+	#if !mobile
 	var option:Option = new Option(Language.get('fake_window_title'),
 		Language.get("fake_window_title_desc"),
 		'fakeWindowTitlePreset',
@@ -342,6 +343,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		["Kathy Engine", "Friday Night Funkin': MintRhythm Engine", "Friday Night Funkin': OS Engine", "Friday Night Funkin': Psych Engine", "Friday Night Funkin'", "FNF", "WTF in FNF", "Rhythm Game", "Not FNF", "Just a Game"]);
 	addOption(option);
 	option.onChange = onChangeFakeWindowTitle;
+	#end
 
 	var option:Option = new Option(Language.get('fake_os_version'),
 		Language.get("fake_os_version_desc"),
@@ -352,6 +354,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		option.onChange = onChangeFakeOSMode;
 
 		// ===== 动态窗口标题 (Dynamic Window Title) =====
+		#if !mobile
 		var option:Option = new Option(Language.get('dynamic_window_title'),
 			Language.get('wintitle_dynamic'),
 			'dynamicWindowTitle',
@@ -386,6 +389,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 			BOOL);
 		option.onChange = function() { Main.updateWindowTitle(); };
 		addOption(option);
+		#end
 
 		super();
 		add(notes);
