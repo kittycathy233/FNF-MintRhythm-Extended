@@ -5,6 +5,7 @@ import backend.StageData;
 import flixel.FlxG;
 import flixel.math.FlxMath;
 import flixel.tweens.FlxTween;
+import flixel.tweens.FlxEase;
 import flixel.input.mouse.FlxMouse;
 import flixel.ui.FlxButton;
 
@@ -50,6 +51,17 @@ class OptionsState extends MusicBeatState
 	var descriptionText:FlxText;
 	var adminButton:FlxButton;
 	var sideGif:FlxGifSprite = null;
+
+	// speaki 语音列表（assets/shared/sounds/speaki 下的全部 .ogg）
+	private var speakiSounds:Array<String> = [
+		'speaki/ahh', 'speaki/ahhww', 'speaki/baseo_full', 'speaki/baseo',
+		'speaki/choayo_1', 'speaki/choayo_2', 'speaki/choayo_23', 'speaki/choayo_excited',
+		'speaki/speaki_will_tryhard', 'speaki/speaki', 'speaki/spq_baseo',
+		'speaki/wwaah_full', 'speaki/wwaahh'
+	];
+	private var pokeCooldown:Bool = false; // 戳戳冷却中（音频未播完）
+	private var pokeTween:FlxTween = null;
+	private var sideGifBaseScale:Float = 1; // sideGif 静止时的缩放（setGraphicSize 设定，非 1.0）
 
 	private var _inSubState:Bool = false;
 
@@ -151,11 +163,21 @@ class OptionsState extends MusicBeatState
 		sideGif.loadGif('assets/shared/images/gifs/minispeaki.gif');
 		sideGif.setGraphicSize(96);
 		sideGif.updateHitbox();
-		sideGif.x = titleText.x - sideGif.width - 12;
-		sideGif.y = titleText.y + (titleText.height - sideGif.height) / 2;
+		sideGifBaseScale = sideGif.scale.x; // 记录静止缩放（setGraphicSize(96) 后通常 < 1）
+		// 以帧中心为锚点，缩放弹动时保持视觉居中
+		sideGif.origin.set(sideGif.frameWidth / 2, sideGif.frameHeight / 2);
+		// 紧贴“设置”文本左侧（仅留 6px 间隙），与文本垂直居中对齐
+		sideGif.x = titleText.x - 6 - sideGif.width / 2;
+		sideGif.y = titleText.y + titleText.height / 2;
 		sideGif.antialiasing = ClientPrefs.data.antialiasing;
 		sideGif.scrollFactor.set();
 		add(sideGif);
+
+		// 预加载 speaki 语音（总共约 1MB，常驻内存无负担）
+		for (s in speakiSounds)
+			Paths.sound(s);
+
+		pokeCooldown = false;
 
 		if (controls.mobileC)
 		{
@@ -417,6 +439,17 @@ class OptionsState extends MusicBeatState
 			openSelectedSubstate(options[mouseOverOption]);
 		}
 
+		// 点击 sideGif：q弹戳戳 + 随机语音（有 cd，需等音频播完）
+		if (mouse.justPressed && allowInput && !_inSubState && sideGif != null)
+		{
+			var hw:Float = sideGif.width / 2;
+			var hh:Float = sideGif.height / 2;
+			if (Math.abs(mouse.x - sideGif.x) <= hw && Math.abs(mouse.y - sideGif.y) <= hh)
+			{
+				pokeGif();
+			}
+		}
+
 		// 选中项动效
 		for (i in 0...grpOptions.length)
 		{
@@ -448,6 +481,31 @@ class OptionsState extends MusicBeatState
 		selectorLeft.y = FlxMath.lerp(selectorLeftTargetY, selectorLeft.y, Math.exp(-elapsed * OptionsConfig.SELECTOR_LERP_SPEED));
 		selectorRight.x = FlxMath.lerp(selectorRightTargetX, selectorRight.x, Math.exp(-elapsed * OptionsConfig.SELECTOR_LERP_SPEED));
 		selectorRight.y = FlxMath.lerp(selectorRightTargetY, selectorRight.y, Math.exp(-elapsed * OptionsConfig.SELECTOR_LERP_SPEED));
+	}
+
+	private function pokeGif():Void
+	{
+		if (pokeCooldown || sideGif == null)
+			return;
+		pokeCooldown = true;
+
+		// 取消上一次补间，从当前状态重新弹动
+		if (pokeTween != null)
+			pokeTween.cancel();
+
+		// 戳一下先变小（被“戳扁”），再用 lerp 平滑过渡回原本的小图大小，营造“q弹/戳戳”手感
+		// 注意：回归目标是 sideGifBaseScale（setGraphicSize 设定的静止缩放），而非 1.0，否则会放大到原始尺寸
+		var s:Float = sideGifBaseScale;
+		sideGif.scale.set(s * 0.6, s * 0.6);
+		pokeTween = FlxTween.tween(sideGif.scale, { x: s, y: s }, 0.45,
+			{ ease: FlxEase.quadOut,
+			  onComplete: function(twn:FlxTween) { pokeTween = null; } });
+
+		// 随机播放 speaki 语音
+		var key:String = speakiSounds[FlxG.random.int(0, speakiSounds.length - 1)];
+		var snd = FlxG.sound.play(Paths.sound(key));
+		if (snd != null)
+			snd.onComplete = function() { pokeCooldown = false; };
 	}
 
 	function changeSelection(dx:Int = 0, dy:Int = 0)
