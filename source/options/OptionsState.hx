@@ -164,11 +164,9 @@ class OptionsState extends MusicBeatState
 		sideGif.setGraphicSize(96);
 		sideGif.updateHitbox();
 		sideGifBaseScale = sideGif.scale.x; // 记录静止缩放（setGraphicSize(96) 后通常 < 1）
-		// 以帧中心为锚点，缩放弹动时保持视觉居中
-		sideGif.origin.set(sideGif.frameWidth / 2, sideGif.frameHeight / 2);
-		// 紧贴“设置”文本左侧（仅留 6px 间隙），与文本垂直居中对齐
-		sideGif.x = titleText.x - 6 - sideGif.width / 2;
-		sideGif.y = titleText.y + titleText.height / 2;
+		// 用默认左上角原点定位（origin 保持 0,0），与“添加动效前”完全一致：位于“设置”文本左侧，留 12px 间隙，垂直居中
+		sideGif.x = titleText.x - sideGif.width - 12;
+		sideGif.y = titleText.y + (titleText.height - sideGif.height) / 2;
 		sideGif.antialiasing = ClientPrefs.data.antialiasing;
 		sideGif.scrollFactor.set();
 		add(sideGif);
@@ -442,9 +440,12 @@ class OptionsState extends MusicBeatState
 		// 点击 sideGif：q弹戳戳 + 随机语音（有 cd，需等音频播完）
 		if (mouse.justPressed && allowInput && !_inSubState && sideGif != null)
 		{
+			// origin 为默认左上角，故精灵中心 = (x + width/2, y + height/2)，命中判定须以真实中心为准
+			var cx:Float = sideGif.x + sideGif.width / 2;
+			var cy:Float = sideGif.y + sideGif.height / 2;
 			var hw:Float = sideGif.width / 2;
 			var hh:Float = sideGif.height / 2;
-			if (Math.abs(mouse.x - sideGif.x) <= hw && Math.abs(mouse.y - sideGif.y) <= hh)
+			if (Math.abs(mouse.x - cx) <= hw && Math.abs(mouse.y - cy) <= hh)
 			{
 				pokeGif();
 			}
@@ -495,11 +496,24 @@ class OptionsState extends MusicBeatState
 
 		// 戳一下先变小（被“戳扁”），再用 lerp 平滑过渡回原本的小图大小，营造“q弹/戳戳”手感
 		// 注意：回归目标是 sideGifBaseScale（setGraphicSize 设定的静止缩放），而非 1.0，否则会放大到原始尺寸
+		// origin 为默认左上角，缩放会绕左上角进行，故在补间中持续补偿 x/y 使显示中心保持不动
 		var s:Float = sideGifBaseScale;
+		var cx:Float = sideGif.x + sideGif.width / 2;
+		var cy:Float = sideGif.y + sideGif.height / 2;
 		sideGif.scale.set(s * 0.6, s * 0.6);
+		sideGif.x = cx - (sideGif.frameWidth * sideGif.scale.x) / 2;
+		sideGif.y = cy - (sideGif.frameHeight * sideGif.scale.y) / 2;
 		pokeTween = FlxTween.tween(sideGif.scale, { x: s, y: s }, 0.45,
 			{ ease: FlxEase.quadOut,
-			  onComplete: function(twn:FlxTween) { pokeTween = null; } });
+			  onUpdate: function(twn:FlxTween) {
+				  sideGif.x = cx - (sideGif.frameWidth * sideGif.scale.x) / 2;
+				  sideGif.y = cy - (sideGif.frameHeight * sideGif.scale.y) / 2;
+			  },
+			  onComplete: function(twn:FlxTween) {
+				  sideGif.x = cx - (sideGif.frameWidth * sideGif.scale.x) / 2;
+				  sideGif.y = cy - (sideGif.frameHeight * sideGif.scale.y) / 2;
+				  pokeTween = null;
+			  } });
 
 		// 随机播放 speaki 语音
 		var key:String = speakiSounds[FlxG.random.int(0, speakiSounds.length - 1)];
