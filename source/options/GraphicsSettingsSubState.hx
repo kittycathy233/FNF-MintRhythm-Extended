@@ -28,13 +28,13 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		aris.alpha = 0.9;
 
 		// 图形设置选项
-		var option:Option = new Option('Low Quality',
+		var option:Option = new Option(Language.get('low_quality'),
 			Language.get("low_quality_desc"),
 			'lowQuality',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option('Anti-Aliasing',
+		var option:Option = new Option(Language.get('anti_aliasing'),
 			Language.get("antialiasing_desc"),
 			'antialiasing',
 			BOOL);
@@ -42,25 +42,25 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 		antialiasingOption = optionsArray.length - 1;
 
-		var option:Option = new Option('Shaders',
+		var option:Option = new Option(Language.get('shaders'),
 			Language.get("shaders_desc"),
 			'shaders',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option('GPU Caching',
+		var option:Option = new Option(Language.get('gpu_caching'),
 			Language.get("gpu_caching_desc"),
 			'cacheOnGPU',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option('Resource Caching on Reload',
+		var option:Option = new Option(Language.get('resource_caching_on_reload'),
 			Language.get("resource_caching_desc"),
 			'cacheResourcesOnReload',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option('Optimized Note Loading',
+		var option:Option = new Option(Language.get('optimized_note_loading'),
 			Language.get("optimized_note_loading_desc"),
 			'useOptimizedNoteLoading',
 			STRING,
@@ -69,7 +69,7 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 
 		#if !html5
 		// 帧率设置（非HTML5平台）
-		var option:Option = new Option('Framerate',
+		var option:Option = new Option(Language.get('framerate'),
 			Language.get("framerate_desc"),
 			'framerate',
 			INT);
@@ -84,34 +84,34 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		option.onChange = onChangeFramerate;
 		#end
 
-		var option:Option = new Option('FPS Rework',
+		var option:Option = new Option(Language.get('fps_rework'),
 			Language.get("fps_rework_desc"),
 			'fpsRework',
 			BOOL);
 		addOption(option);
 
 		// PlayState宽屏自适应
-		var option:Option = new Option('PlayState Adaptive Width',
+		var option:Option = new Option(Language.get('playstate_adaptive_width'),
 			Language.get("playstate_adaptive_width_desc"),
 			'playStateAdaptiveWidth',
 			BOOL);
 		addOption(option);
 
 		// 制谱器分辨率跟随窗口
-		var option:Option = new Option('Chart Editor Follow Window',
+		var option:Option = new Option(Language.get('chart_editor_follow_window'),
 			Language.get("chart_editor_follow_window_desc"),
 			'chartEditorFollowWindow',
 			BOOL);
 		addOption(option);
 
 		// 飞溅数量限制设置
-		var option:Option = new Option('Splash Limit',
+		var option:Option = new Option(Language.get('splash_limit'),
 			Language.get("splash_limit_desc"),
 			'splashLimitEnabled',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option('Max Splashes',
+		var option:Option = new Option(Language.get('max_splashes'),
 			Language.get("max_splashes_desc"),
 			'splashLimit',
 			INT);
@@ -122,7 +122,7 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 
 		// 资源加载线程数（默认 1 = 单线程；数值越大加载越并行，但更耗内存、低端机可能 OOM）
-		var option:Option = new Option('Loading Threads',
+		var option:Option = new Option(Language.get('loading_threads'),
 			Language.get("loading_threads_desc"),
 			'loadingThreadCount',
 			INT);
@@ -133,7 +133,7 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 
 		// 是否显示进入歌曲时的加载界面
-		var option:Option = new Option('Show Loading Screen',
+		var option:Option = new Option(Language.get('show_loading_screen'),
 			Language.get("show_loading_screen_desc"),
 			'loadingScreen',
 			BOOL);

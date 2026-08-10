@@ -12,29 +12,25 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		rpcTitle = 'Gameplay Settings Menu'; //for Discord Rich Presence
 
 		//I'd suggest using "Downscroll" as an example for making your own option since it is the simplest here
-		var option:Option = new Option(
-			"Downscroll",
+		var option:Option = new Option(Language.get('downscroll'),
 			Language.get("downscroll_desc"),
 			'downScroll',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option(
-			"Key Viewer",
+		var option:Option = new Option(Language.get('key_viewer'),
 			Language.get("keyviewer_desc"),
 			'keyViewer',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option(
-			"Key Viewer Profile",
+		var option:Option = new Option(Language.get('key_viewer_profile'),
 			Language.get("keyviewer_profile_desc"),
 			'keyViewerProfile',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option(
-			"Reset Key Viewer Total",
+		var option:Option = new Option(Language.get('reset_key_viewer_total'),
 			Language.get("keyviewer_reset_total_desc"),
 			'_keyViewerResetTotal',
 			BUTTON);
@@ -44,16 +40,14 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 			KeyViewer.saveKeyViewerTotal();
 		};
 
-		var option:Option = new Option(
-			"Key Viewer Trail",
+		var option:Option = new Option(Language.get('key_viewer_trail'),
 			Language.get("keyviewer_trail_desc"),
 			'keyViewerTrail',
 			STRING,
 			['off', 'auto', 'up', 'down']);
 		addOption(option);
 
-		var option:Option = new Option(
-			"Key Viewer Position",
+		var option:Option = new Option(Language.get('key_viewer_position'),
 			Language.get("keyviewer_pos_desc"),
 			'_keyViewerPos',
 			BUTTON);
@@ -62,15 +56,13 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 			MusicBeatState.switchState(new KeyViewerPosState());
 		};
 
-		var option:Option = new Option(
-			"Middlescroll",
+		var option:Option = new Option(Language.get('middlescroll'),
 			Language.get("middlescroll_desc"),
 			'middleScroll',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option(
-			"Lane Cover (Player)",
+		var option:Option = new Option(Language.get('lane_cover_player'),
 			Language.get("lane_cover_p1_desc"),
 			'laneCoverAlphaP1',
 			FLOAT);
@@ -82,8 +74,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.onChange = onChangeLaneCover;
 		addOption(option);
 
-		var option:Option = new Option(
-			"Lane Cover (Opponent)",
+		var option:Option = new Option(Language.get('lane_cover_opponent'),
 			Language.get("lane_cover_p2_desc"),
 			'laneCoverAlphaP2',
 			FLOAT);
@@ -95,97 +86,84 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.onChange = onChangeLaneCover;
 		addOption(option);
 
-		var option:Option = new Option(
-			"Lane Cover × Strum Alpha",
+		var option:Option = new Option(Language.get('lane_cover_strum_alpha'),
 			Language.get("lane_cover_strum_alpha_desc"),
 			'laneCoverByStrumAlpha',
 			BOOL);
 		option.onChange = onChangeLaneCover;
 		addOption(option);
 
-		var option:Option = new Option(
-			"Opponent Notes",
+		var option:Option = new Option(Language.get('opponent_notes'),
 			Language.get("opponentnotes_desc"),
 			'opponentStrums',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option(
-			"Ghost Tapping",
+		var option:Option = new Option(Language.get('ghost_tapping'),
 			Language.get("ghosttapping_desc"),
 			'ghostTapping',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option(
-			"Precise Hit Timing",
+		var option:Option = new Option(Language.get('precise_hit_timing'),
 			Language.get("precise_hit_desc"),
 			'preciseHit',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option(
-			"Input System",
+		var option:Option = new Option(Language.get('input_system'),
 			Language.get("input_system_desc"),
 			'inputSystem',
 			STRING,
 			['default', 'rhythm']);
 		addOption(option);
 
-		var option:Option = new Option(
-			"Auto Pause",
+		var option:Option = new Option(Language.get('auto_pause'),
 			Language.get("autopause_desc"),
 			'autoPause',
 			BOOL);
 		addOption(option);
 		option.onChange = onChangeAutoPause;
 
-		var option:Option = new Option(
-			"GC On Resume",
+		var option:Option = new Option(Language.get('gc_on_resume'),
 			Language.get("gc_on_resume_desc"),
 			'gcOnResume',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option(
-			"Pop Up Score",
+		var option:Option = new Option(Language.get('pop_up_score'),
 			Language.get("popupscore_desc"),
 			'popUpRating',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option(
-			"Disable Reset Button",
+		var option:Option = new Option(Language.get('disable_reset_button'),
 			Language.get("disablereset_desc"),
 			'noReset',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option(
-			"Force Hold Animations",
+		var option:Option = new Option(Language.get('force_hold_animations'),
 			Language.get("force_hold_animations_desc"),
 			'forceHoldAnimations',
 			BOOL);
 		addOption(option);
 
 		#if mobile
-		var option:Option = new Option(
-			"Game Over Vibration",
+		var option:Option = new Option(Language.get('game_over_vibration'),
 			Language.get("gameovervibration_desc"),
 			'gameOverVibration',
 			BOOL);
 		addOption(option);
 		option.onChange = onChangeVibration;
 
-		var mobileCompOption:Option = new Option(
-			"Mobile Judgment Compensation",
+		var mobileCompOption:Option = new Option(Language.get('mobile_judgment_compensation'),
 			Language.get("mobilejudgmentcomp_desc", ["自动为触屏输入叠加判定偏移以补偿触屏延迟"]),
 			'mobileJudgmentCompensation',
 			BOOL);
 		addOption(mobileCompOption);
 
-		var mobileOffsetOption:Option = new Option(
-			"Mobile Judgment Offset",
+		var mobileOffsetOption:Option = new Option(Language.get('mobile_judgment_offset'),
 			Language.get("mobilejudgmentoffset_desc", ["移动端判定补偿量（毫秒）"]),
 			'mobileJudgmentOffset',
 			FLOAT);
@@ -197,51 +175,44 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		addOption(mobileOffsetOption);
 		#end
 
-		var option:Option = new Option(
-			"Sustains as One Note",
+		var option:Option = new Option(Language.get('sustains_as_one_note'),
 			Language.get("sustainsasone_desc"),
 			'guitarHeroSustains',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option(
-			"Hold Note Tail Fix",
+		var option:Option = new Option(Language.get('hold_note_tail_fix'),
 			Language.get("hold_note_tail_fix_desc"),
 			'sustainTailFix',
 			STRING,
 			['off', 'extend', 'earlyHit', 'both']);
 		addOption(option);
 
-		var option:Option = new Option(
-			"Hold Release Instant Miss",
+		var option:Option = new Option(Language.get('hold_release_instant_miss'),
 			Language.get("hold_release_instant_miss_desc"),
 			'holdReleaseInstantMiss',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option(
-			"Hold Tail Judgement",
+		var option:Option = new Option(Language.get('hold_tail_judgement'),
 			Language.get("hold_tail_judge_desc"),
 			'holdTailJudge',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option(
-			"Hold Score Bonus",
+		var option:Option = new Option(Language.get('hold_score_bonus'),
 			"长条命中期间持续加分，直到长条结束（参考原版 Funkin，约每秒 250 分）。",
 			'holdScoreBonus',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option(
-			"Hold Tail Leniency",
+		var option:Option = new Option(Language.get('hold_tail_leniency'),
 			Language.get("hold_tail_leniency_desc"),
 			'holdTailLeniency',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option(
-			"Hold Tail Leniency (ms)",
+		var option:Option = new Option(Language.get('hold_tail_leniency_ms'),
 			Language.get("hold_tail_leniency_ms_desc"),
 			'holdTailLeniencyMs',
 			FLOAT);
@@ -252,8 +223,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.decimals = 0;
 		addOption(option);
 
-		var option:Option = new Option(
-			"Hitsound Volume",
+		var option:Option = new Option(Language.get('hitsound_volume'),
 			Language.get("hitsoundvolume_desc"),
 			'hitsoundVolume',
 			PERCENT);
@@ -265,8 +235,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.decimals = 1;
 		option.onChange = onChangeHitsoundVolume;
 
-		var option:Option = new Option(
-			"Hitsound",
+		var option:Option = new Option(Language.get('hitsound'),
 			Language.get("hitsound_desc"),
 			'hitsound',
 			STRING,
@@ -274,8 +243,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		addOption(option);
 		option.onChange = onChangeHitsound;
 
-		var option:Option = new Option(
-			"Rating Offset",
+		var option:Option = new Option(Language.get('rating_offset'),
 			Language.get("ratingoffset_desc"),
 			'ratingOffset',
 			INT);
@@ -285,8 +253,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.maxValue = 180;
 		addOption(option);
 
-		var option:Option = new Option(
-			"Safe Frames",
+		var option:Option = new Option(Language.get('safe_frames'),
 			Language.get("safeframes_desc"),
 			'safeFrames',
 			FLOAT);
@@ -296,8 +263,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.changeValue = 0.1;
 		addOption(option);
 
-		var hitWindowPresetOption:Option = new Option(
-			"Hit Window Preset",
+		var hitWindowPresetOption:Option = new Option(Language.get('hit_window_preset'),
 			Language.get("hitwindowpreset_desc"),
 			'hitWindowPreset',
 			STRING,
@@ -305,8 +271,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		hitWindowPresetOption.onChange = onChangeHitWindowPreset;
 		addOption(hitWindowPresetOption);
 
-		var perfectWindowOption:Option = new Option(
-			"Perfect!! Hit Window",
+		var perfectWindowOption:Option = new Option(Language.get('perfect_hit_window'),
 			Language.get("perfectwindow_desc"),
 			'perfectWindow',
 			FLOAT);
@@ -318,8 +283,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		perfectWindowOption.onChange = function() { adjustHitWindow('perfectWindow', ClientPrefs.data.perfectWindow); markPresetCustom(); };
 		addOption(perfectWindowOption);
 
-		var sickWindowOption:Option = new Option(
-			"Sick! Hit Window",
+		var sickWindowOption:Option = new Option(Language.get('sick_hit_window'),
 			Language.get("sickwindow_desc"),
 			'sickWindow',
 			FLOAT);
@@ -331,8 +295,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		sickWindowOption.onChange = function() { adjustHitWindow('sickWindow', ClientPrefs.data.sickWindow); markPresetCustom(); };
 		addOption(sickWindowOption);
 
-		var goodWindowOption:Option = new Option(
-			"Good Hit Window",
+		var goodWindowOption:Option = new Option(Language.get('good_hit_window'),
 			Language.get("goodwindow_desc"),
 			'goodWindow',
 			FLOAT);
@@ -344,8 +307,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		goodWindowOption.onChange = function() { adjustHitWindow('goodWindow', ClientPrefs.data.goodWindow); markPresetCustom(); };
 		addOption(goodWindowOption);
 
-		var badWindowOption:Option = new Option(
-			"Bad Hit Window",
+		var badWindowOption:Option = new Option(Language.get('bad_hit_window'),
 			Language.get("badwindow_desc"),
 			'badWindow',
 			FLOAT);
@@ -357,8 +319,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		badWindowOption.onChange = function() { adjustHitWindow('badWindow', ClientPrefs.data.badWindow); markPresetCustom(); };
 		addOption(badWindowOption);
 
-		var shitWindowOption:Option = new Option(
-			"Shit Hit Window",
+		var shitWindowOption:Option = new Option(Language.get('shit_hit_window'),
 			Language.get("shitwindow_desc", ["判定兜底窗口，同时作为 safeZoneOffset 的固定值上限"]),
 			'shitWindow',
 			FLOAT);
@@ -370,15 +331,13 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		shitWindowOption.onChange = function() { adjustHitWindow('shitWindow', ClientPrefs.data.shitWindow); markPresetCustom(); };
 		addOption(shitWindowOption);
 
-		var useShitWindowOption:Option = new Option(
-			"Use Shit Window as SafeZone",
+		var useShitWindowOption:Option = new Option(Language.get('use_shit_window_as_safezone'),
 			Language.get("useshitwindow_desc", ["启用后 safeZoneOffset 使用 Shit Window 固定值，而非通过 Safe Frames 计算"]),
 			'useShitWindowAsSafeZone',
 			BOOL);
 		addOption(useShitWindowOption);
 
-		var softEdgeOption:Option = new Option(
-			"Soft Judgment Edge",
+		var softEdgeOption:Option = new Option(Language.get('soft_judgment_edge'),
 			Language.get("softedge_desc", ["在判定窗口的最外 20% 边缘启用软插值，避免卡边界时出现判定跳变"]),
 			'softJudgmentEdge',
 			BOOL);

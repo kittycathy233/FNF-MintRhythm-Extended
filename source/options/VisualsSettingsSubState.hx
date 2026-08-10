@@ -46,7 +46,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		}
 
 		// options
-		var option:Option = new Option("Arrow Color Mode:",
+		var option:Option = new Option(Language.get('arrow_color_mode'),
 			Language.get('arrow_colormode_desc'),
 			'arrowColorMode',
 			STRING,
@@ -62,7 +62,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 
 			noteSkins.insert(0, ClientPrefs.defaultData.noteSkin);
 			noteSkinList = noteSkins;
-			var option:Option = new Option("Note Skins:",
+			var option:Option = new Option(Language.get('note_skins'),
 				Language.get("noteskin_desc"),
 				'noteSkin',
 				STRING,
@@ -80,7 +80,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 
 			noteSplashes.insert(0, ClientPrefs.defaultData.splashSkin);
 			splashSkinList = noteSplashes;
-			var option:Option = new Option("Note Splashes:",
+			var option:Option = new Option(Language.get('note_splashes'),
 				Language.get("notesplash_desc"),
 				'splashSkin',
 				STRING,
@@ -96,7 +96,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 				ClientPrefs.data.holdCoverSkin = ClientPrefs.defaultData.holdCoverSkin;
 
 			holdCoverSkins.insert(0, ClientPrefs.defaultData.holdCoverSkin);
-			var option:Option = new Option("Hold Cover Skin:",
+			var option:Option = new Option(Language.get('hold_cover_skin'),
 				Language.get("hold_cover_skin_desc"),
 				'holdCoverSkin',
 				STRING,
@@ -104,7 +104,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 			addOption(option);
 		}
 
-		var option:Option = new Option("Note Splash Opacity",
+		var option:Option = new Option(Language.get('note_splash_opacity'),
 			Language.get("notesplashopacity_desc"),
 			'splashAlpha',
 			PERCENT);
@@ -116,75 +116,75 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 		option.onChange = playNoteSplashes;
 
-		var option:Option = new Option("Hide HUD",
+		var option:Option = new Option(Language.get('hide_hud'),
 			Language.get("hidehud_desc"),
 			'hideHud',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option("3-State Icons (Normal/Lose/Win)",
+		var option:Option = new Option(Language.get('3_state_icons_normal_lose_win'),
 			Language.get("three_icons_desc"),
 			'threeIcons',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option("Load Leather Icons",
+		var option:Option = new Option(Language.get('load_leather_icons'),
 			Language.get("load_leather_icons_desc"),
 			'loadLeatherIcons',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option("Opponent Splashes",
+		var option:Option = new Option(Language.get('opponent_splashes'),
 			Language.get("opponent_splashes_desc"),
 			'opponentSplashes',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option("Hold Covers",
+		var option:Option = new Option(Language.get('hold_covers'),
 			Language.get("hold_covers_desc"),
 			'holdCovers',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option("Opponent Hold Covers",
+		var option:Option = new Option(Language.get('opponent_hold_covers'),
 			Language.get("opponent_hold_covers_desc"),
 			'opponentHoldCovers',
 			BOOL);
 		addOption(option);
 		
-		var option:Option = new Option("Time Bar:",
+		var option:Option = new Option(Language.get('time_bar'),
 			Language.get("timebar_desc"),
 			'timeBarType',
 			STRING,
 			['Time Left', 'Time Elapsed', 'Song Name', 'Disabled']);
 		addOption(option);
 
-		var option:Option = new Option("Flashing Lights",
+		var option:Option = new Option(Language.get('flashing_lights'),
 			Language.get("flashinglights_desc"),
 			'flashing',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option("Camera Zooms",
+		var option:Option = new Option(Language.get('camera_zooms'),
 			Language.get("camerazooms_desc"),
 			'camZooms',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option("Score Text Grow on Hit",
+		var option:Option = new Option(Language.get('score_text_grow_on_hit'),
 			Language.get("scoretextgrow_desc"),
 			'scoreZoom',
 			BOOL);
 		addOption(option);
 
-		var option:Option = new Option("ScoreText Language",
+		var option:Option = new Option(Language.get('scoretext_language'),
 			Language.get("scoretextlanguage_desc"),
 			'scoreLanguage',
 			STRING,
 			['auto', 'en_us', 'zh_cn', 'zh_tw', 'ja', 'ko', 'kc_cn']);
 		addOption(option);
 
-		var option:Option = new Option("Health Bar Opacity",
+		var option:Option = new Option(Language.get('health_bar_opacity'),
 			Language.get("healthbaropacity_desc"),
 			'healthBarAlpha',
 			PERCENT);
@@ -195,14 +195,14 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		option.decimals = 1;
 		addOption(option);
 		
-		var option:Option = new Option("FPS Counter",
+		var option:Option = new Option(Language.get('fps_counter'),
 			Language.get("showfps_desc"),
 			'showFPS',
 			BOOL);
 		addOption(option);
 		option.onChange = onChangeFPSCounter;
 
-		var option:Option = new Option("FPS Counter Style:",
+		var option:Option = new Option(Language.get('fps_counter_style'),
 			Language.get("fps_counter_style_desc"),
 			'fpsStyle',
 			STRING,
@@ -210,7 +210,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 		option.onChange = onChangeFPSStyle;
 
-		var option:Option = new Option("FPS Counter Layer:",
+		var option:Option = new Option(Language.get('fps_counter_layer'),
 			Language.get("fps_counter_layer_desc"),
 			'fpsLayer',
 			STRING,
@@ -218,7 +218,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 		option.onChange = onChangeFPSLayer;
 		
-		var option:Option = new Option("Psych FPS Settings...",
+		var option:Option = new Option(Language.get('psych_fps_settings'),
 			Language.get("fps_settings_button_desc"),
 			'_fpsSettings',
 			BUTTON);
@@ -227,7 +227,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 			MusicBeatState.switchState(new FPSCounterSettingsState());
 		};
 		
-		var option:Option = new Option("Simple FPS Settings...",
+		var option:Option = new Option(Language.get('simple_fps_settings'),
 			Language.get("simple_info_settings_button_desc"),
 			'_simpleInfoSettings',
 			BUTTON);
@@ -238,7 +238,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 
 		//新版lime跟git库的不同，故临时禁用此项，之后也许会改
 		/*#if native
-		var option:Option = new Option("VSync",
+		var option:Option = new Option(Language.get('vsync'),
 			Language.get("vsync_desc"),
 			'vsync',
 			BOOL);
@@ -246,7 +246,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 		#end*/
 		
-		var option:Option = new Option("Pause Music:",
+		var option:Option = new Option(Language.get('pause_music'),
 			Language.get("pausemusic_desc"),
 			'pauseMusic',
 			STRING,
@@ -255,7 +255,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		option.onChange = onChangePauseMusic;
 		
 		#if CHECK_FOR_UPDATES
-		var option:Option = new Option("Check for Updates",
+		var option:Option = new Option(Language.get('check_for_updates'),
 			Language.get("checkforupdates_desc"),
 			'checkForUpdates',
 			BOOL);
@@ -263,79 +263,79 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		#end
 
 	#if DISCORD_ALLOWED
-	var option:Option = new Option("Discord Rich Presence",
+	var option:Option = new Option(Language.get('discord_rich_presence'),
 		Language.get("discordrpc_desc"),
 		'discordRPC',
 		BOOL);
 	addOption(option);
 	#end
 
-	var option:Option = new Option("Disable Networking",
+	var option:Option = new Option(Language.get('disable_networking'),
 		Language.get("disable_networking_desc"),
 		'disableNetworking',
 		BOOL);
 	addOption(option);
 
 
-		var option:Option = new Option("Combo Stacking",
+		var option:Option = new Option(Language.get('combo_stacking'),
 		Language.get("combostacking_desc"),
 		'comboStacking',
 		BOOL);
 	addOption(option);
 
-	var option:Option = new Option("Single Hold Animation",
+	var option:Option = new Option(Language.get('single_hold_animation'),
 		Language.get("single_hold_note_animation_desc"),
 		'singleHoldNoteAnimation',
 		BOOL);
 	addOption(option);
 
-	var option:Option = new Option("Auto Reset Strum Animation",
+	var option:Option = new Option(Language.get('auto_reset_strum_animation'),
 		Language.get("auto_reset_strum_anim_desc"),
 		'autoResetStrumAnim',
 		BOOL);
 	addOption(option);
 
-	var option:Option = new Option("Fallback Perfect to Sick",
+	var option:Option = new Option(Language.get('fallback_perfect_to_sick'),
 		Language.get("fallback_perfect_to_sick_desc"),
 		'fallbackPerfectToSick',
 		BOOL);
 	addOption(option);
 
-	var option:Option = new Option("Fallback EX Perfect to Sick",
+	var option:Option = new Option(Language.get('fallback_ex_perfect_to_sick'),
 		Language.get("fallback_experfect_to_sick_desc"),
 		'fallbackEXPerfectToSick',
 		BOOL);
 	addOption(option);
 
 	var soundTrayOptions:Array<String> = ['Flixel', 'Funkin', 'Kathy', 'Dave'];
-	var option:Option = new Option("Sound Tray Style:",
+	var option:Option = new Option(Language.get('sound_tray_style'),
 		Language.get("sound_tray_style_desc"),
 		'soundTrayStyle',
 		STRING,
 		soundTrayOptions);
 	addOption(option);
 	
-	var option:Option = new Option("Hold Note Behind:",
+	var option:Option = new Option(Language.get('hold_note_behind'),
 		Language.get("hold_note_behind_desc"),
 		'holdNoteBehind',
 		BOOL);
 	addOption(option);
 
-	var option:Option = new Option("Legacy Main Menu UI",
+	var option:Option = new Option(Language.get('legacy_main_menu_ui'),
 		Language.get("legacy_main_menu_desc"),
 		'legacyMainMenu',
 		BOOL);
 	addOption(option);
 
 	// Fake OS 伪装设置
-	var option:Option = new Option("Fake OS Mode",
+	var option:Option = new Option(Language.get('fake_os_mode'),
 		Language.get("fake_os_mode_desc"),
 		'fakeOSMode',
 		BOOL);
 	addOption(option);
 	option.onChange = onChangeFakeOSMode;
 
-	var option:Option = new Option("Fake Window Title",
+	var option:Option = new Option(Language.get('fake_window_title'),
 		Language.get("fake_window_title_desc"),
 		'fakeWindowTitlePreset',
 		STRING,
@@ -343,7 +343,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 	addOption(option);
 	option.onChange = onChangeFakeWindowTitle;
 
-	var option:Option = new Option("Fake OS Version",
+	var option:Option = new Option(Language.get('fake_os_version'),
 		Language.get("fake_os_version_desc"),
 		'fakeOSVersion',
 		STRING,
@@ -352,35 +352,35 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		option.onChange = onChangeFakeOSMode;
 
 		// ===== 动态窗口标题 (Dynamic Window Title) =====
-		var option:Option = new Option("Dynamic Window Title",
+		var option:Option = new Option(Language.get('dynamic_window_title'),
 			Language.get('wintitle_dynamic'),
 			'dynamicWindowTitle',
 			BOOL);
 		option.onChange = function() { Main.updateWindowTitle(); };
 		addOption(option);
 
-		var option:Option = new Option("Show Current Screen",
+		var option:Option = new Option(Language.get('show_current_screen'),
 			Language.get('wintitle_state'),
 			'windowTitleShowState',
 			BOOL);
 		option.onChange = function() { Main.updateWindowTitle(); };
 		addOption(option);
 
-		var option:Option = new Option("Show Current Mod",
+		var option:Option = new Option(Language.get('show_current_mod'),
 			Language.get('wintitle_mod'),
 			'windowTitleShowMod',
 			BOOL);
 		option.onChange = function() { Main.updateWindowTitle(); };
 		addOption(option);
 
-		var option:Option = new Option("Show Current Song",
+		var option:Option = new Option(Language.get('show_current_song'),
 			Language.get('wintitle_song'),
 			'windowTitleShowSong',
 			BOOL);
 		option.onChange = function() { Main.updateWindowTitle(); };
 		addOption(option);
 
-		var option:Option = new Option("Show Song Difficulty",
+		var option:Option = new Option(Language.get('show_song_difficulty'),
 			Language.get('wintitle_difficulty'),
 			'windowTitleShowDifficulty',
 			BOOL);

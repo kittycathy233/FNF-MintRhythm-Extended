@@ -50,89 +50,89 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		// BOOL 类型设置
 
 		// 开发者模式（放在最顶部）：启用后可进入编辑器菜单，legacy 主界面显示 toolbox 入口
-		var option:Option = new Option('Developer Mode',
+		var option:Option = new Option(Language.get('developer_mode'),
 			Language.get("developer_mode_desc"),
 			'developer',
 			BOOL);
 		addOption(option);
 
-		option = new Option('Show Extra-Rating',
+		option = new Option(Language.get('show_extra_rating'),
 			Language.get("show_exrating_desc"),
 			'exratingDisplay',
 			BOOL);
 		addOption(option);
 
-		option = new Option('Rating Bounce',
+		option = new Option(Language.get('rating_bounce'),
 			Language.get("rating_bounce_desc"),
 			'ratbounce',
 			BOOL);
 		ratingBounceOption = addOption(option);
 		ratingBounceOptionIndex = optionsArray.length - 1;
 
-		option = new Option('Extra-Rating Bounce',
+		option = new Option(Language.get('extra_rating_bounce'),
 			Language.get("exrating_bounce_desc"),
 			'exratbounce',
 			BOOL);
 		extraRatingBounceOption = addOption(option);
 		extraRatingBounceOptionIndex = optionsArray.length - 1;
 
-		option = new Option('Perfect Judgement Mode',
+		option = new Option(Language.get('perfect_judgement_mode'),
 			Language.get("rm_perfect_judge_desc"),
 			'rmPerfect',
 			STRING,
 			['off', 'remove', 'sickPlus']);
 		addOption(option);
 
-		option = new Option('Remove the "ms" offset',
+		option = new Option(Language.get('remove_the_ms_offset'),
 			Language.get("rm_ms_offset_desc"),
 			'rmmsTimeTxt',
 			BOOL);
 		addOption(option);
 
-		option = new Option('Show mode label in ms text',
+		option = new Option(Language.get('show_mode_label_in_ms_text'),
 			Language.get("show_mode_label_ms_desc"),
 			'showModeLabelInMsTxt',
 			BOOL);
 		addOption(option);
 
-		option = new Option('Show NPS',
+		option = new Option(Language.get('show_nps'),
 			Language.get("nps_desc"),
 			'showNPS',
 			BOOL);
 		addOption(option);
 
-		option = new Option('Keep Sing Animation',
+		option = new Option(Language.get('keep_sing_animation'),
 			Language.get("keep_sing_animation_desc"),
 			'keepSingAnimation',
 			BOOL);
 		addOption(option);
 
-		option = new Option('Ghost Effect (Multi-Press)',
+		option = new Option(Language.get('ghost_effect_multi_press'),
 			Language.get("ghost_effect_desc"),
 			'ghostEffect',
 			BOOL);
 		addOption(option);
 
-		option = new Option('ScoreTxt bounce',
+		option = new Option(Language.get('scoretxt_bounce'),
 			Language.get("scoretxt_bounce_desc"),
 			'scoretxtbounce',
 			BOOL);
 		addOption(option);
 
-		option = new Option('Single Note Splash Anim',
+		option = new Option(Language.get('single_note_splash_anim'),
 			Language.get("single_splashanim_desc"),
 			'forceSingleSplashAnim',
 			BOOL);
 		addOption(option);
 
-		var smoothHPOption:Option = new Option('smooth HP Bar',
+		var smoothHPOption:Option = new Option(Language.get('smooth_hp_bar'),
 			Language.get("smooth_hpbar_desc"),
 			'smoothHP',
 			BOOL);
 		smoothHPOption.onChange = refreshHealthOverflowState;
 		addOption(smoothHPOption);
 
-		option = new Option('Health Overflow Icons',
+		option = new Option(Language.get('health_overflow_icons'),
 			Language.get("health_overflow_desc"),
 			'healthOverflow',
 			BOOL);
@@ -140,7 +140,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		healthOverflowOptionIndex = optionsArray.length - 1;
 		healthOverflowOption.onChange = refreshHealthOverflowState;
 
-		option = new Option('Overflow Return Speed',
+		option = new Option(Language.get('overflow_return_speed'),
 			Language.get("health_overflow_drain_desc"),
 			'healthOverflowDrain',
 			FLOAT);
@@ -153,7 +153,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		healthOverflowDrainOption = addOption(option);
 		healthOverflowDrainOptionIndex = optionsArray.length - 1;
 
-		option = new Option('Smooth HP Speed',
+		option = new Option(Language.get('smooth_hp_speed'),
 			Language.get("smooth_hp_speed_desc"),
 			'smoothHPSpeed',
 			FLOAT);
@@ -166,51 +166,51 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		smoothHPSpeedOption = addOption(option);
 		smoothHPSpeedOptionIndex = optionsArray.length - 1;
 
-		option = new Option('CPU Strums',
+		option = new Option(Language.get('cpu_strums'),
 			Language.get("cpu_strums_desc"),
 			'cpuStrums',
 			BOOL);
 		addOption(option);
 
-		option = new Option('Legacy Note Position',
+		option = new Option(Language.get('legacy_note_position'),
 			Language.get("legacy_notepos_desc"),
 			'legacynotepos',
 			BOOL);
 		addOption(option);
 
-		option = new Option('Charting Version',
+		option = new Option(Language.get('charting_version'),
 			Language.get("charting_version_desc"),
 			'chartingVersion',
 			STRING,
 			states.editors.ChartingRouter.VERSIONS.copy());
 		addOption(option);
 
-		option = new Option('Score Incrase When BotPlay',
+		option = new Option(Language.get('score_incrase_when_botplay'),
 			Language.get("bot_addscore_desc"),
 			'botplayScore',
 			BOOL);
 		addOption(option);
 
-		option = new Option('BotPlay Perfect Timing',
+		option = new Option(Language.get('botplay_perfect_timing'),
 			Language.get("botplay_perfect_timing_desc"),
 			'botplayPerfectTiming',
 			BOOL);
 		addOption(option);
 
-		option = new Option('Show "Combo" Sprite',
+		option = new Option(Language.get('show_combo_sprite'),
 			Language.get("gameplay_combospr_desc"),
 			'comboSprDisplay',
 			BOOL);
 		addOption(option);
 
-		option = new Option('Combo Number Display',
+		option = new Option(Language.get('combo_number_display'),
 			Language.get("combo_num_display_desc"),
 			'comboNumDisplay',
 			STRING,
 			['Psych', 'Default', 'OG Funkin']);
 		addOption(option);
 
-		option = new Option('Rating Fall Style',
+		option = new Option(Language.get('rating_fall_style'),
 			Language.get("rating_fall_style_desc"),
 			'ratingFallStyle',
 			STRING,
@@ -223,7 +223,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		ratingFallStyleOptionIndex = optionsArray.length - 1;
 		ratingFallStyleDescBase = ratingFallStyleOption.description;
 
-		option = new Option('Camellia Scale Mode',
+		option = new Option(Language.get('camellia_scale_mode'),
 			Language.get("camellia_scale_mode_desc"),
 			'camelliaScaleMode',
 			STRING,
@@ -231,19 +231,19 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		camelliaScaleOption = addOption(option);
 		camelliaScaleOptionIndex = optionsArray.length - 1;
 
-		option = new Option('Show Event Information',
+		option = new Option(Language.get('show_event_information'),
 			Language.get("events_debug_desc"),
 			'eventDebug',
 			BOOL);
 		addOption(option);
 
-		option = new Option('Background Volume',
+		option = new Option(Language.get('background_volume'),
 			Language.get("bgvol_desc"),
 			'backgroundVolume',
 			BOOL);
 		addOption(option);
 
-		option = new Option('Fixed Timestep',
+		option = new Option(Language.get('fixed_timestep'),
 			Language.get("fixed_timestep_desc"),
 			'fixedTimestep',
 			BOOL);
@@ -254,7 +254,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		};
 
 		// ===== 渲染质量（StageQuality） =====
-		option = new Option('Stage Quality',
+		option = new Option(Language.get('stage_quality'),
 			Language.get("stage_quality_desc"),
 			'stageQuality',
 			STRING,
@@ -265,7 +265,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		addOption(option);
 
 		// ===== rating/combo 精灵对象池 =====
-		option = new Option('Combo Sprite Pool Size',
+		option = new Option(Language.get('combo_sprite_pool_size'),
 			Language.get("combo_sprite_pool_size_desc"),
 			'comboSpritePoolSize',
 			INT);
@@ -275,13 +275,13 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		addOption(option);
 
 		// ===== 低延迟 / 性能模式 =====
-		option = new Option('Auto Song Resync',
+		option = new Option(Language.get('auto_song_resync'),
 			Language.get("auto_song_resync_desc"),
 			'autoResync',
 			BOOL);
 		addOption(option);
 
-		option = new Option('Background Volume Level',
+		option = new Option(Language.get('background_volume_level'),
 			Language.get("bgvol_level_desc"),
 			'backgroundVolumeLevel',
 			PERCENT);
@@ -292,25 +292,25 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		option.decimals = 2;
 		addOption(option);
 
-		option = new Option('Rating Counter',
+		option = new Option(Language.get('rating_counter'),
 			Language.get("ratcounter_desc"),
 			'ratCounter',
 			BOOL);
 		addOption(option);
 
-		option = new Option('Rating Counter Animation',
+		option = new Option(Language.get('rating_counter_animation'),
 			Language.get("ratcounter_anim_desc"),
 			'ratCounterAnimation',
 			BOOL);
 		addOption(option);
 
-		option = new Option('Show Watermark',
+		option = new Option(Language.get('show_watermark'),
 			Language.get("watermark_desc"),
 			'waterMarkPlay',
 			BOOL);
 		addOption(option);
 
-		option = new Option('Enable Game Log Display',
+		option = new Option(Language.get('enable_game_log_display'),
 			Language.get("enable_game_log_desc"),
 			'enableGameLog',
 			BOOL);
@@ -322,7 +322,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		enableGameLogOption = addOption(option);
 
 		#if !mobile
-		option = new Option('Enable Console Log Output',
+		option = new Option(Language.get('enable_console_log_output'),
 			Language.get("enable_console_log_desc"),
 			'enableConsoleLog',
 			BOOL);
@@ -333,7 +333,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		#end
 
 	// PERCENT 类型设置
-		option = new Option('Ratings Opacity',
+		option = new Option(Language.get('ratings_opacity'),
 			Language.get("rating_opac_desc"),
 			'ratingsAlpha',
 			PERCENT);
@@ -345,53 +345,53 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		addOption(option);
 
 		// STRING 类型设置
-		option = new Option('HealthBar Style',
+		option = new Option(Language.get('healthbar_style'),
 			Language.get("healthbar_style_desc"),
 			'healthbarstyle',
 			STRING,
 			['Psych', 'OS', 'Kade', 'Leather']);
 		addOption(option);
 		
-		option = new Option('Time Bar Stripes',
+		option = new Option(Language.get('time_bar_stripes'),
 			Language.get("time_bar_stripes_desc"),
 			'timeBarStripes',
 			BOOL);
 		addOption(option);
 
-		option = new Option('Time Bar Gradient',
+		option = new Option(Language.get('time_bar_gradient'),
 			Language.get("time_bar_gradient_desc"),
 			'timeBarGradient',
 			BOOL);
 		addOption(option);
 
-		option = new Option('IconBop Style',
+		option = new Option(Language.get('iconbop_style'),
 			Language.get("iconbop_style_desc"),
 			'iconbopstyle',
 			STRING,
 			['Psych', 'OS', 'Kathy', 'Leather', 'SB', 'Vanilla', 'VSlice(New)', 'VSlice(Old)', 'Codename', 'Dave', 'Squash', 'NovaFlare', 'NONE']);
 		addOption(option);
 
-		option = new Option('IconBop Normalize',
+		option = new Option(Language.get('iconbop_normalize'),
 			Language.get("iconbop_normalize_desc"),
 			'iconbopNormalize',
 			BOOL);
 		addOption(option);
 
-		option = new Option('ScoreTxt Style',
+		option = new Option(Language.get('scoretxt_style'),
 			Language.get("scoretxt_style_desc"),
 			'scoretxtstyle',
 			STRING,
 			['Psych', 'OS', 'Kathy', 'Kade', 'V-Slice', 'Leather']);
 		addOption(option);
 
-		option = new Option('Loading Style',
+		option = new Option(Language.get('loading_style'),
 			Language.get("loading_style_desc"),
 			'customFadeStyle',
 			STRING,
 			['None', 'V-Slice', 'NovaFlare Move', 'NovaFlare Alpha', 'Blue Archive', 'BA_Schale_Glow']);
 		var loadingStyleOption = addOption(option);
 		
-		option = new Option('Blue Archive Language',
+		option = new Option(Language.get('blue_archive_language'),
 			Language.get("ba_language_desc"),
 			'blueArchiveLanguage',
 			STRING,
@@ -403,7 +403,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		blueArchiveLanguageOption = addOption(option);
 		blueArchiveLanguageOptionIndex = optionsArray.length - 1;
 
-		option = new Option('TimeBar Style',
+		option = new Option(Language.get('timebar_style'),
 			Language.get("timebar_style_desc"),
 			'timebarStyle',
 			STRING,
@@ -414,18 +414,18 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		timebarStyleOption = addOption(option);
 		timebarStyleOptionIndex = optionsArray.length - 1;
 
-		option = new Option('Bigger Info Text', Language.get("bigger_info_text_desc"), 'biggerInfoText', BOOL);
+		option = new Option(Language.get('bigger_info_text'), Language.get("bigger_info_text_desc"), 'biggerInfoText', BOOL);
 		biggerInfoTextOption = addOption(option);
 		biggerInfoTextOptionIndex = optionsArray.length - 1;
 
-		option = new Option('BotPlayTxt Style',
+		option = new Option(Language.get('botplaytxt_style'),
 			Language.get("botplaytxt_style_desc"),
 			'botplayStyle',
 			STRING,
 			['Kade', 'Psych']);
 		addOption(option);
 
-		option = new Option('ShowCase Style',
+		option = new Option(Language.get('showcase_style'),
 			Language.get("showcase_style_desc"),
 			'showcaseStyle',
 			STRING,
@@ -434,7 +434,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 
 		/*
 		// 修复 FPS 字体选项
-		option = new Option('FPS-Counter Font',
+		option = new Option(Language.get('fps_counter_font'),
 			Language.get("fpstxt_style_desc"),
 			'fpsFont',
 			STRING,
@@ -447,21 +447,21 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		};
 		addOption(option);*/
 
-		option = new Option('Ratings Position',
+		option = new Option(Language.get('ratings_position'),
 			Language.get("ratings_pos_desc"),
 			'ratingsPos',
 			STRING,
 			['camHUD', 'camGame']);
 		addOption(option);
 
-		option = new Option('HUD Zoom Speed',
+		option = new Option(Language.get('hud_zoom_speed'),
 			Language.get("hud_zoomstyle_desc"),
 			'hudZoomStyle',
 			STRING,
 			['default', 'Fast', 'Slow', 'Kade']);
 		addOption(option);
 
-		option = new Option('HUD Zoom',
+		option = new Option(Language.get('hud_zoom'),
 			Language.get("camhud_zoom_desc"),
 			'hudSize',
 			FLOAT);
@@ -474,7 +474,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		addOption(option);
 
 		// 语言设置放在最后
-		option = new Option("Engine Language",
+		option = new Option(Language.get('engine_language'),
 			Language.get("change_language_desc"),
 			'language',
 			STRING,
@@ -533,14 +533,14 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		addOption(option);
 
 		#if !mobile
-		option = new Option('Mods Import',
+		option = new Option(Language.get('mods_import'),
 			Language.get("mods_import_desc"),
 			'enableModsImport',
 			BOOL);
 		addOption(option);
 		#end
 
-		option = new Option('Use System Cursor',
+		option = new Option(Language.get('use_system_cursor'),
 			Language.get("use_system_cursor_desc"),
 			'systemCursor',
 			BOOL);
@@ -550,7 +550,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		};
 		addOption(option);
 
-		option = new Option('Startup Splash',
+		option = new Option(Language.get('startup_splash'),
 			Language.get("startup_splash_desc"),
 			'splashMode',
 			STRING,
