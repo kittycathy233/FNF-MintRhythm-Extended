@@ -6057,7 +6057,20 @@ tempScore += '${lblScore}: ${songScore}';
 			if (ClientPrefs.data.hitsound != 'none' && ClientPrefs.data.hitsound != null && ClientPrefs.data.hitsound.length > 0
 				&& note.hitsound == 'hitsound')
 				useSound = 'hitsounds/' + ClientPrefs.data.hitsound;
-			FlxG.sound.play(Paths.sound(useSound), note.hitsoundVolume);
+
+			#if FLX_PITCH
+			if (ClientPrefs.data.hitsoundPitchOffset)
+			{
+				// 命中时机偏移（毫秒）：>0 偏早，<0 偏晚；按命中窗口归一化后映射到音高
+				var noteDiff:Float = note.strumTime - Conductor.songPosition + (cpuControlled ? 0 : ClientPrefs.data.ratingOffset);
+				var norm:Float = Math.max(-1.0, Math.min(1.0, noteDiff / Conductor.safeZoneOffset));
+				var pitch:Float = 1.0 + norm * ClientPrefs.data.hitsoundPitchRange;
+				var snd = FlxG.sound.play(Paths.sound(useSound), note.hitsoundVolume);
+				if (snd != null) snd.pitch = pitch;
+			}
+			else
+			#end
+				FlxG.sound.play(Paths.sound(useSound), note.hitsoundVolume);
 		}
 
 		if(!note.hitCausesMiss) //Common notes

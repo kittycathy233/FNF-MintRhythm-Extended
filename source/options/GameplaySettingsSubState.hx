@@ -243,6 +243,23 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		addOption(option);
 		option.onChange = onChangeHitsound;
 
+		var option:Option = new Option(Language.get('hitsound_pitch_offset'),
+			Language.get('hitsound_pitch_offset_desc'),
+			'hitsoundPitchOffset',
+			BOOL);
+		addOption(option);
+
+		var option:Option = new Option(Language.get('hitsound_pitch_range'),
+			Language.get('hitsound_pitch_range_desc'),
+			'hitsoundPitchRange',
+			FLOAT);
+		option.scrollSpeed = 20;
+		option.minValue = 0.05;
+		option.maxValue = 0.6;
+		option.changeValue = 0.05;
+		option.decimals = 2;
+		addOption(option);
+
 		var option:Option = new Option(Language.get('rating_offset'),
 			Language.get("ratingoffset_desc"),
 			'ratingOffset',

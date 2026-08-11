@@ -115,6 +115,10 @@ import openfl.display.StageQuality;
 	public var healthBarAlpha:Float = 1;
 	public var hitsoundVolume:Float = 0;
 	public var hitsound:String = 'none';
+	// 打击音随判定偏移变调：开启后命中音高随命中时机偏移（偏早=更高，偏晚=更低）
+	public var hitsoundPitchOffset:Bool = false;
+	// 变调强度：命中窗口边缘处相对基础音高的偏移比例（如 0.25 = ±25% 音高）
+	public var hitsoundPitchRange:Float = 0.25;
 	public var pauseMusic:String = 'Tea Time';
 	public var checkForUpdates:Bool = true;
 	public var disableNetworking:Bool = false; // 全局联网开关：true 时拦截所有联网行为
@@ -542,6 +546,12 @@ class ClientPrefs {
 			data.useShitWindowAsSafeZone = true;
 		if (!Reflect.hasField(FlxG.save.data, 'softJudgmentEdge'))
 			data.softJudgmentEdge = false;
+
+		// 为 1.5.x 新增的打击音随偏移变调字段填充默认值（兼容老存档升级）
+		if (!Reflect.hasField(FlxG.save.data, 'hitsoundPitchOffset'))
+			data.hitsoundPitchOffset = false;
+		if (!Reflect.hasField(FlxG.save.data, 'hitsoundPitchRange') || data.hitsoundPitchRange <= 0)
+			data.hitsoundPitchRange = 0.25;
 
 		// 向后兼容：将旧版 Bool 类型的 rmPerfect 转换为新版 String 三选一
 		// 旧 false → 'enable'(正常), 旧 true → 'remove'(完全移除), 新存档直接为 String
