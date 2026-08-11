@@ -331,7 +331,9 @@ class HScript extends Iris
 				if(libPackage.length > 0)
 					str = libPackage + '.';
 
-				set(libName, Type.resolveClass(str + libName));
+				// [COMPAT] 解析失败(旧版短名)时回退到 LegacyClassAlias 别名表
+				// resolve() 内部已先按全路径尝试，再查别名表
+				set(libName, LegacyClassAlias.resolve(str + libName));
 			}
 			catch (e:IrisError) {
 				Iris.error(Printer.errorToString(e, false), this.interp.posInfos());
@@ -397,6 +399,13 @@ class HScript extends Iris
 		set('Function_StopHScript', LuaUtils.Function_StopHScript);
 		set('Function_StopAll', LuaUtils.Function_StopAll);
 
+		// [COMPAT] 注册旧版 Psych(0.6.3/0.7.3) 常用顶层短类名，使旧模组无需 import/addHaxeLibrary 即可使用
+		// 仅在别名表对应的当前类能解析到时才注册，避免覆盖已有的同名定义
+		for (shortName => fullPath in LegacyClassAlias.aliases) {
+			var c:Dynamic = Type.resolveClass(fullPath);
+			if (c != null) set(shortName, c);
+		}
+
 		// Launch External EXE (Windows only)
 		// 首先尝试在模组包中查找 exe 文件，如果没有找到则使用传入的路径
 		#if (cpp && windows)
@@ -461,6 +470,9 @@ class HScript extends Iris
 			var c:Dynamic = Type.resolveClass(str + libName);
 			if (c == null)
 				c = Type.resolveEnum(str + libName);
+			// [COMPAT] 类/枚举均未解析到(旧版短名)时回退到 LegacyClassAlias 别名表
+			if (c == null)
+				c = LegacyClassAlias.resolve(str + libName);
 
 			if (funk.hscript == null)
 				initHaxeModule(funk);
