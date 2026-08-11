@@ -178,6 +178,12 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		option = new Option(Language.get('legacy_hud'),
+			Language.get("legacy_hud_desc"),
+			'legacyHUD',
+			BOOL);
+		addOption(option);
+
 		option = new Option(Language.get('charting_version'),
 			Language.get("charting_version_desc"),
 			'chartingVersion',

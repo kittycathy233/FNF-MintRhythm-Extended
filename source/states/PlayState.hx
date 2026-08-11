@@ -913,9 +913,14 @@ isReplaying = false;
 		comboSpritePool = new FlxTypedGroup<FlxSprite>(ClientPrefs.data.comboSpritePoolSize);
 		noteGroup = new FlxTypedGroup<FlxBasic>();
 		add(laneCovers);
-		add(comboGroup);
-		add(uiGroup);
-		add(noteGroup);
+		// 旧版HUD模式(legacyHUD): 不将 comboGroup/uiGroup/noteGroup 加入 state,
+		// 其元素改由 addToHUD/addToNoteLayer/addToComboLayer 直接 add 进 state, 以复刻 0.6.x 结构。
+		if (!ClientPrefs.data.legacyHUD)
+		{
+			add(comboGroup);
+			add(uiGroup);
+			add(noteGroup);
+		}
 
 		Conductor.songPosition = -Conductor.crochet * 5 + Conductor.offset;
 		var showTime:Bool = (ClientPrefs.data.timeBarType != 'Disabled');
@@ -1015,8 +1020,8 @@ isReplaying = false;
 		}
 
 		// 先添加条再添加文本，确保文本在上面
-		uiGroup.add(timeBar);
-		uiGroup.add(timeTxt);
+		addToHUD(timeBar);
+		addToHUD(timeTxt);
 		// 对于 Leather (Legacy) 样式，设置为青色
 		if (ClientPrefs.data.timebarStyle == "Leather (Legacy)") {
 			timeBar.setColors(FlxColor.CYAN, FlxColor.BLACK);
@@ -1045,7 +1050,7 @@ isReplaying = false;
 			// 最后添加 normal notes（在最上面）
 		} else {
 			// 如果 holdNoteBehind 是 false，保持原来的顺序
-			noteGroup.add(strumLineNotes);
+			addToNoteLayer(strumLineNotes);
 		}
 
 		// 处理Song Name类型的调整（排除Leather样式）
@@ -1063,16 +1068,16 @@ isReplaying = false;
 			// 1. hold notes（最下面）
 			// 2. strumLineNotes（中间）
 			// 3. normal notes（最上面）
-			noteGroup.add(holdNotes);
-			noteGroup.add(strumLineNotes);
-			noteGroup.add(normalNotes);
+			addToNoteLayer(holdNotes);
+			addToNoteLayer(strumLineNotes);
+			addToNoteLayer(normalNotes);
 		} else {
 			// 如果 holdNoteBehind 是 false，保持原来的顺序
-			noteGroup.add(notes);
+			addToNoteLayer(notes);
 		}
 
-		noteGroup.add(grpNoteSplashes);
-		noteGroup.add(grpHoldCovers);
+		addToNoteLayer(grpNoteSplashes);
+		addToNoteLayer(grpHoldCovers);
 
 		camFollow = new FlxObject();
 		camFollow.setPosition(camPos.x, camPos.y);
@@ -1119,7 +1124,7 @@ isReplaying = false;
 			healthBar.createStripedOverlay();
 		}
 		reloadHealthBarColors();
-		uiGroup.add(healthBar);
+		addToHUD(healthBar);
 
 		msTimeTxt = new FlxText(0, 0, 250, "", 32);
 		msTimeTxt.setFormat(Paths.font('vcr.ttf'), 24, FlxColor.WHITE, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -1131,7 +1136,7 @@ isReplaying = false;
 		mstimeTxt.x += comboSpr.x + 100;*/
 		msTimeTxt.x = ClientPrefs.data.comboOffset[2] + 480;
 		msTimeTxt.y = -ClientPrefs.data.comboOffset[3] + 480 ;
-		uiGroup.add(msTimeTxt);
+		addToHUD(msTimeTxt);
 
 		iconP1 = new HealthIcon(boyfriend.healthIcon, true);
 		if (ClientPrefs.data.healthbarstyle == 'Leather') {
@@ -1143,7 +1148,7 @@ isReplaying = false;
 		iconP1.visible = !ClientPrefs.data.hideHud;
 		iconP1.alpha = ClientPrefs.data.healthBarAlpha;
 		iconP1.startSize = iconP1.scale.x;
-		uiGroup.add(iconP1);
+		addToHUD(iconP1);
 
 		iconP2 = new HealthIcon(dad.healthIcon, false);
 		if (ClientPrefs.data.healthbarstyle == 'Leather') {
@@ -1155,7 +1160,7 @@ isReplaying = false;
 		iconP2.visible = !ClientPrefs.data.hideHud;
 		iconP2.alpha = ClientPrefs.data.healthBarAlpha;
 		iconP2.startSize = iconP2.scale.x;
-		uiGroup.add(iconP2);
+		addToHUD(iconP2);
 
 		if(ClientPrefs.data.scoretxtstyle == 'Kade') 
 		{
@@ -1203,7 +1208,7 @@ isReplaying = false;
 		ScoreLanguage.load();
 		scoreTxt.setFormat(Paths.font(ScoreLanguage.getScoreFont()), scoreTxt.size, FlxColor.WHITE, scoreTxt.alignment, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 
-		uiGroup.add(scoreTxt);
+		addToHUD(scoreTxt);
 
 		botplayTxt = new FlxText(400, ClientPrefs.data.botplayStyle == 'Kade' ? healthBar.y - 120 : healthBar.y - 90, FlxG.width - 800, "BOTPLAY", 32);
 		//botplayTxt = new FlxText(400, healthBar.y - 90, FlxG.width - 800, LanguageBasic.getPhrase("Botplay").toUpperCase(), 32);
@@ -1211,7 +1216,7 @@ isReplaying = false;
 		botplayTxt.scrollFactor.set();
 		botplayTxt.borderSize = ClientPrefs.data.botplayStyle == 'Kade' ? 2 : 1.25;
 		botplayTxt.visible = cpuControlled;
-		uiGroup.add(botplayTxt);
+		addToHUD(botplayTxt);
 
 		// 创建回放模式指示文本
 		replayTxt = new FlxText(400, ClientPrefs.data.botplayStyle == 'Kade' ? healthBar.y - 120 : healthBar.y - 90, FlxG.width - 800, "REPLAY", 32);
@@ -1222,7 +1227,7 @@ isReplaying = false;
 		replayTxt.borderSize = 2;
 		replayTxt.color = FlxColor.fromRGB(boyfriend.healthColorArray[0], boyfriend.healthColorArray[1], boyfriend.healthColorArray[2]);
 		replayTxt.visible = isReplaying;
-		uiGroup.add(replayTxt);
+		addToHUD(replayTxt);
 
 		if(ClientPrefs.data.downScroll)
 			botplayTxt.y = ClientPrefs.data.botplayStyle == 'Kade' ? healthBar.y + 120 : healthBar.y + 70;
@@ -1250,7 +1255,7 @@ isReplaying = false;
 		watermarkText.y = !ClientPrefs.data.downScroll ? 20 : FlxG.height - 20;
 		watermarkText.alpha = 0.8;
 		watermarkText.visible = !ClientPrefs.data.hideHud;
-		if (ClientPrefs.data.waterMarkPlay)	uiGroup.add(watermarkText);
+		if (ClientPrefs.data.waterMarkPlay)	addToHUD(watermarkText);
 
 		// 使用新的 RatingCounter 模块（仅当开启评分计数器时创建，避免禁用后左侧依旧显示文本）
 		if (ClientPrefs.data.ratCounter)
@@ -1258,7 +1263,23 @@ isReplaying = false;
 			ratingCounterModule = new objects.RatingCounter(6, 0, ratingsData);
 			ratingCounterModule.updatePosition();
 			ratingCounterModule.setVisible(!ClientPrefs.data.hideHud);
-			ratingCounterModule.addToGroup(uiGroup);
+			if (ClientPrefs.data.legacyHUD)
+			{
+				// 旧版HUD模式: 将所有评分文本直接加入 state, 供旧模组脚本 getObjectOrder/setObjectOrder 定位
+				for (rt in ratingCounterModule.ratingTexts)
+				{
+					add(rt.text);
+					rt.text.cameras = [camHUD];
+				}
+				add(ratingCounterModule.maText);
+				ratingCounterModule.maText.cameras = [camHUD];
+				add(ratingCounterModule.paText);
+				ratingCounterModule.paText.cameras = [camHUD];
+				add(ratingCounterModule.sickPlusText);
+				ratingCounterModule.sickPlusText.cameras = [camHUD];
+			}
+			else
+				ratingCounterModule.addToGroup(uiGroup);
 		}
 
 		uiGroup.cameras = [camHUD];
@@ -1804,6 +1825,79 @@ isReplaying = false;
 		return true;
 	}
 
+	/**
+	 * 将HUD元素加入场景。
+	 * 普通模式: 加入 uiGroup (默认, 便于统一管理与缩放)。
+	 * 旧版HUD模式 (ClientPrefs.data.legacyHUD): 直接加入 state 并指定 cameras = [camHUD],
+	 * 以兼容依赖旧版Psych(0.6.x)结构的模组脚本 (getObjectOrder/setObjectOrder 需元素为 state 的直接成员)。
+	 */
+	inline private function addToHUD(obj:FlxSprite):FlxSprite
+	{
+		if (ClientPrefs.data.legacyHUD)
+		{
+			add(obj);
+			obj.cameras = [camHUD];
+		}
+		else
+			uiGroup.add(obj);
+		return obj;
+	}
+
+	/**
+	 * 将音符层元素(strumLineNotes/notes/grpNoteSplashes/grpHoldCovers)加入场景。
+	 * 普通模式: 加入 noteGroup。
+	 * 旧版HUD模式 (legacyHUD): 直接 add 进 state 并指定 cameras = [camHUD], 复刻 0.6.x 结构,
+	 * 使 getObjectOrder('strumLineNotes') / getObjectOrder('notes') / members.indexOf(strumLineNotes) 可用。
+	 */
+	inline private function addToNoteLayer(obj:FlxBasic):FlxBasic
+	{
+		if (ClientPrefs.data.legacyHUD)
+		{
+			add(obj);
+			obj.cameras = [camHUD];
+		}
+		else
+			noteGroup.add(obj);
+		return obj;
+	}
+
+	/**
+	 * 将评级弹出元素(rating/comboSpr/numScore/EXrating)加入场景。
+	 * 普通模式: 加入 comboGroup (逻辑回收 + 显示)。
+	 * 旧版HUD模式 (legacyHUD): 不将 comboGroup 加入 state, 而是把每个元素直接 insert 进 state 的
+	 * members.indexOf(strumLineNotes) 之前, 复刻 0.6.x 的 `insert(members.indexOf(strumLineNotes), rating)`,
+	 * 并单独设置 cameras (由 ratingsPos 决定 camHUD/camGame)。comboGroup 仅保留为对象池回收索引。
+	 */
+	inline private function addToComboLayer(obj:FlxSprite):FlxSprite
+	{
+		if (ClientPrefs.data.legacyHUD)
+		{
+			// 仍登记进 comboGroup 作为逻辑索引(供 comboStacking / 对象池定位),
+			// 但 comboGroup 不加入 state, 故不负责渲染。
+			comboGroup.add(obj);
+			obj.cameras = [ClientPrefs.data.ratingsPos == 'camHUD' ? camHUD : camGame];
+			// 复刻 0.6.x: rating 直接成为 state 的成员, 插入到 strumLineNotes 之前。
+			insert(members.indexOf(strumLineNotes), obj);
+		}
+		else
+			comboGroup.add(obj);
+		return obj;
+	}
+
+	/**
+	 * 从显示/逻辑中移除一个评级弹出精灵。
+	 * 非 legacy: 仅从 comboGroup 移除(comboGroup 在 state 中, 移除即停止渲染)。
+	 * legacyHUD: comboGroup 不加入 state, 故需额外从 state.members 移除以停止渲染;
+	 *            同时仍从 comboGroup 逻辑索引移除, 避免索引残留影响 comboStacking/对象池。
+	 */
+	inline private function removeComboSpr(spr:FlxSprite):Void
+	{
+		if (comboGroup != null && comboGroup.members.indexOf(spr) != -1)
+			comboGroup.remove(spr, true);
+		if (ClientPrefs.data.legacyHUD)
+			members.remove(spr);
+	}
+
 	inline private function createCountdownSprite(image:String, antialias:Bool):FlxSprite
 	{
 		var spr:FlxSprite = new FlxSprite().loadGraphic(Paths.image(image));
@@ -1816,7 +1910,7 @@ isReplaying = false;
 
 		spr.screenCenter();
 		spr.antialiasing = antialias;
-		insert(members.indexOf(noteGroup), spr);
+		insert(ClientPrefs.data.legacyHUD ? members.indexOf(strumLineNotes) : members.indexOf(noteGroup), spr);
 		FlxTween.tween(spr, {/*y: spr.y + 100,*/ alpha: 0}, Conductor.crochet / 1000, {
 			ease: FlxEase.cubeInOut,
 			onComplete: function(twn:FlxTween)
@@ -2308,7 +2402,7 @@ tempScore += '${lblScore}: ${songScore}';
 		// 只有当 holdNoteBehind 为 false 时，才将主 notes 组添加到 noteGroup
 		// 当 holdNoteBehind 为 true 时，我们单独添加 normalNotes 和 holdNotes
 		if (!ClientPrefs.data.holdNoteBehind) {
-			noteGroup.add(notes);
+			addToNoteLayer(notes);
 		}
 
 		// 重置优化音符加载的跟踪数组
@@ -4610,7 +4704,7 @@ tempScore += '${lblScore}: ${songScore}';
 		// 同上：scale 补间需单独取消并复位，避免污染对象池中的下一个使用者。
 		FlxTween.cancelTweensOf(spr.scale);
 		spr.scale.set(1, 1);
-		if (comboGroup != null && comboGroup.members.indexOf(spr) != -1) comboGroup.remove(spr, true);
+		removeComboSpr(spr);
 		if (comboSpritePool != null && comboSpritePool.members.indexOf(spr) != -1)
 			spr.kill();
 		else
@@ -5105,9 +5199,9 @@ tempScore += '${lblScore}: ${songScore}';
 				comboSpr.alpha = ratingAlpha;
 			}
 
-			if (ClientPrefs.data.exratingDisplay)	comboGroup.add(theEXrating);
+			if (ClientPrefs.data.exratingDisplay)	addToComboLayer(theEXrating);
 			
-			comboGroup.add(rating);	
+			addToComboLayer(rating);	
 
 			if (isCamellia)
 			{
@@ -5185,7 +5279,7 @@ tempScore += '${lblScore}: ${songScore}';
 			var daLoop:Int = 0;
 			var xThing:Float = 0;
 			if (showThisCombo)
-				comboGroup.add(comboSpr);
+				addToComboLayer(comboSpr);
 
 			for (i in 0...separatedScore.length)
 			{
@@ -5252,7 +5346,7 @@ tempScore += '${lblScore}: ${songScore}';
 
 				// if (combo >= 10 || combo == 0)
 				if (showThisComboNum)
-					comboGroup.add(numScore);
+					addToComboLayer(numScore);
 
 				// 根据不同的跳动风格设置渐隐延迟
 				var numScoreFadeDelay:Float = Conductor.crochet * 0.002 / playbackRate;
@@ -6363,10 +6457,7 @@ tempScore += '${lblScore}: ${songScore}';
 		if (comboSpritePool != null)
 		{
 			for (spr in comboSpritePool.members.copy())
-			{
-				if (comboGroup != null && comboGroup.members.indexOf(spr) != -1)
-					comboGroup.remove(spr, true);
-			}
+				removeComboSpr(spr);
 			comboSpritePool.destroy();
 			comboSpritePool = null;
 		}

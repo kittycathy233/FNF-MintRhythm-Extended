@@ -213,6 +213,7 @@ import openfl.display.StageQuality;
 	public var fpsFont:String = "Psych";
 	public var timebarStyle:String = "Psych";
 	public var legacynotepos:Bool = false;
+	public var legacyHUD:Bool = false; // 兼容旧版Psych(0.6.x): 将HUD元素直接加入state而非uiGroup, 供旧模组脚本用getObjectOrder/setObjectOrder定位
 	public var chartingVersion:String = '1.0.4-Kathy'; // 制谱器版本: '1.0.4-Kathy' | '1.0.4-Official' | '0.7.3' | '0.6.3'
 	public var ratingsPos:String = "camHUD";
 
