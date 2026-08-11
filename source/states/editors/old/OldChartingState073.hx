@@ -1464,6 +1464,20 @@ class OldChartingState073 extends OldEditorState
 			opponentVocals.destroy();
 		}
 
+		// reloadaudio fix (real refresh): drop any cached audio for this song so the
+		// subsequent Paths.voices/playMusic re-reads the file from disk instead of
+		// returning the previously loaded (now stale) Sound object.
+		for (key => snd in Paths.currentTrackedSounds)
+		{
+			if (key.contains('/songs/' + currentSongName + '/') && snd != null)
+			{
+				snd.close();
+				OpenFlAssets.cache.clear(key);
+				Paths.currentTrackedSounds.remove(key);
+				Paths.localTrackedAssets.remove(key);
+			}
+		}
+
 		vocals = new FlxSound();
 		opponentVocals = new FlxSound();
 		try

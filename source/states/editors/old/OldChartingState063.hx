@@ -1393,6 +1393,20 @@ class OldChartingState063 extends OldEditorState
 			// vocals.stop();
 		}
 
+		// reloadaudio fix (real refresh): drop any cached audio for this song so the
+		// subsequent Paths.voices/playMusic re-reads the file from disk instead of
+		// returning the previously loaded (now stale) Sound object.
+		for (key => snd in Paths.currentTrackedSounds)
+		{
+			if (key.contains('/songs/' + currentSongName + '/') && snd != null)
+			{
+				snd.close();
+				OpenFlAssets.cache.clear(key);
+				Paths.currentTrackedSounds.remove(key);
+				Paths.localTrackedAssets.remove(key);
+			}
+		}
+
 		var file:Dynamic = Paths.voices(currentSongName, null, specialVocalSuffix());
 		if (file == null) file = Paths.voices(currentSongName);
 		vocals = new FlxSound();
