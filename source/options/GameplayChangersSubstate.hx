@@ -4,6 +4,7 @@ import objects.AttachedFlxText;
 import objects.CheckboxThingie;
 import flixel.text.FlxText;
 
+import backend.OptionsLanguage;
 import options.Option.OptionType;
 
 class GameplayChangersSubstate extends MusicBeatSubstate
@@ -77,12 +78,12 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 		optionsArray.push(new GameplayOption('Play Opponent', 'playOpponent', BOOL, false));
 	}
 
-	public function getOptionByName(name:String)
+	public function getOptionByVar(variable:String)
 	{
 		for(i in optionsArray)
 		{
 			var opt:GameplayOption = i;
-			if (opt.name == name)
+			if (opt.variable == variable)
 				return opt;
 		}
 		return null;
@@ -237,9 +238,9 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 									curOption.curOption = num;
 									curOption.setValue(curOption.options[num]); //lol
 									
-									if (curOption.name == "Scroll Type")
+									if (curOption.variable == 'scrolltype')
 									{
-										var oOption:GameplayOption = getOptionByName("Scroll Speed");
+										var oOption:GameplayOption = getOptionByVar("scrollspeed");
 										if (oOption != null)
 										{
 											if (curOption.getValue() == "constant")
@@ -305,7 +306,7 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 						updateTextFrom(leOption);
 					}
 
-					if(leOption.name == 'Scroll Speed')
+					if(leOption.variable == 'scrollspeed')
 					{
 						leOption.displayFormat = "%vX";
 						leOption.maxValue = 3;
@@ -424,7 +425,7 @@ class GameplayOption
 	public var showBoyfriend:Bool = false;
 	public var scrollSpeed:Float = 50; //Only works on int/float, defines how fast it scrolls per second while holding left/right
 
-	private var variable:String = null; //Variable from ClientPrefs.hx's gameplaySettings
+	public var variable:String = null; //Variable from ClientPrefs.hx's gameplaySettings
 	public var defaultValue:Dynamic = null;
 
 	public var curOption:Int = 0; //Don't change this
@@ -437,10 +438,25 @@ class GameplayOption
 	public var displayFormat:String = '%v'; //How String/Float/Percent/Int values are shown, %v = Current value, %d = Default value
 	public var name:String = 'Unknown';
 
+	private static var LANG_KEYS:Map<String, String> = [
+		'Scroll Type' => 'scrolltype',
+		'Scroll Speed' => 'scrollspeed',
+		'Playback Rate' => 'playbackrate',
+		'Health Gain Multiplier' => 'healthgain',
+		'Health Loss Multiplier' => 'healthloss',
+		'Instakill on Miss' => 'instakill',
+		'Practice Mode' => 'practice',
+		'Botplay' => 'botplay',
+		'Play Opponent' => 'playopponent'
+	];
+
+	public var langKey:String;
+
 	public function new(name:String, variable:String, type:OptionType, defaultValue:Dynamic = 'null variable value', ?options:Array<String> = null)
 	{
 		_name = name;
-		this.name = LanguageBasic.getPhrase('setting_$name', name);
+		langKey = LANG_KEYS.exists(name) ? LANG_KEYS.get(name) : name.toLowerCase().replace(' ', '');
+		this.name = OptionsLanguage.get(langKey, name);
 		this.variable = variable;
 		this.type = type;
 		this.defaultValue = defaultValue;
@@ -513,7 +529,12 @@ class GameplayOption
 		if(child != null)
 		{
 			_text = newValue;
-			child.text = LanguageBasic.getPhrase('setting_$_name-$_text', _text);
+			var arrowL:String = OptionsConfig.SUBMENU_STRING_ARROW.charAt(0);
+			var arrowR:String = OptionsConfig.SUBMENU_STRING_ARROW.charAt(2);
+			var wrapped:Bool = (newValue.charAt(0) == arrowL) && (newValue.charAt(newValue.length - 1) == arrowR);
+			var raw:String = wrapped ? newValue.substring(1, newValue.length - 1) : newValue;
+			var translated:String = OptionsLanguage.get('${langKey}_${raw.toLowerCase().replace(' ', '')}', raw);
+			child.text = wrapped ? '${arrowL}${translated}${arrowR}' : translated;
 			return _text;
 		}
 		return null;

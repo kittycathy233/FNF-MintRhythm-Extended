@@ -455,5 +455,16 @@
     "note_object_pooling": "音符对象池化",
     "max_notes_spawned_frame": "每帧最大生成音符数",
     "enabled": "已启用",
-    "disabled": "已禁用"
+    "disabled": "已禁用",
+    "scrolltype": "箭头滚动类型",
+    "scrollspeed": "滚动速度",
+    "playbackrate": "播放速率",
+    "healthgain": "命中加血倍率",
+    "healthloss": "失误扣血倍率",
+    "instakill": "失误即死",
+    "practice": "练习模式",
+    "botplay": "自动游玩",
+    "playopponent": "游玩对手",
+    "scrolltype_multiplicative": "基于谱面倍率",
+    "scrolltype_constant": "固定值"
 }

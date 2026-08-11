@@ -450,5 +450,16 @@
     "max_notes_spawned_frame": "每幀最大生成音符數",
     "arrow_colormode_desc": "RGB = 新調色板顏色\nHSV = 舊版Psych v0.6.3色相/飽和度/亮度偏移",
     "enabled": "已啟用",
-    "disabled": "已停用"
+    "disabled": "已停用",
+    "scrolltype": "箭頭滾動類型",
+    "scrollspeed": "滾動速度",
+    "playbackrate": "播放速率",
+    "healthgain": "命中加血倍率",
+    "healthloss": "失誤扣血倍率",
+    "instakill": "失誤即死",
+    "practice": "練習模式",
+    "botplay": "自動遊玩",
+    "playopponent": "遊玩對手",
+    "scrolltype_multiplicative": "基於譜面倍率",
+    "scrolltype_constant": "固定值"
 }

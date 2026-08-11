@@ -450,5 +450,16 @@
     "note_object_pooling": "Note Object Pooling",
     "max_notes_spawned_frame": "Max Notes Spawned / Frame",
     "enabled": "Enabled",
-    "disabled": "Disabled"
+    "disabled": "Disabled",
+    "scrolltype": "Scroll Type",
+    "scrollspeed": "Scroll Speed",
+    "playbackrate": "Playback Rate",
+    "healthgain": "Health Gain Multiplier",
+    "healthloss": "Health Loss Multiplier",
+    "instakill": "Instakill on Miss",
+    "practice": "Practice Mode",
+    "botplay": "Botplay",
+    "playopponent": "Play Opponent",
+    "scrolltype_multiplicative": "Multiplicative",
+    "scrolltype_constant": "Constant"
 }
