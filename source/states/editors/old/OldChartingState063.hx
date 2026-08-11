@@ -381,25 +381,24 @@ class OldChartingState063 extends OldEditorState
 
 		text =
 		"W/S or Mouse Wheel - Change Conductor's strum time
-		\nA/D - Go to the previous/next section
-		\nLeft/Right - Change Snap
-		\nUp/Down - Change Conductor's Strum Time with Snapping
-		\nLeft Bracket / Right Bracket - Change Song Playback Rate (SHIFT to go Faster)
-		\nALT + Left Bracket / Right Bracket - Reset Song Playback Rate
-		\nHold Shift to move 4x faster
-		\nHold Control and click on an arrow to select it
-		\nZ/X - Zoom in/out
-		\n
+		A/D - Go to the previous/next section
+		Left/Right - Change Snap
+		Up/Down - Change Conductor's Strum Time with Snapping
+		Left Bracket / Right Bracket - Change Song Playback Rate (SHIFT to go Faster)
+		ALT + Left Bracket / Right Bracket - Reset Song Playback Rate
+		Hold Shift to move 4x faster
+		Hold Control and click on an arrow to select it
+		Z/X - Zoom in/out
 		\nEsc - Playtest inside Chart Editor
-		\nBackspace - Go back to Editor Menu
-		\nEnter - Play your chart
-		\nQ/E - Decrease/Increase Note Sustain Length
-		\nSpace - Stop/Resume song" + (controls.mobileC ? "\nTouch Pad: use on-screen buttons (B button exits to Editor Menu)" : "");
+		Backspace - Go back to Editor Menu
+		Enter - Play your chart
+		Q/E - Decrease/Increase Note Sustain Length
+		Space - Stop/Resume song" + (controls.mobileC ? "\nTouch Pad: use on-screen buttons (B button exits to Editor Menu)" : "");
 
 		var tipTextArray:Array<String> = text.split('\n');
 		for (i in 0...tipTextArray.length) {
 			var tipText:FlxText = new FlxText(UI_box.x, UI_box.y + UI_box.height + 8, 0, tipTextArray[i], 16);
-			tipText.y += i * 12;
+			tipText.y += i * 16;
 			tipText.setFormat(Paths.font("vcr.ttf"), 14, FlxColor.WHITE, LEFT/*, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK*/);
 			//tipText.borderSize = 2;
 			tipText.scrollFactor.set();
