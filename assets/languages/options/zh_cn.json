@@ -483,5 +483,13 @@
     "botplay": "自动游玩",
     "playopponent": "游玩对手",
     "scrolltype_multiplicative": "基于谱面倍率",
-    "scrolltype_constant": "固定值"
+    "scrolltype_constant": "固定值",
+    "charting_event_search_label": "搜索事件:",
+    "charting_event_search_btn": "搜索",
+    "charting_event_search_clear_btn": "清空",
+    "charting_event_search_found": "找到事件：第 {0} / {1} 个",
+    "charting_event_search_notfound": "未找到匹配事件",
+    "charting_search_box_title": "搜索",
+    "charting_find_event_tab2": "  搜索事件",
+    "charting_event_note_count": "（含 {0} 个事件的 Note）"
 }

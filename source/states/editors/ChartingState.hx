@@ -244,7 +244,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var infoBox:PsychUIBox;
 	var infoBoxPosition:FlxPoint = FlxPoint.get(1000, 360);
 	var upperBox:PsychUIBox;
-	
+	var searchBox:PsychUIBox;
 	var camUI:FlxCamera;
 	var camChart:FlxCamera;
 
@@ -722,6 +722,8 @@ if(_shouldReset) Conductor.songPosition = 0;
 		addNoteTab();
 		addSectionTab();
 		addSongTab();
+
+		createSearchBox();
 		
 		////// for upper box
 		addFileTab();
@@ -1697,7 +1699,11 @@ if(_shouldReset) Conductor.songPosition = 0;
 				else if(FlxG.keys.justPressed.S) // Save (Ctrl + S)
 					saveChart();
 			}
-			
+			if(FlxG.keys.justPressed.F) // Ctrl + F: Toggle search box
+			{
+				searchBox.visible = !searchBox.visible;
+			}
+
 			if(doCut || FlxG.keys.justPressed.DELETE || FlxG.keys.justPressed.BACKSPACE || (isMovingNotes && (FlxG.mouse.justPressedRight || FlxG.keys.justPressed.ESCAPE))) // Delete button
 			{
 				if(selectedNotes.length > 0)
@@ -2864,6 +2870,169 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 			}
 		}
 		else selectedEventText.visible = false;
+	}
+
+	function searchEvents(searchStr:String)
+	{
+		_lastSearchStr = searchStr;
+		if(searchStr.length == 0)
+		{
+			_eventSearchResults = [];
+			eventSearchResultLine1.text = '';
+			eventSearchResultLine1.visible = false;
+			eventSearchResultLine2.text = '';
+			eventSearchResultLine2.visible = false;
+			eventSearchResultLine3.text = '';
+			eventSearchResultLine3.visible = false;
+			return;
+		}
+		var terms:Array<String> = [];
+		var useRegex:Bool = false;
+		var lowerSearch:String = searchStr.toLowerCase().trim();
+
+		// 若含通配符则转 regex，否则按空格分词（全部匹配）
+		if(lowerSearch.contains('*') || lowerSearch.contains('?') || lowerSearch.contains('['))
+		{
+			useRegex = true;
+			var esc = '';
+			var chars = lowerSearch.split('');
+			var ci = 0;
+			while(ci < chars.length)
+			{
+				var c = chars[ci];
+				switch(c)
+				{
+					case '[':
+						// 收集 [] 内的内容直到闭合
+						var clsEnd = lowerSearch.indexOf(']', ci);
+						if(clsEnd == -1) { esc += '\\['; ci++; continue; }
+						var clsContent = lowerSearch.substring(ci + 1, clsEnd);
+						// [!...] 转为 [^...]
+						if(clsContent.length > 0 && clsContent.charCodeAt(0) == 33)
+							clsContent = '^' + clsContent.substr(1);
+						esc += '[' + clsContent + ']';
+						ci = clsEnd + 1;
+					case '*': esc += '.*'; ci++;
+					case '?': esc += '.'; ci++;
+					case '.': esc += '\\.'; ci++;
+					case '^': esc += '\\^'; ci++;
+					case '$': esc += '\\$'; ci++;
+					case '+': esc += '\\+'; ci++;
+					case '|': esc += '\\|'; ci++;
+					case '{': esc += '\\{'; ci++;
+					case '}': esc += '\\}'; ci++;
+					case '(': esc += '\\('; ci++;
+					case ')': esc += '\\)'; ci++;
+					case '\\': esc += '\\\\'; ci++;
+					default: esc += c; ci++;
+				}
+			}
+			terms.push(esc);
+		}
+		else
+		{
+			var parts = lowerSearch.split(' ');
+			for(p in parts) if(p.length > 0) terms.push(p);
+		}
+
+		function matchesText(txt:String):Bool
+		{
+			var t = txt.toLowerCase();
+			for(term in terms)
+			{
+				if(useRegex)
+				{
+					var re = new EReg(term, '');
+					if(!re.match(t)) return false;
+				}
+				else if(!t.contains(term)) return false;
+			}
+			return true;
+		}
+
+		_eventSearchResults = [];
+		for (eventNote in events)
+		{
+			for (i in 0...eventNote.events.length)
+			{
+				var ev:Array<Dynamic> = eventNote.events[i];
+				if(ev == null) continue;
+				var match:Bool = false;
+				// 检查事件名
+				var evName:String = (ev[0] != null) ? Std.string(ev[0]) : '';
+				if(matchesText(evName)) match = true;
+				// 检查各 value 字段
+				if(!match)
+					for (v in 1...Std.int(Math.min(ev.length, 5)))
+					{
+						if(ev[v] != null && matchesText(Std.string(ev[v])))
+						{
+							match = true;
+							break;
+						}
+					}
+				if(match) _eventSearchResults.push({note: eventNote, index: i});
+			}
+		}
+		// 自动检测事件名（所有匹配事件名相同）
+		var allNamesSame:Bool = true;
+		var commonName:String = '';
+		if(_eventSearchResults.length > 0)
+		{
+			commonName = _eventSearchResults[0].note.events[_eventSearchResults[0].index][0];
+			for (r in _eventSearchResults)
+			{
+				var n:String = r.note.events[r.index][0];
+				if(n != commonName) { allNamesSame = false; break; }
+			}
+		}
+		_jumpToSearchResult(0, allNamesSame, commonName);
+	}
+
+	function _jumpToSearchResult(resultIdx:Int, allNamesSame:Bool, commonName:String)
+	{
+		if(_eventSearchResults.length == 0)
+		{
+			eventSearchResultLine1.text = Language.get('charting_event_search_notfound');
+			eventSearchResultLine1.visible = true;
+			eventSearchResultLine2.text = '';
+			eventSearchResultLine2.visible = false;
+			eventSearchResultLine3.text = '';
+			eventSearchResultLine3.visible = false;
+			return;
+		}
+		_currentSearchResultIdx = Std.int(FlxMath.bound(resultIdx, 0, _eventSearchResults.length - 1));
+		var result = _eventSearchResults[_currentSearchResultIdx];
+		resetSelectedNotes();
+		selectedNotes.push(result.note);
+		curEventSelected = result.index;
+		setSongPlaying(false);
+		Conductor.songPosition = result.note.strumTime;
+		FlxG.sound.music.time = result.note.strumTime - Conductor.offset;
+		updateSelectedEventText();
+		eventSearchResultLine1.text = Language.get('charting_event_search_found', [Std.string(_currentSearchResultIdx + 1), Std.string(_eventSearchResults.length)]);
+		eventSearchResultLine1.visible = true;
+		if(result.note.events.length > 1)
+		{
+			eventSearchResultLine2.text = '(' + Language.get('charting_event_note_count', [Std.string(result.note.events.length)]) + ')';
+			eventSearchResultLine2.visible = true;
+		}
+		else
+		{
+			eventSearchResultLine2.text = '';
+			eventSearchResultLine2.visible = false;
+		}
+		var curEventName:String = result.note.events[result.index][0];
+		if(curEventName.length > 0)
+		{
+			eventSearchResultLine3.text = curEventName;
+			eventSearchResultLine3.visible = true;
+		}
+		else
+		{
+			eventSearchResultLine3.text = '';
+			eventSearchResultLine3.visible = false;
+		}
 	}
 
 	function createGrids()
@@ -4745,6 +4914,17 @@ for (i in 0...GRID_PLAYERS)
 
 	var eventsList:Array<Array<String>>;
 	var curEventSelected:Int = 0;
+	var eventSearchInputText:PsychUIInputText;
+	var eventSearchResultLine1:FlxText;
+	var eventSearchResultLine2:FlxText;
+	var eventSearchResultLine3:FlxText;
+	var eventSearchButton:PsychUIButton;
+	var eventSearchClearButton:PsychUIButton;
+	var eventSearchPrevButton:PsychUIButton;
+	var eventSearchNextButton:PsychUIButton;
+	var _eventSearchResults:Array<{note:EventMetaNote, index:Int}> = [];
+	var _lastSearchStr:String = '';
+	var _currentSearchResultIdx:Int = 0;
 	function addEventsTab()
 	{
 		var tab_group = mainBox.getTab(Language.get('charting_events_text')).menu;
@@ -4900,6 +5080,65 @@ for (i in 0...GRID_PLAYERS)
 		tab_group.add(eventDescriptionText);
 		
 		tab_group.add(eventDropDown); //lowest priority to display properly
+	}
+
+	function createSearchBox()
+	{
+		var searchBoxTabs = [Language.get('charting_search_box_title')];
+		searchBox = new PsychUIBox(mainBox.x - 290, mainBox.y + 310, 280, 200, searchBoxTabs);
+		searchBox.cameras = [camUI];
+		searchBox.scrollFactor.set();
+		searchBox.visible = false;
+		add(searchBox);
+
+		var tab = searchBox.getTab(searchBoxTabs[0]);
+		var tab_group = tab.menu;
+		var objX = 10;
+		var objY = 25;
+
+		eventSearchInputText = new PsychUIInputText(objX, objY, 200, '', 8);
+		tab_group.add(new FlxText(objX, objY - 15, 80, Language.get('charting_event_search_label')).setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(eventSearchInputText);
+
+		objY += 42;
+		eventSearchButton = new PsychUIButton(objX, objY, Language.get('charting_event_search_btn'), function()
+		{
+			searchEvents(eventSearchInputText.text.trim());
+		}, 55);
+		eventSearchPrevButton = new PsychUIButton(objX + 60, objY, '<', function()
+		{
+			if(_eventSearchResults.length > 0) _jumpToSearchResult(_currentSearchResultIdx - 1, false, '');
+		}, 20);
+		eventSearchNextButton = new PsychUIButton(objX + 85, objY, '>', function()
+		{
+			if(_eventSearchResults.length > 0) _jumpToSearchResult(_currentSearchResultIdx + 1, false, '');
+		}, 20);
+		eventSearchClearButton = new PsychUIButton(objX + 110, objY, Language.get('charting_event_search_clear_btn'), function()
+		{
+			eventSearchInputText.text = '';
+			_eventSearchResults = [];
+			_lastSearchStr = '';
+			_currentSearchResultIdx = 0;
+			eventSearchResultLine1.text = '';
+			eventSearchResultLine1.visible = false;
+			eventSearchResultLine2.text = '';
+			eventSearchResultLine2.visible = false;
+			eventSearchResultLine3.text = '';
+			eventSearchResultLine3.visible = false;
+		}, 50);
+		tab_group.add(eventSearchButton);
+		tab_group.add(eventSearchPrevButton);
+		tab_group.add(eventSearchNextButton);
+		tab_group.add(eventSearchClearButton);
+
+		var font = Paths.font(Language.get('uitab_font'));
+		eventSearchResultLine1 = new FlxText(objX, objY + 42, 260, '', 13).setFormat(font, 13);
+		eventSearchResultLine2 = new FlxText(objX, objY + 60, 260, '', 13).setFormat(font, 13);
+		eventSearchResultLine3 = new FlxText(objX, objY + 78, 260, '', 13).setFormat(font, 13);
+		eventSearchResultLine3.visible = false;
+		tab_group.add(eventSearchResultLine1);
+		tab_group.add(eventSearchResultLine2);
+		tab_group.add(eventSearchResultLine3);
 	}
 
 	var susLengthLastVal:Float = 0; //used for multiple notes selected
@@ -6637,6 +6876,15 @@ for (i in 0...GRID_PLAYERS)
 			addUndoAction(SELECT_NOTE, {old: sel, current: selectedNotes.copy()});
 			onSelectNote();
 			trace('Notes selected: ' + selectedNotes.length);
+		}, btnWid);
+		btn.text.alignment = LEFT;
+		tab_group.add(btn);
+
+		btnY++;
+		btnY += 20;
+		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_find_event_tab2'), function()
+		{
+			searchBox.visible = !searchBox.visible;
 		}, btnWid);
 		btn.text.alignment = LEFT;
 		tab_group.add(btn);

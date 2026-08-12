@@ -478,5 +478,17 @@
     "botplay": "自動遊玩",
     "playopponent": "遊玩對手",
     "scrolltype_multiplicative": "基於譜面倍率",
-    "scrolltype_constant": "固定值"
+    "scrolltype_constant": "固定值",
+    "charting_event_search_label": "搜尋事件：",
+    "charting_event_search_btn": "搜尋",
+    "charting_event_search_clear_btn": "清除",
+    "charting_event_search_found": "找到事件：第 {{0}} / {{1}} 個",
+    "charting_event_search_notfound": "未找到匹配事件",
+    "charting_search_box_title": "搜尋",
+    "charting_find_event_tab2": "  搜尋事件",
+    "charting_event_prev_note": "上一条",
+    "charting_event_next_note": "下一条",
+    "charting_event_note_count": "（含 {0} 個事件的 Note）",
+    "charting_event_prev_result": "上一个",
+    "charting_event_next_result": "下一个"
 }

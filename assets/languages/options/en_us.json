@@ -478,5 +478,17 @@
     "botplay": "Botplay",
     "playopponent": "Play Opponent",
     "scrolltype_multiplicative": "Multiplicative",
-    "scrolltype_constant": "Constant"
+    "scrolltype_constant": "Constant",
+    "charting_event_search_label": "Search Event:",
+    "charting_event_search_btn": "Search",
+    "charting_event_search_clear_btn": "Clear",
+    "charting_event_search_found": "Found event: #{{0}} / {{1}}",
+    "charting_event_search_notfound": "No matching event found",
+    "charting_search_box_title": "Search",
+    "charting_find_event_tab2": "  Search Event",
+    "charting_event_prev_note": "Prev",
+    "charting_event_next_note": "Next",
+    "charting_event_note_count": "(in Note with {0} events)",
+    "charting_event_prev_result": "Prev",
+    "charting_event_next_result": "Next"
 }
