@@ -15,6 +15,7 @@ class PsychUIDropDownMenu extends PsychUIInputText
 
 	var _curFilter:Array<String>;
 	var _itemWidth:Float = 0;
+	public var markedIndices:Array<Int> = [];
 	public function new(x:Float, y:Float, list:Array<String>, callback:Int->String->Void, ?width:Float = 100)
 	{
 		super(x, y);
@@ -248,11 +249,25 @@ class PsychUIDropDownMenu extends PsychUIInputText
 
 		_items = [];
 		list = [];
+		markedIndices = [];
 		for (option in v)
 			addOption(option);
 
 		if(selectedLabel != null) selectedLabel = selected;
 		return v;
+	}
+
+	public function markItem(index:Int)
+	{
+		if(!markedIndices.contains(index))
+			markedIndices.push(index);
+		if(index >= 0 && index < _items.length)
+			_items[index].marked = true;
+	}
+
+	public function markItems(indices:Array<Int>)
+	{
+		for (i in indices) markItem(i);
 	}
 }
 
@@ -268,7 +283,18 @@ class PsychUIDropDownItem extends FlxSpriteGroup
 		textColor: FlxColor.BLACK,
 		bgAlpha: 1
 	};
+	public var markedStyle:UIStyleData = {
+		bgColor: 0xFFB3E5FC,
+		textColor: FlxColor.BLACK,
+		bgAlpha: 1
+	};
+	public var markedHoverStyle:UIStyleData = {
+		bgColor: 0xFF0288D1,
+		textColor: FlxColor.WHITE,
+		bgAlpha: 1
+	};
 
+	public var marked:Bool = false;
 	public var bg:FlxSprite;
 	public var text:FlxText;
 	public function new(x:Float = 0, y:Float = 0, width:Float = 100)
@@ -294,7 +320,11 @@ class PsychUIDropDownItem extends FlxSpriteGroup
 		{
 			var overlapped:Bool = (FlxG.mouse.overlaps(bg, camera));
 
-			var style = overlapped ? hoverStyle : normalStyle;
+			var style;
+			if(marked)
+				style = overlapped ? markedHoverStyle : markedStyle;
+			else
+				style = overlapped ? hoverStyle : normalStyle;
 			bg.color = style.bgColor;
 			text.color = style.textColor;
 			bg.alpha = style.bgAlpha;

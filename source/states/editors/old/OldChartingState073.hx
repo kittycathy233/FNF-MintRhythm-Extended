@@ -971,6 +971,37 @@ class OldChartingState073 extends OldEditorState
 			}
 		#end
 
+		// Also scan per-song data folder for custom_notetypes
+		var perSongNoteTypeNames:Array<String> = [];
+		if(currentSongName != null && currentSongName.length > 0)
+		{
+			#if MODS_ALLOWED
+			var folders:Array<String> = Mods.directoriesWithFile(Paths.getSharedPath(), 'data/' + currentSongName + '/');
+			for (folder in folders)
+			{
+				var perSongTypesPath:String = folder + 'custom_notetypes/';
+				if(FileSystem.exists(perSongTypesPath))
+				{
+					for (file in FileSystem.readDirectory(perSongTypesPath))
+					{
+						var pFileName:String = file.toLowerCase().trim();
+						var pWordLen:Int = 4;
+						if((#if LUA_ALLOWED pFileName.endsWith('.lua') || #end
+							#if HSCRIPT_ALLOWED (pFileName.endsWith('.hx') && (pWordLen = 3) == 3) || #end
+							pFileName.endsWith('.txt')) && pFileName != 'readme.txt')
+						{
+							var pFileToCheck:String = file.substr(0, file.length - pWordLen);
+							if(!curNoteTypes.contains(pFileToCheck))
+							{
+								curNoteTypes.push(pFileToCheck);
+								perSongNoteTypeNames.push(pFileToCheck);
+							}
+						}
+					}
+				}
+			}
+			#end
+		}
 
 		var displayNameList:Array<String> = curNoteTypes.copy();
 		for (i in 1...displayNameList.length) {
@@ -986,6 +1017,13 @@ class OldChartingState073 extends OldEditorState
 			}
 		});
 		blockPressWhileScrolling.push(noteTypeDropDown);
+
+		// Mark per-song note types
+		for (idx in 0...curNoteTypes.length)
+		{
+			if(perSongNoteTypeNames.contains(curNoteTypes[idx]))
+				noteTypeDropDown.markItem(idx);
+		}
 
 		tab_group_note.add(new FlxText(10, 10, 0, 'Sustain length:'));
 		tab_group_note.add(new FlxText(10, 50, 0, 'Strum time (in miliseconds):'));
@@ -1035,11 +1073,47 @@ class OldChartingState073 extends OldEditorState
 		eventPushedMap = null;
 		#end
 
+		// Also scan per-song data folder for custom_events
+		var perSongEventNames:Array<String> = [];
+		if(currentSongName != null && currentSongName.length > 0)
+		{
+			#if MODS_ALLOWED
+			var eventFolders:Array<String> = Mods.directoriesWithFile(Paths.getSharedPath(), 'data/' + currentSongName + '/');
+			for (folder in eventFolders)
+			{
+				var perSongEventsPath:String = folder + 'custom_events/';
+				if(FileSystem.exists(perSongEventsPath))
+				{
+					for (file in FileSystem.readDirectory(perSongEventsPath))
+					{
+						var path = haxe.io.Path.join([perSongEventsPath, file]);
+						if (!FileSystem.isDirectory(path) && file != 'readme.txt' && file.endsWith('.txt')) {
+							var fileToCheck:String = file.substr(0, file.length - 4);
+							var alreadyInList:Bool = false;
+							for (ev in eventStuff)
+							{
+								if(ev[0] == fileToCheck) { alreadyInList = true; break; }
+							}
+							if(!alreadyInList)
+							{
+								eventStuff.push([fileToCheck, File.getContent(path)]);
+								perSongEventNames.push(fileToCheck);
+							}
+						}
+					}
+				}
+			}
+			#end
+		}
+
 		descText = new FlxText(20, 200, 0, eventStuff[0][0]);
 
 		var leEvents:Array<String> = [];
+		var perSongEventIndices:Array<Int> = [];
 		for (i in 0...eventStuff.length) {
 			leEvents.push(eventStuff[i][0]);
+			if(perSongEventNames.contains(eventStuff[i][0]))
+				perSongEventIndices.push(i);
 		}
 
 		var text:FlxText = new FlxText(20, 30, 0, "Event:");
@@ -1056,6 +1130,10 @@ class OldChartingState073 extends OldEditorState
 			}
 		});
 		blockPressWhileScrolling.push(eventDropDown);
+
+		// Mark per-song events
+		for (idx in perSongEventIndices)
+			eventDropDown.markItem(idx);
 
 		var text:FlxText = new FlxText(20, 90, 0, "Value 1:");
 		tab_group_event.add(text);

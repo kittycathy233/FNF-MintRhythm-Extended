@@ -2,6 +2,11 @@ package backend;
 
 import objects.Note;
 
+#if MODS_ALLOWED
+import sys.FileSystem;
+import sys.io.File;
+#end
+
 typedef NoteTypeProperty = {
 	property:Array<String>,
 	value:Dynamic
@@ -10,14 +15,40 @@ typedef NoteTypeProperty = {
 class NoteTypesConfig
 {
 	private static var noteTypesData:Map<String, Array<NoteTypeProperty>> = new Map<String, Array<NoteTypeProperty>>();
+	public static var currentSongName:String = null;
 	public static function clearNoteTypesData()
+	{
 		noteTypesData.clear();
+		currentSongName = null;
+	}
 
 	public static function loadNoteTypeData(name:String)
 	{
 		if(noteTypesData.exists(name)) return noteTypesData.get(name);
 
-		var str:String = Paths.getTextFromFile('custom_notetypes/$name.txt');
+		var str:String = null;
+
+		// Try per-song custom_notetypes first (overrides global)
+		if(currentSongName != null && currentSongName.length > 0)
+		{
+			#if MODS_ALLOWED
+			var folders:Array<String> = Mods.directoriesWithFile(Paths.getSharedPath(), 'data/' + currentSongName + '/');
+			for (folder in folders)
+			{
+				var perSongPath:String = folder + 'custom_notetypes/' + name + '.txt';
+				if(FileSystem.exists(perSongPath))
+				{
+					str = File.getContent(perSongPath);
+					break;
+				}
+			}
+			#end
+		}
+
+		// Fall back to global custom_notetypes
+		if(str == null)
+			str = Paths.getTextFromFile('custom_notetypes/$name.txt');
+
 		if(str == null || !str.contains(':') || !str.contains('=')) noteTypesData.set(name, null);
 
 		var parsed:Array<NoteTypeProperty> = [];

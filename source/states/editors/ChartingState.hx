@@ -5312,9 +5312,47 @@ for (i in 0...GRID_PLAYERS)
 		{
 			eventsList = [];
 			var eventFiles:Array<String> = loadFileList('custom_events/', ['.txt']);
+
+			// Also scan per-song data folder for custom_events
+			var songFolder:String = _getSongDataFolder();
+			var perSongEventNames:Array<String> = [];
+			if(songFolder != null)
+			{
+				var perSongEventsPath:String = songFolder + 'custom_events/';
+				#if MODS_ALLOWED
+				if(FileSystem.exists(perSongEventsPath))
+				{
+					for (file in Paths.readDirectory(perSongEventsPath))
+					{
+						var fileName:String = file;
+						if(fileName.toLowerCase().endsWith('.txt'))
+						{
+							fileName = fileName.substr(0, fileName.length - 4);
+							if(!eventFiles.contains(fileName))
+							{
+								eventFiles.push(fileName);
+								perSongEventNames.push(fileName);
+							}
+						}
+					}
+				}
+				#end
+			}
+
 			for (file in eventFiles)
 			{
-				var desc:String = Paths.getTextFromFile('custom_events/$file.txt');
+				var desc:String = null;
+				// Try per-song first, then global
+				if(songFolder != null)
+				{
+					var perSongDescPath:String = songFolder + 'custom_events/' + file + '.txt';
+					#if MODS_ALLOWED
+					if(FileSystem.exists(perSongDescPath))
+						desc = File.getContent(perSongDescPath);
+					#end
+				}
+				if(desc == null)
+					desc = Paths.getTextFromFile('custom_events/$file.txt');
 				eventsList.push([file, desc]);
 			}
 
@@ -5323,8 +5361,12 @@ for (i in 0...GRID_PLAYERS)
 					eventsList.insert(id, event);
 			
 			var displayEventsList:Array<String> = [];
+			var perSongEventIndices:Array<Int> = [];
 			for (id => data in eventsList)
 			{
+				var evName:String = data[0];
+				if(perSongEventNames.contains(evName))
+					perSongEventIndices.push(id);
 				if(id > 0)
 					displayEventsList[id] = '$id. ${data[0]}';
 				else
@@ -5334,6 +5376,8 @@ for (i in 0...GRID_PLAYERS)
 			var lastSelected:String = eventDropDown.selectedLabel;
 			eventDropDown.list = displayEventsList;
 			eventDropDown.selectedLabel = lastSelected;
+			for (idx in perSongEventIndices)
+				eventDropDown.markItem(idx);
 		}
 
 		// Note type drop down
@@ -5343,6 +5387,33 @@ for (i in 0...GRID_PLAYERS)
 			#if LUA_ALLOWED exts.push('.lua'); #end
 			#if HSCRIPT_ALLOWED exts.push('.hx'); #end
 			noteTypes = loadFileList('custom_notetypes/', exts);
+
+			// Also scan per-song data folder for custom_notetypes
+			var songFolder2:String = _getSongDataFolder();
+			var perSongNoteTypeNames:Array<String> = [];
+			if(songFolder2 != null)
+			{
+				var perSongTypesPath:String = songFolder2 + 'custom_notetypes/';
+				#if MODS_ALLOWED
+				if(FileSystem.exists(perSongTypesPath))
+				{
+					for (file in Paths.readDirectory(perSongTypesPath))
+					{
+						var tn:String = file;
+						var tnExt:String = '';
+						if(tn.toLowerCase().endsWith('.txt')) { tn = tn.substr(0, tn.length - 4); tnExt = '.txt'; }
+						else if(tn.toLowerCase().endsWith('.lua')) { tn = tn.substr(0, tn.length - 4); tnExt = '.lua'; }
+						else if(tn.toLowerCase().endsWith('.hx')) { tn = tn.substr(0, tn.length - 3); tnExt = '.hx'; }
+						if(tnExt.length > 0 && !noteTypes.contains(tn))
+						{
+							noteTypes.push(tn);
+							perSongNoteTypeNames.push(tn);
+						}
+					}
+				}
+				#end
+			}
+
 			for (id => noteType in Note.defaultNoteTypes)
 				if(!noteTypes.contains(noteType))
 					noteTypes.insert(id, noteType);
@@ -5364,8 +5435,11 @@ for (i in 0...GRID_PLAYERS)
 			}
 			
 			var displayNoteTypes:Array<String> = noteTypes.copy();
+			var perSongNoteTypeIndices:Array<Int> = [];
 			for (id => key in displayNoteTypes)
 			{
+				if(perSongNoteTypeNames.contains(noteTypes[id]))
+					perSongNoteTypeIndices.push(id);
 				if(id == 0) continue;
 				displayNoteTypes[id] = '$id. $key';
 			}
@@ -5373,7 +5447,48 @@ for (i in 0...GRID_PLAYERS)
 			var lastSelected:String = noteTypeDropDown.selectedLabel;
 			noteTypeDropDown.list = displayNoteTypes;
 			noteTypeDropDown.selectedLabel = lastSelected;
+			for (idx in perSongNoteTypeIndices)
+				noteTypeDropDown.markItem(idx);
 		}
+	}
+
+	function _getSongDataFolder():String
+	{
+		if(Song.chartPath == null || Song.chartPath.length < 1) return null;
+
+		var normalizedPath:String = Song.chartPath.replace('\\', '/');
+		var lastSlash:Int = normalizedPath.lastIndexOf('/');
+		if(lastSlash < 0) return null;
+
+		var chartFileName:String = normalizedPath.substr(lastSlash + 1);
+		var songName:String = chartFileName;
+		// Remove common extensions
+		if(songName.endsWith('.json')) songName = songName.substr(0, songName.length - 5);
+		if(songName.endsWith('.txt')) songName = songName.substr(0, songName.length - 4);
+
+		var basePath:String = normalizedPath.substr(0, lastSlash + 1);
+
+		// Check if we're already in a data/<song>/ folder
+		var dataIdx:Int = basePath.indexOf('data/');
+		if(dataIdx >= 0)
+		{
+			var afterData:String = basePath.substr(dataIdx + 5);
+			var songFolderEnd:Int = afterData.indexOf('/');
+			if(songFolderEnd > 0)
+			{
+				var extractedSong:String = afterData.substr(0, songFolderEnd);
+				if(extractedSong.length > 0)
+					return basePath.substr(0, dataIdx + 5) + extractedSong + '/';
+			}
+		}
+
+		// Fallback: use song name from chart file name
+		#if MODS_ALLOWED
+		var songDataPath:String = Paths.getSharedPath('data/' + songName + '/');
+		if(FileSystem.exists(songDataPath)) return songDataPath;
+		#end
+
+		return null;
 	}
 
 	function pasteCopiedNotesToSection(?canCopyNotes:Bool = true, ?canCopyEvents:Bool = true, ?showMessage:Bool = true) //Used on "Paste Section" and "Copy Last Section" buttons

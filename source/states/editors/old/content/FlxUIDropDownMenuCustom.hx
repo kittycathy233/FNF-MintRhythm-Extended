@@ -3,6 +3,7 @@ package states.editors.old.content;
 import openfl.geom.Rectangle;
 import flixel.FlxG;
 import flixel.FlxSprite;
+import flixel.math.FlxPoint;
 import flixel.ui.FlxButton;
 import flixel.util.FlxColor;
 import flixel.util.FlxDestroyUtil;
@@ -220,6 +221,7 @@ class FlxUIDropDownMenuCustom extends FlxUIGroup
 				offset += buttonHeight;
 			}
 		}
+		positionMarkBgSprites();
 	}
 
 	override function set_visible(Value:Bool):Bool
@@ -244,6 +246,16 @@ class FlxUIDropDownMenuCustom extends FlxUIGroup
 			if (list[i] != null)
 			{
 				list[i].visible = vButtons[i];
+			}
+		}
+		// Update mark background visibility
+		for (idx in 0...markBgSprites.length)
+		{
+			var bg:FlxSprite = markBgSprites[idx];
+			if(bg != null)
+			{
+				var btn:FlxUIButton = list[idx];
+				bg.visible = (btn != null && btn.visible);
 			}
 		}
 		return Value;
@@ -323,6 +335,35 @@ class FlxUIDropDownMenuCustom extends FlxUIGroup
 
 		dropPanel.resize(header.background.width, getPanelHeight());
 		updateButtonPositions();
+
+		// Clear old mark backgrounds and re-apply marks
+		var marksToReapply:Array<Int> = markedIndices.copy();
+		clearMarks();
+		for (m in marksToReapply)
+		{
+			if(m < list.length) markItem(m);
+		}
+		// Ensure button positions are updated after adding mark backgrounds
+		updateButtonPositions();
+	}
+
+	private function positionMarkBgSprites():Void
+	{
+		// Position mark background sprites to match their corresponding buttons
+		for (idx in 0...markBgSprites.length)
+		{
+			var bg:FlxSprite = markBgSprites[idx];
+			if(bg == null) continue;
+			var btn:FlxUIButton = list[idx];
+			if(btn == null || !btn.visible)
+			{
+				bg.visible = false;
+				continue;
+			}
+			bg.x = btn.x;
+			bg.y = btn.y;
+			bg.visible = true;
+		}
 	}
 
 	private function selectSomething(name:String, label:String):Void
@@ -360,6 +401,66 @@ class FlxUIDropDownMenuCustom extends FlxUIGroup
 		}
 
 		return t;
+	}
+
+	public var markedIndices:Array<Int> = [];
+	private var markBgSprites:Array<FlxSprite> = [];
+
+	public function markItem(index:Int)
+	{
+		if(!markedIndices.contains(index))
+			markedIndices.push(index);
+		var btn:FlxUIButton = getBtnByIndex(index);
+		if(btn != null)
+		{
+			btn.up_color = FlxColor.BLACK;
+			btn.over_color = FlxColor.WHITE;
+			btn.down_color = FlxColor.WHITE;
+		}
+		// Create / update background sprite for this index
+		var bgW:Float = header.background.width;
+		var bgH:Float = header.background.height;
+		var markBg:FlxSprite = new FlxSprite().makeGraphic(1, 1, 0xFFB3E5FC);
+		markBg.setGraphicSize(bgW, bgH);
+		markBg.updateHitbox();
+		markBg.x = 0;
+		markBg.visible = false;
+		markBg.scrollFactor = new FlxPoint(0, 0);
+		add(markBg);
+		// Move the mark background to just before the corresponding button
+		// so it renders behind the button but above the dropPanel
+		var btnIdx:Int = list.indexOf(btn);
+		if(btnIdx >= 0 && btnIdx < list.length - 1)
+		{
+			// Remove and re-add markBg before the button in the display list
+			remove(markBg);
+			// Re-add: remove all buttons after btnIdx, add markBg, then re-add buttons
+			var tempBtns:Array<FlxUIButton> = [];
+			for(i in btnIdx...list.length)
+			{
+				var b:FlxUIButton = list[i];
+				remove(b);
+				tempBtns.push(b);
+			}
+			add(markBg);
+			for(b in tempBtns) add(b);
+		}
+		markBgSprites[index] = markBg;
+	}
+
+	public function markItems(indices:Array<Int>)
+	{
+		for (i in indices) markItem(i);
+	}
+
+	public function clearMarks()
+	{
+		for (bg in markBgSprites)
+		{
+			if(bg != null) remove(bg, true);
+		}
+		markBgSprites = [];
+		markedIndices = [];
 	}
 
 	public function changeLabelByIndex(i:Int, NewLabel:String):Void

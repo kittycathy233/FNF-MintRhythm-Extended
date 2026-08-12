@@ -753,6 +753,7 @@ isReplaying = false;
 
 		GameOverSubstate.resetVariables();
 		songName = Paths.formatToSongPath(SONG.song);
+		backend.NoteTypesConfig.currentSongName = songName;
 		if(SONG.stage == null || SONG.stage.length < 1)
 			SONG.stage = StageData.vanillaSongStage(Paths.formatToSongPath(Song.loadedSongName));
 
@@ -1289,18 +1290,87 @@ isReplaying = false;
 		msTimeTxt.cameras = [ClientPrefs.data.ratingsPos == 'camHUD' ? camHUD : camGame];
 		startingSong = true;
 
+		// PER-SONG CUSTOM EVENTS & NOTETYPES (take priority over global)
+		var perSongEventScripts:Array<String> = [];
+		var perSongNoteTypeScripts:Array<String> = [];
+
+		#if (LUA_ALLOWED || HSCRIPT_ALLOWED)
+		#if MODS_ALLOWED
+		for (folder in Mods.directoriesWithFile(Paths.getSharedPath(), 'data/$songName/'))
+		{
+			// custom_events subfolder
+			var eventsFolder:String = folder + 'custom_events/';
+			if(FileSystem.exists(eventsFolder))
+			{
+				for (file in Paths.readDirectory(eventsFolder))
+				{
+					var eventName:String = file;
+					var ext:String = '';
+					if(file.toLowerCase().endsWith('.lua')) { eventName = file.substr(0, file.length - 4); ext = '.lua'; }
+					else if(file.toLowerCase().endsWith('.hx')) { eventName = file.substr(0, file.length - 3); ext = '.hx'; }
+
+					if(!perSongEventScripts.contains(eventName))
+						perSongEventScripts.push(eventName);
+
+					#if LUA_ALLOWED
+					if(ext == '.lua') new FunkinLua(eventsFolder + file);
+					#end
+					#if HSCRIPT_ALLOWED
+					if(ext == '.hx') initHScript(eventsFolder + file);
+					#end
+				}
+			}
+
+			// custom_notetypes subfolder
+			var typesFolder:String = folder + 'custom_notetypes/';
+			if(FileSystem.exists(typesFolder))
+			{
+				for (file in Paths.readDirectory(typesFolder))
+				{
+					var typeName:String = file;
+					var ext:String = '';
+					if(file.toLowerCase().endsWith('.lua')) { typeName = file.substr(0, file.length - 4); ext = '.lua'; }
+					else if(file.toLowerCase().endsWith('.hx')) { typeName = file.substr(0, file.length - 3); ext = '.hx'; }
+
+					if(!perSongNoteTypeScripts.contains(typeName))
+						perSongNoteTypeScripts.push(typeName);
+
+					#if LUA_ALLOWED
+					if(ext == '.lua') new FunkinLua(typesFolder + file);
+					#end
+					#if HSCRIPT_ALLOWED
+					if(ext == '.hx') initHScript(typesFolder + file);
+					#end
+				}
+			}
+		}
+		#end
+		#end
+
 		#if LUA_ALLOWED
 		for (notetype in noteTypes)
-			startLuasNamed('custom_notetypes/' + notetype + '.lua');
+		{
+			if(!perSongNoteTypeScripts.contains(notetype))
+				startLuasNamed('custom_notetypes/' + notetype + '.lua');
+		}
 		for (event in eventsPushed)
-			startLuasNamed('custom_events/' + event + '.lua');
+		{
+			if(!perSongEventScripts.contains(event))
+				startLuasNamed('custom_events/' + event + '.lua');
+		}
 		#end
 
 		#if HSCRIPT_ALLOWED
 		for (notetype in noteTypes)
-			startHScriptsNamed('custom_notetypes/' + notetype + '.hx');
+		{
+			if(!perSongNoteTypeScripts.contains(notetype))
+				startHScriptsNamed('custom_notetypes/' + notetype + '.hx');
+		}
 		for (event in eventsPushed)
-			startHScriptsNamed('custom_events/' + event + '.hx');
+		{
+			if(!perSongEventScripts.contains(event))
+				startHScriptsNamed('custom_events/' + event + '.hx');
+		}
 		#end
 		noteTypes = null;
 
