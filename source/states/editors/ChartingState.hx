@@ -2579,7 +2579,6 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 						var sound:FlxSound = hitSoundPool[hitSoundPoolIndex];
 						sound.loadEmbedded(Paths.sound('CLAP'));
 						sound.volume = hitsoundPlayerStepper.value;
-						sound.pan = -1; // 玩家音符：纯左声道
 						sound.play();
 						hitSoundPoolIndex = (hitSoundPoolIndex + 1) % hitSoundPoolSize;
 					}
@@ -2588,7 +2587,7 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 						var sound:FlxSound = hitSoundPool[hitSoundPoolIndex];
 						sound.loadEmbedded(Paths.sound('SNAP'));
 						sound.volume = hitsoundOpponentStepper.value;
-						sound.pan = 1; // 对手音符：纯右声道
+						// sound.pan = 1; // 对手音符：纯右声道
 						sound.play();
 						hitSoundPoolIndex = (hitSoundPoolIndex + 1) % hitSoundPoolSize;
 					}
