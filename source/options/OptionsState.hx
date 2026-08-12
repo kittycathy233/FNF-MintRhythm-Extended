@@ -8,6 +8,8 @@ import flixel.tweens.FlxTween;
 import flixel.tweens.FlxEase;
 import flixel.input.mouse.FlxMouse;
 import flixel.ui.FlxButton;
+import backend.CoolUtil;
+import lime.system.System;
 
 class OptionsState extends MusicBeatState
 {
@@ -50,6 +52,7 @@ class OptionsState extends MusicBeatState
 	var selectorRight:FlxText;
 	var descriptionText:FlxText;
 	var adminButton:FlxButton;
+	var clearFilesButton:FlxButton;
 	var sideGif:FlxGifSprite = null;
 
 	// speaki 语音列表（assets/shared/sounds/speaki 下的全部 .ogg）
@@ -94,6 +97,59 @@ class OptionsState extends MusicBeatState
 			// 可选：显示提示信息
 			FlxG.log.add("UAC prompt was declined by user");
 		}
+	}
+	#end
+
+	#if mobile
+	private function onClearFilesClick():Void {
+		// 第一次确认
+		CoolUtil.showConfirmDialog(
+			Language.get("clear_copied_files_confirm"),
+			LanguageBasic.getPhrase('mobile_notice', 'Notice!'),
+			function() {
+				// 第二次确认（最终警告）
+				CoolUtil.showConfirmDialog(
+					Language.get("clear_copied_files_warning"),
+					LanguageBasic.getPhrase('mobile_warning', 'Warning!'),
+					function() {
+						// 执行清理
+						var result: {deleted:Int, failed:Int} = {deleted: 0, failed: 0};
+						#if COPYSTATE_ALLOWED
+						result = states.CopyState.clearCopiedFiles();
+						#end
+
+						// 构建结果信息
+						var deletedText = Language.get("clear_copied_files_deleted", [Std.string(result.deleted)]);
+						var failedText = Language.get("clear_copied_files_failed_count", [Std.string(result.failed)]);
+
+						var resultMessage:String = '';
+						var resultTitle:String = '';
+
+						if (result.failed > 0) {
+							resultMessage = Language.get("clear_copied_files_failed") +
+								"\n\n" + deletedText + "\n" + failedText + "\n\n" +
+								Language.get("clear_copied_files_restart");
+							resultTitle = LanguageBasic.getPhrase('mobile_error', 'Error!');
+						} else if (result.deleted > 0) {
+							resultMessage = Language.get("clear_copied_files_done") +
+								"\n\n" + deletedText + "\n\n" +
+								Language.get("clear_copied_files_restart");
+							resultTitle = LanguageBasic.getPhrase('mobile_success', 'Success!');
+						} else {
+							resultMessage = Language.get("clear_copied_files_nothing") +
+								"\n\n" +
+								Language.get("clear_copied_files_restart");
+							resultTitle = LanguageBasic.getPhrase('mobile_notice', 'Notice!');
+						}
+
+						// 显示结果弹窗，用户点击 OK 后游戏自动退出
+						CoolUtil.showPopUp(resultMessage, resultTitle, function() {
+							System.exit(0);
+						});
+					}
+				);
+			}
+		);
 	}
 	#end
 
@@ -255,6 +311,17 @@ class OptionsState extends MusicBeatState
 			adminButton.label.alignment = CENTER;
 			add(adminButton);
 		}
+		#end
+
+		// 移动端：添加清空复制文件按钮
+		#if mobile
+		clearFilesButton = new FlxButton(FlxG.width - 220, 20, Language.get("clear_copied_files"), onClearFilesClick);
+		clearFilesButton.setGraphicSize(200, 40);
+		clearFilesButton.updateHitbox();
+		clearFilesButton.label.setFormat(Paths.font(Language.get('game_font')), 16, FlxColor.WHITE, CENTER);
+		clearFilesButton.label.fieldWidth = 200;
+		clearFilesButton.label.alignment = CENTER;
+		add(clearFilesButton);
 		#end
 
 		// 初始化选择器目标位置

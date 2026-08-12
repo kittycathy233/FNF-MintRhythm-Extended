@@ -143,9 +143,15 @@ class CopyState extends MusicBeatState
 
 	public function copyAsset(file:String)
 	{
-		if (!FileSystem.exists(file))
+		var path:String = file;
+		#if android
+		if (file.startsWith('mods/'))
+			path = StorageUtil.getExternalStorageDirectory() + file;
+		#end
+
+		if (!FileSystem.exists(path))
 		{
-			var directory = Path.directory(file);
+			var directory = Path.directory(path);
 			if (!FileSystem.exists(directory))
 				FileSystem.createDirectory(directory);
 			try
@@ -153,18 +159,11 @@ class CopyState extends MusicBeatState
 				if (OpenFLAssets.exists(getFile(file)))
 				{
 					if (textFilesExtensions.contains(Path.extension(file)))
-						createContentFromInternal(file);
-					else
-					{
-						var path:String = '';
-						#if android
-						if (file.startsWith('mods/'))
-							path = StorageUtil.getExternalStorageDirectory() + file;
-						else
-						#end
-						path = file;
-						File.saveBytes(path, getFileBytes(getFile(file)));
-					}
+					createContentFromInternal(file);
+				else
+				{
+					File.saveBytes(path, getFileBytes(getFile(file)));
+				}
 				}
 				else
 				{
@@ -185,7 +184,7 @@ class CopyState extends MusicBeatState
 		var fileName = Path.withoutDirectory(file);
 		var directory = Path.directory(file);
 		#if android
-		if (fileName.startsWith('mods/'))
+		if (file.startsWith('mods/'))
 			directory = StorageUtil.getExternalStorageDirectory() + directory;
 		#end
 		try
@@ -274,12 +273,16 @@ class CopyState extends MusicBeatState
 		var assets = locatedFiles.filter(folder -> folder.startsWith('assets/'));
 		var mods = locatedFiles.filter(folder -> folder.startsWith('mods/'));
 		locatedFiles = assets.concat(mods);
-		locatedFiles = locatedFiles.filter(file -> !FileSystem.exists(file));
-		#if android
-		for (file in locatedFiles)
+
+		// Check file existence with correct paths per platform
+		locatedFiles = locatedFiles.filter(function(file) {
+			var checkPath:String = file;
+			#if android
 			if (file.startsWith('mods/'))
-				locatedFiles = locatedFiles.filter(file -> !FileSystem.exists(StorageUtil.getExternalStorageDirectory() + file));
-		#end
+				checkPath = StorageUtil.getExternalStorageDirectory() + file;
+			#end
+			return !FileSystem.exists(checkPath);
+		});
 
 		var filesToRemove:Array<String> = [];
 
@@ -306,6 +309,121 @@ class CopyState extends MusicBeatState
 		maxLoopTimes = locatedFiles.length;
 
 		return (maxLoopTimes <= 0);
+	}
+
+	public static function clearCopiedFiles():{deleted:Int, failed:Int}
+	{
+		var allFiles = OpenFLAssets.list();
+		var assets = allFiles.filter(folder -> folder.startsWith('assets/'));
+		var mods = allFiles.filter(folder -> folder.startsWith('mods/'));
+		var files = assets.concat(mods);
+
+		var filesToRemove:Array<String> = [];
+
+		// Apply the same ignore logic as checkExistingFiles
+		var dirsToIgnore:Array<String> = [];
+		for (file in files)
+		{
+			if (file.endsWith(IGNORE_FOLDER_FILE_NAME) && !dirsToIgnore.contains(Path.directory(file)))
+				dirsToIgnore.push(Path.directory(file));
+		}
+		for (file in files)
+		{
+			for (directory in dirsToIgnore)
+			{
+				if (file.startsWith(directory))
+					filesToRemove.push(file);
+			}
+		}
+		files = files.filter(file -> !filesToRemove.contains(file));
+
+		var deletedCount:Int = 0;
+		var failedCount:Int = 0;
+		var directoriesToCheck:Array<String> = [];
+		var modDirectoriesToCheck:Array<String> = [];
+
+		for (file in files)
+		{
+			var path:String = file;
+			var isModFile:Bool = file.startsWith('mods/');
+			#if android
+			if (isModFile)
+				path = StorageUtil.getExternalStorageDirectory() + file;
+			#end
+
+			if (FileSystem.exists(path))
+			{
+				try
+				{
+					FileSystem.deleteFile(path);
+					deletedCount++;
+
+					var dir = haxe.io.Path.directory(path);
+					if (dir != null && dir.length > 0)
+					{
+						if (isModFile)
+						{
+							// 模组目录下只清理叶子目录（如 mods/engine/），避免误删用户的 mods/ 根目录
+							if (!modDirectoriesToCheck.contains(dir))
+								modDirectoriesToCheck.push(dir);
+						}
+						else
+						{
+							if (!directoriesToCheck.contains(dir))
+								directoriesToCheck.push(dir);
+						}
+					}
+				}
+				catch (e:haxe.Exception)
+				{
+					failedCount++;
+				}
+			}
+		}
+
+		// Clean up empty directories for assets files (internal storage, safe to clean)
+		directoriesToCheck.sort((a, b) -> b.length - a.length);
+		for (dir in directoriesToCheck)
+		{
+			try
+			{
+				if (FileSystem.exists(dir))
+				{
+					var entries = FileSystem.readDirectory(dir);
+					if (entries.length == 0)
+						FileSystem.deleteDirectory(dir);
+				}
+			}
+			catch (e:haxe.Exception)
+			{
+				// Ignore directory cleanup failures
+			}
+		}
+
+		// Clean up empty directories for mod files, but never touch the mods/ root directory
+		modDirectoriesToCheck.sort((a, b) -> b.length - a.length);
+		for (dir in modDirectoriesToCheck)
+		{
+			try
+			{
+				// Never delete the mods/ root directory itself
+				if (dir.endsWith('mods') || dir.endsWith('mods/'))
+					continue;
+
+				if (FileSystem.exists(dir))
+				{
+					var entries = FileSystem.readDirectory(dir);
+					if (entries.length == 0)
+						FileSystem.deleteDirectory(dir);
+				}
+			}
+			catch (e:haxe.Exception)
+			{
+				// Ignore directory cleanup failures
+			}
+		}
+
+		return {deleted: deletedCount, failed: failedCount};
 	}
 }
 #end

@@ -298,14 +298,30 @@ class CoolUtil
 		}
 	}
 
-	public static function showPopUp(message:String, title:String):Void
+	public static function showPopUp(message:String, title:String, ?onOk:()->Void):Void
 	{
-		/*#if android
-		AndroidTools.showAlertDialog(title, message, {name: "OK", func: null}, null);
-		#else*/
+		#if android
+		AndroidTools.showAlertDialog(title, message, {name: "OK", func: onOk != null ? onOk : null}, null);
+		#else
 		FlxG.stage.window.alert(message, title);
-		//#end
+		if (onOk != null) onOk();
+		#end
 	}
+
+	#if mobile
+	public static function showConfirmDialog(message:String, title:String, onConfirm:()->Void, ?onCancel:()->Void):Void
+	{
+		#if android
+		AndroidTools.showAlertDialog(title, message,
+			{name: Language.get("confirm_button"), func: onConfirm},
+			{name: Language.get("cancel_button"), func: onCancel != null ? onCancel : function() {}}
+		);
+		#else
+		FlxG.stage.window.alert(message, title);
+		if (onCancel != null) onCancel();
+		#end
+	}
+	#end
 
 	#if cpp
     @:functionCode('
