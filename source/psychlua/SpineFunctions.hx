@@ -136,7 +136,7 @@ class SpineFunctions
 				var skeletonData = loadSkeletonData(funk, skeletonPath, atlasPath);
 				if(skeletonData != null) {
 					var stateData = new AnimationStateData(skeletonData);
-					var sprite = new SkeletonSprite(skeletonData, stateData);
+					var sprite = new NoCullSkeletonSprite(skeletonData, stateData);
 					sprite.x = x;
 					sprite.y = y;
 					sprite.active = true;
