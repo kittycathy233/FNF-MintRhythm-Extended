@@ -12,9 +12,13 @@ import spine.atlas.TextureAtlasPage;
 import spine.atlas.TextureLoader;
 import spine.attachments.AtlasAttachmentLoader;
 import spine.flixel.SkeletonSprite;
+import spine.flixel.NoCullSkeletonSprite;
 import spine.Physics;
 import flixel.FlxG;
+import flixel.FlxCamera;
+import flixel.FlxSprite;
 import flixel.graphics.FlxGraphic;
+import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.util.FlxDestroyUtil;
 import backend.Paths;
 import states.PlayState;
@@ -154,25 +158,36 @@ class SpineFunctions
 
 		Lua_helper.add_callback(lua, "spineSpriteExists", function(tag:String) {
 			var obj = MusicBeatState.getVariables().get(tag);
-			return (obj != null && Std.isOfType(obj, SkeletonSprite));
+			return (obj != null && Std.isOfType(obj, SkeletonSprite) || Std.isOfType(obj, NoCullSkeletonSprite));
 		});
 
 		Lua_helper.add_callback(lua, "addSpineSprite", function(tag:String, ?inFront:Bool = false) {
 			var sprite:SkeletonSprite = cast MusicBeatState.getVariables().get(tag);
 			if(sprite == null) return;
 
+			var ps:PlayState = PlayState.instance;
+			if(ps == null) return;
+
+			// 若 sprite 尚未加入任何相机 group，先为其创建一个默认 camGame 组
+			var grpKey = '_spcam_' + tag;
+			if(MusicBeatState.getVariables().get(grpKey) == null)
+				getSpineCameraGroup(tag, ps.camGame);
+
+			var group:FlxTypedGroup<SkeletonSprite> = cast MusicBeatState.getVariables().get(grpKey);
+			if(group == null) return;
+
 			var instance = LuaUtils.getTargetInstance();
 			if(inFront)
-				instance.add(sprite);
+				instance.add(group);
 			else
 			{
-				if(PlayState.instance == null || PlayState.instance.isDead)
+				if(ps.isDead)
 				{
 					if(GameOverSubstate.instance != null)
-						GameOverSubstate.instance.insert(GameOverSubstate.instance.members.indexOf(GameOverSubstate.instance.boyfriend), sprite);
+						GameOverSubstate.instance.insert(GameOverSubstate.instance.members.indexOf(GameOverSubstate.instance.boyfriend), group);
 				}
 				else
-					instance.insert(instance.members.indexOf(LuaUtils.getLowestCharacterGroup()), sprite);
+					instance.insert(instance.members.indexOf(LuaUtils.getLowestCharacterGroup()), group);
 			}
 		});
 
@@ -472,6 +487,163 @@ class SpineFunctions
 
 			sprite.visible = visible;
 		});
+
+		// ------------------------------------------------------------------
+		// 兼容性层：图层位置 / 相机控制
+		// ------------------------------------------------------------------
+
+		/**
+		 * 把 spine 角色分配到指定相机（camGame / camArchived / camHUD 等）。
+		 * cameraName 不区分大小写，未识别时保留原相机不变并打印警告。
+		 *
+		 * 原理：Spine sprite 继承自 FlxObject，无 cameras 属性。
+		 * 我们通过一个专用的 FlxTypedGroup（存于 $__spcam_{tag}）控制相机，
+		 * 该 group 加入 PlayState 后由 cameras 决定渲染在哪个相机上。
+		 */
+		Lua_helper.add_callback(lua, "spineSetCamera", function(tag:String, cameraName:String) {
+			var sprite:SkeletonSprite = cast MusicBeatState.getVariables().get(tag);
+			if(sprite == null) return;
+
+			var ps:PlayState = PlayState.instance;
+			if(ps == null) return;
+
+			var camNameLower:String = cameraName.toLowerCase();
+			var targetCam:FlxCamera = null;
+			switch(camNameLower)
+			{
+				case 'game':      targetCam = ps.camGame;
+				case 'archived':  targetCam = ps.camArchived;
+				case 'hud':       targetCam = ps.camHUD;
+				default:
+					FunkinLua.luaTrace('spineSetCamera: 未知相机名 "' + cameraName + '"，保留原相机', false, false, FlxColor.YELLOW);
+					return;
+			}
+			if(targetCam != null) {
+				var group:FlxTypedGroup<SkeletonSprite> = getSpineCameraGroup(tag, targetCam);
+				// 若 group 已加入某个 state，先将其移入目标 state 以更新 cameras
+				var instance = LuaUtils.getTargetInstance();
+				instance.add(group);
+			}
+		});
+
+		/**
+		 * 返回 spine 角色在当前 state members 数组中的索引（图层位置）。
+		 * 值越大越靠前（渲染顺序）。找不到时返回 -1。
+		 */
+		Lua_helper.add_callback(lua, "spineGetLayer", function(tag:String):Int {
+			var sprite:SkeletonSprite = cast MusicBeatState.getVariables().get(tag);
+			if(sprite == null) return -1;
+
+			// 优先在相机 group 中查找；若不在 group 中则退回 state members
+			var grpKey = '_spcam_' + tag;
+			var group:FlxTypedGroup<SkeletonSprite> = cast MusicBeatState.getVariables().get(grpKey);
+			if(group != null)
+				return group.members.indexOf(sprite);
+
+			var instance = LuaUtils.getTargetInstance();
+			return instance.members.indexOf(sprite);
+		});
+
+		/**
+		 * 把 spine 角色移动到指定图层索引。
+		 * layerIndex 越大越靠前；传入 -1 等价于 bringToFront。
+		 */
+		Lua_helper.add_callback(lua, "spineSetLayer", function(tag:String, layerIndex:Int) {
+			var sprite:SkeletonSprite = cast MusicBeatState.getVariables().get(tag);
+			if(sprite == null) return;
+
+			var instance = LuaUtils.getTargetInstance();
+			var currentIdx:Int = instance.members.indexOf(sprite);
+			if(currentIdx < 0) return;
+
+			var targetIdx:Int = (layerIndex == -1) ? instance.members.length : layerIndex;
+			instance.remove(sprite, false);
+			instance.insert(Std.int(Math.max(0, Math.min(targetIdx, instance.members.length))), sprite);
+		});
+
+		/** 把 spine 角色移到最前面（最高图层）。 */
+		Lua_helper.add_callback(lua, "spineBringToFront", function(tag:String) {
+			var sprite:SkeletonSprite = cast MusicBeatState.getVariables().get(tag);
+			if(sprite == null) return;
+
+			var instance = LuaUtils.getTargetInstance();
+			var idx:Int = instance.members.indexOf(sprite);
+			if(idx < 0) return;
+
+			instance.remove(sprite, false);
+			instance.insert(instance.members.length, sprite);
+		});
+
+		/** 把 spine 角色移到最后面（最低图层）。 */
+		Lua_helper.add_callback(lua, "spineSendToBack", function(tag:String) {
+			var sprite:SkeletonSprite = cast MusicBeatState.getVariables().get(tag);
+			if(sprite == null) return;
+
+			var instance = LuaUtils.getTargetInstance();
+			var idx:Int = instance.members.indexOf(sprite);
+			if(idx < 0) return;
+
+			instance.remove(sprite, false);
+			instance.insert(0, sprite);
+		});
+
+		/**
+		 * 交换两个 spine 角色的图层位置（不销毁对象）。
+		 * 若任一 tag 不存在则忽略并打印警告。
+		 */
+		Lua_helper.add_callback(lua, "spineSwapLayers", function(tag1:String, tag2:String) {
+			var sprite1:SkeletonSprite = cast MusicBeatState.getVariables().get(tag1);
+			var sprite2:SkeletonSprite = cast MusicBeatState.getVariables().get(tag2);
+			if(sprite1 == null || sprite2 == null)
+			{
+				FunkinLua.luaTrace('spineSwapLayers: 找不到角色 "' + (sprite1 == null ? tag1 : tag2) + '"', false, false, FlxColor.YELLOW);
+				return;
+			}
+
+			var instance = LuaUtils.getTargetInstance();
+			var idx1:Int = instance.members.indexOf(sprite1);
+			var idx2:Int = instance.members.indexOf(sprite2);
+			if(idx1 < 0 || idx2 < 0) return;
+
+			instance.remove(sprite1, false);
+			instance.remove(sprite2, false);
+			instance.insert(idx2, sprite1);
+			instance.insert(idx1, sprite2);
+		});
+
+		/** 按偏移量移动 spine 角色的图层位置（正数上移，负数下移）。 */
+		Lua_helper.add_callback(lua, "spineMoveLayer", function(tag:String, delta:Int) {
+			var sprite:SkeletonSprite = cast MusicBeatState.getVariables().get(tag);
+			if(sprite == null) return;
+
+			var instance = LuaUtils.getTargetInstance();
+			var currentIdx:Int = instance.members.indexOf(sprite);
+			if(currentIdx < 0) return;
+
+			var targetIdx:Int = currentIdx + delta;
+			instance.remove(sprite, false);
+			instance.insert(Std.int(Math.max(0, Math.min(targetIdx, instance.members.length))), sprite);
+		});
+	}
+
+	/**
+	 * 获取或创建指定 tag 对应的相机 group。
+	 * 若 group 已存在则直接返回；否则新建并注册到 MusicBeatState 变量表中。
+	 */
+	private static function getSpineCameraGroup(tag:String, ?defaultCam:FlxCamera):FlxTypedGroup<SkeletonSprite> {
+		var grpKey = '_spcam_' + tag;
+		var existing = MusicBeatState.getVariables().get(grpKey);
+		if(existing != null) return cast existing;
+
+		var group = new FlxTypedGroup<SkeletonSprite>();
+		group.cameras = (defaultCam != null) ? [defaultCam] : [];
+
+		var sprite:SkeletonSprite = cast MusicBeatState.getVariables().get(tag);
+		if(sprite != null)
+			group.add(sprite);
+
+		MusicBeatState.getVariables().set(grpKey, group);
+		return group;
 	}
 
 	private static function getScriptDirectory(funk:FunkinLua):String {
