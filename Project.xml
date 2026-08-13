@@ -121,6 +121,7 @@
 	<haxelib name="flixel-addons" version="4.0.1"/>
 	<haxelib name="flixel-ui" version="2.6.5"/>
 	<haxelib name="tjson" version="1.4.0"/>
+	<haxelib name="away3d" version="5.0.9"/>
 
 	<!--Psych stuff needed-->
 	<haxelib name="linc_luajit" if="LUA_ALLOWED"/>
