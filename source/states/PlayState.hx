@@ -491,6 +491,8 @@ class PlayState extends MusicBeatState
 	public var healthOverflowDrain:Float = 20; // 超满血回落速度，越大回落越快（可在设置里配默认值）
 
 	public var audioAnalyzer:SpectralAnalyzer;
+	public var opponentAudioAnalyzer:SpectralAnalyzer;
+	public var playerAudioAnalyzer:SpectralAnalyzer;
 
 	public function initAnalyzer(barCount:Int, maxDelta:Float = 0.01, peakHold:Int = 30) {
 		@:privateAccess
@@ -506,6 +508,42 @@ class PlayState extends MusicBeatState
 
 	public function getAudioLevels() {
 		var levels = audioAnalyzer.getLevels();
+		return [for (i in levels) i.value];
+	}
+
+	public function initOpponentAnalyzer(barCount:Int, maxDelta:Float = 0.01, peakHold:Int = 30) {
+		@:privateAccess
+		if (opponentVocals == null || opponentVocals._channel == null || opponentVocals._channel.__audioSource == null) return;
+
+		@:privateAccess
+		opponentAudioAnalyzer = new SpectralAnalyzer(opponentVocals._channel.__audioSource, barCount, maxDelta, peakHold);
+
+		#if desktop
+		opponentAudioAnalyzer.fftN = 256;
+		#end
+	}
+
+	public function getOpponentAudioLevels() {
+		if (opponentAudioAnalyzer == null) return null;
+		var levels = opponentAudioAnalyzer.getLevels();
+		return [for (i in levels) i.value];
+	}
+
+	public function initPlayerAnalyzer(barCount:Int, maxDelta:Float = 0.01, peakHold:Int = 30) {
+		@:privateAccess
+		if (vocals == null || vocals._channel == null || vocals._channel.__audioSource == null) return;
+
+		@:privateAccess
+		playerAudioAnalyzer = new SpectralAnalyzer(vocals._channel.__audioSource, barCount, maxDelta, peakHold);
+
+		#if desktop
+		playerAudioAnalyzer.fftN = 256;
+		#end
+	}
+
+	public function getPlayerAudioLevels() {
+		if (playerAudioAnalyzer == null) return null;
+		var levels = playerAudioAnalyzer.getLevels();
 		return [for (i in levels) i.value];
 	}
 

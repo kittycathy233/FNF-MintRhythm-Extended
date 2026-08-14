@@ -227,6 +227,24 @@ class FunkinLua {
 			return PlayState.instance.getAudioLevels();
 		});
 
+		Lua_helper.add_callback(lua, "initOpponentAnalyzer", function(barCount:Int, maxDelta:Float = 0.01, peakHold:Int = 30) {
+			PlayState.instance.initOpponentAnalyzer(barCount, maxDelta, peakHold);
+			return true;
+		});
+
+		Lua_helper.add_callback(lua, "getOpponentAudioLevels", function(barCount:Int, maxDelta:Float = 0.01, peakHold:Int = 30) {
+			return PlayState.instance.getOpponentAudioLevels();
+		});
+
+		Lua_helper.add_callback(lua, "initPlayerAnalyzer", function(barCount:Int, maxDelta:Float = 0.01, peakHold:Int = 30) {
+			PlayState.instance.initPlayerAnalyzer(barCount, maxDelta, peakHold);
+			return true;
+		});
+
+		Lua_helper.add_callback(lua, "getPlayerAudioLevels", function(barCount:Int, maxDelta:Float = 0.01, peakHold:Int = 30) {
+			return PlayState.instance.getPlayerAudioLevels();
+		});
+
 		addLocalCallback("setOnScripts", function(varName:String, arg:Dynamic, ?ignoreSelf:Bool = false, ?exclusions:Array<String> = null) {
 			if(exclusions == null) exclusions = [];
 			if(ignoreSelf && !exclusions.contains(scriptName)) exclusions.push(scriptName);
