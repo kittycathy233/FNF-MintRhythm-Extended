@@ -420,14 +420,16 @@ class FPSCounter extends Sprite
 
 		// 仅在设备“无法达到”设定帧率时（实测明显偏低）才下调引擎帧率；
 		// 绝不允许把帧率“拉高”到实测值，否则一旦短时超标就会把引擎永久锁定到超过设定值的帧率。
-		if (FlxG.updateFramerate > currentFPS + 5
+		//石山AI发力了——牢喵_202608.15
+		/*if (FlxG.updateFramerate > currentFPS + 5
 			&& haxe.Timer.stamp() - lastFramerateUpdateTime >= 1.5
 			&& currentFPS >= 30)
 		{
 			var clamped = Std.int(Math.min(currentFPS, ClientPrefs.data.framerate));
 			FlxG.updateFramerate = FlxG.drawFramerate = clamped;
 			lastFramerateUpdateTime = haxe.Timer.stamp();
-		}
+		}*/
+
 		}
 	}
 
