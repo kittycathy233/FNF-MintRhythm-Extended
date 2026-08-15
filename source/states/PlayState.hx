@@ -131,7 +131,13 @@ class PlayState extends MusicBeatState
 
 	// 存储打击数据供 HitGraph 使用 [diff, judge, time]
 	public var hitHistory:Array<Array<Dynamic>> = [];
-	
+
+	// 每帧复用的按键状态数组，避免重复分配
+	var _holdBuffer:Array<Bool> = [];
+	var _pressBuffer:Array<Bool> = [];
+	var _releaseBuffer:Array<Bool> = [];
+	var _heldBuffer:Array<Bool> = [];
+	var _countedBuffer:Array<Bool> = [];
 	// 回放系统
 	public var replayData:Array<ReplayData> = [];	// 回放数据
 	public var isReplaying:Bool = false;			// 是否正在回放
@@ -3442,9 +3448,10 @@ tempScore += '${lblScore}: ${songScore}';
 			// 检查长按音符，保持按键按下状态
 			if(guitarHeroSustains)
 			{
-				var holdArray:Array<Bool> = [];
-				for (i in 0...keysArray.length)
-					holdArray.push(replayHeldKeys[i]);
+				// 复用缓冲数组，避免每帧分配
+			_holdBuffer.splice(0, _holdBuffer.length);
+			for (i in 0...keysArray.length)
+				_holdBuffer.push(replayHeldKeys[i]);
 
 				if(notes.length > 0) {
 					for (n in notes) {
@@ -3493,20 +3500,10 @@ tempScore += '${lblScore}: ${songScore}';
 							}
 
 							// 根据当前的ghostTapping设置决定是否调用noteMissPress和onGhostTap
-							if(ClientPrefs.data.ghostTapping)
-							{
-								callOnScripts('onGhostTap', [replayAction.key]);
-							}
-							else
-							{
-								noteMissPress(replayAction.key);
-							}
+							handleGhostTap(replayAction.key);
 
 							// 调用onKeyPress回调（与正常模式保持一致）
 							callOnScripts('onKeyPress', [replayAction.key]);
-
-							// 更新keysPressed数组（与正常模式保持一致）
-							if(!keysPressed.contains(replayAction.key)) keysPressed.push(replayAction.key);
 						}
 						else if(replayAction.judge == 'miss')
 						{
@@ -3621,8 +3618,10 @@ tempScore += '${lblScore}: ${songScore}';
 			else if (controls.justPressed('debug_3'))
 				eventDebugGroup.visible = !eventDebugGroup.visible;
 			else if (controls.justPressed('debug_4'))
+			{
 				cpuControlled = !cpuControlled;
 				botplayTxt.visible = cpuControlled;
+			}
 
 		}
 
@@ -3974,17 +3973,20 @@ tempScore += '${lblScore}: ${songScore}';
 		}
 
 		{
-			var balls = notesHitArray.length - 1;
-			var now:Float = haxe.Timer.stamp() * 1000; // 毫秒
-			while (balls >= 0)
+			// 原地过滤：只保留最近 1000ms 内的命中时间戳，避免 Array.remove() 的 O(n) 移动开销
+			var now:Float = haxe.Timer.stamp() * 1000;
+			var writeIdx:Int = 0;
+			for (readIdx in 0...notesHitArray.length)
 			{
-				var t:Float = notesHitArray[balls];
-				if (t + 1000 < now)
-					notesHitArray.remove(t);
-				else
-					balls = 0;
-				balls--;
+				if (notesHitArray[readIdx] + 1000 >= now)
+				{
+					if (writeIdx != readIdx)
+						notesHitArray[writeIdx] = notesHitArray[readIdx];
+					writeIdx++;
+				}
 			}
+			while (notesHitArray.length > writeIdx)
+				notesHitArray.pop();
 			nps = notesHitArray.length;
 			if (nps > maxNPS)
 				maxNPS = nps;
@@ -4127,6 +4129,8 @@ tempScore += '${lblScore}: ${songScore}';
 	// Health icon updaters
 	var iconSizeResetTime:Float = 0; // 压扁风格(Squash)的恢复计时器：beat 触发后从 ICON_SQUASH_TIME 递减到 0，期间平滑恢复为正常大小
 	var ICON_SQUASH_TIME:Float = 2.0; // 压扁风格恢复时长（秒），数值越大回弹越慢越柔和
+	var _cachedIconSpeedMult:Float = 9; // 缓存 speedMultiplier，仅在 iconbopstyle 改变时更新，避免每帧字符串比较
+	var _lastIconBopStyle:String = null; // 记录上次检查的 iconbopstyle，用于检测变更
 
 	// 图标缩放回弹的插值因子：
 	// - 归一化(iconbopNormalize=true)：1 - e^(-k·dt·playbackRate)，任意刷新率/倍速下表现一致（高刷屏不再偏快/偏慢）
@@ -4140,11 +4144,30 @@ tempScore += '${lblScore}: ${songScore}';
 
 	public dynamic function updateIconsScale(elapsed:Float)
 {
+    // 当 iconbopstyle 改变时同步缓存，避免每帧做字符串 switch
+    var curStyle:String = ClientPrefs.data.iconbopstyle;
+    if (curStyle != _lastIconBopStyle)
+    {
+        _lastIconBopStyle = curStyle;
+        _cachedIconSpeedMult = switch (curStyle)
+        {
+            case "Codename": 20;
+            case "Leather": 6;
+            case "SB": 20;
+            case "VSlice(New)": 14;
+            case "VSlice(Old)": 36;
+            case "NovaFlare": 22;
+            default: 9;
+        }
+    }
+
+    // 统一递减：Squash 和 Dave 都需要此计时器，提到 if/else 外避免重复
+    iconSizeResetTime = Math.max(0, iconSizeResetTime - elapsed * playbackRate);
+
     // 压扁风格(Squash)：beat 上双方 icon 被压扁（一方变矮胖、一方变高瘦），
     // 并随血量/输赢状态表现不同，随后在 0.8 秒内平滑过渡回正常大小（参考 JSE 的 Dave and Bambi）。
     if (ClientPrefs.data.iconbopstyle == "Squash")
     {
-        iconSizeResetTime = Math.max(0, iconSizeResetTime - elapsed * playbackRate);
         var t:Float = FlxMath.bound(iconSizeResetTime / ICON_SQUASH_TIME, 0, 1);
         var iconLerp:Float = t * t * t * t; // 等价于 FlxEase.quartIn：开头慢、结尾快地恢复
         iconP1.scale.x = FlxMath.lerp(1, iconP1.scale.x, iconLerp);
@@ -4153,7 +4176,6 @@ tempScore += '${lblScore}: ${songScore}';
         iconP2.scale.y = FlxMath.lerp(1, iconP2.scale.y, iconLerp);
     }
     else if (ClientPrefs.data.iconbopstyle == "Dave") {
-        iconSizeResetTime = Math.max(0, iconSizeResetTime - elapsed * playbackRate);
         var iconLerp:Float = FlxMath.bound(iconSizeResetTime / ICON_SQUASH_TIME, 0, 1);
         iconLerp = iconLerp * iconLerp * iconLerp * iconLerp; // 等价于 FlxEase.quartIn
         iconP1.setGraphicSize(Std.int(FlxMath.lerp(iconP1.frameWidth, iconP1.width, iconLerp)),
@@ -4165,11 +4187,11 @@ tempScore += '${lblScore}: ${songScore}';
     else if (ClientPrefs.data.iconbopstyle == "Kathy") {
         var healthPercent:Float = healthBar.percent;
         var targetScale:Float = 1.0;
-        
+
         // 根据血量动态调整缩放强度
         var scaleIntensity:Float = 1 - Math.abs(healthPercent - 50) / 50;
         targetScale += 0.1 * scaleIntensity;
-        
+
         // 平滑缩放过渡（归一化：任意刷新率下回弹速度一致）
         var kathyFactor:Float = iconBopLerpFactor(12, elapsed);
         iconP1.scale.x = FlxMath.lerp(iconP1.scale.x, targetScale, kathyFactor);
@@ -4177,16 +4199,8 @@ tempScore += '${lblScore}: ${songScore}';
         iconP2.scale.x = FlxMath.lerp(iconP2.scale.x, targetScale, kathyFactor);
         iconP2.scale.y = FlxMath.lerp(iconP2.scale.y, targetScale, kathyFactor);
     } else {
-			var speedMultiplier:Float = switch (ClientPrefs.data.iconbopstyle)
-			{
-				case "Codename": 20;
-				case "Leather": 6;
-				case "SB": 20;
-				case "VSlice(New)": 14;
-			case "VSlice(Old)": 36;
-			case "NovaFlare": 22;
-				default: 9;
-			}
+			// 使用缓存的 speedMultiplier，仅在 style 变更时由同步逻辑更新
+			var speedMultiplier:Float = _cachedIconSpeedMult;
 
 			// 定义缩放上限
 			final ICON_BOUND:Float = 1.2; // 1 + 0.2
@@ -5678,31 +5692,23 @@ tempScore += '${lblScore}: ${songScore}';
 		}
 		else
 		{
-			if (ClientPrefs.data.ghostTapping)
+			// ghostTapping开启时，也需要记录回放数据
+			if(!isReplaying)
 			{
-				// ghostTapping开启时，也需要记录回放数据
-				if(!isReplaying)
-				{
-					replayData.push({
-						time: Conductor.songPosition,
-						key: key,
-						noteTime: null,
-						late: null,
-						judge: 'ghost',
-						releaseTime: null
-					});
-				}
-				callOnScripts('onGhostTap', [key]);
+				replayData.push({
+					time: Conductor.songPosition,
+					key: key,
+					noteTime: null,
+					late: null,
+					judge: 'ghost',
+					releaseTime: null
+				});
 			}
-			else
-			{
-				noteMissPress(key);
-			}
+			handleGhostTap(key);
 		}
 
 		// Needed for the  "Just the Two of Us" achievement.
 		//									- Shadow Mario
-		if(!keysPressed.contains(key)) keysPressed.push(key);
 
 	// [毫秒级精确判定] 开启时 songPosition 被临时改为精确值，这里还原为本帧原值，避免影响后续逻辑与音符视觉位置（防抖动）；下一帧 update 会重新从音频时钟同步。
 	if (preciseHit) Conductor.songPosition = lastTime;
@@ -5857,25 +5863,27 @@ tempScore += '${lblScore}: ${songScore}';
 		if(notes.length <= 0) return;
 
 		// 每列是否按住（与 keysCheck 保持一致）
-		var held:Array<Bool> = [];
+		_heldBuffer.splice(0, _heldBuffer.length);
 		for (i in 0...keysArray.length)
 		{
-			if(cpuControlled) held.push(true);
-			else if(isReplaying) held.push(replayHeldKeys[i]);
-			else held.push(controls.pressed(keysArray[i]));
+			if(cpuControlled) _heldBuffer.push(true);
+			else if(isReplaying) _heldBuffer.push(replayHeldKeys[i]);
+			else _heldBuffer.push(controls.pressed(keysArray[i]));
 		}
 
 		// 统计当前正在被有效按住的长条列数（每列只计一次，避免同列多个尾音重复计分）
-		var counted:Array<Bool> = [for (i in 0...keysArray.length) false];
+		_countedBuffer.splice(0, _countedBuffer.length);
+		for (i in 0...keysArray.length)
+			_countedBuffer.push(false);
 		var activeCols:Int = 0;
 		for (n in notes)
 		{
 			if(n == null || !n.isSustainNote || !isPlayerNote(n)) continue;
 			if(n.tooLate || n.missed || n.ignoreNote) continue;
 			if(n.parent == null || !n.parent.wasGoodHit) continue; // 头部已命中(长条进行中)
-			if(n.noteData < 0 || n.noteData >= counted.length || counted[n.noteData]) continue;
-			if(!held[n.noteData]) continue;
-			counted[n.noteData] = true;
+			if(n.noteData < 0 || n.noteData >= _countedBuffer.length || _countedBuffer[n.noteData]) continue;
+			if(!_heldBuffer[n.noteData]) continue;
+			_countedBuffer[n.noteData] = true;
 			activeCols++;
 		}
 
@@ -5949,31 +5957,31 @@ tempScore += '${lblScore}: ${songScore}';
 	// Hold notes
 	private function keysCheck():Void
 	{
-		// HOLDING
-		var holdArray:Array<Bool> = [];
-		var pressArray:Array<Bool> = [];
-		var releaseArray:Array<Bool> = [];
+		// HOLDING — 复用缓冲数组，避免每帧分配
+		_holdBuffer.splice(0, _holdBuffer.length);
+		_pressBuffer.splice(0, _pressBuffer.length);
+		_releaseBuffer.splice(0, _releaseBuffer.length);
 		for (i in 0...keysArray.length)
 		{
 			// 在回放模式下使用replayHeldKeys，否则使用controls.pressed
 			if(isReplaying)
 			{
-				holdArray.push(replayHeldKeys[i]);
-				pressArray.push(false); // 回放模式下不使用justPressed
-				releaseArray.push(false); // 回放模式下不使用justReleased
+				_holdBuffer.push(replayHeldKeys[i]);
+				_pressBuffer.push(false); // 回放模式下不使用justPressed
+				_releaseBuffer.push(false); // 回放模式下不使用justReleased
 			}
 			else
 			{
-				holdArray.push(controls.pressed(keysArray[i]));
-				pressArray.push(controls.justPressed(keysArray[i]));
-				releaseArray.push(controls.justReleased(keysArray[i]));
+				_holdBuffer.push(controls.pressed(keysArray[i]));
+				_pressBuffer.push(controls.justPressed(keysArray[i]));
+				_releaseBuffer.push(controls.justReleased(keysArray[i]));
 			}
 		}
 
 		// TO DO: Find a better way to handle controller inputs, this should work for now
-		if(controls.controllerMode && pressArray.contains(true))
-			for (i in 0...pressArray.length)
-				if(pressArray[i] && strumsBlocked[i] != true)
+		if(controls.controllerMode && _pressBuffer.contains(true))
+			for (i in 0..._pressBuffer.length)
+				if(_pressBuffer[i] && strumsBlocked[i] != true)
 					keyPressed(i);
 
 		if (startedCountdown && !inCutscene && !playerSideChar().stunned && generatedMusic)
@@ -5988,7 +5996,7 @@ tempScore += '${lblScore}: ${songScore}';
 						canHit = canHit && n.parent != null && n.parent.wasGoodHit;
 
 					if (canHit && n.isSustainNote) {
-						var released:Bool = !holdArray[n.noteData];
+						var released:Bool = !_holdBuffer[n.noteData];
 
 						// 特性2：启用尾部判定时，最后一个尾音不在按住期间自动命中，
 						// 改在松手(keyReleased)时按其释放时机判定；botplay 仍照常完成。
@@ -6000,7 +6008,7 @@ tempScore += '${lblScore}: ${songScore}';
 				}
 			}
 
-			if (!holdArray.contains(true) || endingSong)
+			if (!_holdBuffer.contains(true) || endingSong)
 				playerDance();
 
 			#if ACHIEVEMENTS_ALLOWED
@@ -6009,9 +6017,9 @@ tempScore += '${lblScore}: ${songScore}';
 		}
 
 		// TO DO: Find a better way to handle controller inputs, this should work for now
-		if((controls.controllerMode || strumsBlocked.contains(true)) && releaseArray.contains(true))
-			for (i in 0...releaseArray.length)
-				if(releaseArray[i] || strumsBlocked[i] == true)
+		if((controls.controllerMode || strumsBlocked.contains(true)) && _releaseBuffer.contains(true))
+			for (i in 0..._releaseBuffer.length)
+				if(_releaseBuffer[i] || strumsBlocked[i] == true)
 					keyReleased(i);
 	}
 
@@ -6052,6 +6060,23 @@ tempScore += '${lblScore}: ${songScore}';
 		FlxG.sound.play(Paths.soundRandom('missnote', 1, 3), FlxG.random.float(0.1, 0.2));
 		stagesFunc(function(stage:BaseStage) stage.noteMissPress(direction));
 		callOnScripts('noteMissPress', [direction]);
+	}
+
+	// 处理空按：ghostTapping 时触发脚本回调，否则计入 miss；并记录按键
+	private function handleGhostTap(key:Int):Void
+	{
+		if (ClientPrefs.data.ghostTapping)
+			callOnScripts('onGhostTap', [key]);
+		else
+			noteMissPress(key);
+		addToKeysPressed(key);
+	}
+
+	// 去重追加到 keysPressed（用于 achievement 追踪）
+	private function addToKeysPressed(key:Int):Void
+	{
+		if (!keysPressed.contains(key))
+			keysPressed.push(key);
 	}
 
 	function noteMissCommon(direction:Int, note:Note = null)
