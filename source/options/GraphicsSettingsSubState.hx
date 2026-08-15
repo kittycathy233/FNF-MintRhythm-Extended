@@ -54,6 +54,12 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		var option:Option = new Option(Language.get('playstate_pixel_perfect'),
+			Language.get("playstate_pixel_perfect_desc"),
+			'playStatePixelPerfect',
+			BOOL);
+		addOption(option);
+
 		var option:Option = new Option(Language.get('resource_caching_on_reload'),
 			Language.get("resource_caching_desc"),
 			'cacheResourcesOnReload',

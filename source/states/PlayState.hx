@@ -766,10 +766,10 @@ isReplaying = false;
     		camHUD.zoom = ClientPrefs.data.hudSize;
 		}
 
-		camGame.pixelPerfectRender = true;
-		camHUD.pixelPerfectRender = true;
-		camOther.pixelPerfectRender = true;
-		camArchived.pixelPerfectRender = true;
+		camGame.pixelPerfectRender = ClientPrefs.data.playStatePixelPerfect;
+		camHUD.pixelPerfectRender = ClientPrefs.data.playStatePixelPerfect;
+		camOther.pixelPerfectRender = ClientPrefs.data.playStatePixelPerfect;
+		camArchived.pixelPerfectRender = ClientPrefs.data.playStatePixelPerfect;
 
 		FlxG.cameras.add(camHUD, false);
 		FlxG.cameras.add(camOther, false);

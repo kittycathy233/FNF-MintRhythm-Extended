@@ -47,6 +47,7 @@ import openfl.display.StageQuality;
 	public var lowQuality:Bool = false;
 	public var shaders:Bool = true;
 	public var cacheOnGPU:Bool = #if !switch false #else true #end; // GPU Caching made by Raltyro
+	public var playStatePixelPerfect:Bool = true; // 游戏内所有相机是否启用 pixelPerfectRender（关闭可显著改善全屏/高分辨率滚动性能）
 	public var framerate:Int = 60;
 	public var camZooms:Bool = true;
 	public var stageQuality:String = 'MEDIUM'; // 矢量/文本渲染质量(StageQuality)：LOW/MEDIUM/HIGH/BEST，移动端建议 MEDIUM 及以下
