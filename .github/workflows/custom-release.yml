@@ -84,8 +84,8 @@ jobs:
   build-windows:
     name: Windows
     needs: get-commit-hash
-    if: ${{ inputs.windows }}
     uses: ./.github/workflows/build.yml
+    if: ${{ inputs.windows }}
     with:
       name: Windows
       os: windows-2022
@@ -97,8 +97,8 @@ jobs:
   build-linux:
     name: Linux
     needs: get-commit-hash
-    if: ${{ inputs.linux }}
     uses: ./.github/workflows/build.yml
+    if: ${{ inputs.linux }}
     with:
       name: Linux
       os: ubuntu-22.04
@@ -110,8 +110,8 @@ jobs:
   build-macos-x64:
     name: macOS x86_64
     needs: get-commit-hash
-    if: ${{ inputs.macos_x64 }}
     uses: ./.github/workflows/build.yml
+    if: ${{ inputs.macos_x64 }}
     with:
       name: macOS x86_64
       os: macos-15
@@ -123,8 +123,8 @@ jobs:
   build-macos-arm64:
     name: macOS ARM64
     needs: get-commit-hash
-    if: ${{ inputs.macos_arm64 }}
     uses: ./.github/workflows/build.yml
+    if: ${{ inputs.macos_arm64 }}
     with:
       name: macOS ARM64
       os: macos-15
@@ -136,33 +136,33 @@ jobs:
   build-android:
     name: Android
     needs: get-commit-hash
-    if: ${{ inputs.android }}
     uses: ./.github/workflows/build.yml
+    if: ${{ inputs.android }}
     with:
       name: Android
       os: macos-15
       setupCommand: sh ./setup/unix.sh
       buildArgs: "android -final -D officialBuild"
       artifactName: androidBuild
-      artifactPath: "export/release/android/bin/app/build/outputs/apk/release/*.apk"
+      artifactPath: export/release/android/bin/app/build/outputs/apk/release/*.apk
 
   build-ios:
     name: iOS
     needs: get-commit-hash
-    if: ${{ inputs.iOS }}
     uses: ./.github/workflows/build.yml
+    if: ${{ inputs.iOS }}
     with:
       name: iOS
       os: macos-15
       setupCommand: sh ./setup/unix.sh
       buildArgs: "ios -final -nosign -D officialBuild"
       artifactName: iOSBuild
-      artifactPath: "export/release/ios/build/Release-iphoneos/*.ipa"
+      artifactPath: export/release/ios/build/Release-iphoneos/*.ipa
 
   release:
     name: Release
-    if: ${{ inputs.windows || inputs.linux || inputs.macos_x64 || inputs.macos_arm64 || inputs.android || inputs.iOS }}
     needs: [get-commit-hash, build-windows, build-linux, build-macos-x64, build-macos-arm64, build-android, build-ios]
+    if: ${{ always() && (inputs.windows || inputs.linux || inputs.macos_x64 || inputs.macos_arm64 || inputs.android || inputs.iOS) }}
     runs-on: ubuntu-latest
     permissions: write-all
     steps:
