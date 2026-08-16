@@ -9,7 +9,7 @@ for /f "delims=" %%p in ('haxelib config') do set "HAXELIB_PATH=%%p"
 pushd "%HAXELIB_PATH%hxcpp\git\tools\hxcpp"
 haxe compile.hxml
 popd
-haxelib git lime https://github.com/kittycathy233/lime --quiet
+haxelib git lime https://github.com/kittycathy332/lime-kathy.git --quiet
 haxelib install openfl 9.4.2 --quiet --skip-dependencies
 haxelib install flixel 5.9.0 --quiet --skip-dependencies
 haxelib install flixel-addons 4.0.1 --quiet --skip-dependencies

@@ -11,7 +11,7 @@ haxelib git hxcpp https://github.com/kittycathy332/hxcpp-SDE.git 9532d7871ba6fc7
 # hxcpp git 源码版需要重新编译命令行工具（hxcpp.n），否则构建时会卡在交互提示
 HAXELIB_PATH=$(haxelib config)
 ( cd "$HAXELIB_PATH/hxcpp/git/tools/hxcpp" && haxe compile.hxml )
-haxelib git lime https://github.com/kittycathy233/lime --quiet
+haxelib git lime https://github.com/kittycathy332/lime-kathy.git --quiet
 haxelib install openfl 9.4.2 --quiet
 haxelib install flixel 5.9.0 --quiet
 haxelib install flixel-addons 4.0.1 --quiet
