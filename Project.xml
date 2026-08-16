@@ -127,7 +127,7 @@
 	<haxelib name="linc_luajit" if="LUA_ALLOWED"/>
 	<haxelib name="hscript-iris" if="HSCRIPT_ALLOWED"/>
 	<haxelib name="hscript" if="HSCRIPT_ALLOWED"/>
-	<haxelib name="hxvlc" if="VIDEOS_ALLOWED" version="2.2.6"/>
+	<haxelib name="hxvlc" if="VIDEOS_ALLOWED" version="2.3.0"/>
 	<haxelib name="hxdiscord_rpc" if="DISCORD_ALLOWED"/>
 	<haxelib name="flxanimate"/>
 	<haxelib name="spine-haxe"/>

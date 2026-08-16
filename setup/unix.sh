@@ -25,7 +25,7 @@ haxelib install away3d 5.0.9 --quiet
 haxelib git flxanimate https://github.com/Dot-Stuff/flxanimate 768740a56b26aa0c072720e0d1236b94afe68e3e --quiet
 haxelib git linc_luajit https://github.com/kittycathy233/linc_luajit --quiet
 haxelib install hxdiscord_rpc --quiet --skip-dependencies
-haxelib install hxvlc 2.2.6 --quiet --skip-dependencies
+haxelib install hxvlc 2.3.0 --quiet --skip-dependencies
 haxelib install flxgif 1.0.3 --quiet
 haxelib install flxsvg 1.1.0 --quiet
 haxelib install sl-windows-api 1.1.0 --quiet
