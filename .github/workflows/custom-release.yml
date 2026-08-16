@@ -161,6 +161,7 @@ jobs:
 
   release:
     name: Release
+    if: ${{ inputs.windows || inputs.linux || inputs.macos_x64 || inputs.macos_arm64 || inputs.android || inputs.iOS }}
     needs: [get-commit-hash, build-windows, build-linux, build-macos-x64, build-macos-arm64, build-android, build-ios]
     runs-on: ubuntu-latest
     permissions: write-all
