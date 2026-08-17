@@ -1,5 +1,9 @@
 name: Desktop & Android Release
 
+concurrency:
+  group: desktop-android-release-${{ github.ref }}
+  cancel-in-progress: false
+
 on:
   workflow_dispatch:
 

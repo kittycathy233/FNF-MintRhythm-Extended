@@ -1,5 +1,9 @@
 name: Full Release
 
+concurrency:
+  group: full-release-${{ github.ref }}
+  cancel-in-progress: false
+
 on:
   workflow_dispatch:
 
@@ -40,63 +44,81 @@ jobs:
             exit 1
           fi
 
-  build:
-    name: ${{ matrix.name }}
+  build-windows:
+    name: Windows
     needs: get-commit-hash
-    strategy:
-      # 单个平台失败（尤其是 checkout 卡住这类偶发问题）不应连累其它平台，
-      # 否则要重跑整个矩阵，而且其它平台的日志会被 "operation was canceled" 掩盖。
-      fail-fast: false
-      matrix:
-        include:
-          - name: Windows
-            os: windows-2022
-            buildArgs: "windows -final -D officialBuild"
-            setupCommand: .\setup\windows.bat
-            artifactName: windowsBuild-x86_64
-            artifactPath: export\release\windows\bin\*
-          - name: Linux
-            os: ubuntu-22.04
-            buildArgs: "linux -final -D officialBuild"
-            setupCommand: sh ./setup/unix.sh
-            artifactName: linuxBuild-x86_64
-            artifactPath: export/release/linux/bin/*
-          - name: macOS x86_64
-            os: macos-15
-            setupCommand: sh ./setup/unix.sh
-            buildArgs: "mac -64 -D HXCPP_M64 -final -D officialBuild"
-            artifactName: macOSBuild-x86_64
-            artifactPath: export/release/macos/bin/*
-          - name: macOS ARM64
-            os: macos-15
-            setupCommand: sh ./setup/unix.sh
-            buildArgs: "mac -arm64 -D HXCPP_ARM64 -final -D officialBuild"
-            artifactName: macOSBuild-arm64
-            artifactPath: export/release/macos/bin/*
-          - name: Android
-            os: macos-15
-            buildArgs: "android -final -D officialBuild"
-            setupCommand: sh ./setup/unix.sh
-            artifactName: androidBuild
-            artifactPath: "export/release/android/bin/app/build/outputs/apk/release/*.apk"
-          - name: iOS
-            os: macos-15
-            buildArgs: "ios -final -nosign -D officialBuild"
-            setupCommand: sh ./setup/unix.sh
-            artifactName: iOSBuild
-            artifactPath: "export/release/ios/build/Release-iphoneos/*.ipa"
     uses: ./.github/workflows/build.yml
     with:
-      name: ${{ matrix.name }}
-      os: ${{ matrix.os }}
-      setupCommand: ${{ matrix.setupCommand }}
-      buildArgs: ${{ matrix.buildArgs }}
-      artifactName: ${{ matrix.artifactName }}
-      artifactPath: ${{ matrix.artifactPath }}
+      name: Windows
+      os: windows-2022
+      setupCommand: .\setup\windows.bat
+      buildArgs: "windows -final -D officialBuild"
+      artifactName: windowsBuild-x86_64
+      artifactPath: export\release\windows\bin\*
+
+  build-linux:
+    name: Linux
+    needs: get-commit-hash
+    uses: ./.github/workflows/build.yml
+    with:
+      name: Linux
+      os: ubuntu-22.04
+      setupCommand: sh ./setup/unix.sh
+      buildArgs: "linux -final -D officialBuild"
+      artifactName: linuxBuild-x86_64
+      artifactPath: export/release/linux/bin/*
+
+  build-macos-x64:
+    name: macOS x64
+    needs: get-commit-hash
+    uses: ./.github/workflows/build.yml
+    with:
+      name: macOS x86_64
+      os: macos-15
+      setupCommand: sh ./setup/unix.sh
+      buildArgs: "mac -64 -D HXCPP_M64 -final -D officialBuild"
+      artifactName: macOSBuild-x86_64
+      artifactPath: export/release/macos/bin/*
+
+  build-macos-arm64:
+    name: macOS ARM64
+    needs: get-commit-hash
+    uses: ./.github/workflows/build.yml
+    with:
+      name: macOS ARM64
+      os: macos-15
+      setupCommand: sh ./setup/unix.sh
+      buildArgs: "mac -arm64 -D HXCPP_ARM64 -final -D officialBuild"
+      artifactName: macOSBuild-arm64
+      artifactPath: export/release/macos/bin/*
+
+  build-android:
+    name: Android
+    needs: get-commit-hash
+    uses: ./.github/workflows/build.yml
+    with:
+      name: Android
+      os: macos-15
+      setupCommand: sh ./setup/unix.sh
+      buildArgs: "android -final -D officialBuild"
+      artifactName: androidBuild
+      artifactPath: "export/release/android/bin/app/build/outputs/apk/release/*.apk"
+
+  build-ios:
+    name: iOS
+    needs: get-commit-hash
+    uses: ./.github/workflows/build.yml
+    with:
+      name: iOS
+      os: macos-15
+      setupCommand: sh ./setup/unix.sh
+      buildArgs: "ios -final -nosign -D officialBuild"
+      artifactName: iOSBuild
+      artifactPath: "export/release/ios/build/Release-iphoneos/*.ipa"
 
   release:
     name: Release
-    needs: [build, get-commit-hash]
+    needs: [build-windows, build-linux, build-macos-x64, build-macos-arm64, build-android, build-ios, get-commit-hash]
     runs-on: ubuntu-latest
     permissions: write-all
     steps:
@@ -106,7 +128,7 @@ jobs:
           name: windowsBuild-x86_64
           path: builds/windows
 
-      - name: Download Linux  
+      - name: Download Linux
         uses: actions/download-artifact@v4
         with:
           name: linuxBuild-x86_64

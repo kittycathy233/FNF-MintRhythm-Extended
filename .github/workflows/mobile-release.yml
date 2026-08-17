@@ -1,4 +1,7 @@
 name: Mobile Release
+concurrency:
+  group: mobile-release-${{ github.ref }}
+  cancel-in-progress: false
 on: workflow_dispatch
 
 permissions:

@@ -1,4 +1,9 @@
-name: Lock Closed Issues
+name: Autolock
+
+concurrency:
+  group: autolock-${{ github.ref }}
+  cancel-in-progress: false
+
 on: workflow_dispatch
 jobs:
   lock-closed-issues:
