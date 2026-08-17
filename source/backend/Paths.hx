@@ -285,7 +285,17 @@ inline static public function inst(song:String, ?specialInst:String = null, ?mod
 		{
 			#if sys
 			if (FileSystem.exists(file))
-				currentTrackedSounds.set(file, Sound.fromFile(file));
+			{
+				try
+				{
+					currentTrackedSounds.set(file, Sound.fromFile(file));
+				}
+				catch (e:Dynamic)
+				{
+					trace('Failed to load sound at $file: $e');
+					currentTrackedSounds.set(file, null);
+				}
+			}
 			#else if (OpenFlAssets.exists(file, SOUND))
 				currentTrackedSounds.set(file, OpenFlAssets.getSound(file));
 			#end
@@ -517,7 +527,17 @@ inline static public function inst(song:String, ?specialInst:String = null, ?mod
 		{
 			#if sys
 			if(FileSystem.exists(file))
-				currentTrackedSounds.set(file, Sound.fromFile(file));
+			{
+				try
+				{
+					currentTrackedSounds.set(file, Sound.fromFile(file));
+				}
+				catch (e:Dynamic)
+				{
+					trace('Failed to load sound at $file: $e');
+					currentTrackedSounds.set(file, null);
+				}
+			}
 			#else
 			if(OpenFlAssets.exists(file, SOUND))
 				currentTrackedSounds.set(file, OpenFlAssets.getSound(file));
