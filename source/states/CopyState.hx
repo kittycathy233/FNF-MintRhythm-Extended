@@ -208,7 +208,13 @@ class CopyState extends MusicBeatState
 		switch (Path.extension(file).toLowerCase())
 		{
 			case 'otf' | 'ttf':
-				return ByteArray.fromFile(file);
+				try
+					return ByteArray.fromFile(file);
+				catch (e:Dynamic)
+				{
+					trace('Failed to load font file at $file: $e');
+					return null;
+				}
 			default:
 				return OpenFLAssets.getBytes(file);
 		}

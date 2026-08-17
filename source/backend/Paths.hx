@@ -333,7 +333,15 @@ inline static public function inst(song:String, ?specialInst:String = null, ?mod
 			var file:String = getPath(key, IMAGE, parentFolder, true);
 			#if MODS_ALLOWED
 			if (FileSystem.exists(file))
-				bitmap = BitmapData.fromFile(file);
+			{
+				try
+					bitmap = BitmapData.fromFile(file);
+				catch (e:Dynamic)
+				{
+					trace('Failed to load bitmap at $file: $e');
+					bitmap = null;
+				}
+			}
 			else #end if (OpenFlAssets.exists(file, IMAGE))
 				bitmap = OpenFlAssets.getBitmapData(file);
 
@@ -525,12 +533,14 @@ inline static public function inst(song:String, ?specialInst:String = null, ?mod
 		//trace('precaching sound: $file');
 		if(!currentTrackedSounds.exists(file))
 		{
+			var loaded:Bool = false;
 			#if sys
 			if(FileSystem.exists(file))
 			{
 				try
 				{
 					currentTrackedSounds.set(file, Sound.fromFile(file));
+					loaded = true;
 				}
 				catch (e:Dynamic)
 				{
@@ -538,11 +548,12 @@ inline static public function inst(song:String, ?specialInst:String = null, ?mod
 					currentTrackedSounds.set(file, null);
 				}
 			}
-			#else
-			if(OpenFlAssets.exists(file, SOUND))
+			else #end if(OpenFlAssets.exists(file, SOUND))
+			{
 				currentTrackedSounds.set(file, OpenFlAssets.getSound(file));
-			#end
-			else if(beepOnNull)
+				loaded = true;
+			}
+			if(!loaded && beepOnNull)
 			{
 				trace('SOUND NOT FOUND: $key, PATH: $path');
 				FlxG.log.error('SOUND NOT FOUND: $key, PATH: $path');

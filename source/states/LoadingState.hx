@@ -906,10 +906,27 @@ class LoadingState extends MusicBeatState
 		{
 			if (#if sys FileSystem.exists(file) || #end OpenFlAssets.exists(file, SOUND))
 			{
-				var sound:Sound = #if sys Sound.fromFile(file) #else OpenFlAssets.getSound(file, false) #end;
+				#if sys
+				try
+				{
+					var sound:Sound = Sound.fromFile(file);
+					mutex.acquire();
+					Paths.currentTrackedSounds.set(file, sound);
+					mutex.release();
+				}
+				catch (e:Dynamic)
+				{
+					trace('Failed to preload sound at $file: $e');
+					mutex.acquire();
+					Paths.currentTrackedSounds.set(file, null);
+					mutex.release();
+				}
+				#else
+				var sound:Sound = OpenFlAssets.getSound(file, false);
 				mutex.acquire();
 				Paths.currentTrackedSounds.set(file, sound);
 				mutex.release();
+				#end
 			}
 			else if (beepOnNull)
 			{
