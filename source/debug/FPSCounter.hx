@@ -356,15 +356,6 @@ class FPSCounter extends Sprite
 		if (!visible)
 			return;
 
-		// 帧率限制：每帧都调用 tick() 刷新 allowFrame 状态。
-		// 之前从未调用 tick()，导致 allowFrame 恒为 true，
-		// 计数器按显示器真实刷新率统计，从而超出设定帧数。
-		// 现在只统计“允许”的帧，使显示帧率最高等于设定值。
-		backend.FramerateLimiter.targetFps = ClientPrefs.data.framerate;
-		if (!backend.FramerateLimiter.tick())
-			return;
-
-
 		// 限制 Delay 更新频率为每 0.2 秒
 		if (Timer.stamp() - lastDelayUpdateTime > 0.2)
 		{
@@ -389,8 +380,6 @@ class FPSCounter extends Sprite
 		if (Timer.stamp() - lastFpsUpdateTime > updateInterval)
 		{
 			currentFPS = Math.round((currentCount + cacheCount) / 2);
-			// 兜底：显示值绝不超过设定帧数（应对滑动窗口内的瞬时抖动）
-			currentFPS = Std.int(Math.min(currentFPS, backend.FramerateLimiter.targetFps));
 			cacheCount = currentCount;
 			lastFpsUpdateTime = Timer.stamp();
 			updateText();
@@ -418,8 +407,8 @@ class FPSCounter extends Sprite
 				updateTime = nowTime + 500;
 			}
 
-		// 仅在设备“无法达到”设定帧率时（实测明显偏低）才下调引擎帧率；
-		// 绝不允许把帧率“拉高”到实测值，否则一旦短时超标就会把引擎永久锁定到超过设定值的帧率。
+		// 仅在设备"无法达到"设定帧率时（实测明显偏低）才下调引擎帧率；
+		// 绝不允许把帧率"拉高"到实测值，否则一旦短时超标就会把引擎永久锁定到超过设定值的帧率。
 		//石山AI发力了——牢喵_202608.15
 		/*if (FlxG.updateFramerate > currentFPS + 5
 			&& haxe.Timer.stamp() - lastFramerateUpdateTime >= 1.5
