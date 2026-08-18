@@ -614,16 +614,9 @@ class StoryPlayerState extends MusicBeatState
 		#if sys
 		if (sys.FileSystem.exists(path))
 		{
-			try
-			{
-				var bd:BitmapData = BitmapData.fromFile(path);
-				if (bd != null)
-					return FlxGraphic.fromBitmapData(bd);
-			}
-			catch (e:Dynamic)
-			{
-				trace('Failed to load story image at $path: $e');
-			}
+			var bd:BitmapData = BitmapData.fromFile(path);
+			if (bd != null)
+				return FlxGraphic.fromBitmapData(bd);
 		}
 		#end
 		try

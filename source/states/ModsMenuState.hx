@@ -889,16 +889,7 @@ class ModItem extends FlxSpriteGroup
 		}
 		
 		var bmp:BitmapData = null;
-		if (FileSystem.exists(file))
-		{
-			try
-				bmp = BitmapData.fromFile(file);
-			catch (e:Dynamic)
-			{
-				trace('Failed to load icon bitmap at $file: $e');
-				bmp = null;
-			}
-		}
+		if (FileSystem.exists(file)) bmp = BitmapData.fromFile(file);
 		else isPixel = false;
 
 		if(FileSystem.exists(file))

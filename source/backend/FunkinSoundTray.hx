@@ -80,13 +80,7 @@ class FunkinSoundTray extends FlxSoundTray
 	{
 		final imagePath = Paths.getPath('$path.png', IMAGE);
 		#if MODS_ALLOWED
-		try
-			return BitmapData.fromFile(imagePath);
-		catch (e:Dynamic)
-		{
-			trace('Failed to load sound tray image at $imagePath: $e');
-			return null;
-		}
+		return BitmapData.fromFile(imagePath);
 		#end
 		return Assets.getBitmapData(imagePath);
 	}
