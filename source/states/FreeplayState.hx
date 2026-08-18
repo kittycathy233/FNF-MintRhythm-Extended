@@ -1277,8 +1277,9 @@ class FreeplayState extends MusicBeatState
 
 		curDifficulty = FlxMath.wrap(curDifficulty + change, 0, Difficulty.list.length - 1);
 		#if !switch
-		intendedScore = Highscore.getScore(songs[curSelected].songName, curDifficulty);
-		intendedRating = Highscore.getRating(songs[curSelected].songName, curDifficulty);
+		var ratingSongName:String = Paths.formatToSongPath(songs[curSelected].songName);
+		intendedScore = Highscore.getScore(ratingSongName, curDifficulty);
+		intendedRating = Highscore.getRating(ratingSongName, curDifficulty);
 		#end
 
 		lastDifficultyName = Difficulty.getString(curDifficulty, false);
@@ -1671,10 +1672,17 @@ class FreeplayState extends MusicBeatState
 	/**
 	 * 把评分百分比格式化为固定 2 位小数的字符串，避免每帧使用
 	 * split('.') + while 循环拼接产生的临时字符串数组（GC 来源）。
+	 *
+	 * 输入兼容两种格式：
+	 *   - 0~1   (ratingPercent 原生格式，如 0.955 = 95.5%)
+	 *   - 0~100 (旧 saveScore 中 ratingPercent * 100 的格式)
+	 * 自动检测：r > 1.0 视为 0~100，反之为 0~1。
 	 */
 	private function buildRatingString(r:Float):String
 	{
-		var v:Int = Std.int(Math.round(r * 100));
+		if (r > 1.0) r = r / 100;
+
+		var v:Int = Std.int(Math.round(r * 10000));
 		var dec:Int = v % 100;
 		if (dec < 0) dec = -dec;
 		var intPart:Int = Std.int(v / 100);
