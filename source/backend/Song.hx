@@ -89,30 +89,32 @@ class Song
 			for (secNum in 0...songJson.notes.length)
 			{
 				var sec:SwagSection = songJson.notes[secNum];
-
-				var i:Int = 0;
 				var notes:Array<Dynamic> = sec.sectionNotes;
-				var len:Int = notes.length;
-				while(i < len)
+				var newNotes:Array<Dynamic> = [];
+				if(notes != null)
 				{
-					var note:Array<Dynamic> = notes[i];
-					if(note[1] < 0)
+					for(note in notes)
 					{
-						songJson.events.push([note[0], [[note[2], note[3], note[4]]]]);
-						notes.remove(note);
-						len = notes.length;
+						if(note[1] < 0)
+						{
+							songJson.events.push([note[0], [[note[2], note[3], note[4]]]]);
+						}
+						else
+						{
+							newNotes.push(note);
+						}
 					}
-					else i++;
 				}
+				sec.sectionNotes = newNotes;
 			}
 		}
 
 		var sectionsData:Array<SwagSection> = songJson.notes;
 		if(sectionsData == null) return;
 
+		var yieldCounter:Int = 0;
 		for (section in sectionsData)
 		{
-			// 防御：个别 section 可能缺 sectionNotes 字段，避免 Null Object Reference 崩溃
 			if (section.sectionNotes == null)
 				section.sectionNotes = [];
 
@@ -129,7 +131,16 @@ class Song
 				note[1] = (note[1] % 4) + (gottaHitNote ? 0 : 4);
 
 				if(!Std.isOfType(note[3], String))
-					note[3] = Note.defaultNoteTypes[note[3]]; //compatibility with Week 7 and 0.1-0.3 psych charts
+					note[3] = Note.defaultNoteTypes[note[3]];
+			}
+
+			yieldCounter++;
+			if (yieldCounter >= 4)
+			{
+				yieldCounter = 0;
+				#if (sys && FEATURE_FILESYSTEM)
+				Sys.sleep(0.002);
+				#end
 			}
 		}
 	}

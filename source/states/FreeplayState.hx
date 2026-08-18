@@ -31,6 +31,8 @@ class FreeplayState extends MusicBeatState
 	// 谱面数据缓存：避免试听和进入游戏时重复加载同一谱面
 	private static var _songDataCache:Map<String, SwagSong> = new Map();
 	private static var _songPathCache:Map<String, String> = new Map();
+	// 音频 mod 目录缓存：避免每次按空格时重复扫描所有 mod 目录
+	private static var _audioModCache:Map<String, String> = new Map();
 
 	// 后台预解析：在玩家还在浏览列表时就把选中曲目的谱面 JSON 解析好，
 	// 这样按下确认键时不需要在主线程做 File.getContent + Json.parse，避免掉帧卡顿。
@@ -100,6 +102,8 @@ class FreeplayState extends MusicBeatState
 					_prefetchMutex.acquire();
 					_prefetchDone.set(job.key, parsed);
 					_prefetchMutex.release();
+
+					Sys.sleep(0.003);
 				}
 				else
 				{
@@ -138,7 +142,7 @@ class FreeplayState extends MusicBeatState
 	private static inline var PREFETCH_DELAY:Float = 1.0;
 	// 每帧预热图标数量上限：把“滚动时才加载纹理”的开销摊到空闲帧，
 	// 同时让可见窗口在被滚到后能较快填充满，减少图标缺帧。
-	private static inline var ICON_WARM_PER_FRAME:Int = 3;
+	private static inline var ICON_WARM_PER_FRAME:Int = 2;
 	// 选中曲目上下各显示/预热多少个小图标（共 ±ICON_RADIUS）
 	private static inline var ICON_RADIUS:Int = 8;
 
@@ -204,6 +208,8 @@ class FreeplayState extends MusicBeatState
 
 	var lerpSelected:Float = 0;
 	var curDifficulty:Int = -1;
+	// 用于检测选择变化，仅在变化时触发图标预热，避免每帧空转造成 GC
+	var lastWarmupSelected:Int = -999;
 
 	private static var lastDifficultyName:String = Difficulty.getDefault();
 
@@ -248,6 +254,13 @@ class FreeplayState extends MusicBeatState
 	// 回放缓存相关
 	private var cachedReplayText:String = "";
 	private var cachedReplayIndex:Map<String, Array<String>> = new Map(); // 缓存回放文件索引：歌曲名 -> 难度列表
+
+	// 谱面信息面板（按 SPACE 预览时显示在右侧）
+	private var chartInfoBG:FlxSprite;
+	private var chartInfoTitle:FlxText;
+	private var chartInfoText:FlxText;
+	private var _chartInfoBuilt:Bool = false;
+	private var _chartInfoVisible:Bool = true;
 
 	override function create()
 	{
@@ -413,6 +426,28 @@ class FreeplayState extends MusicBeatState
 		add(player);
 		add(bpmTextBG);
 		add(bpmText);
+
+		// 谱面信息面板（右侧居中，预览时显示）
+		var infoPanelW:Float = 280;
+		var infoPanelH:Float = 200;
+		var infoPanelX:Float = FlxG.width - infoPanelW - 12;
+		var infoPanelY:Float = (FlxG.height - infoPanelH) / 2;
+
+		chartInfoBG = new FlxSprite(infoPanelX, infoPanelY).makeGraphic(Std.int(infoPanelW), Std.int(infoPanelH), 0xFF000000);
+		chartInfoBG.alpha = 0.3;
+		chartInfoBG.visible = false;
+
+		chartInfoTitle = new FlxText(infoPanelX + 8, infoPanelY + 6, infoPanelW - 16, 'CHART INFO', 18);
+		chartInfoTitle.setFormat(Paths.font("vcr.ttf"), 18, FlxColor.YELLOW, LEFT);
+		chartInfoTitle.visible = false;
+
+		chartInfoText = new FlxText(infoPanelX + 8, infoPanelY + 28, infoPanelW - 16, '', 14);
+		chartInfoText.setFormat(Paths.font("vcr.ttf"), 14, FlxColor.WHITE, LEFT);
+		chartInfoText.visible = false;
+
+		add(chartInfoBG);
+		add(chartInfoTitle);
+		add(chartInfoText);
 
 		// 搜索 / 筛选（顶部居中，默认常驻显示）
 		searchContainer = new FlxSpriteGroup();
@@ -601,13 +636,29 @@ class FreeplayState extends MusicBeatState
 		if (!player.playingMusic && !modText.visible)
 			modText.visible = true;
 
+		// 谱面信息面板：仅在预览播放时显示，可通过 TAB 手动切换
+		if (_chartInfoBuilt)
+		{
+			var showInfo:Bool = player.playingMusic && _chartInfoVisible;
+			chartInfoBG.visible = showInfo;
+			chartInfoTitle.visible = showInfo;
+			chartInfoText.visible = showInfo;
+		}
+
+		if (FlxG.keys.justPressed.TAB)
+		{
+			_chartInfoVisible = !_chartInfoVisible;
+		}
+
 		// 后台预解析当前选中曲目的谱面，让按下确认键时直接命中缓存
 		updateChartPrefetch(elapsed);
 
-		// 空闲时预加载附近图标，把“滚动时临时加载纹理”的开销摊到空闲帧，
-		// 避免滚动过程中间歇性卡顿
-		if (!player.playingMusic)
+		// 仅在曲目切换时预热图标，避免每帧空转造成 GC 尖刺
+		if (!player.playingMusic && curSelected != lastWarmupSelected)
+		{
+			lastWarmupSelected = curSelected;
 			warmupIcons();
+		}
 
 		if (FlxG.sound.music.volume < 0.7)
 			FlxG.sound.music.volume += 0.5 * elapsed;
@@ -625,8 +676,8 @@ class FreeplayState extends MusicBeatState
 				if (currentBPM != lastBPM)
 				{
 					bpmText.text = 'BPM: ${Math.round(currentBPM)}';
-					bpmText.x = FlxG.width - bpmText.width - 10;
-					bpmText.y = (FlxG.height - bpmText.height) / 2; // 垂直居中
+					bpmText.x = FlxG.width - bpmText.width - 6;
+					bpmText.y = diffText.y + diffText.height + 4;
 
 					// 复用底图仅缩放，避免每 250ms 新建 BitmapData 造成 GC 尖刺
 					refreshBpmBackground();
@@ -829,8 +880,14 @@ class FreeplayState extends MusicBeatState
 							missingText.visible = true;
 							missingTextBG.visible = true;
 							FlxG.sound.play(Paths.sound('cancelMenu'));
+							chartInfoBG.visible = false;
+							chartInfoTitle.visible = false;
+							chartInfoText.visible = false;
+							_chartInfoBuilt = false;
 							return;
 						}
+
+						buildChartInfo(songData);
 
 						// 设置Conductor的BPM信息以支持beat检测
 						Conductor.bpm = PlayState.SONG.bpm;
@@ -838,8 +895,8 @@ class FreeplayState extends MusicBeatState
 
 				// 显示初始BPM
 				bpmText.text = 'BPM: ${Math.round(Conductor.bpm)}';
-				bpmText.x = FlxG.width - bpmText.width - 10;
-				bpmText.y = (FlxG.height - bpmText.height) / 2; // 垂直居中
+				bpmText.x = FlxG.width - bpmText.width - 6;
+				bpmText.y = diffText.y + diffText.height + 4;
 
 				// 复用底图仅缩放，避免新建 BitmapData 造成 GC 尖刺
 				refreshBpmBackground();
@@ -867,6 +924,8 @@ class FreeplayState extends MusicBeatState
 
 			function findModWithSong(song:String):String
 			{
+				if (_audioModCache.exists(song))
+					return _audioModCache.get(song);
 				var found:String = '';
 				#if MODS_ALLOWED
 				for (mod in Mods.getModDirectories())
@@ -878,6 +937,7 @@ class FreeplayState extends MusicBeatState
 					}
 				}
 				#end
+				_audioModCache.set(song, found);
 				return found;
 			}
 
@@ -1742,6 +1802,112 @@ class FreeplayState extends MusicBeatState
 		}
 	}
 
+	private function buildChartInfo(songData:SwagSong):Void
+	{
+		if (songData == null)
+			return;
+
+		var songName:String = songData.song;
+		var bpm:Float = songData.bpm;
+		var speed:Float = songData.speed;
+		var fmt:String = songData.format;
+		var p1:String = songData.player1;
+		var p2:String = songData.player2;
+		var sections:Array<SwagSection> = songData.notes;
+		var secCount:Int = (sections != null) ? sections.length : 0;
+
+		var totalNotes:Int = 0;
+		var totalEvents:Int = (songData.events != null) ? songData.events.length : 0;
+		if (sections != null)
+		{
+			for (sec in sections)
+			{
+				if (sec.sectionNotes != null)
+					totalNotes += sec.sectionNotes.length;
+			}
+		}
+
+		var lastTime:Float = 0;
+		if (sections != null && sections.length > 0)
+		{
+			var lastSec:SwagSection = sections[sections.length - 1];
+			var secBeats:Float = 4;
+			var lastBeats:Null<Float> = cast lastSec.sectionBeats;
+			if (lastBeats != null && !Math.isNaN(lastBeats))
+				secBeats = lastBeats;
+
+			var baseTime:Float = 0;
+			for (i in 0...sections.length - 1)
+			{
+				var sb:Float = 4;
+				var rawBeats:Null<Float> = cast sections[i].sectionBeats;
+				if (rawBeats != null && !Math.isNaN(rawBeats))
+					sb = rawBeats;
+				baseTime += (sb * 60000) / bpm;
+			}
+			lastTime = baseTime + (secBeats * 60000) / bpm;
+			var lastNoteTime:Float = 0;
+			if (lastSec.sectionNotes != null)
+			{
+				for (note in lastSec.sectionNotes)
+				{
+					var nt:Float = note[0];
+					if (nt > lastNoteTime)
+						lastNoteTime = nt;
+				}
+				if (lastNoteTime > 0)
+					lastTime = lastNoteTime + (secBeats * 60000) / bpm;
+			}
+		}
+
+		var durationStr:String = '';
+		if (lastTime > 0)
+		{
+			var totalSec:Float = lastTime / 1000;
+			var mins:Int = Std.int(totalSec / 60);
+			var secs:Int = Std.int(totalSec % 60);
+			var ms:Int = Std.int(lastTime % 1000);
+			durationStr = '$mins:${StringTools.lpad(Std.string(secs), '0', 2)}.${StringTools.lpad(Std.string(ms), '0', 3)}';
+		}
+		else
+		{
+			durationStr = 'N/A';
+		}
+
+		var lines:Array<String> = [];
+		lines.push('Song: $songName');
+		lines.push('BPM: ${Math.round(bpm)}');
+		lines.push('Speed: ${Std.string(speed)}x');
+		lines.push('Format: $fmt');
+		lines.push('Sections: $secCount');
+		lines.push('Notes: $totalNotes');
+		lines.push('Events: $totalEvents');
+		lines.push('Duration: $durationStr');
+		lines.push('Players: $p1 vs $p2');
+		if (songData.stage != null && songData.stage.length > 0)
+			lines.push('Stage: ${songData.stage}');
+		if (songData.generatedBy != null && songData.generatedBy.length > 0)
+			lines.push('By: ${songData.generatedBy}');
+
+		chartInfoText.text = lines.join('\n');
+
+		var textH:Float = chartInfoText.height;
+		var newH:Float = Std.int(textH + 44);
+		var infoPanelX:Float = FlxG.width - 280 - 12;
+		var infoPanelY:Float = (FlxG.height - newH) / 2;
+
+		chartInfoBG.setGraphicSize(280, newH);
+		chartInfoBG.updateHitbox();
+		chartInfoBG.x = infoPanelX;
+		chartInfoBG.y = infoPanelY;
+		chartInfoTitle.x = infoPanelX + 8;
+		chartInfoTitle.y = infoPanelY + 6;
+		chartInfoText.x = infoPanelX + 8;
+		chartInfoText.y = infoPanelY + 28;
+
+		_chartInfoBuilt = true;
+	}
+
 	override function destroy():Void
 	{
 		// 清理背景缩放状态
@@ -1751,10 +1917,12 @@ class FreeplayState extends MusicBeatState
 
 		// 重置Freeplay播放标志
 		isFreeplayPlayingMusic = false;
+		lastWarmupSelected = -999;
 
 		// 清理谱面缓存，释放内存
 		_songDataCache.clear();
 		_songPathCache.clear();
+		_audioModCache.clear();
 		#if (sys && FEATURE_FILESYSTEM)
 		// 停止后台预解析工作线程并清空队列，避免线程泄漏
 		_prefetchWorkerRunning = false;
@@ -1777,5 +1945,12 @@ class FreeplayState extends MusicBeatState
 		// 清理BPM提示
 		bpmText = null;
 		bpmTextBG = null;
+
+		// 清理谱面信息面板
+		chartInfoBG = null;
+		chartInfoTitle = null;
+		chartInfoText = null;
+		_chartInfoBuilt = false;
+		_chartInfoVisible = true;
 	}
 }

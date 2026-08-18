@@ -69,7 +69,8 @@ class MusicPlayer extends FlxGroup
 			add(text);
 		}
 
-		progressBar = new FlxBar(timeTxt.x, timeTxt.y + timeTxt.height, LEFT_TO_RIGHT, Std.int(timeTxt.width), 8, null, "", 0, Math.POSITIVE_INFINITY);
+		var barW:Int = Std.int(Math.max(350, timeTxt.width));
+		progressBar = new FlxBar(timeTxt.x + timeTxt.width - barW, timeTxt.y + timeTxt.height, LEFT_TO_RIGHT, barW, 8, null, "", 0, Math.POSITIVE_INFINITY);
 		progressBar.createFilledBar(FlxColor.WHITE, FlxColor.BLACK);
 		add(progressBar);
 
@@ -281,7 +282,7 @@ class MusicPlayer extends FlxGroup
 
 			progressBar.setRange(0, FlxG.sound.music.length);
 			progressBar.setParent(FlxG.sound.music, "time");
-			progressBar.numDivisions = 1600;
+			progressBar.numDivisions = 0;
 
 			updateTimeTxt();
 		}
