@@ -51,6 +51,7 @@ class PsychUIRadioGroup extends FlxSpriteGroup
 
 	override function update(elapsed:Float)
 	{
+		if (!active || !exists || camera == null) return;
 		super.update(elapsed);
 
 		_hitbox.x = x;

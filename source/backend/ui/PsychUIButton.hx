@@ -56,6 +56,7 @@ class PsychUIButton extends FlxSpriteGroup
 	var _firstFrame:Bool = true;
 	override function update(elapsed:Float)
 	{
+		if (!active || !exists || camera == null) return;
 		super.update(elapsed);
 
 		if(_firstFrame)

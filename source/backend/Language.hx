@@ -3,6 +3,7 @@ package backend;
 // Language.hx
 import openfl.utils.Assets;
 import haxe.Json;
+import backend.ui.PsychUIInputText;
 
 class Language {
     private static var currentLang:Map<String, String> = new Map();
@@ -31,6 +32,12 @@ class Language {
 
         // 合并设置界面（Options）专属语言包（assets/languages/options/{lang}.json）
         OptionsLanguage.mergeInto(currentLang, lang);
+
+        // 合并场景编辑器（Stage Editor）专属语言包（assets/languages/editors/stage_editor/{lang}.json）
+        StageEditorLanguage.mergeInto(currentLang, lang);
+
+        // 设置 UI 组件默认字体，确保下拉框/数字框/输入框能正确显示 CJK 字符
+        PsychUIInputText.defaultFont = Paths.font(get('uitab_font'));
 
         // 通知所有监听者语言已更改
         for (callback in onLanguageChangedCallbacks) {

@@ -308,6 +308,8 @@ class PsychUIDropDownItem extends FlxSpriteGroup
 
 		text = new FlxText(0, 0, width, 8);
 		text.color = FlxColor.BLACK;
+		if (PsychUIInputText.defaultFont != null && PsychUIInputText.defaultFont.length > 0)
+			text.setFormat(PsychUIInputText.defaultFont, 8, FlxColor.BLACK);
 		add(text);
 	}
 

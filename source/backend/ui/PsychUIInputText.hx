@@ -41,6 +41,8 @@ class PsychUIInputText extends FlxSpriteGroup
 
 	public static var focusOn(default, set):PsychUIInputText = null;
 
+	public static var defaultFont:String = null;
+
 	public var name:String;
 	public var bg:FlxSprite;
 	public var behindText:FlxSprite;

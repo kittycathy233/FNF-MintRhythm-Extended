@@ -39,6 +39,7 @@ class PsychUICheckBox extends FlxSpriteGroup
 	public var broadcastCheckBoxEvent:Bool = true;
 	override function update(elapsed:Float)
 	{
+		if (!active || !exists || camera == null || box == null || text == null) return;
 		super.update(elapsed);
 
 		if(FlxG.mouse.justPressed)

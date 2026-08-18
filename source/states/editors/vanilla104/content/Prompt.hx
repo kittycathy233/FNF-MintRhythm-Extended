@@ -3,29 +3,28 @@ package states.editors.vanilla104.content;
 import states.editors.vanilla104.content.ui.*;
 
 import flixel.util.FlxDestroyUtil;
+import backend.Language;
 
-// Exit confirmation prompt used on all editors, for convenience
 class ExitConfirmationPrompt extends Prompt
 {
 	public function new(?finishCallback:Void->Void)
 	{
-		super('There\'s unsaved progress,\nare you sure you want to exit?', function()
+		super(Language.get('stage_editor_prompt_exit_title'), function()
 		{
 			FlxG.mouse.visible = false;
 			MusicBeatState.switchState(new states.editors.MasterEditorMenu());
 			FlxG.sound.playMusic(Paths.music('freakyMenu'));
 			if(finishCallback != null) finishCallback();
-		}, 'Exit');
+		}, Language.get('stage_editor_prompt_yes'));
 	}
 }
 
-// A Simple Prompt with "OK" and "Cancel" that covers most case usages
 class Prompt extends BasePrompt
 {
 	var yesFunction:Void->Void;
 	var noFunction:Void->Void;
-	var _yesTxt:String = 'OK';
-	var _noTxt:String = 'Cancel';
+	var _yesTxt:String = Language.get('stage_editor_prompt_yes');
+	var _noTxt:String = Language.get('stage_editor_prompt_cancel');
 	public function new(title:String, yesFunction:Void->Void, ?noFunction:Void->Void, ?_yesTxt:String, ?_noTxt:String)
 	{
 		if(_yesTxt != null) this._yesTxt = _yesTxt;
@@ -42,7 +41,7 @@ class Prompt extends BasePrompt
 		var btn:VUIButton = new VUIButton(0, btnY, _yesTxt, function() {
 			yesFunction();
 			controls.isInSubstate = false;
-			close();
+			_pendingClose = true;
 		});
 		btn.normalStyle.bgColor = FlxColor.RED;
 		btn.normalStyle.textColor = FlxColor.WHITE;
@@ -51,7 +50,7 @@ class Prompt extends BasePrompt
 		btn.cameras = cameras;
 		add(btn);
 
-		var btn:VUIButton = new VUIButton(0, btnY, _noTxt, close);
+		var btn:VUIButton = new VUIButton(0, btnY, _noTxt, function() { _pendingClose = true; });
 		btn.screenCenter(X);
 		btn.x += 100;
 		btn.cameras = cameras;
@@ -73,6 +72,7 @@ class BasePrompt extends MusicBeatSubstate
 
 	public var onCreate:BasePrompt->Void;
 	public var onUpdate:BasePrompt->Float->Void;
+	var _pendingClose:Bool = false;
 	public function new(?sizeX:Float = 420, ?sizeY:Float = 160, title:String, ?onCreate:BasePrompt->Void, ?onUpdate:BasePrompt->Float->Void)
 	{
 		this._sizeX = sizeX;
@@ -110,13 +110,22 @@ class BasePrompt extends MusicBeatSubstate
 	var _blockInput:Float = 0.1;
 	override function update(elapsed:Float)
 	{
+		if(!active) return;
+
 		super.update(elapsed);
+
+		if(_pendingClose)
+		{
+			_pendingClose = false;
+			close();
+			return;
+		}
 
 		_blockInput = Math.max(0, _blockInput - elapsed);
 		if(_blockInput <= 0 && FlxG.keys.justPressed.ESCAPE)
 		{
 			controls.isInSubstate = false;
-			close();
+			_pendingClose = true;
 			return;
 		}
 
@@ -126,7 +135,6 @@ class BasePrompt extends MusicBeatSubstate
 
 	override function destroy()
 	{
-		for (member in members) FlxDestroyUtil.destroy(member);
 		super.destroy();
 	}
 }
