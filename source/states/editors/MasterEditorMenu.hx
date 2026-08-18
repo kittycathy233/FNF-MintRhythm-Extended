@@ -15,7 +15,7 @@ class MasterEditorMenu extends MusicBeatState
 	var options:Array<String> = [
 		'Chart Editor',
 		'Character Editor',
-		'Stage Editor (WIP)',
+		'Stage Editor (BETA)',
 		'Week Editor',
 		'Menu Character Editor',
 		'Dialogue Editor',
@@ -119,7 +119,7 @@ class MasterEditorMenu extends MusicBeatState
 					states.editors.ChartingRouter.openChartingEditor(true);
 				case 'Character Editor':
 					LoadingState.loadAndSwitchState(new CharacterEditorState(Character.DEFAULT_CHARACTER, false));
-				case 'Stage Editor (WIP)':
+				case 'Stage Editor (BETA)':
 					LoadingState.loadAndSwitchState(new StageEditorState());
 				case 'Week Editor':
 					MusicBeatState.switchState(new WeekEditorState());

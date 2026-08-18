@@ -145,24 +145,24 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		var btn = 'F2';
 		#end
 
-		var str:Array<String> = (controls.mobileC) ? ["X/Y - Camera Zoom In/Out",
-			"G + Arrow Buttons - Move Camera",
-			"Z - Reset Camera Zoom",
-			"Arrow Buttons/Drag - Move Object",
+		var str:Array<String> = (controls.mobileC) ? [
+			Language.get('stage_editor_help_m_zoom'),
+			Language.get('stage_editor_help_m_move_cam'),
+			Language.get('stage_editor_help_m_reset_zoom'),
+			Language.get('stage_editor_help_m_move_obj'),
 			"",
-			"S - Toggle HUD",
-			// "F12 - Toggle Selection Rectangle",
-			// "Hold Control - Move Objects pixel-by-pixel and Camera 4x slower",
-			"Hold C - Move Objects and Camera 4x faster"
-		] : ["E/Q - Camera Zoom In/Out",
-			"J/K/L/I - Move Camera",
-			"R - Reset Camera Zoom",
-			"Arrow Keys/Mouse & Right Click - Move Object",
+			Language.get('stage_editor_help_m_toggle_hud'),
+			Language.get('stage_editor_help_m_fast')
+		] : [
+			Language.get('stage_editor_help_d_zoom'),
+			Language.get('stage_editor_help_d_move_cam'),
+			Language.get('stage_editor_help_d_reset_zoom'),
+			Language.get('stage_editor_help_d_move_obj'),
 			"",
-			'$btn - Toggle HUD',
-			"F12 - Toggle Selection Rectangle",
-			"Hold Shift - Move Objects and Camera 4x faster",
-			"Hold Control - Move Objects pixel-by-pixel and Camera 4x slower"
+			Language.get('stage_editor_help_d_toggle_hud', [btn]),
+			Language.get('stage_editor_help_d_select_rect'),
+			Language.get('stage_editor_help_d_fast'),
+			Language.get('stage_editor_help_d_slow')
 		];
 
 		helpBg = new FlxSprite().makeGraphic(1, 1, FlxColor.BLACK);
@@ -233,12 +233,67 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 			if(highQualityCheckbox.checked) curFilters |= HIGH_QUALITY;
 		}
 
-		spriteList_box = new PsychUIBox(25, 40, 250, 200, [Language.get('stage_editor_sprite_list')]);
+		spriteList_box = new PsychUIBox(25, #if mobile 70 #else 40 #end, 250, 200, [Language.get('stage_editor_sprite_list')]);
 		spriteList_box.scrollFactor.set();
 		spriteList_box.cameras = [camHUD];
 		add(spriteList_box);
 		addSpriteListBox();
 
+		#if mobile
+		var bg:FlxSprite = new FlxSprite(0, 0).makeGraphic(1, 1, FlxColor.BLACK);
+		bg.cameras = [camHUD];
+		bg.alpha = 0.4;
+		bg.scale.set(FlxG.width, 60);
+		bg.updateHitbox();
+		add(bg);
+		
+		var targetTxt:FlxText = lbl(30, 8, 300, Language.get('stage_editor_camera_target'), 16);
+		targetTxt.alignment = CENTER;
+		targetTxt.cameras = [camHUD];
+		targetTxt.scrollFactor.set();
+		targetTxt.active = false;
+		add(targetTxt);
+
+		focusRadioGroup = new PsychUIRadioGroup(targetTxt.x, 36, ['dad', 'boyfriend', 'gf'], 10, 0, true);
+		focusRadioGroup.onClick = function() {
+			var point = focusOnTarget(focusRadioGroup.labels[focusRadioGroup.checked]);
+			camFollow.setPosition(point.x, point.y);
+			FlxG.camera.target = camFollow;
+		}
+		focusRadioGroup.radios[0].label = Language.get('stage_editor_opponent');
+		focusRadioGroup.radios[1].label = Language.get('stage_editor_boyfriend');
+		focusRadioGroup.radios[2].label = Language.get('stage_editor_girlfriend');
+
+		for (radio in focusRadioGroup.radios)
+			radio.text.size = 11;
+		
+		focusRadioGroup.cameras = [camHUD];
+		add(focusRadioGroup);
+
+		lowQualityCheckbox = new PsychUICheckBox(FlxG.width - 240, 24, Language.get('stage_editor_can_see_low_quality'), 90);
+		lowQualityCheckbox.cameras = [camHUD];
+		lowQualityCheckbox.onClick = visibilityFilterUpdate;
+		lowQualityCheckbox.checked = false;
+		add(lowQualityCheckbox);
+
+		highQualityCheckbox = new PsychUICheckBox(FlxG.width - 120, 24, Language.get('stage_editor_can_see_high_quality'), 90);
+		highQualityCheckbox.cameras = [camHUD];
+		highQualityCheckbox.onClick = visibilityFilterUpdate;
+		highQualityCheckbox.checked = true;
+		add(highQualityCheckbox);
+		visibilityFilterUpdate();
+
+		var tipTextMobile:FlxText = lbl(0, 20, 300, Language.get('stage_editor_press_f1_for_help', [(controls.mobileC) ? 'F' : 'F1']), 12);
+		tipTextMobile.alignment = CENTER;
+		tipTextMobile.cameras = [camHUD];
+		tipTextMobile.scrollFactor.set();
+		tipTextMobile.screenCenter(X);
+		tipTextMobile.borderStyle = OUTLINE_FAST;
+		tipTextMobile.borderColor = FlxColor.BLACK;
+		tipTextMobile.borderSize = 2;
+		tipTextMobile.active = false;
+		add(tipTextMobile);
+		#else
 		var bg:FlxSprite = new FlxSprite(0, FlxG.height - 60).makeGraphic(1, 1, FlxColor.BLACK);
 		bg.cameras = [camHUD];
 		bg.alpha = 0.4;
@@ -290,6 +345,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		highQualityCheckbox.checked = true;
 		add(highQualityCheckbox);
 		visibilityFilterUpdate();
+		#end
 
 		posTxt = new FlxText(0, 50, 500, Language.get('stage_editor_pos_x_y', ['0', '0']), 24);
 		posTxt.setFormat(Paths.font('vcr.ttf'), 24, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -304,7 +360,12 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		outputTxt.borderStyle = OUTLINE_FAST;
 		outputTxt.borderSize = 1;
 		outputTxt.cameras = [camHUD];
+		#if mobile
+		outputTxt.y = 68;
+		outputTxt.screenCenter(X);
+		#else
 		outputTxt.screenCenter();
+		#end
 		outputTxt.alpha = 0;
 		add(outputTxt);
 	}
@@ -477,6 +538,15 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 	}
 
 	var createPopup:FlxSpriteGroup;
+	var mobileSpritePopup:FlxSpriteGroup;
+	var mobileSpriteInput:PsychUIInputText;
+	var mobileSpriteAddBtn:PsychUIButton;
+	var mobileSpriteType:String = null;
+	var mobileSpriteLoadedKey:String = null;
+	var mobileSpriteFormatTxt:FlxText;
+	var mobileChangeImgPopup:FlxSpriteGroup;
+	var mobileChangeImgInput:PsychUIInputText;
+	var mobileChangeImgFormatTxt:FlxText;
 	function findUnoccupiedName(prefix = 'sprite')
 	{
 		var num:Int = 1;
@@ -534,12 +604,20 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		createPopup.add(txt);
 
 		var btnY = 320;
+		#if mobile
+		var btn:PsychUIButton = new PsychUIButton(0, btnY, Language.get('stage_editor_no_animation'), function() openMobileSpriteInput('sprite'));
+		#else
 		var btn:PsychUIButton = new PsychUIButton(0, btnY, Language.get('stage_editor_no_animation'), function() loadImage('sprite'));
+		#end
 		btn.screenCenter(X);
 		createPopup.add(btn);
 
 		btnY += 50;
+		#if mobile
+		var btn:PsychUIButton = new PsychUIButton(0, btnY, Language.get('stage_editor_animated'), function() openMobileSpriteInput('animatedSprite'));
+		#else
 		var btn:PsychUIButton = new PsychUIButton(0, btnY, Language.get('stage_editor_animated'), function() loadImage('animatedSprite'));
+		#end
 		btn.screenCenter(X);
 		createPopup.add(btn);
 
@@ -556,7 +634,298 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		createPopup.add(btn);
 		add(createPopup);
 		createPopup.visible = createPopup.active = false;
+
+		#if mobile
+		createMobileSpriteInput();
+		createMobileChangeImagePopup();
+		#end
 	}
+
+	#if mobile
+	function createMobileSpriteInput()
+	{
+		mobileSpritePopup = new FlxSpriteGroup();
+		mobileSpritePopup.cameras = [camHUD];
+
+		var bg:FlxSprite = new FlxSprite().makeGraphic(1, 1, FlxColor.BLACK);
+		bg.alpha = 0.7;
+		bg.scale.set(340, 280);
+		bg.updateHitbox();
+		bg.screenCenter();
+		mobileSpritePopup.add(bg);
+
+		var titleTxt:FlxText = lbl(0, bg.y + 10, 300, Language.get('stage_editor_new_sprite'), 20);
+		titleTxt.screenCenter(X);
+		titleTxt.alignment = CENTER;
+		mobileSpritePopup.add(titleTxt);
+
+		var yPos = bg.y + 45;
+
+		var pathLbl:FlxText = lbl(bg.x + 10, yPos, 300, Language.get('stage_editor_mobile_sprite_path'), 14);
+		mobileSpritePopup.add(pathLbl);
+
+		yPos += 22;
+
+		mobileSpriteInput = new PsychUIInputText(bg.x + 10, yPos, 310, '', 14);
+		mobileSpriteInput.cameras = [camHUD];
+		mobileSpritePopup.add(mobileSpriteInput);
+
+		yPos += 36;
+
+		mobileSpriteFormatTxt = lbl(bg.x + 10, yPos, 310, Language.get('stage_editor_mobile_sprite_format'), 12);
+		mobileSpriteFormatTxt.color = 0xFFAAAAAA;
+		mobileSpritePopup.add(mobileSpriteFormatTxt);
+
+		yPos += 18;
+
+		var hintTxt:FlxText = lbl(bg.x + 10, yPos, 310, Language.get('stage_editor_mobile_sprite_enter_hint'), 12);
+		hintTxt.color = 0xFF666666;
+		mobileSpritePopup.add(hintTxt);
+
+		yPos += 46;
+
+		mobileSpriteAddBtn = new PsychUIButton(0, yPos, Language.get('stage_editor_mobile_sprite_add'), function() tryAndAddMobileSprite());
+		mobileSpriteAddBtn.screenCenter(X);
+		mobileSpriteAddBtn.normalStyle.bgColor = FlxColor.GREEN;
+		mobileSpriteAddBtn.normalStyle.textColor = FlxColor.WHITE;
+		mobileSpritePopup.add(mobileSpriteAddBtn);
+
+		yPos += 50;
+
+		var cancelBtn:PsychUIButton = new PsychUIButton(0, yPos, Language.get('stage_editor_prompt_cancel'), function() {
+			mobileSpritePopup.visible = mobileSpritePopup.active = false;
+		});
+		cancelBtn.screenCenter(X);
+		mobileSpritePopup.add(cancelBtn);
+
+		add(mobileSpritePopup);
+		mobileSpritePopup.visible = mobileSpritePopup.active = false;
+	}
+
+	function openMobileSpriteInput(type:String)
+	{
+		mobileSpriteType = type;
+		mobileSpriteLoadedKey = null;
+		mobileSpriteInput.text = '';
+
+		if (mobileSpriteFormatTxt != null)
+		{
+			mobileSpriteFormatTxt.text = Language.get(type == 'animatedSprite'
+				? 'stage_editor_mobile_sprite_anim_required'
+				: 'stage_editor_mobile_sprite_format');
+		}
+
+		createPopup.visible = createPopup.active = false;
+		mobileSpritePopup.visible = mobileSpritePopup.active = true;
+	}
+
+	function tryAndAddMobileSprite()
+	{
+		var inputPath:String = mobileSpriteInput.text;
+		if (inputPath == null || inputPath.trim().length == 0)
+		{
+			showOutput(Language.get('stage_editor_mobile_sprite_not_found', ['']), true);
+			return;
+		}
+
+		var trimmedPath:String = inputPath.trim();
+		if (trimmedPath.startsWith('images/'))
+			trimmedPath = trimmedPath.substr('images/'.length);
+
+		var lastDot:Int = trimmedPath.lastIndexOf('.');
+		if (lastDot < 0)
+		{
+			showOutput(Language.get('stage_editor_mobile_sprite_invalid_ext'), true);
+			return;
+		}
+
+		var ext:String = trimmedPath.substr(lastDot + 1).toLowerCase();
+		var baseKey:String = trimmedPath.substr(0, lastDot);
+
+		if (ext != 'png' && ext != 'xml' && ext != 'json' && ext != 'txt')
+		{
+			showOutput(Language.get('stage_editor_mobile_sprite_invalid_ext'), true);
+			return;
+		}
+
+		var pngPath:String = 'images/$baseKey.png';
+		if (!Paths.fileExists(pngPath, TEXT))
+		{
+			showOutput(Language.get('stage_editor_mobile_sprite_not_found', [pngPath]), true);
+			return;
+		}
+
+		if (mobileSpriteType == 'animatedSprite')
+		{
+			var hasAnim:Bool = false;
+			if (Paths.fileExists('images/$baseKey.xml', TEXT)) hasAnim = true;
+			if (Paths.fileExists('images/$baseKey.json', TEXT)) hasAnim = true;
+			if (Paths.fileExists('images/$baseKey.txt', TEXT)) hasAnim = true;
+
+			if (!hasAnim)
+			{
+				showOutput(Language.get('stage_editor_mobile_sprite_anim_required'), true);
+				return;
+			}
+		}
+
+		insertMeta(new StageEditorMetaSprite({type: mobileSpriteType, name: findUnoccupiedName()}, new ModchartSprite()));
+
+		var selected = getSelected();
+		tryLoadImage(selected, baseKey);
+
+		selected.sprite.x = Math.round(FlxG.camera.scroll.x + FlxG.width / 2 - selected.sprite.width / 2);
+		selected.sprite.y = Math.round(FlxG.camera.scroll.y + FlxG.height / 2 - selected.sprite.height / 2);
+		posTxt.visible = true;
+		posTxt.text = Language.get('stage_editor_pos_x_y', [Std.string(selected.sprite.x), Std.string(selected.sprite.y)]);
+
+		showOutput(Language.get('stage_editor_mobile_sprite_loaded', [baseKey]));
+
+		mobileSpritePopup.visible = mobileSpritePopup.active = false;
+	}
+
+	function createMobileChangeImagePopup()
+	{
+		mobileChangeImgPopup = new FlxSpriteGroup();
+		mobileChangeImgPopup.cameras = [camHUD];
+
+		var bg:FlxSprite = new FlxSprite().makeGraphic(1, 1, FlxColor.BLACK);
+		bg.alpha = 0.7;
+		bg.scale.set(340, 260);
+		bg.updateHitbox();
+		bg.screenCenter();
+		mobileChangeImgPopup.add(bg);
+
+		var titleTxt:FlxText = lbl(0, bg.y + 10, 300, Language.get('stage_editor_change_image'), 18);
+		titleTxt.screenCenter(X);
+		titleTxt.alignment = CENTER;
+		mobileChangeImgPopup.add(titleTxt);
+
+		var yPos = bg.y + 45;
+
+		var pathLbl:FlxText = lbl(bg.x + 10, yPos, 300, Language.get('stage_editor_mobile_sprite_path'), 14);
+		mobileChangeImgPopup.add(pathLbl);
+
+		yPos += 22;
+
+		mobileChangeImgInput = new PsychUIInputText(bg.x + 10, yPos, 310, '', 14);
+		mobileChangeImgInput.cameras = [camHUD];
+		mobileChangeImgPopup.add(mobileChangeImgInput);
+
+		yPos += 36;
+
+		mobileChangeImgFormatTxt = lbl(bg.x + 10, yPos, 310, Language.get('stage_editor_mobile_sprite_format'), 12);
+		mobileChangeImgFormatTxt.color = 0xFFAAAAAA;
+		mobileChangeImgPopup.add(mobileChangeImgFormatTxt);
+
+		yPos += 40;
+
+		var addBtn:PsychUIButton = new PsychUIButton(0, yPos, Language.get('stage_editor_mobile_sprite_add'), function() tryAndChangeMobileImage());
+		addBtn.screenCenter(X);
+		addBtn.normalStyle.bgColor = FlxColor.GREEN;
+		addBtn.normalStyle.textColor = FlxColor.WHITE;
+		mobileChangeImgPopup.add(addBtn);
+
+		yPos += 50;
+
+		var cancelBtn:PsychUIButton = new PsychUIButton(0, yPos, Language.get('stage_editor_prompt_cancel'), function() {
+			mobileChangeImgPopup.visible = mobileChangeImgPopup.active = false;
+		});
+		cancelBtn.screenCenter(X);
+		mobileChangeImgPopup.add(cancelBtn);
+
+		add(mobileChangeImgPopup);
+		mobileChangeImgPopup.visible = mobileChangeImgPopup.active = false;
+	}
+
+	function openMobileChangeImage()
+	{
+		var selected = getSelected();
+		if (selected == null)
+		{
+			showOutput(Language.get('stage_editor_select_first'), true);
+			return;
+		}
+
+		mobileChangeImgInput.text = '';
+		if (mobileChangeImgFormatTxt != null)
+		{
+			mobileChangeImgFormatTxt.text = Language.get(selected.type == 'animatedSprite'
+				? 'stage_editor_mobile_sprite_anim_required'
+				: 'stage_editor_mobile_sprite_format');
+		}
+
+		mobileChangeImgPopup.visible = mobileChangeImgPopup.active = true;
+	}
+
+	function tryAndChangeMobileImage()
+	{
+		var selected = getSelected();
+		if (selected == null)
+		{
+			showOutput(Language.get('stage_editor_select_first'), true);
+			mobileChangeImgPopup.visible = mobileChangeImgPopup.active = false;
+			return;
+		}
+
+		var inputPath:String = mobileChangeImgInput.text;
+		if (inputPath == null || inputPath.trim().length == 0)
+		{
+			showOutput(Language.get('stage_editor_mobile_sprite_not_found', ['']), true);
+			return;
+		}
+
+		var trimmedPath:String = inputPath.trim();
+		if (trimmedPath.startsWith('images/'))
+			trimmedPath = trimmedPath.substr('images/'.length);
+
+		var lastDot:Int = trimmedPath.lastIndexOf('.');
+		if (lastDot < 0)
+		{
+			showOutput(Language.get('stage_editor_mobile_sprite_invalid_ext'), true);
+			return;
+		}
+
+		var ext:String = trimmedPath.substr(lastDot + 1).toLowerCase();
+		var baseKey:String = trimmedPath.substr(0, lastDot);
+
+		if (ext != 'png' && ext != 'xml' && ext != 'json' && ext != 'txt')
+		{
+			showOutput(Language.get('stage_editor_mobile_sprite_invalid_ext'), true);
+			return;
+		}
+
+		var pngPath:String = 'images/$baseKey.png';
+		if (!Paths.fileExists(pngPath, TEXT))
+		{
+			showOutput(Language.get('stage_editor_mobile_sprite_not_found', [pngPath]), true);
+			return;
+		}
+
+		if (selected.type == 'animatedSprite')
+		{
+			var hasAnim:Bool = false;
+			if (Paths.fileExists('images/$baseKey.xml', TEXT)) hasAnim = true;
+			if (Paths.fileExists('images/$baseKey.json', TEXT)) hasAnim = true;
+			if (Paths.fileExists('images/$baseKey.txt', TEXT)) hasAnim = true;
+
+			if (!hasAnim)
+			{
+				showOutput(Language.get('stage_editor_mobile_sprite_anim_required'), true);
+				return;
+			}
+		}
+
+		tryLoadImage(selected, baseKey);
+
+		posTxt.visible = true;
+		posTxt.text = Language.get('stage_editor_pos_x_y', [Std.string(selected.sprite.x), Std.string(selected.sprite.y)]);
+
+		showOutput(Language.get('stage_editor_mobile_sprite_loaded', [baseKey]));
+
+		mobileChangeImgPopup.visible = mobileChangeImgPopup.active = false;
+	}
+	#end
 	
 	function updateSpriteListRadio()
 	{
@@ -592,10 +961,29 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 
 		final maxNum:Int = 19;
 		spriteList_box.resize(250, Std.int(Math.min(maxNum, spriteListRadioGroup.labels.length) * 25 + 35));
+
+		#if mobile
+		if (UI_stagebox != null)
+		{
+			UI_stagebox.y = spriteList_box.y + spriteList_box.height + 10;
+		}
+		#end
 	}
 
 	function editorUI()
 	{
+		#if mobile
+		UI_stagebox = new PsychUIBox(25, spriteList_box.y + spriteList_box.height + 10, 250, 100, [Language.get('stage_editor_stage')]);
+		UI_stagebox.cameras = [camHUD];
+		UI_stagebox.scrollFactor.set();
+		add(UI_stagebox);
+
+		UI_box = new PsychUIBox(FlxG.width - 225, 70, 200, 400, [Language.get('stage_editor_meta'), Language.get('stage_editor_data'), Language.get('stage_editor_object')]);
+		UI_box.cameras = [camHUD];
+		UI_box.scrollFactor.set();
+		add(UI_box);
+		UI_box.selectedName = Language.get('stage_editor_data');
+		#else
 		UI_box = new PsychUIBox(FlxG.width - 225, 10, 200, 400, [Language.get('stage_editor_meta'), Language.get('stage_editor_data'), Language.get('stage_editor_object')]);
 		UI_box.cameras = [camHUD];
 		UI_box.scrollFactor.set();
@@ -607,6 +995,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		UI_stagebox.scrollFactor.set();
 		add(UI_stagebox);
 		UI_box.y += UI_stagebox.y + UI_stagebox.height;
+		#end
 
 		addDataTab();
 		addObjectTab();
@@ -848,8 +1237,12 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		objY += 35;
 		imgTxt = lbl(objX, objY - 15, 200, Language.get('stage_editor_image'), 8);
 		var imgButton:PsychUIButton = new PsychUIButton(objX, objY, Language.get('stage_editor_change_image'), function() {
+			#if mobile
+			openMobileChangeImage();
+			#else
 			trace('attempt to load image');
 			loadImage();
+			#end
 		});
 		tab_group.add(imgButton);
 		tab_group.add(imgTxt);
@@ -857,7 +1250,10 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		var animationsButton:PsychUIButton = new PsychUIButton(objX + 90, objY, Language.get('stage_editor_animations'), function() {
 			var selected = getSelected();
 			if(selected == null)
+			{
+				showOutput(Language.get('stage_editor_select_first'), true);
 				return;
+			}
 
 			if(selected.type != 'animatedSprite')
 			{
@@ -2114,7 +2510,11 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 		animsTxtGroup.cameras = [camHUD];
 		add(animsTxtGroup);
 		
+		#if mobile
+		UI_animationbox = new PsychUIBox(FlxG.width - 320, 75, 300, 250, [Language.get('stage_editor_animations_tab')]);
+		#else
 		UI_animationbox = new PsychUIBox(FlxG.width - 320, 20, 300, 250, [Language.get('stage_editor_animations_tab')]);
+		#end
 		UI_animationbox.cameras = [camHUD];
 		UI_animationbox.scrollFactor.set();
 		add(UI_animationbox);
@@ -2171,9 +2571,15 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 	{
 		var tab_group = UI_animationbox.getTab(Language.get('stage_editor_animations_tab')).menu;
 
-		animationInputText = new PsychUIInputText(15, 85, 80, '', 8);
-		animationNameInputText = new PsychUIInputText(animationInputText.x, animationInputText.y + 35, 150, '', 8);
-		animationIndicesInputText = new PsychUIInputText(animationNameInputText.x, animationNameInputText.y + 40, 250, '', 8);
+		#if mobile
+		var animSize:Int = 12;
+		#else
+		var animSize:Int = 8;
+		#end
+
+		animationInputText = new PsychUIInputText(15, 85, 80, '', animSize);
+		animationNameInputText = new PsychUIInputText(animationInputText.x, animationInputText.y + 35, 150, '', animSize);
+		animationIndicesInputText = new PsychUIInputText(animationNameInputText.x, animationNameInputText.y + 40, 250, '', animSize);
 		animationFramerate = new PsychUINumericStepper(animationInputText.x + 170, animationInputText.y, 1, 24, 0, 240, 0);
 		animationLoopCheckBox = new PsychUICheckBox(animationNameInputText.x + 170, animationNameInputText.y - 1, 'Should it Loop?', 100);
 
