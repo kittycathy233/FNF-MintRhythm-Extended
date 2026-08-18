@@ -335,9 +335,7 @@ inline static public function inst(song:String, ?specialInst:String = null, ?mod
 			if (FileSystem.exists(file))
 			{
 				try
-				{
 					bitmap = BitmapData.fromFile(file);
-				}
 				catch (e:Dynamic)
 				{
 					trace('Failed to load bitmap at $file: $e');

@@ -892,9 +892,7 @@ class ModItem extends FlxSpriteGroup
 		if (FileSystem.exists(file))
 		{
 			try
-			{
 				bmp = BitmapData.fromFile(file);
-			}
 			catch (e:Dynamic)
 			{
 				trace('Failed to load icon bitmap at $file: $e');

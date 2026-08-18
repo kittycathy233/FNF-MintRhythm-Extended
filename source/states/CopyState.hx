@@ -209,9 +209,7 @@ class CopyState extends MusicBeatState
 		{
 			case 'otf' | 'ttf':
 				try
-				{
 					return ByteArray.fromFile(file);
-				}
 				catch (e:Dynamic)
 				{
 					trace('Failed to load font file at $file: $e');
