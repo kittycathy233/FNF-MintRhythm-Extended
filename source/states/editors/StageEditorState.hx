@@ -12,6 +12,7 @@ import flixel.addons.display.FlxBackdrop;
 import flixel.addons.display.FlxGridOverlay;
 import flixel.math.FlxRect;
 import flixel.util.FlxDestroyUtil;
+import flixel.util.FlxColor;
 
 import openfl.utils.Assets;
 import openfl.utils.ByteArray;
@@ -958,6 +959,37 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 	}
 	#end
 	
+	function getHealthColor(type:String):FlxColor
+	{
+		var defaultColor:FlxColor = FlxColor.WHITE;
+		try
+		{
+			switch(type)
+			{
+				case 'gf':
+					if(gf != null)
+					{
+						var c:Array<Int> = gf.healthColorArray;
+						return FlxColor.fromRGB(Std.int(Math.min(255, Std.int(c[0] * 1.2))), Std.int(Math.min(255, Std.int(c[1] * 1.2))), Std.int(Math.min(255, Std.int(c[2] * 1.2))));
+					}
+				case 'boyfriend':
+					if(boyfriend != null)
+					{
+						var c:Array<Int> = boyfriend.healthColorArray;
+						return FlxColor.fromRGB(Std.int(Math.min(255, Std.int(c[0] * 1.2))), Std.int(Math.min(255, Std.int(c[1] * 1.2))), Std.int(Math.min(255, Std.int(c[2] * 1.2))));
+					}
+				case 'dad':
+					if(dad != null)
+					{
+						var c:Array<Int> = dad.healthColorArray;
+						return FlxColor.fromRGB(Std.int(Math.min(255, Std.int(c[0] * 1.2))), Std.int(Math.min(255, Std.int(c[1] * 1.2))), Std.int(Math.min(255, Std.int(c[2] * 1.2))));
+					}
+			}
+		}
+		catch(e:Dynamic) {}
+		return defaultColor;
+	}
+
 	function updateSpriteListRadio()
 	{
 		var _sel:String = (spriteListRadioGroup.checkedRadio != null ? spriteListRadioGroup.checkedRadio.label : null);
@@ -979,7 +1011,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 			}
 		}
 		nameList.reverse();
-		
+
 		spriteListRadioGroup.labels = nameList;
 		for (radio in spriteListRadioGroup.radios)
 		{
@@ -988,6 +1020,22 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 				spriteListRadioGroup.checkedRadio = radio;
 				break;
 			}
+		}
+
+		var colorIndex:Int = 0;
+		for (radio in spriteListRadioGroup.radios)
+		{
+			var idx:Int = spriteListRadioGroup.labels.length - colorIndex - 1;
+			if(idx >= 0 && idx < stageSprites.length)
+			{
+				var sprType:String = stageSprites[idx].type;
+				radio.text.color = getHealthColor(sprType);
+			}
+			else
+			{
+				radio.text.color = FlxColor.WHITE;
+			}
+			colorIndex++;
 		}
 
 		final maxNum:Int = 19;
@@ -1510,6 +1558,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 			dad.changeCharacter(selected);
 			setMetaData('dad', selected);
 			repositionDad();
+			updateSpriteListRadio();
 		});
 		oppDropdown.selectedLabel = dad.curCharacter;
 
@@ -1520,6 +1569,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 			gf.changeCharacter(selected);
 			setMetaData('gf', selected);
 			repositionGirlfriend();
+			updateSpriteListRadio();
 		});
 		gfDropdown.selectedLabel = gf.curCharacter;
 
@@ -1530,6 +1580,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 			boyfriend.changeCharacter(selected);
 			setMetaData('boyfriend', selected);
 			repositionBoyfriend();
+			updateSpriteListRadio();
 		});
 		plDropdown.selectedLabel = boyfriend.curCharacter;
 
@@ -1734,6 +1785,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		oppDropdown.selectedLabel = dad.curCharacter;
 		gfDropdown.selectedLabel = gf.curCharacter;
 		plDropdown.selectedLabel = boyfriend.curCharacter;
+		updateSpriteListRadio();
 	}
 	
 	function reloadStageDropDown()
