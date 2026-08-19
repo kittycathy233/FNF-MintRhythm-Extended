@@ -6,7 +6,7 @@ import backend.Highscore;
 import backend.StageData;
 import backend.WeekData;
 import backend.Song;
-import backend.ScoreLanguage;
+import backend.Language.ScoreLanguage;
 import backend.Rating;
 
 #if MODS_ALLOWED

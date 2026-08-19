@@ -1,0 +1,14 @@
+{
+	"dialogue_tab_line": "台词行",
+	"dialogue_angry": "愤怒文本框",
+	"dialogue_load": "加载台词",
+	"dialogue_save": "保存台词",
+	"dialogue_interval": "间隔/速度（毫秒）：",
+	"dialogue_character": "角色：",
+	"dialogue_sound": "音效文件名：",
+	"dialogue_text": "文本：",
+	"dialogue_tip": "按 {0} 删除当前台词行，按 {1} 在当前行之后插入新的一行。",
+	"dialogue_anim": "动画：{0}（{1} / {2}）- 按 {3} 或 {4} 切换",
+	"dialogue_no_anims": "错误！未找到任何动画",
+	"dialogue_line": "行：({0} / {1}) - 按 {2} 或 {3} 切换"
+}

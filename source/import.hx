@@ -58,7 +58,10 @@ import backend.Difficulty;
 import backend.Mods;
 import backend.LanguageBasic;
 import backend.Language;
-import backend.OptionsLanguage;
+import backend.Language.OptionsLanguage;
+// 各编辑器/分数本地化包已整合进 backend.Language 模块，作为其子类型：
+// StageEditorLanguage / OptionsLanguage / CharacterEditorLanguage / WeekEditorLanguage
+// / SubEditorsLanguage / ScoreLanguage。此处 OptionsLanguage 用于下方全局导入，其余子类型按需 import backend.Language.XXX。
 import backend.EventHandler;
 import mobile.backend.StorageUtil;
 

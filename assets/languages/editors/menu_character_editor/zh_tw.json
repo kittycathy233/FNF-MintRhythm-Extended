@@ -1,0 +1,17 @@
+{
+	"menu_char_tab_type": "角色類型",
+	"menu_char_tab_char": "角色",
+	"menu_char_load": "載入角色",
+	"menu_char_save": "儲存角色",
+	"menu_char_opponent": "對手",
+	"menu_char_boyfriend": "男朋友",
+	"menu_char_girlfriend": "女朋友",
+	"menu_char_flip_x": "水平翻轉",
+	"menu_char_antialiasing": "抗鋸齒",
+	"menu_char_reload": "重新載入角色",
+	"menu_char_confirm_anim": "按下確認動畫（.XML 中）：",
+	"menu_char_image_name": "圖像檔名：",
+	"menu_char_idle_anim": "閒置動畫（.XML 中）：",
+	"menu_char_scale": "縮放：",
+	"menu_char_tip": "方向鍵 - 調整偏移（按住 Shift 提升 10 倍速）\n空白鍵 - 播放\"按下\"動畫（男朋友角色類型）"
+}

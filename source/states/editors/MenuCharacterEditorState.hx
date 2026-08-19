@@ -53,10 +53,8 @@ class MenuCharacterEditorState extends MusicBeatState implements PsychUIEventHan
 		txtOffsets.alpha = 0.7;
 		add(txtOffsets);
 
-		var tipText:FlxText = new FlxText(0, 540, FlxG.width,
-			"Arrow Keys - Change Offset (Hold shift for 10x speed)
-			\nSpace - Play \"Start Press\" animation (Boyfriend Character Type)", 16);
-		tipText.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, CENTER);
+		var tipText:FlxText = new FlxText(0, 540, FlxG.width, Language.get('menu_char_tip'), 16);
+		tipText.setFormat(Paths.font(Language.get('uitab_font')), 16, FlxColor.WHITE, CENTER);
 		tipText.scrollFactor.set();
 		add(tipText);
 
@@ -71,20 +69,25 @@ class MenuCharacterEditorState extends MusicBeatState implements PsychUIEventHan
 
 	var UI_typebox:PsychUIBox;
 	var UI_mainbox:PsychUIBox;
+	function uilabel(x:Float, y:Float, ?w:Int, s:String):FlxText
+	{
+		return new FlxText(x, y, w == null ? 0 : w, s, 12).setFormat(Paths.font(Language.get('uitab_font')), 12, FlxColor.WHITE, LEFT, OUTLINE_FAST, FlxColor.BLACK);
+	}
+
 	function addEditorBox() {
-		UI_typebox = new PsychUIBox(100, FlxG.height - 230, 120, 180, ['Character Type']);
+		UI_typebox = new PsychUIBox(100, FlxG.height - 230, 120, 180, [Language.get('menu_char_tab_type')]);
 		UI_typebox.scrollFactor.set();
 		addTypeUI();
 		add(UI_typebox);
 
 		
-		UI_mainbox = new PsychUIBox(FlxG.width - 340, FlxG.height - 265, 240, 215, ['Character']);
+		UI_mainbox = new PsychUIBox(FlxG.width - 340, FlxG.height - 265, 240, 215, [Language.get('menu_char_tab_char')]);
 		UI_mainbox.scrollFactor.set();
 		addCharacterUI();
 		add(UI_mainbox);
 
 		#if !mobile
-		var loadButton:PsychUIButton = new PsychUIButton(0, 480, "Load Character", function() {
+		var loadButton:PsychUIButton = new PsychUIButton(0, 480, Language.get('menu_char_load'), function() {
 			loadCharacter();
 		});
 		loadButton.screenCenter(X);
@@ -92,7 +95,7 @@ class MenuCharacterEditorState extends MusicBeatState implements PsychUIEventHan
 		add(loadButton);
 		#end
 	
-		var saveButton:PsychUIButton = new PsychUIButton(0, 480, "Save Character", function() {
+		var saveButton:PsychUIButton = new PsychUIButton(0, 480, Language.get('menu_char_save'), function() {
 			saveCharacter();
 		});
 		saveButton.screenCenter(X);
@@ -104,9 +107,9 @@ class MenuCharacterEditorState extends MusicBeatState implements PsychUIEventHan
 
 	var characterTypeRadio:PsychUIRadioGroup;
 	function addTypeUI() {
-		var tab_group = UI_typebox.getTab('Character Type').menu;
+		var tab_group = UI_typebox.getTab(Language.get('menu_char_tab_type')).menu;
 
-		characterTypeRadio = new PsychUIRadioGroup(10, 20, ['Opponent', 'Boyfriend', 'Girlfriend'], 40);
+		characterTypeRadio = new PsychUIRadioGroup(10, 20, [Language.get('menu_char_opponent'), Language.get('menu_char_boyfriend'), Language.get('menu_char_girlfriend')], 40);
 		characterTypeRadio.checked = 0;
 		characterTypeRadio.onClick = updateCharacters;
 		tab_group.add(characterTypeRadio);
@@ -119,20 +122,20 @@ class MenuCharacterEditorState extends MusicBeatState implements PsychUIEventHan
 	var flipXCheckbox:PsychUICheckBox;
 	var antialiasingCheckbox:PsychUICheckBox;
 	function addCharacterUI() {
-		var tab_group = UI_mainbox.getTab('Character').menu;
+		var tab_group = UI_mainbox.getTab(Language.get('menu_char_tab_char')).menu;
 		
-		imageInputText = new PsychUIInputText(10, 20, 80, characterFile.image, 8);
-		idleInputText = new PsychUIInputText(10, imageInputText.y + 35, 100, characterFile.idle_anim, 8);
-		confirmInputText = new PsychUIInputText(10, idleInputText.y + 35, 100, characterFile.confirm_anim, 8);
+		imageInputText = new PsychUIInputText(10, 20, 80, characterFile.image, 12);
+		idleInputText = new PsychUIInputText(10, imageInputText.y + 35, 100, characterFile.idle_anim, 12);
+		confirmInputText = new PsychUIInputText(10, idleInputText.y + 35, 100, characterFile.confirm_anim, 12);
 
-		flipXCheckbox = new PsychUICheckBox(10, confirmInputText.y + 30, "Flip X", 100);
+		flipXCheckbox = new PsychUICheckBox(10, confirmInputText.y + 30, Language.get('menu_char_flip_x'), 100);
 		flipXCheckbox.onClick = function()
 		{
 			grpWeekCharacters.members[characterTypeRadio.checked].flipX = flipXCheckbox.checked;
 			characterFile.flipX = flipXCheckbox.checked;
 		};
 
-		antialiasingCheckbox = new PsychUICheckBox(10, flipXCheckbox.y + 30, "Antialiasing", 100);
+		antialiasingCheckbox = new PsychUICheckBox(10, flipXCheckbox.y + 30, Language.get('menu_char_antialiasing'), 100);
 		antialiasingCheckbox.checked = grpWeekCharacters.members[characterTypeRadio.checked].antialiasing;
 		antialiasingCheckbox.onClick = function()
 		{
@@ -140,16 +143,16 @@ class MenuCharacterEditorState extends MusicBeatState implements PsychUIEventHan
 			characterFile.antialiasing = antialiasingCheckbox.checked;
 		};
 
-		var reloadImageButton:PsychUIButton = new PsychUIButton(140, confirmInputText.y + 30, "Reload Char", function() {
+		var reloadImageButton:PsychUIButton = new PsychUIButton(140, confirmInputText.y + 30, Language.get('menu_char_reload'), function() {
 			reloadSelectedCharacter();
 		});
 		
 		scaleStepper = new PsychUINumericStepper(140, imageInputText.y, 0.05, 1, 0.1, 30, 2);
 
-		var confirmDescText = new FlxText(10, confirmInputText.y - 18, 0, 'Start Press animation on the .XML:');
-		tab_group.add(new FlxText(10, imageInputText.y - 18, 0, 'Image file name:'));
-		tab_group.add(new FlxText(10, idleInputText.y - 18, 0, 'Idle animation on the .XML:'));
-		tab_group.add(new FlxText(scaleStepper.x, scaleStepper.y - 18, 0, 'Scale:'));
+		var confirmDescText = uilabel(10, confirmInputText.y - 18, 200, Language.get('menu_char_confirm_anim'));
+		tab_group.add(uilabel(10, imageInputText.y - 18, 160, Language.get('menu_char_image_name')));
+		tab_group.add(uilabel(10, idleInputText.y - 18, 200, Language.get('menu_char_idle_anim')));
+		tab_group.add(uilabel(scaleStepper.x, scaleStepper.y - 18, 80, Language.get('menu_char_scale')));
 		tab_group.add(flipXCheckbox);
 		tab_group.add(antialiasingCheckbox);
 		tab_group.add(reloadImageButton);

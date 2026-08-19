@@ -30,6 +30,17 @@ class NoteSplashEditorState extends MusicBeatState
     var properUI:PsychUIBox;
     var shaderUI:PsychUIBox;
 
+    var ANIM_TAB:String;
+    var PROPS_TAB:String;
+    var SHADER_TAB:String;
+    var RED_LBL:String;
+    var GREEN_LBL:String;
+    var BLUE_LBL:String;
+    function uilabel(x:Float, y:Float, ?w:Int, s:String):FlxText
+    {
+        return new FlxText(x, y, w == null ? 0 : w, s, 12).setFormat(Paths.font(Language.get('uitab_font')), 12, FlxColor.WHITE, LEFT, OUTLINE_FAST, FlxColor.BLACK);
+    }
+
     override function create()
     {
         if (imageSkin == null)
@@ -41,6 +52,13 @@ class NoteSplashEditorState extends MusicBeatState
         FlxG.sound.volumeDownKeys = [];
         FlxG.sound.muteKeys = [];
 
+        ANIM_TAB = Language.get('notesplash_tab_anim');
+        PROPS_TAB = Language.get('notesplash_tab_props');
+        SHADER_TAB = Language.get('notesplash_tab_shader');
+        RED_LBL = Language.get('notesplash_color_red');
+        GREEN_LBL = Language.get('notesplash_color_green');
+        BLUE_LBL = Language.get('notesplash_color_blue');
+
         #if DISCORD_ALLOWED
         DiscordClient.changePresence('Note Splash Editor');
         #end
@@ -50,13 +68,13 @@ class NoteSplashEditorState extends MusicBeatState
         bg.color = 0xFF505050;
         add(bg);      
 
-        UI = new PsychUIBox(0, 0, 0, 0, ["Animation"]);
+        UI = new PsychUIBox(0, 0, 0, 0, [ANIM_TAB]);
         UI.canMove = UI.canMinimize = false;
         UI.y += 20;
         UI.x = FlxG.width - 300;
         UI.resize(290, 240);
 
-        properUI = new PsychUIBox(0, 0, 0, 0, ["Properties"]);
+        properUI = new PsychUIBox(0, 0, 0, 0, [PROPS_TAB]);
         properUI.canMove = properUI.canMinimize = false;
         properUI.resize(280, 210);
         properUI.y += 20;
@@ -64,7 +82,7 @@ class NoteSplashEditorState extends MusicBeatState
         add(properUI);
         add(UI);
 
-        shaderUI = new PsychUIBox(0, 0, 0, 0, ["Shader"]);
+        shaderUI = new PsychUIBox(0, 0, 0, 0, [SHADER_TAB]);
         shaderUI.canMove = shaderUI.canMinimize = false;
         shaderUI.resize(160, 180);
         shaderUI.x = FlxG.width - shaderUI.width - 10;
@@ -74,8 +92,8 @@ class NoteSplashEditorState extends MusicBeatState
         final buttonF1:String = (controls.mobileC) ? "F" : "F1";
 
         var tipText:FlxText = new FlxText();
-        tipText.setFormat(null, 24);
-        tipText.text = 'Press $buttonF1 for Help';
+        tipText.setFormat(Paths.font(Language.get('uitab_font')), 24);
+        tipText.text = Language.get('notesplash_help_press', [buttonF1]);
         tipText.setPosition(properUI.x - properUI.width + 15, UI.y);
         add(tipText);
 
@@ -106,15 +124,15 @@ class NoteSplashEditorState extends MusicBeatState
         addShadersTab();
 
         errorText = new FlxText();
-        errorText.setFormat(null, 16, FlxColor.RED);
-        errorText.text = "ERROR!";
+        errorText.setFormat(Paths.font(Language.get('uitab_font')), 16, FlxColor.RED);
+        errorText.text = Language.get('notesplash_err_generic');
         errorText.y = FlxG.height - errorText.height;
         errorText.alpha = .0;
         add(errorText);
 
         curText = new FlxText();
-        curText.setFormat(null, 24, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-        curText.text = 'Copied Offsets: [0, 0]\nCurrent Animation: NONE';
+        curText.setFormat(Paths.font(Language.get('uitab_font')), 24, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+        curText.text = Language.get('notesplash_copied_offsets', [Std.string([0, 0]).replace(',', ', ')]) + Language.get('notesplash_cur_anim', [Language.get('notesplash_anim_none')]);
         curText.y = FlxG.height - curText.height;
         curText.x += 5;
         add(curText);
@@ -132,31 +150,31 @@ class NoteSplashEditorState extends MusicBeatState
     var templateButton:PsychUIButton;
     function addAnimTab()
     {
-        var UI = UI.getTab("Animation").menu;
+        var UI = UI.getTab(ANIM_TAB).menu;
 
-        UI.add(new FlxText(20, 20, 0, "Animation Name:", 8));
-        var name_input:PsychUIInputText = new PsychUIInputText(20, 37.5, 100, "", 8);
+        UI.add(uilabel(20, 20, 120, Language.get('notesplash_anim_name')));
+        var name_input:PsychUIInputText = new PsychUIInputText(20, 37.5, 100, "", 12);
         name_input.name = "name_input";
         curAnimText = name_input;
         UI.add(name_input);
 
-        UI.add(new FlxText(name_input.x, name_input.y + 30, 0, "Animation Prefix:", 8));
-        var prefix_input:PsychUIInputText = new PsychUIInputText(20, name_input.y + 47.5, 100, "", 8);
+        UI.add(uilabel(name_input.x, name_input.y + 30, 120, Language.get('notesplash_anim_prefix')));
+        var prefix_input:PsychUIInputText = new PsychUIInputText(20, name_input.y + 47.5, 100, "", 12);
         UI.add(prefix_input);
 
-        UI.add(new FlxText(150, 20, 0, "Note Data:"));
+        UI.add(uilabel(150, 20, 120, Language.get('notesplash_note_data')));
         numericStepperData = new PsychUINumericStepper(150, 37.5, 1, .0, .0, 999, 0);
         UI.add(numericStepperData);
 
-        UI.add(new FlxText(150, name_input.y + 30, 0, "Indices (OPTIONAL):"));
-        var indices_input:PsychUIInputText = new PsychUIInputText(150, name_input.y + 47.5, 100, "", 8);
+        UI.add(uilabel(150, name_input.y + 30, 130, Language.get('notesplash_indices')));
+        var indices_input:PsychUIInputText = new PsychUIInputText(150, name_input.y + 47.5, 100, "", 12);
         UI.add(indices_input);
 
-        UI.add(new FlxText(20, 110, 0, "Minimum FPS:"));
+        UI.add(uilabel(20, 110, 120, Language.get('notesplash_min_fps')));
         var minFps:PsychUINumericStepper = new PsychUINumericStepper(20, 127.5, 1, 22, 1, 120);
         UI.add(minFps);
 
-        UI.add(new FlxText(150, 110, 0, "Maximum FPS:"));
+        UI.add(uilabel(150, 110, 120, Language.get('notesplash_max_fps')));
         var maxFps:PsychUINumericStepper = new PsychUINumericStepper(150, 127.5, 1, 26, 1, 120);
         UI.add(maxFps);
 
@@ -217,11 +235,11 @@ class NoteSplashEditorState extends MusicBeatState
             maxFps.value = 26;
             setAnimDropDown();
             parseRGB();
-            changeShader.selectedLabel = "Red";
-            changeShader.onSelect(0, "Red");
+            changeShader.selectedLabel = RED_LBL;
+            changeShader.onSelect(0, RED_LBL);
         }
 
-        addButton = new PsychUIButton(20, 185, "Add/Update", function()
+        addButton = new PsychUIButton(20, 185, Language.get('notesplash_add_update'), function()
         {       
             var indices:Array<Int> = [];
             if (indices_input.text.split(',').length > 1)
@@ -255,7 +273,7 @@ class NoteSplashEditorState extends MusicBeatState
         }); 
         UI.add(addButton);
 
-        var removeButton:PsychUIButton = new PsychUIButton(185, 185, "Remove", function()
+        var removeButton:PsychUIButton = new PsychUIButton(185, 185, Language.get('notesplash_remove'), function()
         {
             if (config != null)
             {
@@ -285,7 +303,7 @@ class NoteSplashEditorState extends MusicBeatState
             var image = Paths.image(imageSkin);
             if (image == null)
             {
-                errorText.text = 'ERROR! Couldn\'t find $imageSkin.png';
+                errorText.text = Language.get('notesplash_err_not_found', [imageSkin]);
                 errorText.alpha = 1;
                 return;
             }
@@ -293,7 +311,7 @@ class NoteSplashEditorState extends MusicBeatState
             {
                 errorText.color = FlxColor.GREEN;
                 errorText.alpha = 1;
-                errorText.text = 'Succesfully loaded $imageSkin.png';
+                errorText.text = Language.get('notesplash_err_loaded', [imageSkin]);
             }
 
             NoteSplash.configs.clear();
@@ -317,8 +335,8 @@ class NoteSplashEditorState extends MusicBeatState
             maxFps.value = 26;
             setAnimDropDown();
             parseRGB();
-            changeShader.selectedLabel = "Red";
-            changeShader.onSelect(0, "Red");
+            changeShader.selectedLabel = RED_LBL;
+            changeShader.onSelect(0, RED_LBL);
         }
     }
 
@@ -326,34 +344,34 @@ class NoteSplashEditorState extends MusicBeatState
     var scaleNumericStepper:PsychUINumericStepper;
     function addPropertiesTab()
     {
-        var ui = properUI.getTab("Properties").menu;
+        var ui = properUI.getTab(PROPS_TAB).menu;
 
-        ui.add(new FlxText(20, 10, 0, "Image:"));
-        imageInputText = new PsychUIInputText(60, 10, 120, imageSkin, 8);
+        ui.add(uilabel(20, 10, 120, Language.get('notesplash_image')));
+        imageInputText = new PsychUIInputText(60, 10, 120, imageSkin, 12);
         ui.add(imageInputText);
 
-        var reloadButton:PsychUIButton = new PsychUIButton(185, 6.8, "Reload Image", function()
+        var reloadButton:PsychUIButton = new PsychUIButton(185, 6.8, Language.get('notesplash_reload_image'), function()
         {
             reloadImage();
         });
         ui.add(reloadButton);
 
-        ui.add(new FlxText(20, 40, "Scale:"));
+        ui.add(uilabel(20, 40, 120, Language.get('notesplash_scale')));
         scaleNumericStepper = new PsychUINumericStepper(20, 57.5, 0.1, 1, 0, 4, 2, 60);
         ui.add(scaleNumericStepper);
 
         scaleNumericStepper.value = config != null ? config.scale : 1;
 
-        ui.add(new FlxText(130, 40, "Animations:"));
+        ui.add(uilabel(130, 40, 120, Language.get('notesplash_animations')));
 
-        var saveButton:PsychUIButton = new PsychUIButton(20, 130, "Save", saveSplash);
+        var saveButton:PsychUIButton = new PsychUIButton(20, 130, Language.get('notesplash_save'), saveSplash);
         ui.add(saveButton);
 
-        templateButton = new PsychUIButton(20, 155, "Template");
+        templateButton = new PsychUIButton(20, 155, Language.get('notesplash_template'));
         ui.add(templateButton);
 
         #if !mobile
-        var loadButton:PsychUIButton = new PsychUIButton(180, 155, "Convert TXT", loadTxt);
+        var loadButton:PsychUIButton = new PsychUIButton(180, 155, Language.get('notesplash_convert_txt'), loadTxt);
         ui.add(loadButton);
         #end
 
@@ -367,7 +385,8 @@ class NoteSplashEditorState extends MusicBeatState
         allowRGBCheck.checked = config != null && cast(config.allowRGB, Null<Bool>) != null ? config.allowRGB : false;
 
         var rgbText = new FlxText(allowRGBCheck.x + 20, 0);
-        rgbText.text = "Allow RGB?";
+        rgbText.setFormat(Paths.font(Language.get('uitab_font')), 12);
+        rgbText.text = Language.get('notesplash_allow_rgb');
         rgbText.y = allowRGBCheck.y + 2.5;
         ui.add(rgbText);
 
@@ -383,7 +402,8 @@ class NoteSplashEditorState extends MusicBeatState
         allowPixelCheck.checked = config != null && cast(config.allowPixel, Null<Bool>) != null ? config.allowPixel : false;
 
         var pixelText = new FlxText(allowPixelCheck.x + 20, 0);
-        pixelText.text = "Allow Pixel?";
+        pixelText.setFormat(Paths.font(Language.get('uitab_font')), 12);
+        pixelText.text = Language.get('notesplash_allow_pixel');
         pixelText.y = allowPixelCheck.y + 2.5;
         ui.add(pixelText);
 
@@ -400,45 +420,36 @@ class NoteSplashEditorState extends MusicBeatState
     var defaultButton:PsychUICheckBox;
     function addShadersTab()
     {
-        var tab = shaderUI.getTab("Shader").menu;
+        var tab = shaderUI.getTab(SHADER_TAB).menu;
 
-        tab.add(new FlxText(40, 10, "Replacing Color:"));
-        tab.add(new FlxText(25, 30, "Red:"));
-        tab.add(new FlxText(25, 50, "Green:"));
-        tab.add(new FlxText(25, 70, "Blue:"));
+        tab.add(uilabel(40, 10, 120, Language.get('notesplash_replacing_color')));
+        tab.add(uilabel(25, 30, 60, Language.get('notesplash_red_label')));
+        tab.add(uilabel(25, 50, 60, Language.get('notesplash_green_label')));
+        tab.add(uilabel(25, 70, 60, Language.get('notesplash_blue_label')));
 
         var red = new PsychUINumericStepper(60, 30, 1, redShader[0], 0, 255, 0);
         red.onValueChange = () -> {
-            var shader = switch (changeShader.selectedLabel)
-            {
-                case "Red": redShader[0] = Std.int(red.value);
-                case "Green": greenShader[0] = Std.int(red.value);
-                case _: blueShader[0] = Std.int(red.value);
-            }
+            if (changeShader.selectedLabel == RED_LBL) redShader[0] = Std.int(red.value);
+            else if (changeShader.selectedLabel == GREEN_LBL) greenShader[0] = Std.int(red.value);
+            else blueShader[0] = Std.int(red.value);
             setConfigRGB();
         };
         tab.add(red);
 
         var green = new PsychUINumericStepper(60, 50, 1, redShader[1], 0, 255, 0);
         green.onValueChange = () -> {
-            var shader = switch (changeShader.selectedLabel)
-            {
-                case "Red": redShader[1] = Std.int(green.value);
-                case "Green": greenShader[1] = Std.int(green.value);
-                case _: blueShader[1] = Std.int(green.value);
-            }
+            if (changeShader.selectedLabel == RED_LBL) redShader[1] = Std.int(green.value);
+            else if (changeShader.selectedLabel == GREEN_LBL) greenShader[1] = Std.int(green.value);
+            else blueShader[1] = Std.int(green.value);
             setConfigRGB();
         };
         tab.add(green);
 
         var blue = new PsychUINumericStepper(60, 70, 1, redShader[2], 0, 255, 0);
         blue.onValueChange = () -> {
-            var shader = switch (changeShader.selectedLabel)
-            {
-                case "Red": redShader[2] = Std.int(blue.value);
-                case "Green": greenShader[2] = Std.int(blue.value);
-                case _: blueShader[2] = Std.int(blue.value);
-            }
+            if (changeShader.selectedLabel == RED_LBL) redShader[2] = Std.int(blue.value);
+            else if (changeShader.selectedLabel == GREEN_LBL) greenShader[2] = Std.int(blue.value);
+            else blueShader[2] = Std.int(blue.value);
             setConfigRGB();
         };
         tab.add(blue);
@@ -451,46 +462,38 @@ class NoteSplashEditorState extends MusicBeatState
                 shaderUI.alpha = 0.6;
 
             if (change)
-                switch (changeShader.selectedLabel)
-                {
-                    case "Red": redEnabled = !defaultButton.checked;
-                    case "Green": greenEnabled = !defaultButton.checked;
-                    case "Blue": blueEnabled = !defaultButton.checked;
-                }
+                if (changeShader.selectedLabel == RED_LBL) redEnabled = !defaultButton.checked;
+                else if (changeShader.selectedLabel == GREEN_LBL) greenEnabled = !defaultButton.checked;
+                else if (changeShader.selectedLabel == BLUE_LBL) blueEnabled = !defaultButton.checked;
 
             setConfigRGB();
         }
 
-        add(new FlxText(shaderUI.x + 20, shaderUI.y + 135, 0, "Color to Replace:"));
-        changeShader = new PsychUIDropDownMenu(shaderUI.x + 20, shaderUI.y + 150, ["Red", "Green", "Blue"], function(id:Int, name:String)
+        add(uilabel(shaderUI.x + 20, shaderUI.y + 135, 140, Language.get('notesplash_color_to_replace')));
+        changeShader = new PsychUIDropDownMenu(shaderUI.x + 20, shaderUI.y + 150, [RED_LBL, GREEN_LBL, BLUE_LBL], function(id:Int, name:String)
         {
-            var shader = switch (name)
-            {
-                case "Red": redShader;
-                case "Green": greenShader;
-                case _: blueShader;
-            }
+            var shader:Array<Int> = blueShader;
+            if (name == RED_LBL) shader = redShader;
+            else if (name == GREEN_LBL) shader = greenShader;
 
             red.value = shader[0];
             green.value = shader[1];
             blue.value = shader[2];
 
             // changing checked doesn't initiate onCheck!!
-            defaultButton.checked = switch (name) {
-                case "Red": !redEnabled;
-                case "Green": !greenEnabled;
-                case _: !blueEnabled;
-            }
+            defaultButton.checked = !blueEnabled;
+            if (name == RED_LBL) defaultButton.checked = !redEnabled;
+            else if (name == GREEN_LBL) defaultButton.checked = !greenEnabled;
             onCheck(false);
         });
         add(changeShader);
         
-        defaultButton = new PsychUICheckBox(shaderUI.x + 30, shaderUI.y + 115, "Do not replace", 100, () -> onCheck());
+        defaultButton = new PsychUICheckBox(shaderUI.x + 30, shaderUI.y + 115, Language.get('notesplash_do_not_replace'), 100, () -> onCheck());
         defaultButton.text.y += 2.5;
         add(defaultButton);
 
-        changeShader.selectedLabel = "Red";
-        changeShader.onSelect(0, "Red");
+        changeShader.selectedLabel = RED_LBL;
+        changeShader.onSelect(0, RED_LBL);
     }
 
     dynamic function reloadImage() // Dynamic because needs to be changed later
@@ -507,10 +510,11 @@ class NoteSplashEditorState extends MusicBeatState
 
         errorText.x = FlxG.width - errorText.width - 5;
 
-        curText.text = 'Copied Offsets: ${Std.string(copiedOffset).replace(',', ', ')}\n';
-        curText.text += 'Current Animation: ${curAnim == null || curAnim.length < 1  ? "NONE" : curAnim}';
+        var hasAnim:Bool = (curAnim != null && curAnim.length > 0);
+        curText.text = Language.get('notesplash_copied_offsets', [Std.string(copiedOffset).replace(',', ', ')]);
+        curText.text += Language.get('notesplash_cur_anim', [hasAnim ? curAnim : Language.get('notesplash_anim_none')]);
 
-        if (config != null && !curText.text.contains('NONE'))
+        if (config != null && hasAnim)
         {
             var offsets:Array<Float> = try config.animations.get(curAnim).offsets catch (e) [0, 0];
             curText.text += ' ($offsets)'.replace(',', ', ');
@@ -520,9 +524,9 @@ class NoteSplashEditorState extends MusicBeatState
         {
             var currentAnim:String = curAnimText.text;
             if (config.animations.exists(currentAnim) && config.animations.get(currentAnim) != null)
-                addButton.label = 'Update';
+                addButton.label = Language.get('notesplash_update');
             else
-                addButton.label = 'Add';
+                addButton.label = Language.get('notesplash_add');
 
             config.scale = scaleNumericStepper.value;
         }
@@ -663,7 +667,7 @@ class NoteSplashEditorState extends MusicBeatState
         else
         {
             errorText.alpha = 1;
-            errorText.text = "ERROR while playing splash";
+            errorText.text = Language.get('notesplash_err_playing');
             
             FlxTween.cancelTweensOf(errorText);
             FlxTween.tween(errorText, {alpha: 0}, {startDelay: 1});
@@ -957,30 +961,30 @@ class NoteSplashEditorHelpSubState extends MusicBeatSubstate
 
 		var str:Array<String> = (controls.mobileC) ? 
         [
-            "Touch on a Strum",
-            "to spawn a Splash",
+            Language.get('notesplash_help_line1_mobile'),
+            Language.get('notesplash_help_line2_mobile'),
             "",
-            "Arrow Keys - Move Offset",
-			"Hold Z - Move Offsets 10x faster",
+            Language.get('notesplash_help_line3_mobile'),
+			Language.get('notesplash_help_line4_mobile'),
             "",
             "",
-            "C - Copy Current Offset",
-            "V - Paste Copied Offset on Current Splash",
-            "On every 4 subsequent note datas",
-            "an extra set of animations will be added"
+            Language.get('notesplash_help_line5_mobile'),
+            Language.get('notesplash_help_line6_mobile'),
+            Language.get('notesplash_help_line7_mobile'),
+            Language.get('notesplash_help_line8_mobile')
         ] : [
-			"Click on a Strum or Press Space",
-			"to spawn a Splash",
+			Language.get('notesplash_help_line1'),
+			Language.get('notesplash_help_line2'),
 			"",
-			"Arrow Keys - Move Offset",
-			"Hold Shift - Move Offsets 10x faster",
+			Language.get('notesplash_help_line3'),
+			Language.get('notesplash_help_line4'),
 			"",
 			"",
-			"Ctrl + C - Copy Current Offset",
-			"Ctrl + V - Paste Copied Offset on Current Splash",
-			"Ctrl + R - Reset Current Offset",
-            "On every 4 subsequent note datas",
-            "an extra set of animations will be added"
+			Language.get('notesplash_help_line5'),
+			Language.get('notesplash_help_line6'),
+			Language.get('notesplash_help_line7'),
+            Language.get('notesplash_help_line8'),
+            Language.get('notesplash_help_line9')
 		];
 
         var helpTexts:FlxSpriteGroup = new FlxSpriteGroup();
@@ -989,7 +993,7 @@ class NoteSplashEditorHelpSubState extends MusicBeatSubstate
             if(txt.length < 1) continue;
 
             var helpText:FlxText = new FlxText(0, 0, 0, txt, 24);
-            helpText.setFormat(null, 24, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
+            helpText.setFormat(Paths.font(Language.get('uitab_font')), 24, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
             helpText.borderColor = FlxColor.BLACK;
             helpText.scrollFactor.set();
             helpText.borderSize = 1;
@@ -1001,8 +1005,8 @@ class NoteSplashEditorHelpSubState extends MusicBeatSubstate
         add(helpTexts);
 
         var noteDataText:FlxText = new FlxText();
-        noteDataText.setFormat(null, 24, FlxColor.WHITE, RIGHT, OUTLINE_FAST, FlxColor.BLACK);
-        noteDataText.text = "NOTE DATAS:\nLEFT: 0\nDOWN: 1\nUP: 2\nRIGHT: 3";
+        noteDataText.setFormat(Paths.font(Language.get('uitab_font')), 24, FlxColor.WHITE, RIGHT, OUTLINE_FAST, FlxColor.BLACK);
+        noteDataText.text = Language.get('notesplash_note_datas');
         noteDataText.x = FlxG.width - noteDataText.width - 5;
         noteDataText.y = FlxG.height - noteDataText.height - 5;
 

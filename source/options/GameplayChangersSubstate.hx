@@ -4,7 +4,7 @@ import objects.AttachedFlxText;
 import objects.CheckboxThingie;
 import flixel.text.FlxText;
 
-import backend.OptionsLanguage;
+import backend.Language.OptionsLanguage;
 import options.Option.OptionType;
 
 class GameplayChangersSubstate extends MusicBeatSubstate

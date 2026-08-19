@@ -2,7 +2,7 @@ package states.editors.content;
 
 import backend.Song;
 import backend.Rating;
-import backend.ScoreLanguage;
+import backend.Language.ScoreLanguage;
 
 import objects.Note;
 import objects.NoteSplash;

@@ -1,0 +1,14 @@
+{
+	"dialogue_tab_line": "Dialogue Line",
+	"dialogue_angry": "Angry Textbox",
+	"dialogue_load": "Load Dialogue",
+	"dialogue_save": "Save Dialogue",
+	"dialogue_interval": "Interval/Speed (ms):",
+	"dialogue_character": "Character:",
+	"dialogue_sound": "Sound file name:",
+	"dialogue_text": "Text:",
+	"dialogue_tip": "Press {0} to remove the current dialogue line, Press {1} to add another line after the current one.",
+	"dialogue_anim": "Animation: {0} ({1} / {2}) - Press {3} or {4} to scroll",
+	"dialogue_no_anims": "ERROR! NO ANIMATIONS FOUND",
+	"dialogue_line": "Line: ({0} / {1}) - Press {2} or {3} to scroll"
+}

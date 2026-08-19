@@ -59,6 +59,23 @@ class HoldCoverEditorState extends MusicBeatState
 	function currentAnim():HoldCoverAnim
 		return _config.anims.get(currentColor());
 
+	function colorLabel(color:String):String
+	{
+		return switch (color)
+		{
+			case 'Purple': Language.get('hold_cover_color_purple');
+			case 'Blue':   Language.get('hold_cover_color_blue');
+			case 'Green':  Language.get('hold_cover_color_green');
+			case 'Red':    Language.get('hold_cover_color_red');
+			default:       color;
+		}
+	}
+
+	function uilabel(x:Float, y:Float, ?w:Int, s:String):FlxText
+	{
+		return new FlxText(x, y, w == null ? 0 : w, s, 12).setFormat(Paths.font(Language.get('uitab_font')), 12, FlxColor.WHITE, LEFT, OUTLINE_FAST, FlxColor.BLACK);
+	}
+
 	override function create()
 	{
 		FlxG.camera.bgColor = FlxColor.fromRGB(110, 90, 145);
@@ -101,7 +118,7 @@ class HoldCoverEditorState extends MusicBeatState
 			applyConfigToCover(c, c.coverColor);
 
 		// UI
-		UI_box = new PsychUIBox(0, 0, 0, 0, ['Properties', 'Animations']);
+		UI_box = new PsychUIBox(0, 0, 0, 0, [Language.get('hold_cover_tab_props'), Language.get('hold_cover_tab_anims')]);
 		UI_box.canMove = UI_box.canMinimize = false;
 		UI_box.resize(320, 240);
 		UI_box.x = FlxG.width - UI_box.width - 10;
@@ -112,13 +129,13 @@ class HoldCoverEditorState extends MusicBeatState
 		addPropertiesTab();
 		addAnimationsTab();
 
-		errorText = new FlxText(0, FlxG.height - 30, 0, '', 16);
-		errorText.setFormat(Paths.font('vcr.ttf'), 16, FlxColor.RED, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		errorText = new FlxText(0, FlxG.height - 30, 0, '', 14);
+		errorText.setFormat(Paths.font(Language.get('uitab_font')), 14, FlxColor.RED, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		errorText.scrollFactor.set();
 		add(errorText);
 
 		curText = new FlxText(0, 40, 0, '', 14);
-		curText.setFormat(Paths.font('vcr.ttf'), 14, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		curText.setFormat(Paths.font(Language.get('uitab_font')), 14, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		curText.scrollFactor.set();
 		add(curText);
 	}
@@ -149,10 +166,10 @@ class HoldCoverEditorState extends MusicBeatState
 
 	function addPropertiesTab()
 	{
-		var ui = UI_box.getTab('Properties').menu;
+		var ui = UI_box.getTab(Language.get('hold_cover_tab_props')).menu;
 
-		ui.add(new FlxText(20, 10, 0, "Base Path:"));
-		imageInputText = new PsychUIInputText(95, 10, 180, imageSkin, 8);
+		ui.add(uilabel(20, 10, 120, Language.get('hold_cover_base_path')));
+		imageInputText = new PsychUIInputText(95, 10, 180, imageSkin, 12);
 		imageInputText.onChange = function(old:String, cur:String)
 		{
 			imageSkin = cur;
@@ -160,13 +177,13 @@ class HoldCoverEditorState extends MusicBeatState
 		};
 		ui.add(imageInputText);
 
-		var reloadButton:PsychUIButton = new PsychUIButton(280, 6.8, "Reload Image", function()
+		var reloadButton:PsychUIButton = new PsychUIButton(280, 6.8, Language.get('hold_cover_reload_image'), function()
 		{
 			reloadAllImages();
 		});
 		ui.add(reloadButton);
 
-		ui.add(new FlxText(20, 40, 0, "Scale:"));
+		ui.add(uilabel(20, 40, 120, Language.get('hold_cover_scale')));
 		scaleNumericStepper = new PsychUINumericStepper(20, 57.5, 0.1, _config.scale, 0, 4, 2, 60);
 		scaleNumericStepper.onValueChange = () ->
 		{
@@ -175,25 +192,25 @@ class HoldCoverEditorState extends MusicBeatState
 		};
 		ui.add(scaleNumericStepper);
 
-		var saveButton:PsychUIButton = new PsychUIButton(20, 130, "Save", function()
+		var saveButton:PsychUIButton = new PsychUIButton(20, 130, Language.get('hold_cover_save'), function()
 		{
 			saveCFG();
 		});
 		ui.add(saveButton);
 
-		var templateButton:PsychUIButton = new PsychUIButton(110, 130, "Template", function()
+		var templateButton:PsychUIButton = new PsychUIButton(110, 130, Language.get('hold_cover_template'), function()
 		{
 			saveTemplate();
 		});
 		ui.add(templateButton);
 
-		var helpButton:PsychUIButton = new PsychUIButton(210, 130, "Help", function()
+		var helpButton:PsychUIButton = new PsychUIButton(210, 130, Language.get('hold_cover_help'), function()
 		{
 			openSubState(new HoldCoverEditorHelp());
 		});
 		ui.add(helpButton);
 
-		var exitButton:PsychUIButton = new PsychUIButton(210, 6.8, "Exit", function()
+		var exitButton:PsychUIButton = new PsychUIButton(210, 6.8, Language.get('hold_cover_exit'), function()
 		{
 			exitState();
 		});
@@ -207,41 +224,43 @@ class HoldCoverEditorState extends MusicBeatState
 
 	function addAnimationsTab()
 	{
-		var ui = UI_box.getTab('Animations').menu;
+		var ui = UI_box.getTab(Language.get('hold_cover_tab_anims')).menu;
 
-		ui.add(new FlxText(20, 10, 0, "Color:"));
-		colorDropdown = new PsychUIDropDownMenu(70, 8, NoteHoldCover.COVER_COLORS.copy(), function(id:Int, name:String)
+		ui.add(uilabel(20, 10, 60, Language.get('hold_cover_color')));
+		var colorOptions:Array<String> = [for (c in NoteHoldCover.COVER_COLORS) colorLabel(c)];
+		colorDropdown = new PsychUIDropDownMenu(70, 8, colorOptions, function(id:Int, name:String)
 		{
 			_curColorIndex = id;
 			refreshAnimInputs();
 		});
+		colorDropdown.selectedLabel = colorLabel(NoteHoldCover.COVER_COLORS[_curColorIndex]);
 		ui.add(colorDropdown);
 
-		ui.add(new FlxText(20, 45, 0, "Start:"));
-		startInput = new PsychUIInputText(70, 45, 160, '', 8);
+		ui.add(uilabel(20, 45, 60, Language.get('hold_cover_start')));
+		startInput = new PsychUIInputText(70, 45, 160, '', 12);
 		startInput.onChange = function(old:String, cur:String)
 		{
 			if (currentAnim() != null) { currentAnim().start = cur; applyForCurrentColor(); }
 		};
 		ui.add(startInput);
 
-		ui.add(new FlxText(20, 75, 0, "Hold:"));
-		holdInput = new PsychUIInputText(70, 75, 160, '', 8);
+		ui.add(uilabel(20, 75, 60, Language.get('hold_cover_hold')));
+		holdInput = new PsychUIInputText(70, 75, 160, '', 12);
 		holdInput.onChange = function(old:String, cur:String)
 		{
 			if (currentAnim() != null) { currentAnim().hold = cur; applyForCurrentColor(); }
 		};
 		ui.add(holdInput);
 
-		ui.add(new FlxText(20, 105, 0, "End:"));
-		endInput = new PsychUIInputText(70, 105, 160, '', 8);
+		ui.add(uilabel(20, 105, 60, Language.get('hold_cover_end')));
+		endInput = new PsychUIInputText(70, 105, 160, '', 12);
 		endInput.onChange = function(old:String, cur:String)
 		{
 			if (currentAnim() != null) { currentAnim().end = cur; applyForCurrentColor(); }
 		};
 		ui.add(endInput);
 
-		ui.add(new FlxText(20, 140, 0, "FPS:"));
+		ui.add(uilabel(20, 140, 60, Language.get('hold_cover_fps')));
 		fpsStepper = new PsychUINumericStepper(60, 140, 1, 24, 1, 60, 0, 60);
 		fpsStepper.onValueChange = () ->
 		{
@@ -249,7 +268,7 @@ class HoldCoverEditorState extends MusicBeatState
 		};
 		ui.add(fpsStepper);
 
-		arrowKeysOption = new PsychUICheckBox(20, 175, "Use Arrow Keys (Offsets)", 200, function()
+		arrowKeysOption = new PsychUICheckBox(20, 175, Language.get('hold_cover_use_arrow_keys'), 200, function()
 		{
 			// 仅作为开关；偏移微调在 update() 中通过 FlxG.keys 处理，
 			// 不再向 FlxG.stage 注册监听器，避免 state 重建后崩溃。
@@ -318,7 +337,7 @@ class HoldCoverEditorState extends MusicBeatState
 			File.saveContent('assets/shared/images/holdCover/' + fileName + '.json', data);
 			#end
 		}
-		showError('Saved holdCover configs to assets/shared/images/holdCover/', FlxColor.GREEN);
+		showError(Language.get('hold_cover_saved_cfg'), FlxColor.GREEN);
 	}
 
 	function saveTemplate():Void
@@ -337,7 +356,7 @@ class HoldCoverEditorState extends MusicBeatState
 		#else
 		File.saveContent('assets/shared/images/holdCover/template.json', data);
 		#end
-		showError('Saved template to assets/shared/images/holdCover/template.json', FlxColor.GREEN);
+		showError(Language.get('hold_cover_saved_template'), FlxColor.GREEN);
 	}
 
 	function showError(msg:String, color:FlxColor):Void
@@ -363,8 +382,8 @@ class HoldCoverEditorState extends MusicBeatState
 
 		errorText.x = FlxG.width - errorText.width - 5;
 
-		curText.text = 'Copied Offsets: ${Std.string(copiedOffset).replace(', ', ', ')}\n';
-		curText.text += 'Current Color: ${currentColor()}';
+		curText.text = Language.get('hold_cover_copied_offsets', [Std.string(copiedOffset).replace(', ', ', ')]);
+		curText.text += Language.get('hold_cover_current_color', [colorLabel(currentColor())]);
 		if (currentAnim() != null && currentAnim().offsets != null)
 			curText.text += ' (${Std.string(currentAnim().offsets).replace(', ', ', ')})';
 
@@ -400,17 +419,17 @@ class HoldCoverEditorHelp extends MusicBeatSubstate
 		add(bg);
 
 		helpText = new FlxText(40, 40, FlxG.width - 80,
-			"HOLD COVER EDITOR\n\n" +
-			"- Base Path: 图集基础路径（默认 holdCover/holdCover），实际读取 holdCover{Color}{Skin}.png\n" +
-			"  帧前缀约定：holdCoverStart{Color}（长条头）/ holdCover{Color}（循环）/ holdCoverEnd{Color}（末尾爆发）\n" +
-			"- Color: 选择要编辑的颜色（Purple/Blue/Green/Red），分别设置三套动画前缀\n" +
-			"- Scale: 整体缩放（默认光效约为箭头 1.9 倍宽）\n" +
-			"- Offsets: 勾选 Use Arrow Keys 后，方向键微调当前颜色的偏移\n" +
-			"- Save: 写入 assets/shared/images/holdCover/holdCover{Color}.json\n" +
-			"- Template: 导出模板 JSON 供参考\n\n" +
-			"游戏中在 Visuals 设置里可选 Hold Cover Skin（需 images/holdCover/list.txt）。\n" +
-			"按 ESC 或点击任意处关闭。", 18);
-		helpText.setFormat(Paths.font('vcr.ttf'), 18, FlxColor.WHITE, LEFT);
+			Language.get('hold_cover_help_title') + "\n\n" +
+			Language.get('hold_cover_help_p1') + "\n" +
+			Language.get('hold_cover_help_p2') + "\n" +
+			Language.get('hold_cover_help_p3') + "\n" +
+			Language.get('hold_cover_help_p4') + "\n" +
+			Language.get('hold_cover_help_p5') + "\n" +
+			Language.get('hold_cover_help_p6') + "\n" +
+			Language.get('hold_cover_help_p7') + "\n\n" +
+			Language.get('hold_cover_help_p8') + "\n" +
+			Language.get('hold_cover_help_close'), 14);
+		helpText.setFormat(Paths.font(Language.get('uitab_font')), 14, FlxColor.WHITE, LEFT);
 		add(helpText);
 	}
 

@@ -1,0 +1,17 @@
+{
+	"menu_char_tab_type": "Character Type",
+	"menu_char_tab_char": "Character",
+	"menu_char_load": "Load Character",
+	"menu_char_save": "Save Character",
+	"menu_char_opponent": "Opponent",
+	"menu_char_boyfriend": "Boyfriend",
+	"menu_char_girlfriend": "Girlfriend",
+	"menu_char_flip_x": "Flip X",
+	"menu_char_antialiasing": "Antialiasing",
+	"menu_char_reload": "Reload Char",
+	"menu_char_confirm_anim": "Start Press animation on the .XML:",
+	"menu_char_image_name": "Image file name:",
+	"menu_char_idle_anim": "Idle animation on the .XML:",
+	"menu_char_scale": "Scale:",
+	"menu_char_tip": "Arrow Keys - Change Offset (Hold shift for 10x speed)\nSpace - Play \"Start Press\" animation (Boyfriend Character Type)"
+}
