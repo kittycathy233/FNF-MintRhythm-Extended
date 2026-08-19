@@ -73,6 +73,14 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 		super();
 	}
 
+	/** 创建一个带 UI 字体的标签（本地化文本需用 uitab_font 才能正确显示 CJK 字符） */
+	function uilabel(x:Float, y:Float, ?w:Int, s:String):FlxText
+	{
+		var t:FlxText = new FlxText(x, y, (w != null) ? w : 0, s, 12);
+		t.setFormat(Paths.font(Language.get('uitab_font')), 12);
+		return t;
+	}
+
 	override function create()
 	{
 		Paths.clearStoredMemory();
@@ -134,17 +142,17 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 		add(healthIcon);
 		add(animsTxt);
 
-		var tipText:FlxText = new FlxText(FlxG.width - 300, FlxG.height - 24, 300, 'Press ${(controls.mobileC) ? 'F' : 'F1'} for Help', 20);
+		var tipText:FlxText = new FlxText(FlxG.width - 300, FlxG.height - 24, 300, Language.get('character_editor_press_f1_for_help', [(controls.mobileC) ? 'F' : 'F1']), 20);
 		tipText.cameras = [camHUD];
-		tipText.setFormat(null, 16, FlxColor.WHITE, RIGHT, OUTLINE_FAST, FlxColor.BLACK);
+		tipText.setFormat(Paths.font(Language.get('uitab_font')), 16, FlxColor.WHITE, RIGHT, OUTLINE_FAST, FlxColor.BLACK);
 		tipText.borderColor = FlxColor.BLACK;
 		tipText.scrollFactor.set();
 		tipText.borderSize = 1;
 		tipText.active = false;
 		add(tipText);
 
-		cameraZoomText = new FlxText(0, 50, 200, 'Zoom: 1x');
-		cameraZoomText.setFormat(null, 16, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
+		cameraZoomText = new FlxText(0, 50, 200, Language.get('character_editor_zoom', ['1']));
+		cameraZoomText.setFormat(Paths.font(Language.get('uitab_font')), 16, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
 		cameraZoomText.scrollFactor.set();
 		cameraZoomText.borderSize = 1;
 		cameraZoomText.screenCenter(X);
@@ -152,7 +160,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 		add(cameraZoomText);
 
 		frameAdvanceText = new FlxText(0, 75, 350, '');
-		frameAdvanceText.setFormat(null, 16, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
+		frameAdvanceText.setFormat(Paths.font(Language.get('uitab_font')), 16, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
 		frameAdvanceText.scrollFactor.set();
 		frameAdvanceText.borderSize = 1;
 		frameAdvanceText.screenCenter(X);
@@ -197,52 +205,13 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 		shape.graphics.clear();
 
 		// 设置线条样式
-		shape.graphics.lineStyle(2, FlxColor.WHITE, 1.0);
+		shape.graphics.lineStyle(4, FlxColor.WHITE, 1.0, false, 'none', 'square');
 
-		// 绘制水平线
-		shape.graphics.moveTo(2, halfSize);
-		shape.graphics.lineTo(size - 2, halfSize);
-
-		// 绘制垂直线
-		shape.graphics.moveTo(halfSize, 2);
-		shape.graphics.lineTo(halfSize, size - 2);
-
-		// 绘制中心十字（更粗）
-		shape.graphics.lineStyle(3, FlxColor.WHITE, 1.0);
-		shape.graphics.moveTo(halfSize - 6, halfSize);
-		shape.graphics.lineTo(halfSize + 6, halfSize);
-		shape.graphics.moveTo(halfSize, halfSize - 6);
-		shape.graphics.lineTo(halfSize, halfSize + 6);
-
-		// 绘制外圈（半透明）
-		shape.graphics.lineStyle(1.5, FlxColor.WHITE, 0.5);
-		var ringRadius = size * 0.35;
-		shape.graphics.drawCircle(halfSize, halfSize, ringRadius);
-
-		// 绘制四个角的小标记
-		shape.graphics.lineStyle(2, FlxColor.WHITE, 0.8);
-		var cornerSize = 6;
-		var cornerOffset = size * 0.25;
-
-		// 左上角
-		shape.graphics.moveTo(cornerOffset - cornerSize, cornerOffset);
-		shape.graphics.lineTo(cornerOffset, cornerOffset);
-		shape.graphics.lineTo(cornerOffset, cornerOffset - cornerSize);
-
-		// 右上角
-		shape.graphics.moveTo(size - cornerOffset + cornerSize, cornerOffset);
-		shape.graphics.lineTo(size - cornerOffset, cornerOffset);
-		shape.graphics.lineTo(size - cornerOffset, cornerOffset - cornerSize);
-
-		// 左下角
-		shape.graphics.moveTo(cornerOffset - cornerSize, size - cornerOffset);
-		shape.graphics.lineTo(cornerOffset, size - cornerOffset);
-		shape.graphics.lineTo(cornerOffset, size - cornerOffset + cornerSize);
-
-		// 右下角
-		shape.graphics.moveTo(size - cornerOffset + cornerSize, size - cornerOffset);
-		shape.graphics.lineTo(size - cornerOffset, size - cornerOffset);
-		shape.graphics.lineTo(size - cornerOffset, size - cornerOffset + cornerSize);
+		// 绘制十字形聚焦标记（仅保留十字，去除外圈与四角装饰）
+		shape.graphics.moveTo(halfSize - 15, halfSize);
+		shape.graphics.lineTo(halfSize + 15, halfSize);
+		shape.graphics.moveTo(halfSize, halfSize - 15);
+		shape.graphics.lineTo(halfSize, halfSize + 15);
 
 		// 创建 BitmapData
 		var bitmapData = new BitmapData(size, size, true, 0x00000000);
@@ -258,39 +227,39 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 	function addHelpScreen()
 	{
 		var str:Array<String> = (controls.mobileC) ? [
-			"CAMERA",
-			"X/Y - Camera Zoom In/Out",
-			"G + Arrow Buttons - Move Camera",
-			"Z - Reset Camera Zoom",
-			"",
-			"CHARACTER",
-			"A - Reset Current Offset",
-			"V/D - Previous/Next Animation",
-			"Arrow Buttons - Move Offset",
-			"",
-			"OTHER",
-			"S - Toggle Silhouettes",
-			"Hold C - Move Offsets 10x faster and Camera 4x faster"
+			Language.get('character_editor_help_camera'),
+			Language.get('character_editor_help_m_zoom'),
+			Language.get('character_editor_help_m_move_cam'),
+			Language.get('character_editor_help_m_reset_zoom'),
+			'',
+			Language.get('character_editor_help_character'),
+			Language.get('character_editor_help_m_reset_offset'),
+			Language.get('character_editor_help_m_prev_next_anim'),
+			Language.get('character_editor_help_m_move_offset'),
+			'',
+			Language.get('character_editor_help_other'),
+			Language.get('character_editor_help_m_toggle_silhouettes'),
+			Language.get('character_editor_help_m_fast')
 		] : [
-			"CAMERA",
-			"E/Q - Camera Zoom In/Out",
-			"J/K/L/I - Move Camera",
-			"R - Reset Camera Zoom",
-			"",
-			"CHARACTER",
-			"Ctrl + R - Reset Current Offset",
-			"Ctrl + C - Copy Current Offset",
-			"Ctrl + V - Paste Copied Offset on Current Animation",
-			"Ctrl + Z - Undo Last Paste or Reset",
-			"W/S - Previous/Next Animation",
-			"Space - Replay Animation",
-			"Arrow Keys/Mouse & Right Click - Move Offset",
-			"A/D - Frame Advance (Back/Forward)",
-			"",
-			"OTHER",
-			"F12 - Toggle Silhouettes",
-			"Hold Shift - Move Offsets 10x faster and Camera 4x faster",
-			"Hold Control - Move camera 4x slower"
+			Language.get('character_editor_help_camera'),
+			Language.get('character_editor_help_d_zoom'),
+			Language.get('character_editor_help_d_move_cam'),
+			Language.get('character_editor_help_d_reset_zoom'),
+			'',
+			Language.get('character_editor_help_character'),
+			Language.get('character_editor_help_d_reset_offset'),
+			Language.get('character_editor_help_d_copy_offset'),
+			Language.get('character_editor_help_d_paste_offset'),
+			Language.get('character_editor_help_d_undo'),
+			Language.get('character_editor_help_d_prev_next_anim'),
+			Language.get('character_editor_help_d_replay_anim'),
+			Language.get('character_editor_help_d_move_offset'),
+			Language.get('character_editor_help_d_frame_advance'),
+			'',
+			Language.get('character_editor_help_other'),
+			Language.get('character_editor_help_d_toggle_silhouettes'),
+			Language.get('character_editor_help_d_fast'),
+			Language.get('character_editor_help_d_slow')
 		];
 
 		helpBg = new FlxSprite().makeGraphic(1, 1, FlxColor.BLACK);
@@ -308,7 +277,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 			if(txt.length < 1) continue;
 
 			var helpText:FlxText = new FlxText(0, 0, 600, txt, 16);
-			helpText.setFormat(null, 16, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
+			helpText.setFormat(Paths.font(Language.get('uitab_font')), 16, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
 			helpText.borderColor = FlxColor.BLACK;
 			helpText.scrollFactor.set();
 			helpText.borderSize = 1;
@@ -352,11 +321,11 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 
 	function makeUIMenu()
 	{
-		UI_box = new PsychUIBox(FlxG.width - 275, 25, 250, 120, ['Ghost', 'Settings']);
+		UI_box = new PsychUIBox(FlxG.width - 275, 25, 250, 120, [Language.get('character_editor_tab_ghost'), Language.get('character_editor_tab_settings')]);
 		UI_box.scrollFactor.set();
 		UI_box.cameras = [camHUD];
 
-		UI_characterbox = new PsychUIBox(UI_box.x - 100, UI_box.y + UI_box.height + 10, 350, 280, ['Animations', 'Character']);
+		UI_characterbox = new PsychUIBox(UI_box.x - 100, UI_box.y + UI_box.height + 10, 350, 280, [Language.get('character_editor_tab_animations'), Language.get('character_editor_tab_character')]);
 		UI_characterbox.scrollFactor.set();
 		UI_characterbox.cameras = [camHUD];
 		add(UI_characterbox);
@@ -367,17 +336,17 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 		addAnimationsUI();
 		addCharacterUI();
 
-		UI_box.selectedName = 'Settings';
-		UI_characterbox.selectedName = 'Character';
+		UI_box.selectedName = Language.get('character_editor_tab_settings');
+		UI_characterbox.selectedName = Language.get('character_editor_tab_character');
 	}
 
 	var ghostAlpha:Float = 0.6;
 	function addGhostUI()
 	{
-		var tab_group = UI_box.getTab('Ghost').menu;
+		var tab_group = UI_box.getTab(Language.get('character_editor_tab_ghost')).menu;
 
 		//var hideGhostButton:PsychUIButton = null;
-		var makeGhostButton:PsychUIButton = new PsychUIButton(25, 15, "Make Ghost", function() {
+		var makeGhostButton:PsychUIButton = new PsychUIButton(25, 15, Language.get('character_editor_make_ghost'), function() {
 			var anim = anims[curAnim];
 			if(!character.isAnimationNull())
 			{
@@ -445,7 +414,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 		hideGhostButton.active = false;
 		hideGhostButton.alpha = 0.6;*/
 
-		var highlightGhost:PsychUICheckBox = new PsychUICheckBox(20 + makeGhostButton.x + makeGhostButton.width, makeGhostButton.y, "Highlight Ghost", 100);
+		var highlightGhost:PsychUICheckBox = new PsychUICheckBox(20 + makeGhostButton.x + makeGhostButton.width, makeGhostButton.y, Language.get('character_editor_highlight_ghost'), 100);
 		highlightGhost.onClick = function()
 		{
 			var value = highlightGhost.checked ? 125 : 0;
@@ -467,7 +436,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 			if(animateGhost != null) animateGhost.alpha = ghostAlpha;
 
 		}, ghostAlpha, 0, 1);
-		ghostAlphaSlider.label = 'Opacity:';
+		ghostAlphaSlider.label = Language.get('character_editor_opacity');
 
 		tab_group.add(makeGhostButton);
 		//tab_group.add(hideGhostButton);
@@ -479,9 +448,9 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 	var charDropDown:PsychUIDropDownMenu;
 	function addSettingsUI()
 	{
-		var tab_group = UI_box.getTab('Settings').menu;
+		var tab_group = UI_box.getTab(Language.get('character_editor_tab_settings')).menu;
 
-		check_player = new PsychUICheckBox(10, 60, "Playable Character", 100);
+		check_player = new PsychUICheckBox(10, 60, Language.get('character_editor_playable_character'), 100);
 		check_player.checked = character.isPlayer;
 		check_player.onClick = function()
 		{
@@ -491,7 +460,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 			updatePointerPos(false);
 		};
 
-		var reloadCharacter:PsychUIButton = new PsychUIButton(140, 20, "Reload Char", function()
+		var reloadCharacter:PsychUIButton = new PsychUIButton(140, 20, Language.get('character_editor_reload_char'), function()
 		{
 			addCharacter(true);
 			updatePointerPos();
@@ -499,7 +468,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 			reloadCharacterDropDown();
 		});
 
-		var templateCharacter:PsychUIButton = new PsychUIButton(140, 50, "Load Template", function()
+		var templateCharacter:PsychUIButton = new PsychUIButton(140, 50, Language.get('character_editor_load_template'), function()
 		{
 			final _template:CharacterFile =
 			{
@@ -565,7 +534,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 		reloadCharacterDropDown();
 		charDropDown.selectedLabel = _char;
 
-		tab_group.add(new FlxText(charDropDown.x, charDropDown.y - 18, 80, 'Character:'));
+		tab_group.add(uilabel(charDropDown.x, charDropDown.y - 18, 80, Language.get('character_editor_character')));
 		tab_group.add(check_player);
 		tab_group.add(reloadCharacter);
 		tab_group.add(templateCharacter);
@@ -580,13 +549,13 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 	var animationLoopCheckBox:PsychUICheckBox;
 	function addAnimationsUI()
 	{
-		var tab_group = UI_characterbox.getTab('Animations').menu;
+		var tab_group = UI_characterbox.getTab(Language.get('character_editor_tab_animations')).menu;
 
-		animationInputText = new PsychUIInputText(15, 85, 80, '', 8);
-		animationNameInputText = new PsychUIInputText(animationInputText.x, animationInputText.y + 35, 150, '', 8);
-		animationIndicesInputText = new PsychUIInputText(animationNameInputText.x, animationNameInputText.y + 40, 250, '', 8);
+		animationInputText = new PsychUIInputText(15, 85, 80, '', 12);
+		animationNameInputText = new PsychUIInputText(animationInputText.x, animationInputText.y + 35, 150, '', 12);
+		animationIndicesInputText = new PsychUIInputText(animationNameInputText.x, animationNameInputText.y + 40, 250, '', 12);
 		animationFramerate = new PsychUINumericStepper(animationInputText.x + 170, animationInputText.y, 1, 24, 0, 240, 0);
-		animationLoopCheckBox = new PsychUICheckBox(animationNameInputText.x + 170, animationNameInputText.y - 1, "Should it Loop?", 100);
+		animationLoopCheckBox = new PsychUICheckBox(animationNameInputText.x + 170, animationNameInputText.y - 1, Language.get('character_editor_should_loop'), 100);
 
 		animationDropDown = new PsychUIDropDownMenu(15, animationInputText.y - 55, [''], function(selectedAnimation:Int, pressed:String) {
 			var anim:AnimArray = character.animationsArray[selectedAnimation];
@@ -599,7 +568,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 			animationIndicesInputText.text = indicesStr.substr(1, indicesStr.length - 2);
 		});
 
-		var addUpdateButton:PsychUIButton = new PsychUIButton(70, animationIndicesInputText.y + 60, "Add/Update", function() {
+		var addUpdateButton:PsychUIButton = new PsychUIButton(70, animationIndicesInputText.y + 60, Language.get('character_editor_add_update'), function() {
 			var indicesText:String = animationIndicesInputText.text.trim();
 			var indices:Array<Int> = [];
 			if(indicesText.length > 0)
@@ -658,7 +627,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 			trace('Added/Updated animation: ' + animationInputText.text);
 		});
 
-		var removeButton:PsychUIButton = new PsychUIButton(180, animationIndicesInputText.y + 60, "Remove", function() {
+		var removeButton:PsychUIButton = new PsychUIButton(180, animationIndicesInputText.y + 60, Language.get('character_editor_remove'), function() {
 			for (anim in character.animationsArray)
 				if(animationInputText.text == anim.anim)
 				{
@@ -684,11 +653,11 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 		reloadAnimList();
 		animationDropDown.selectedLabel = anims[0] != null ? anims[0].anim : '';
 
-		tab_group.add(new FlxText(animationDropDown.x, animationDropDown.y - 18, 100, 'Animations:'));
-		tab_group.add(new FlxText(animationInputText.x, animationInputText.y - 18, 100, 'Animation name:'));
-		tab_group.add(new FlxText(animationFramerate.x, animationFramerate.y - 18, 100, 'Framerate:'));
-		tab_group.add(new FlxText(animationNameInputText.x, animationNameInputText.y - 18, 150, 'Animation Symbol Name/Tag:'));
-		tab_group.add(new FlxText(animationIndicesInputText.x, animationIndicesInputText.y - 18, 170, 'ADVANCED - Animation Indices:'));
+		tab_group.add(uilabel(animationDropDown.x, animationDropDown.y - 18, 100, Language.get('character_editor_animations')));
+		tab_group.add(uilabel(animationInputText.x, animationInputText.y - 18, 100, Language.get('character_editor_animation_name')));
+		tab_group.add(uilabel(animationFramerate.x, animationFramerate.y - 18, 100, Language.get('character_editor_framerate')));
+		tab_group.add(uilabel(animationNameInputText.x, animationNameInputText.y - 18, 150, Language.get('character_editor_symbol_tag')));
+		tab_group.add(uilabel(animationIndicesInputText.x, animationIndicesInputText.y - 18, 170, Language.get('character_editor_anim_indices')));
 
 		tab_group.add(animationInputText);
 		tab_group.add(animationNameInputText);
@@ -719,10 +688,10 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 	var healthColorStepperB:PsychUINumericStepper;
 	function addCharacterUI()
 	{
-		var tab_group = UI_characterbox.getTab('Character').menu;
+		var tab_group = UI_characterbox.getTab(Language.get('character_editor_tab_character')).menu;
 
-		imageInputText = new PsychUIInputText(15, 30, 200, character.imageFile, 8);
-		var reloadImage:PsychUIButton = new PsychUIButton(imageInputText.x + 210, imageInputText.y - 3, "Reload Image", function()
+		imageInputText = new PsychUIInputText(15, 30, 200, character.imageFile, 12);
+		var reloadImage:PsychUIButton = new PsychUIButton(imageInputText.x + 210, imageInputText.y - 3, Language.get('character_editor_reload_image'), function()
 		{
 			var lastAnim = character.getAnimationName();
 			character.imageFile = imageInputText.text;
@@ -732,7 +701,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 			}
 		});
 
-		var decideIconColor:PsychUIButton = new PsychUIButton(reloadImage.x, reloadImage.y + 30, "Get Icon Color", function()
+		var decideIconColor:PsychUIButton = new PsychUIButton(reloadImage.x, reloadImage.y + 30, Language.get('character_editor_get_icon_color'), function()
 			{
 				var coolColor:FlxColor = FlxColor.fromInt(CoolUtil.dominantColor(healthIcon));
 				character.healthColorArray[0] = coolColor.red;
@@ -741,15 +710,15 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 				updateHealthBar();
 			});
 
-		healthIconInputText = new PsychUIInputText(15, imageInputText.y + 35, 75, healthIcon.getCharacter(), 8);
+		healthIconInputText = new PsychUIInputText(15, imageInputText.y + 35, 75, healthIcon.getCharacter(), 12);
 
-		vocalsInputText = new PsychUIInputText(15, healthIconInputText.y + 35, 75, character.vocalsFile != null ? character.vocalsFile : '', 8);
+		vocalsInputText = new PsychUIInputText(15, healthIconInputText.y + 35, 75, character.vocalsFile != null ? character.vocalsFile : '', 12);
 
 		singDurationStepper = new PsychUINumericStepper(15, vocalsInputText.y + 45, 0.1, 4, 0, 999, 1);
 
 		scaleStepper = new PsychUINumericStepper(15, singDurationStepper.y + 40, 0.1, 1, 0.05, 10, 2);
 
-		flipXCheckBox = new PsychUICheckBox(singDurationStepper.x + 80, singDurationStepper.y, "Flip X", 50);
+		flipXCheckBox = new PsychUICheckBox(singDurationStepper.x + 80, singDurationStepper.y, Language.get('character_editor_flip_x'), 120);
 		flipXCheckBox.checked = character.flipX;
 		if(character.isPlayer) flipXCheckBox.checked = !flipXCheckBox.checked;
 		flipXCheckBox.onClick = function() {
@@ -757,7 +726,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 			character.flipX = (character.originalFlipX != character.isPlayer);
 		};
 
-		noAntialiasingCheckBox = new PsychUICheckBox(flipXCheckBox.x, flipXCheckBox.y + 40, "No Antialiasing", 80);
+		noAntialiasingCheckBox = new PsychUICheckBox(flipXCheckBox.x, flipXCheckBox.y + 40, Language.get('character_editor_no_antialiasing'), 120);
 		noAntialiasingCheckBox.checked = character.noAntialiasing;
 		noAntialiasingCheckBox.onClick = function() {
 			character.antialiasing = false;
@@ -773,7 +742,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 		positionCameraXStepper = new PsychUINumericStepper(positionXStepper.x, positionXStepper.y + 40, 10, character.cameraPosition[0], -9000, 9000, 0);
 		positionCameraYStepper = new PsychUINumericStepper(positionYStepper.x, positionYStepper.y + 40, 10, character.cameraPosition[1], -9000, 9000, 0);
 
-		var saveCharacterButton:PsychUIButton = new PsychUIButton(reloadImage.x, noAntialiasingCheckBox.y + 40, "Save Character", function() {
+		var saveCharacterButton:PsychUIButton = new PsychUIButton(reloadImage.x, noAntialiasingCheckBox.y + 40, Language.get('character_editor_save_character'), function() {
 			saveCharacter();
 		});
 
@@ -781,14 +750,14 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 		healthColorStepperG = new PsychUINumericStepper(singDurationStepper.x + 65, saveCharacterButton.y, 20, character.healthColorArray[1], 0, 255, 0);
 		healthColorStepperB = new PsychUINumericStepper(singDurationStepper.x + 130, saveCharacterButton.y, 20, character.healthColorArray[2], 0, 255, 0);
 
-		tab_group.add(new FlxText(15, imageInputText.y - 18, 100, 'Image file name:'));
-		tab_group.add(new FlxText(15, healthIconInputText.y - 18, 100, 'Health icon name:'));
-		tab_group.add(new FlxText(15, vocalsInputText.y - 18, 100, 'Vocals File Postfix:'));
-		tab_group.add(new FlxText(15, singDurationStepper.y - 18, 120, 'Sing Animation length:'));
-		tab_group.add(new FlxText(15, scaleStepper.y - 18, 100, 'Scale:'));
-		tab_group.add(new FlxText(positionXStepper.x, positionXStepper.y - 18, 100, 'Character X/Y:'));
-		tab_group.add(new FlxText(positionCameraXStepper.x, positionCameraXStepper.y - 18, 100, 'Camera X/Y:'));
-		tab_group.add(new FlxText(healthColorStepperR.x, healthColorStepperR.y - 18, 100, 'Health Bar R/G/B:'));
+		tab_group.add(uilabel(15, imageInputText.y - 18, 100, Language.get('character_editor_image_file_name')));
+		tab_group.add(uilabel(15, healthIconInputText.y - 18, 100, Language.get('character_editor_health_icon_name')));
+		tab_group.add(uilabel(15, vocalsInputText.y - 18, 100, Language.get('character_editor_vocals_postfix')));
+		tab_group.add(uilabel(15, singDurationStepper.y - 18, 120, Language.get('character_editor_sing_anim_length')));
+		tab_group.add(uilabel(15, scaleStepper.y - 18, 100, Language.get('character_editor_scale')));
+		tab_group.add(uilabel(positionXStepper.x, positionXStepper.y - 18, 100, Language.get('character_editor_char_xy')));
+		tab_group.add(uilabel(positionCameraXStepper.x, positionCameraXStepper.y - 18, 100, Language.get('character_editor_camera_xy')));
+		tab_group.add(uilabel(healthColorStepperR.x, healthColorStepperR.y - 18, 100, Language.get('character_editor_health_rgb')));
 		tab_group.add(imageInputText);
 		tab_group.add(reloadImage);
 		tab_group.add(decideIconColor);
@@ -1001,7 +970,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 			if(FlxG.camera.zoom < 0.1) FlxG.camera.zoom = 0.1;
 		}
 
-		if(lastZoom != FlxG.camera.zoom) cameraZoomText.text = 'Zoom: ' + FlxMath.roundDecimal(FlxG.camera.zoom, 2) + 'x';
+		cameraZoomText.text = Language.get('character_editor_zoom', [Std.string(FlxMath.roundDecimal(FlxG.camera.zoom, 2))]);
 
 		// CHARACTER CONTROLS
 		var changedAnim:Bool = false;
@@ -1099,7 +1068,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 			updateText();
 		}
 
-		var txt = 'ERROR: No Animation Found';
+		var txt = Language.get('character_editor_no_animation_found');
 		var clr = FlxColor.RED;
 		if(!character.isAnimationNull())
 		{
@@ -1143,7 +1112,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 					}
 				}
 	
-				txt = 'Frames: ( $frames / ${length-1} )';
+				txt = Language.get('character_editor_frames', [Std.string(frames), Std.string(length - 1)]);
 				//if(character.animation.curAnim.paused) txt += ' - PAUSED';
 				clr = FlxColor.WHITE;
 			}
@@ -1357,7 +1326,7 @@ class CharacterEditorState extends MusicBeatState implements PsychUIEventHandler
 	function reloadAnimationDropDown() {
 		var animList:Array<String> = [];
 		for (anim in anims) animList.push(anim.anim);
-		if(animList.length < 1) animList.push('NO ANIMATIONS'); //Prevents crash
+		if(animList.length < 1) animList.push(Language.get('character_editor_no_animations')); //Prevents crash
 
 		animationDropDown.list = animList;
 	}
