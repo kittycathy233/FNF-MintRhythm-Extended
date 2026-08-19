@@ -1,0 +1,30 @@
+{
+	"week_editor_tab_other": "Other",
+	"week_editor_tab_week": "Week",
+
+	"week_editor_load_week": "Load Week",
+	"week_editor_freeplay": "Freeplay",
+	"week_editor_story_mode": "Story Mode",
+	"week_editor_save_week": "Save Week",
+
+	"week_editor_songs": "Songs:",
+	"week_editor_characters": "Characters:",
+	"week_editor_background_asset": "Background Asset:",
+	"week_editor_display_name": "Display Name:",
+	"week_editor_week_name_reset": "Week Name (for Reset Score Menu):",
+	"week_editor_week_file": "Week File:",
+	"week_editor_hide_story": "Hide Week from Story Mode?",
+
+	"week_editor_week_locked": "Week starts Locked",
+	"week_editor_hidden_until_unlock": "Hidden until Unlocked",
+	"week_editor_week_before": "Week File name of the Week you have\nto finish for Unlocking:",
+	"week_editor_difficulties": "Difficulties:",
+	"week_editor_difficulties_default": "Default difficulties are \"Easy, Normal, Hard\"\nwithout quotes.",
+	"week_editor_missing_file": "MISSING FILE: images/storymenu/{0}.png",
+
+	"week_editor_sel_bg_color": "Selected background Color R/G/B:",
+	"week_editor_sel_icon": "Selected icon:",
+	"week_editor_copy_color": "Copy Color",
+	"week_editor_paste_color": "Paste Color",
+	"week_editor_hide_freeplay": "Hide Week from Freeplay?"
+}

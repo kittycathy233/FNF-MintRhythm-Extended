@@ -1,0 +1,30 @@
+{
+	"week_editor_tab_other": "其他",
+	"week_editor_tab_week": "週目",
+
+	"week_editor_load_week": "載入週目",
+	"week_editor_freeplay": "自由模式",
+	"week_editor_story_mode": "故事模式",
+	"week_editor_save_week": "儲存週目",
+
+	"week_editor_songs": "歌曲：",
+	"week_editor_characters": "角色：",
+	"week_editor_background_asset": "背景資源：",
+	"week_editor_display_name": "顯示名稱：",
+	"week_editor_week_name_reset": "週目名稱（用於重置分數選單）：",
+	"week_editor_week_file": "週目檔案：",
+	"week_editor_hide_story": "在故事模式中隱藏該週目？",
+
+	"week_editor_week_locked": "週目初始鎖定",
+	"week_editor_hidden_until_unlock": "解鎖前隱藏",
+	"week_editor_week_before": "要解鎖該週目，需先完成的週目檔名：",
+	"week_editor_difficulties": "難度：",
+	"week_editor_difficulties_default": "預設難度為 \"Easy, Normal, Hard\"\n（不含引號）。",
+	"week_editor_missing_file": "缺少檔案：images/storymenu/{0}.png",
+
+	"week_editor_sel_bg_color": "所選背景顏色 R/G/B：",
+	"week_editor_sel_icon": "所選圖示：",
+	"week_editor_copy_color": "複製顏色",
+	"week_editor_paste_color": "貼上顏色",
+	"week_editor_hide_freeplay": "在自由模式中隱藏該週目？"
+}

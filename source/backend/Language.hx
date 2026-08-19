@@ -39,6 +39,9 @@ class Language {
         // 合并角色编辑器（Character Editor）专属语言包（assets/languages/editors/character_editor/{lang}.json）
         CharacterEditorLanguage.mergeInto(currentLang, lang);
 
+        // 合并周目编辑器（Week Editor）专属语言包（assets/languages/editors/week_editor/{lang}.json）
+        WeekEditorLanguage.mergeInto(currentLang, lang);
+
         // 设置 UI 组件默认字体，确保下拉框/数字框/输入框能正确显示 CJK 字符
         PsychUIInputText.defaultFont = Paths.font(get('uitab_font'));
 
