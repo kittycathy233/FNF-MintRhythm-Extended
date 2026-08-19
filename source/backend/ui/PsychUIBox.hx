@@ -40,6 +40,10 @@ class PsychUIBox extends FlxSpriteGroup
 	public var canMinimize(default, set):Bool = true;
 	public var isMinimized(default, set):Bool = false;
 	public var minimizeOnFocusLost:Bool = false;
+	// 当设置为 true 时，背景板(bg)会随选中的 tab 实时移动/缩放，作为下拉菜单的底板；
+	// 解决点击切换 tab 时背景板延迟导致 minimizeOnFocusLost 误收起菜单的问题
+	public var bgFollowsSelectedTab:Bool = false;
+	var _boxWidth:Int = 0;
 
 	public function new(x:Float, y:Float, width:Int, height:Int, tabs:Array<String> = null)
 	{
@@ -155,6 +159,14 @@ class PsychUIBox extends FlxSpriteGroup
 				tab.alpha = style.bgAlpha;
 				tab.text.color = style.textColor;
 			}
+
+			// 实时同步下拉菜单背景板到当前选中的 tab（需在下方 minimizeOnFocusLost 判定之前）
+			if(bgFollowsSelectedTab && selectedTab != null && !isMinimized && tabs.length > 0)
+			{
+				bg.x = x + selectedIndex * (_boxWidth / tabs.length);
+				bg.setGraphicSize(selectedTab.menu.width, selectedTab.menu.height + 21);
+				bg.updateHitbox();
+			}
 		}
 
 		if(_ignoreTabUpdate)
@@ -214,7 +226,7 @@ class PsychUIBox extends FlxSpriteGroup
 	public var tabHeight:Int = 20;
 	public function updateTabs()
 	{
-		var wid:Int = Std.int(bg.width / tabs.length);
+		var wid:Int = Std.int(_boxWidth / tabs.length);
 		for (num => tab in tabs)
 		{
 			tab.x = x + wid * num;
@@ -227,6 +239,7 @@ class PsychUIBox extends FlxSpriteGroup
 	public function resize(width:Int, height:Int)
 	{
 		_originalHeight = height;
+		_boxWidth = width;
 		bg.setGraphicSize(width, height);
 		bg.updateHitbox();
 		updateTabs();

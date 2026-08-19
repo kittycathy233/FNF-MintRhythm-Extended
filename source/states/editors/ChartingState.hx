@@ -101,6 +101,15 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		['Add IconBop', "Make the health icons bop once immediately."]
 		];
 	
+	/** 根据事件名获取本地化描述，找不到翻译则返回原文 */
+	public static function getEventDesc(eventName:String, originalDesc:String):String
+	{
+		var keySuffix = eventName.toLowerCase().replace(' ', '_').replace('!', '').replace("'", '');
+		var key = 'charting_event_desc_' + (keySuffix == '' ? 'nothing' : keySuffix);
+		var translated = Language.get(key);
+		return (translated == key) ? originalDesc : translated;
+	}
+	
 	public static var keysArray:Array<FlxKey> = [ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT]; //Used for Vortex Editor
 	public static var SHOW_EVENT_COLUMN = true;
 	public static var EVENT_TRACK_COUNT = 4; // Event轨道数量，用于分散同一时间点的多个event
@@ -251,7 +260,6 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	// 角色对象
 	public var dad:Character;
 	public var boyfriend:Character;
-	public var showCharactersCheckBox:PsychUICheckBox;
 	public var charactersLoaded:Bool = false;
 
 	// idle动画重新播放标记（初始为true，让角色开始播放idle动画）
@@ -701,6 +709,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 		upperBox.canMove = false;
 		upperBox.cameras = [camUI];
 		upperBox.bg.visible = false;
+		upperBox.bgFollowsSelectedTab = true; // 让背景板实时跟随下拉菜单选中的 tab
 		add(upperBox);
 
 		outputTxt = new FlxText(25, FlxG.height - 50, FlxG.width - 50, '', 20);
@@ -878,7 +887,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 		dad = new Character(stageData.opponent[0], stageData.opponent[1], PlayState.SONG.player2);
 		dad.cameras = [camChart];
 		dad.updateHitbox();
-		dad.visible = showCharactersCheckBox != null ? chartEditorSave.data.showCharacters : false;
+		dad.visible = chartEditorSave.data.showCharacters;
 		
 		// 自定义对手角色位置（覆盖StageData，不影响全局）
 		dad.x = -700;
@@ -891,7 +900,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 		boyfriend = new Character(stageData.boyfriend[0], stageData.boyfriend[1], PlayState.SONG.player1, true);
 		boyfriend.cameras = [camChart];
 		boyfriend.updateHitbox();
-		boyfriend.visible = showCharactersCheckBox != null ? chartEditorSave.data.showCharacters : false;
+		boyfriend.visible = chartEditorSave.data.showCharacters;
 		
 		// 自定义玩家角色位置（覆盖StageData，不影响全局）
 		boyfriend.x = 1200;
@@ -921,7 +930,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 			dad = new Character(stageData.opponent[0], stageData.opponent[1], PlayState.SONG.player2);
 			dad.cameras = [camChart];
 			dad.updateHitbox();
-			dad.visible = showCharactersCheckBox.checked;
+			dad.visible = chartEditorSave.data.showCharacters;
 			
 			// 自定义对手角色位置（覆盖StageData，不影响全局）
 			dad.x = -850;
@@ -937,7 +946,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 			boyfriend = new Character(stageData.boyfriend[0], stageData.boyfriend[1], PlayState.SONG.player1, true);
 			boyfriend.cameras = [camChart];
 			boyfriend.updateHitbox();
-			boyfriend.visible = showCharactersCheckBox.checked;
+			boyfriend.visible = chartEditorSave.data.showCharacters;
 			
 			// 自定义玩家角色位置（覆盖StageData，不影响全局）
 			boyfriend.x = 1500;
@@ -2432,7 +2441,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 		ignoreClickForThisFrame = false;
 
 	// 基于Conductor.songPosition自动播放角色sing动画
-	if(showCharactersCheckBox.checked && charactersLoaded)
+	if(charactersLoaded)
 	{
 		// 检测音符是否刚刚到达判定点（类似打击音的时机）
 		var currentStrumTime:Float = Conductor.songPosition;
@@ -2847,7 +2856,7 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 		{
 			var eventNote:EventMetaNote = cast (selectedNotes[0], EventMetaNote);
 			curEventSelected = Std.int(FlxMath.bound(curEventSelected, 0, eventNote.events.length - 1));
-			selectedEventText.text = 'Selected Event: ${curEventSelected + 1} / ${eventNote.events.length}';
+			selectedEventText.text = Language.get('charting_selected_event', ['${curEventSelected + 1}', '${eventNote.events.length}']);
 			selectedEventText.visible = true;
 			
 			var myEvent:Array<String> = eventNote.events[curEventSelected];
@@ -4613,23 +4622,8 @@ for (i in 0...GRID_PLAYERS)
 				}
 			}
 		}
-			// 根据mustHitSection调整角色颜色
-		if(showCharactersCheckBox.checked && charactersLoaded)
-		{
-			if(mustHitSection)
-			{
-				// 启用mustHitSection时，dad变暗，boyfriend正常
-				if(dad != null) dad.color = 0xFF666666;
-				if(boyfriend != null) boyfriend.color = 0xFFFFFFFF;
-			}
-			else
-			{
-				// 禁用mustHitSection时，boyfriend变暗，dad正常
-				if(dad != null) dad.color = 0xFFFFFFFF;
-				if(boyfriend != null) boyfriend.color = 0xFF666666;
-			}
-		}
-		
+			// 根据mustHitSection调整角色颜色已移除（ShowCharacters复选框已删除）
+
 		_lastGfSection = isGfSection;
 		_lastSec = curSec;
 	}
@@ -4657,17 +4651,17 @@ for (i in 0...GRID_PLAYERS)
 		var objX = 10;
 		var objY = 10;
 
-		var txt = new FlxText(objX, objY, 280, Language.get('charting_charting_tip'), Std.parseInt(Language.get('charting_font_size')));
-		txt.font = Language.get('uitab_font');
+		var txt = new FlxText(objX, objY, 320, Language.get('charting_charting_tip'), Std.parseInt(Language.get('charting_font_size')));
+		txt.font = Paths.font(Language.get('uitab_font'));
 		txt.alignment = CENTER;
 		tab_group.add(txt);
 
 		objY += 25;
-		playbackSlider = new PsychUISlider(50, objY, function(v:Float) setPitch(playbackRate = v), 1, 0.1, 5.0, 200);
+		playbackSlider = new PsychUISlider(50, objY, function(v:Float) setPitch(playbackRate = v), 1, 0.1, 5.0, 250);
 		playbackSlider.label = Language.get('charting_playback_text');
 		
 		objY += 60;
-		mouseSnapCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_mousescrsnap_text'), 100, function() 
+		mouseSnapCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_mousescrsnap_text'), 160, function() 
 		{
 			chartEditorSave.data.mouseScrollSnap = mouseSnapCheckBox.checked;
 			chartEditorSave.flush();
@@ -4675,7 +4669,7 @@ for (i in 0...GRID_PLAYERS)
 		if(chartEditorSave.data.mouseScrollSnap == null) chartEditorSave.data.mouseScrollSnap = false;
 		mouseSnapCheckBox.checked = chartEditorSave.data.mouseScrollSnap;
 
-		ignoreProgressCheckBox = new PsychUICheckBox(objX + 150, objY, Language.get('charting_ignwarning_text'), 100, function() 
+		ignoreProgressCheckBox = new PsychUICheckBox(objX + 170, objY, Language.get('charting_ignwarning_text'), 160, function()
 		{
 			chartEditorSave.data.ignoreProgressWarns = ignoreProgressCheckBox.checked;
 			chartEditorSave.flush();
@@ -4685,8 +4679,8 @@ for (i in 0...GRID_PLAYERS)
 
 		if(!controls.mobileC)
 		{
-			objY += 30;
-			rightClickDeleteCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_rightclickdel_text'), 280, function()
+			objY += 25;
+			rightClickDeleteCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_rightclickdel_text'), 160, function()
 			{
 				rightClickDeleteNote = rightClickDeleteCheckBox.checked;
 				chartEditorSave.data.rightClickDeleteNote = rightClickDeleteNote;
@@ -4695,8 +4689,8 @@ for (i in 0...GRID_PLAYERS)
 			if(chartEditorSave.data.rightClickDeleteNote == null) chartEditorSave.data.rightClickDeleteNote = false;
 			rightClickDeleteCheckBox.checked = chartEditorSave.data.rightClickDeleteNote;
 
-			objY += 30;
-			dragHoldCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_dragcreatesustain_text'), 280, function()
+			// dragHoldCheckBox 移到 ignoreProgressCheckBox 下方（与 rightClickDeleteCheckBox 同行但右对齐）
+			dragHoldCheckBox = new PsychUICheckBox(objX + 170, objY, Language.get('charting_dragcreatesustain_text'), 160, function()
 			{
 				dragCreateHoldNote = dragHoldCheckBox.checked;
 				chartEditorSave.data.dragCreateHoldNote = dragCreateHoldNote;
@@ -4707,19 +4701,19 @@ for (i in 0...GRID_PLAYERS)
 		}
 
 		objY += 50;
-		hitsoundPlayerStepper = new PsychUINumericStepper(objX, objY, 0.2, chartEditorSave.data.hitsoundPlayerVol, 0, 1, 1);
+		hitsoundPlayerStepper = new PsychUINumericStepper(objX, objY, 0.2, chartEditorSave.data.hitsoundPlayerVol, 0, 1, 1, 80);
 		hitsoundPlayerStepper.onValueChange = function()
 		{
 			chartEditorSave.data.hitsoundPlayerVol = hitsoundPlayerStepper.value;
 			chartEditorSave.flush();
 		};
-		hitsoundOpponentStepper = new PsychUINumericStepper(objX + 100, objY, 0.2, chartEditorSave.data.hitsoundOpponentVol, 0, 1, 1);
+		hitsoundOpponentStepper = new PsychUINumericStepper(objX + 110, objY, 0.2, chartEditorSave.data.hitsoundOpponentVol, 0, 1, 1, 80);
 		hitsoundOpponentStepper.onValueChange = function()
 		{
 			chartEditorSave.data.hitsoundOpponentVol = hitsoundOpponentStepper.value;
 			chartEditorSave.flush();
 		};
-		metronomeStepper = new PsychUINumericStepper(objX + 200, objY, 0.2, chartEditorSave.data.metronomeVol, 0, 1, 1);
+		metronomeStepper = new PsychUINumericStepper(objX + 220, objY, 0.2, chartEditorSave.data.metronomeVol, 0, 1, 1, 80);
 		metronomeStepper.onValueChange = function()
 		{
 			chartEditorSave.data.metronomeVol = metronomeStepper.value;
@@ -4727,21 +4721,21 @@ for (i in 0...GRID_PLAYERS)
 		};
 
 		objY += 50;
-		instVolumeStepper = new PsychUINumericStepper(objX, objY, 0.1, chartEditorSave.data.instVolume, 0, 1, 1);
+		instVolumeStepper = new PsychUINumericStepper(objX, objY, 0.1, chartEditorSave.data.instVolume, 0, 1, 1, 80);
 		instVolumeStepper.onValueChange = function()
 		{
 			chartEditorSave.data.instVolume = instVolumeStepper.value;
 			chartEditorSave.flush();
 			updateAudioVolume();
 		};
-		playerVolumeStepper = new PsychUINumericStepper(objX + 100, objY, 0.1, chartEditorSave.data.playerVolume, 0, 1, 1);
+		playerVolumeStepper = new PsychUINumericStepper(objX + 110, objY, 0.1, chartEditorSave.data.playerVolume, 0, 1, 1, 80);
 		playerVolumeStepper.onValueChange = function()
 		{
 			chartEditorSave.data.playerVolume = playerVolumeStepper.value;
 			chartEditorSave.flush();
 			updateAudioVolume();
 		};
-		opponentVolumeStepper = new PsychUINumericStepper(objX + 200, objY, 0.1, chartEditorSave.data.opponentVolume, 0, 1, 1);
+		opponentVolumeStepper = new PsychUINumericStepper(objX + 220, objY, 0.1, chartEditorSave.data.opponentVolume, 0, 1, 1, 80);
 		opponentVolumeStepper.onValueChange = function()
 		{
 			chartEditorSave.data.opponentVolume = opponentVolumeStepper.value;
@@ -4781,16 +4775,16 @@ for (i in 0...GRID_PLAYERS)
 		if(rightClickDeleteCheckBox != null) tab_group.add(rightClickDeleteCheckBox);
 		if(dragHoldCheckBox != null) tab_group.add(dragHoldCheckBox);
 
-		tab_group.add(new FlxText(hitsoundPlayerStepper.x, hitsoundPlayerStepper.y - 15, 100, Language.get('charting_playersoundhit_text')).setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(hitsoundOpponentStepper.x, hitsoundOpponentStepper.y - 15, 100, Language.get('charting_opposoundhit_text')).setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(metronomeStepper.x, metronomeStepper.y - 15, 100, Language.get('charting_metronome_text')).setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(hitsoundPlayerStepper.x, hitsoundPlayerStepper.y - 15, 120, Language.get('charting_playersoundhit_text')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(hitsoundOpponentStepper.x, hitsoundOpponentStepper.y - 15, 120, Language.get('charting_opposoundhit_text')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(metronomeStepper.x, metronomeStepper.y - 15, 100, Language.get('charting_metronome_text')).setFormat(Paths.font(Language.get('uitab_font')), 12));
 		tab_group.add(hitsoundPlayerStepper);
 		tab_group.add(hitsoundOpponentStepper);
 		tab_group.add(metronomeStepper);
 		
-		tab_group.add(new FlxText(instVolumeStepper.x, instVolumeStepper.y - 15, 100, Language.get('charting_instvol_text')).setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(playerVolumeStepper.x, playerVolumeStepper.y - 15, 100, Language.get('charting_playervol_text')).setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(opponentVolumeStepper.x, opponentVolumeStepper.y - 15, 100, Language.get('charting_oppovol_text')).setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(instVolumeStepper.x, instVolumeStepper.y - 15, 100, Language.get('charting_instvol_text')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(playerVolumeStepper.x, playerVolumeStepper.y - 15, 100, Language.get('charting_playervol_text')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(opponentVolumeStepper.x, opponentVolumeStepper.y - 15, 100, Language.get('charting_oppovol_text')).setFormat(Paths.font(Language.get('uitab_font')), 12));
 		tab_group.add(instVolumeStepper);
 		tab_group.add(instMuteCheckBox);
 		tab_group.add(playerVolumeStepper);
@@ -4819,21 +4813,21 @@ for (i in 0...GRID_PLAYERS)
 		});
 
 		objY += 40;
-		gameOverSndInputText = new PsychUIInputText(objX, objY, 120, '', 8);
+		gameOverSndInputText = new PsychUIInputText(objX, objY, 150, '', 12);
 		gameOverSndInputText.onChange = function(old:String, cur:String)
 		{
 			PlayState.SONG.gameOverSound = cur;
 			if(cur.trim().length < 1) Reflect.deleteField(PlayState.SONG, 'gameOverSound');
 		}
 		objY += 40;
-		gameOverLoopInputText = new PsychUIInputText(objX, objY, 120, '', 8);
+		gameOverLoopInputText = new PsychUIInputText(objX, objY, 150, '', 12);
 		gameOverLoopInputText.onChange = function(old:String, cur:String)
 		{
 			PlayState.SONG.gameOverLoop = cur;
 			if(cur.trim().length < 1) Reflect.deleteField(PlayState.SONG, 'gameOverLoop');
 		}
 		objY += 40;
-		gameOverRetryInputText = new PsychUIInputText(objX, objY, 120, '', 8);
+		gameOverRetryInputText = new PsychUIInputText(objX, objY, 150, '', 12);
 		gameOverRetryInputText.onChange = function(old:String, cur:String)
 		{
 			PlayState.SONG.gameOverEnd = cur;
@@ -4846,7 +4840,7 @@ for (i in 0...GRID_PLAYERS)
 		if(ClientPrefs.data.arrowColorMode == 'HSV') noRGBCheckBox.alpha = 0.5;
 		
 		objY += 40;
-		noteTextureInputText = new PsychUIInputText(objX, objY, 120, '');
+		noteTextureInputText = new PsychUIInputText(objX, objY, 150, '', 12);
 		noteTextureInputText.unfocus = function()
 		{
 			var changed:Bool = false;
@@ -4879,24 +4873,24 @@ for (i in 0...GRID_PLAYERS)
 			}
 		};
 
-		noteSplashesInputText = new PsychUIInputText(objX + 140, objY, 120, '');
+		noteSplashesInputText = new PsychUIInputText(objX + 160, objY, 140, '', 12);
 		noteSplashesInputText.onChange = function(old:String, cur:String)
 		{
 			PlayState.SONG.splashSkin = cur;
 			if(cur.trim().length < 1) PlayState.SONG.splashSkin = null;
 		}
 	
-		tab_group.add(new FlxText(gameOverCharDropDown.x, gameOverCharDropDown.y - 15, 120, 'Game Over Character:'));
-		tab_group.add(new FlxText(gameOverSndInputText.x, gameOverSndInputText.y - 15, 180, 'Game Over Death Sound (sounds/):'));
-		tab_group.add(new FlxText(gameOverLoopInputText.x, gameOverLoopInputText.y - 15, 180, 'Game Over Loop Music (music/):'));
-		tab_group.add(new FlxText(gameOverRetryInputText.x, gameOverRetryInputText.y - 15, 180, 'Game Over Retry Music (music/):'));
+		tab_group.add(new FlxText(gameOverCharDropDown.x, gameOverCharDropDown.y - 15, 120, Language.get('charting_gameover_char')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(gameOverSndInputText.x, gameOverSndInputText.y - 15, 180, Language.get('charting_gameover_snd')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(gameOverLoopInputText.x, gameOverLoopInputText.y - 15, 180, Language.get('charting_gameover_loop')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(gameOverRetryInputText.x, gameOverRetryInputText.y - 15, 180, Language.get('charting_gameover_retry')).setFormat(Paths.font(Language.get('uitab_font')), 12));
 		tab_group.add(gameOverSndInputText);
 		tab_group.add(gameOverLoopInputText);
 		tab_group.add(gameOverRetryInputText);
 		tab_group.add(noRGBCheckBox);
 
-		tab_group.add(new FlxText(noteTextureInputText.x, noteTextureInputText.y - 15, 100, 'Note Texture:'));
-		tab_group.add(new FlxText(noteSplashesInputText.x, noteSplashesInputText.y - 15, 120, 'Note Splashes Texture:'));
+		tab_group.add(new FlxText(noteTextureInputText.x, noteTextureInputText.y - 15, 100, Language.get('charting_note_texture')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(noteSplashesInputText.x, noteSplashesInputText.y - 15, 120, Language.get('charting_note_splashes')).setFormat(Paths.font(Language.get('uitab_font')), 12));
 		tab_group.add(noteTextureInputText);
 		tab_group.add(noteSplashesInputText);
 
@@ -4929,13 +4923,26 @@ for (i in 0...GRID_PLAYERS)
 		var tab_group = mainBox.getTab(Language.get('charting_events_text')).menu;
 		var objX = 10;
 		var objY = 25;
+		var boxW:Float = mainBox.bg.width;
+		var rightEdge:Int = Std.int(boxW) - objX; // usable right margin within the mainBox
+
+		// Dropdown row layout:
+		//   [  eventDropDown  ] (arrow protrudes 15px to the right of the box edge)  (10px) [ - ] (15px) [ + ] ... [ < ] (15px) [ > ] (15px from right edge)
+		var eventDropDownWidth = 150;      // total width of the dropdown (excl. the protruding arrow)
+		var arrowProtrude:Int = 15;         // how far the dropdown arrow sticks out past the box right edge
+		var innerBtnGap:Int = 15;          // gap between consecutive buttons in a group (red-green, left-right)
+		var removeBtnX:Int = objX + eventDropDownWidth + arrowProtrude + 10; // red button: 10px right of the arrow's right edge
+		var addBtnX:Int = removeBtnX + 20 + innerBtnGap;
+		var rightMargin:Int = 15;          // distance from the box right edge for the trailing '>' button
+		var rightBtnX:Int = rightEdge - rightMargin - 20; // top-right '>' button
+		var leftBtnX:Int = rightBtnX - innerBtnGap - 20;   // '<' button (to the left of '>')
 
 		eventDropDown = new PsychUIDropDownMenu(objX, objY, [], function(id:Int, character:String)
 		{
 			var eventSelected:Array<String> = eventsList[id];
 			var eventName:String = eventSelected[0];
 			var description:String = eventSelected[1];
-			eventDescriptionText.text = description;
+			eventDescriptionText.text = getEventDesc(eventName, description);
 			if(selectedNotes.length > 1)
 			{
 				for (note in selectedNotes)
@@ -4954,7 +4961,7 @@ for (i in 0...GRID_PLAYERS)
 				event.updateEventText();
 			}
 			chartDataDirty = true;
-		});
+		}, eventDropDownWidth);
 
 		function genericEventButton(func:EventMetaNote->Void)
 		{
@@ -4971,8 +4978,7 @@ for (i in 0...GRID_PLAYERS)
 			else showOutput(Language.get('charting_msg_single_event'), true);
 		}
 
-		var objX2 = 140;
-		var removeButton:PsychUIButton = new PsychUIButton(objX2, objY, '-', function()
+		var removeButton:PsychUIButton = new PsychUIButton(removeBtnX, objY, '-', function()
 		{
 			genericEventButton(function(event:EventMetaNote)
 			{
@@ -4997,7 +5003,7 @@ for (i in 0...GRID_PLAYERS)
 				}
 			});
 		}, 20);
-		var addButton:PsychUIButton = new PsychUIButton(objX2 + 30, objY, '+', function()
+		var addButton:PsychUIButton = new PsychUIButton(addBtnX, objY, '+', function()
 		{
 			genericEventButton(function(event:EventMetaNote)
 			{
@@ -5007,11 +5013,11 @@ for (i in 0...GRID_PLAYERS)
 				chartDataDirty = true;
 			});
 		}, 20);
-		var leftButton:PsychUIButton = new PsychUIButton(objX2 + 80, objY, '<', function()
+		var leftButton:PsychUIButton = new PsychUIButton(leftBtnX, objY, '<', function()
 		{
 			genericEventButton(function(event:EventMetaNote) curEventSelected = FlxMath.wrap(curEventSelected - 1, 0, event.events.length - 1));
 		}, 20);
-		var rightButton:PsychUIButton = new PsychUIButton(objX2 + 110, objY, '>', function()
+		var rightButton:PsychUIButton = new PsychUIButton(rightBtnX, objY, '>', function()
 		{
 			genericEventButton(function(event:EventMetaNote) curEventSelected = FlxMath.wrap(curEventSelected + 1, 0, event.events.length - 1));
 		}, 20);
@@ -5020,7 +5026,9 @@ for (i in 0...GRID_PLAYERS)
 		addButton.normalStyle.bgColor = FlxColor.GREEN;
 		addButton.normalStyle.textColor = FlxColor.WHITE;
 
-		selectedEventText = new FlxText(150, objY + 30, 150, '');
+		selectedEventText = new FlxText(objX, objY + 30, rightEdge - objX, '');
+		selectedEventText.font = Paths.font(Language.get('uitab_font'));
+		selectedEventText.size = 12;
 		selectedEventText.visible = false;
 
 		function changeEventsValue(str:String, n:Int)
@@ -5045,26 +5053,33 @@ for (i in 0...GRID_PLAYERS)
 			chartDataDirty = true;
 		}
 
+		// Value rows: stretch inputs to use the full inner width of the box.
+		var valueColGap:Int = 12;
+		var valueInputWidth:Int = Std.int((rightEdge - objX - valueColGap) / 2);
+		var valueInputCol2X:Int = objX + valueInputWidth + valueColGap;
+
 		objY += 70;
-		value1InputText = new PsychUIInputText(objX, objY, 120, '', 8);
+		value1InputText = new PsychUIInputText(objX, objY, valueInputWidth, '', 12);
 		value1InputText.onChange = function(old:String, cur:String) changeEventsValue(cur, 1);
-		value2InputText = new PsychUIInputText(objX + 150, objY, 120, '', 8);
+		value2InputText = new PsychUIInputText(valueInputCol2X, objY, valueInputWidth, '', 12);
 		value2InputText.onChange = function(old:String, cur:String) changeEventsValue(cur, 2);
 
 		objY += 40;
-		value3InputText = new PsychUIInputText(objX, objY, 120, '', 8);
+		value3InputText = new PsychUIInputText(objX, objY, valueInputWidth, '', 12);
 		value3InputText.onChange = function(old:String, cur:String) changeEventsValue(cur, 3);
-		value4InputText = new PsychUIInputText(objX + 150, objY, 120, '', 8);
+		value4InputText = new PsychUIInputText(valueInputCol2X, objY, valueInputWidth, '', 12);
 		value4InputText.onChange = function(old:String, cur:String) changeEventsValue(cur, 4);
 
 		objY += 40;
-		eventDescriptionText = new FlxText(objX, objY, 280, defaultEvents[0][1]);
+		eventDescriptionText = new FlxText(objX, objY, rightEdge - objX, getEventDesc(defaultEvents[0][0], defaultEvents[0][1]));
+		eventDescriptionText.font = Paths.font(Language.get('uitab_font'));
+		eventDescriptionText.size = 12;
 
-		tab_group.add(new FlxText(eventDropDown.x, eventDropDown.y - 15, 80, Language.get('charting_event_drop')).setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(value1InputText.x, value1InputText.y - 15, 80, 'Value 1:').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(value2InputText.x, value2InputText.y - 15, 80, 'Value 2:').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(value3InputText.x, value3InputText.y - 15, 80, 'Value 3:').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(value4InputText.x, value4InputText.y - 15, 80, 'Value 4:').setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(eventDropDown.x, eventDropDown.y - 15, 80, Language.get('charting_event_drop')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(value1InputText.x, value1InputText.y - 15, 80, Language.get('charting_value1')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(value2InputText.x, value2InputText.y - 15, 80, Language.get('charting_value2')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(value3InputText.x, value3InputText.y - 15, 80, Language.get('charting_value3')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(value4InputText.x, value4InputText.y - 15, 80, Language.get('charting_value4')).setFormat(Paths.font(Language.get('uitab_font')), 12));
 
 		tab_group.add(removeButton);
 		tab_group.add(addButton);
@@ -5095,8 +5110,8 @@ for (i in 0...GRID_PLAYERS)
 		var objX = 10;
 		var objY = 25;
 
-		eventSearchInputText = new PsychUIInputText(objX, objY, 200, '', 8);
-		tab_group.add(new FlxText(objX, objY - 15, 80, Language.get('charting_event_search_label')).setFormat(Paths.font(Language.get('uitab_font'))));
+		eventSearchInputText = new PsychUIInputText(objX, objY, 200, '', 12);
+		tab_group.add(new FlxText(objX, objY - 15, 80, Language.get('charting_event_search_label')).setFormat(Paths.font(Language.get('uitab_font')), 12));
 		tab_group.add(eventSearchInputText);
 
 		objY += 42;
@@ -5225,9 +5240,9 @@ for (i in 0...GRID_PLAYERS)
 			chartDataDirty = true;
 		}, 150);
 		
-		tab_group.add(new FlxText(susLengthStepper.x, susLengthStepper.y - 15, 80, Language.get('charting_sustainlength_text')).setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(strumTimeStepper.x, strumTimeStepper.y - 15, 100, Language.get('charting_notetime_text')).setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(noteTypeDropDown.x, noteTypeDropDown.y - 15, 80, Language.get('charting_notetype_text')).setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(susLengthStepper.x, susLengthStepper.y - 15, 80, Language.get('charting_sustainlength_text')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(strumTimeStepper.x, strumTimeStepper.y - 15, 140, Language.get('charting_notetime_text')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(noteTypeDropDown.x, noteTypeDropDown.y - 15, 80, Language.get('charting_notetype_text')).setFormat(Paths.font(Language.get('uitab_font')), 12));
 		tab_group.add(susLengthStepper);
 		tab_group.add(strumTimeStepper);
 		tab_group.add(noteTypeDropDown);
@@ -5314,21 +5329,21 @@ for (i in 0...GRID_PLAYERS)
 			}
 		}
 
-		mustHitCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_musthitsec_text'), 70, function()
+		mustHitCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_musthitsec_text'), 100, function()
 		{
 			var sec = getCurChartSection();
 			if(sec != null) sec.mustHitSection = mustHitCheckBox.checked;
 			updateHeads(true);
 			chartDataDirty = true;
 		});
-		gfSectionCheckBox = new PsychUICheckBox(objX + 100, objY, Language.get('charting_gfsec_text'), 70, function()
+		gfSectionCheckBox = new PsychUICheckBox(objX + 110, objY, Language.get('charting_gfsec_text'), 100, function()
 		{
 			var sec = getCurChartSection();
 			if(sec != null) sec.gfSection = gfSectionCheckBox.checked;
 			updateHeads(true);
 			chartDataDirty = true;
 		});
-		altAnimSectionCheckBox = new PsychUICheckBox(objX + 200, objY, Language.get('charting_altanim_text'), 70, function()
+		altAnimSectionCheckBox = new PsychUICheckBox(objX + 220, objY, Language.get('charting_altanim_text'), 100, function()
 		{
 			var sec = getCurChartSection();
 			if(sec != null) sec.altAnim = altAnimSectionCheckBox.checked;
@@ -5336,7 +5351,7 @@ for (i in 0...GRID_PLAYERS)
 		});
 
 		objY += 40;
-		changeBpmCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_changebpm_text'), 80, function()
+		changeBpmCheckBox = new PsychUICheckBox(objX, objY, Language.get('charting_changebpm_text'), 100, function()
 		{
 			var sec = getCurChartSection();
 			if(sec != null)
@@ -5350,7 +5365,7 @@ for (i in 0...GRID_PLAYERS)
 	});
 
 	objY += 25;
-	changeBpmStepper = new PsychUINumericStepper(objX, objY, 1, 0, 1, 10000, 3);
+	changeBpmStepper = new PsychUINumericStepper(objX, objY, 1, 0, 1, 10000, 3, 100);
 	changeBpmStepper.onValueChange = function()
 	{
 		var sec = getCurChartSection();
@@ -5365,11 +5380,11 @@ for (i in 0...GRID_PLAYERS)
 		}
 	};
 
-		objY += 25;
-		var bpmRampLabel = new FlxText(changeBpmStepper.x, objY - 15, 220, 'BPM Ramp (steps)');
+		objY += 35;
+	var bpmRampLabel = new FlxText(changeBpmStepper.x, objY - 15, 100, Language.get('charting_bpm_ramp'));
 		bpmRampLabel.setFormat(Paths.font(Language.get('uitab_font')), 12);
 		tab_group.add(bpmRampLabel);
-		bpmRampStepper = new PsychUINumericStepper(changeBpmStepper.x, objY, 1, 0, 0, 9999, 0);
+		bpmRampStepper = new PsychUINumericStepper(changeBpmStepper.x, objY, 1, 0, 0, 9999, 0, 100);
 		bpmRampStepper.onValueChange = function()
 		{
 			var sec = getCurChartSection();
@@ -5382,15 +5397,16 @@ for (i in 0...GRID_PLAYERS)
 					sec.changeBPM = true;
 					if(sec.bpm == null) sec.bpm = changeBpmStepper.value;
 				}
-				// 不要在这里调用 _cacheSections()，否则 adaptNotesToNewTimes 内部捕获的"旧映射"会变成新映射
 				adaptNotesToNewTimes(oldTimes);
 				softReloadNotes();
 				chartDataDirty = true;
 			}
 		};
 
-
-		beatsPerSecStepper = new PsychUINumericStepper(objX + 150, objY, 1, 4, 1, 16, 2);
+		var beatsLabel = new FlxText(objX + 150, objY - 15, 110, Language.get('charting_beatspersec_text'));
+		beatsLabel.setFormat(Paths.font(Language.get('uitab_font')), 12);
+		tab_group.add(beatsLabel);
+		beatsPerSecStepper = new PsychUINumericStepper(objX + 150, objY, 1, 4, 1, 16, 2, 100);
 		beatsPerSecStepper.onValueChange = function()
 		{
 			beatsPerSecStepper.value = Math.round(beatsPerSecStepper.value * 4) / 4;
@@ -5523,7 +5539,7 @@ for (i in 0...GRID_PLAYERS)
 		tab_group.add(gfSectionCheckBox);
 		tab_group.add(altAnimSectionCheckBox);
 
-		tab_group.add(new FlxText(beatsPerSecStepper.x, beatsPerSecStepper.y - 15, 100, Language.get('charting_beatspersec_text')).setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(beatsPerSecStepper.x, beatsPerSecStepper.y - 15, 100, Language.get('charting_beatspersec_text')).setFormat(Paths.font(Language.get('uitab_font')), 12));
 		tab_group.add(changeBpmCheckBox);
 		tab_group.add(changeBpmStepper);
 		tab_group.add(bpmRampStepper);
@@ -5606,7 +5622,7 @@ for (i in 0...GRID_PLAYERS)
 				if(perSongEventNames.contains(evName))
 					perSongEventIndices.push(id);
 				if(id > 0)
-					displayEventsList[id] = '$id. ${data[0]}';
+					displayEventsList[id] = data[0];
 				else
 					displayEventsList.push('');
 			}
@@ -5817,7 +5833,7 @@ for (i in 0...GRID_PLAYERS)
 		var objX = 10;
 		var objY = 25;
 
-		songNameInputText = new PsychUIInputText(objX, objY, 100, 'None', 8);
+		songNameInputText = new PsychUIInputText(objX, objY, 100, 'None', 12);
 		songNameInputText.onChange = function(old:String, cur:String) PlayState.SONG.song = cur;
 
 		allowVocalsCheckBox = new PsychUICheckBox(objX, objY + 20, Language.get('charting_allvoc_text'), 80, function()
@@ -5862,7 +5878,7 @@ for (i in 0...GRID_PLAYERS)
 
 		objY += 65;
 		//(x:Float = 0, y:Float = 0, step:Float = 1, defValue:Float = 0, min:Float = -999, max:Float = 999, decimals:Int = 0, ?wid:Int = 60, ?isPercent:Bool = false)
-		bpmStepper = new PsychUINumericStepper(objX, objY, 1, 1, 1, 10000, 3);
+		bpmStepper = new PsychUINumericStepper(objX, objY, 1, 1, 1, 10000, 3, 80);
 		bpmStepper.onValueChange = function()
 		{
 			var oldTimes:Array<Float> = cachedSectionTimes.copy();
@@ -5870,10 +5886,10 @@ for (i in 0...GRID_PLAYERS)
 			adaptNotesToNewTimes(oldTimes);
 		};
 
-		scrollSpeedStepper = new PsychUINumericStepper(objX + 90, objY, 0.1, 1, 0.1, 10000, 2);
+		scrollSpeedStepper = new PsychUINumericStepper(objX + 110, objY, 0.1, 1, 0.1, 10000, 2, 80);
 		scrollSpeedStepper.onValueChange = function() PlayState.SONG.speed = scrollSpeedStepper.value;
 
-		audioOffsetStepper = new PsychUINumericStepper(objX + 180, objY, 1, 0, -500, 500, 0);
+		audioOffsetStepper = new PsychUINumericStepper(objX + 220, objY, 1, 0, -500, 500, 0, 100);
 		audioOffsetStepper.onValueChange = function()
 		{
 			PlayState.SONG.offset = audioOffsetStepper.value;
@@ -5882,60 +5898,13 @@ for (i in 0...GRID_PLAYERS)
 		};
 
 
-		specialInstInputText = new PsychUIInputText(objX + 200, objY + 80, 100, '', 8);
-		specialInstInputText.onChange = function(old:String, cur:String)
-		{
-			PlayState.SONG.specialInst = specialInstInputText.text;
-			//updateWaveform();
-		};
-
-		specialVocalInputText = new PsychUIInputText(objX + 200, objY + 140, 100, '', 8);
-		specialVocalInputText.onChange = function(old:String, cur:String)
-		{
-			PlayState.SONG.specialVocal = specialVocalInputText.text;
-			//updateWaveform();
-		};
-
-		specialEventsInputText = new PsychUIInputText(objX + 200, objY + 200, 100, '', 8);
-		specialEventsInputText.onChange = function(old:String, cur:String)
-		{
-			PlayState.SONG.specialEvents = specialEventsInputText.text;
-			//updateWaveform();
-		};
-
-		tab_group.add(new FlxText(songNameInputText.x, songNameInputText.y - 15, 80, Language.get('charting_songname')).setFormat(Paths.font(Language.get('uitab_font'))));
+		tab_group.add(new FlxText(songNameInputText.x, songNameInputText.y - 15, 80, Language.get('charting_songname')).setFormat(Paths.font(Language.get('uitab_font')), 12));
 		tab_group.add(songNameInputText);
 		tab_group.add(allowVocalsCheckBox);
 		tab_group.add(reloadAudioButton);
-		tab_group.add(new FlxText(specialInstInputText.x, specialInstInputText.y - 15, 100, 'Special Inst:').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(specialInstInputText);
-		tab_group.add(new FlxText(specialVocalInputText.x, specialVocalInputText.y - 15, 100, 'Special Vocal:').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(specialVocalInputText);
-		tab_group.add(new FlxText(specialEventsInputText.x, specialEventsInputText.y - 15, 100, 'Special Events:').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(specialEventsInputText);
 	#if (mac || mobile)
 		tab_group.add(reloadJsonButton);
 	#end
-
-	// Show Characters checkbox
-	showCharactersCheckBox = new PsychUICheckBox(objX + 200, specialEventsInputText.y + 40, 'Show Characters', 100);
-	showCharactersCheckBox.checked = chartEditorSave.data.showCharacters;
-	showCharactersCheckBox.onClick = function()
-	{
-		chartEditorSave.data.showCharacters = showCharactersCheckBox.checked;
-		chartEditorSave.flush();
-
-		if(!charactersLoaded)
-		{
-			initCharacters();
-		}
-		else
-		{
-			if(dad != null) dad.visible = showCharactersCheckBox.checked;
-			if(boyfriend != null) boyfriend.visible = showCharactersCheckBox.checked;
-		}
-	};
-	tab_group.add(showCharactersCheckBox);
 
 	// Find characters
 	var characters:Array<String> = [];
@@ -5950,13 +5919,13 @@ for (i in 0...GRID_PLAYERS)
 			loadMusic();
 			updateCharacters();
 			trace('selected $character');
-		});
-		stageDropDown = new PsychUIDropDownMenu(objX + 140, objY, [''], function(id:Int, stage:String)
+		}, 110);
+		stageDropDown = new PsychUIDropDownMenu(objX + 130, objY, [''], function(id:Int, stage:String)
 		{
 			PlayState.SONG.stage = stage;
 			StageData.loadDirectory(PlayState.SONG);
 			trace('selected $stage');
-		});
+		}, 110);
 		
 		opponentDropDown = new PsychUIDropDownMenu(objX, objY + 40, [''], function(id:Int, character:String)
 		{
@@ -5966,33 +5935,61 @@ for (i in 0...GRID_PLAYERS)
 			loadMusic();
 			updateCharacters();
 			trace('selected $character');
-		});
+		}, 110);
 		
 		girlfriendDropDown = new PsychUIDropDownMenu(objX, objY + 80, [''], function(id:Int, character:String)
 		{
 			PlayState.SONG.gfVersion = character;
 			trace('selected $character');
-		});
-		
-		tab_group.add(new FlxText(bpmStepper.x, bpmStepper.y - 15, 50, 'BPM:').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(scrollSpeedStepper.x, scrollSpeedStepper.y - 15, 80, Language.get('charting_scrollspeed')).setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(audioOffsetStepper.x, audioOffsetStepper.y - 15, 100, Language.get('charting_audiooffset')).setFormat(Paths.font(Language.get('uitab_font'))));
+		}, 110);
+
+		// Special inputs on right column, aligned with opponent/girlfriend
+		var rightX = objX + 150;
+		specialInstInputText = new PsychUIInputText(rightX, objY + 40, 110, '', 12);
+		specialInstInputText.onChange = function(old:String, cur:String)
+		{
+			PlayState.SONG.specialInst = specialInstInputText.text;
+			//updateWaveform();
+		};
+
+		specialVocalInputText = new PsychUIInputText(rightX, objY + 80, 110, '', 12);
+		specialVocalInputText.onChange = function(old:String, cur:String)
+		{
+			PlayState.SONG.specialVocal = specialVocalInputText.text;
+			//updateWaveform();
+		};
+
+		specialEventsInputText = new PsychUIInputText(rightX, objY + 120, 110, '', 12);
+		specialEventsInputText.onChange = function(old:String, cur:String)
+		{
+			PlayState.SONG.specialEvents = specialEventsInputText.text;
+			//updateWaveform();
+		};
+
+		tab_group.add(new FlxText(bpmStepper.x, bpmStepper.y - 15, 80, Language.get('charting_bpm')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(scrollSpeedStepper.x, scrollSpeedStepper.y - 15, 80, Language.get('charting_scrollspeed')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(audioOffsetStepper.x, audioOffsetStepper.y - 15, 160, Language.get('charting_audiooffset')).setFormat(Paths.font(Language.get('uitab_font')), 12));
 		tab_group.add(bpmStepper);
 		tab_group.add(scrollSpeedStepper);
 		tab_group.add(audioOffsetStepper);
 
 		//dropdowns
-		tab_group.add(new FlxText(stageDropDown.x, stageDropDown.y - 15, 80, 'Stage:').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(playerDropDown.x, playerDropDown.y - 15, 80, 'Player:').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(opponentDropDown.x, opponentDropDown.y - 15, 80, 'Opponent:').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(girlfriendDropDown.x, girlfriendDropDown.y - 15, 80, 'Girlfriend:').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(specialInstInputText.x, specialInstInputText.y - 15, 200, 'Special Inst:').setFormat(Paths.font(Language.get('uitab_font'))));
-		tab_group.add(new FlxText(specialVocalInputText.x, specialVocalInputText.y - 15, 200, 'Special Vocal:').setFormat(Paths.font(Language.get('uitab_font'))));
-
+		tab_group.add(new FlxText(stageDropDown.x, stageDropDown.y - 15, 80, Language.get('charting_stage')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(playerDropDown.x, playerDropDown.y - 15, 80, Language.get('charting_player')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(opponentDropDown.x, opponentDropDown.y - 15, 80, Language.get('charting_opponent')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(girlfriendDropDown.x, girlfriendDropDown.y - 15, 80, Language.get('charting_girlfriend')).setFormat(Paths.font(Language.get('uitab_font')), 12));
 		tab_group.add(stageDropDown);
 		tab_group.add(girlfriendDropDown);
 		tab_group.add(opponentDropDown);
 		tab_group.add(playerDropDown);
+
+		// Special inputs labels and controls (right column)
+		tab_group.add(new FlxText(specialInstInputText.x, specialInstInputText.y - 15, 120, Language.get('charting_special_inst')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(specialInstInputText);
+		tab_group.add(new FlxText(specialVocalInputText.x, specialVocalInputText.y - 15, 120, Language.get('charting_special_vocal')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(specialVocalInputText);
+		tab_group.add(new FlxText(specialEventsInputText.x, specialEventsInputText.y - 15, 120, Language.get('charting_special_events')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(specialEventsInputText);
 	}
 
 	function addFileTab()
@@ -6001,7 +5998,7 @@ for (i in 0...GRID_PLAYERS)
 		var tab_group = tab.menu;
 		var btnX = tab.x - upperBox.x;
 		var btnY = 1;
-		var btnWid = Std.int(tab.width);
+		var btnWid = 180; // 下拉选项条宽度，加宽以容纳较长文本单行显示
 
 		#if !mobile
 		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_new_tab1'), function()
@@ -6212,7 +6209,7 @@ for (i in 0...GRID_PLAYERS)
 								btn.cameras = state.cameras;
 								state.add(btn);
 								
-								var btn:PsychUIButton = new PsychUIButton(0, btnY, 'Add', function()
+								var btn:PsychUIButton = new PsychUIButton(0, btnY, Language.get('charting_add_btn'), function()
 								{
 									for (event in loadedEvents)
 										events.push(createEvent(event));
@@ -6225,7 +6222,7 @@ for (i in 0...GRID_PLAYERS)
 								btn.cameras = state.cameras;
 								state.add(btn);
 						
-								var btn:PsychUIButton = new PsychUIButton(0, btnY, 'Cancel', state.close);
+								var btn:PsychUIButton = new PsychUIButton(0, btnY, Language.get('charting_cancel_btn'), state.close);
 								btn.screenCenter(X);
 								btn.x += 125;
 								btn.cameras = state.cameras;
@@ -6439,23 +6436,23 @@ for (i in 0...GRID_PLAYERS)
 							btn.cameras = state.cameras;
 							state.add(btn);
 							
-							var btn:PsychUIButton = new PsychUIButton(btnX + 100, btnY, 'Cancel', state.close);
+							var btn:PsychUIButton = new PsychUIButton(btnX + 100, btnY, Language.get('charting_cancel_btn'), state.close);
 							btn.cameras = state.cameras;
 							state.add(btn);
 							
 							var textX = FlxG.width/2 - 155;
 							var textY = 360;
-							var artistInput:PsychUIInputText = new PsychUIInputText(textX, textY, 120, pack.metadata.artist, 8);
+							var artistInput:PsychUIInputText = new PsychUIInputText(textX, textY, 120, pack.metadata.artist, 12);
 							artistInput.cameras = state.cameras;
 							artistInput.onChange = function(old:String, cur:String) pack.metadata.artist = cur;
 
-							var charterInput:PsychUIInputText = new PsychUIInputText(textX + 190, textY, 120, pack.metadata.charter, 8);
+							var charterInput:PsychUIInputText = new PsychUIInputText(textX + 190, textY, 120, pack.metadata.charter, 12);
 							charterInput.cameras = state.cameras;
 							charterInput.onChange = function(old:String, cur:String) pack.metadata.charter = cur;
 							
-							var artistTxt:FlxText = new FlxText(artistInput.x, artistInput.y - 15, 100, 'Artist/Composer:');
+							var artistTxt:FlxText = new FlxText(artistInput.x, artistInput.y - 15, 100, Language.get('charting_artist')).setFormat(Paths.font(Language.get('uitab_font')), 12);
 							artistTxt.cameras = state.cameras;
-							var charterTxt:FlxText = new FlxText(charterInput.x, charterInput.y - 15, 100, 'Charter:');
+							var charterTxt:FlxText = new FlxText(charterInput.x, charterInput.y - 15, 100, Language.get('charting_charter')).setFormat(Paths.font(Language.get('uitab_font')), 12);
 							charterTxt.cameras = state.cameras;
 							state.add(artistTxt);
 							state.add(charterTxt);
@@ -6597,23 +6594,23 @@ for (i in 0...GRID_PLAYERS)
 						btn.cameras = state.cameras;
 						state.add(btn);
 						
-						var btn:PsychUIButton = new PsychUIButton(btnX + 100, btnY, 'Cancel', state.close);
+						var btn:PsychUIButton = new PsychUIButton(btnX + 100, btnY, Language.get('charting_cancel_btn'), state.close);
 						btn.cameras = state.cameras;
 						state.add(btn);
 						
 						var textX = FlxG.width/2 - 180;
 						var textY = 360;
-						artistInput = new PsychUIInputText(textX, textY, 120, pack.metadata.artist, 8);
+						artistInput = new PsychUIInputText(textX, textY, 120, pack.metadata.artist, 12);
 						artistInput.cameras = state.cameras;
 						artistInput.onChange = function(old:String, cur:String) pack.metadata.artist = cur;
 	
-						charterInput = new PsychUIInputText(textX + 150, textY, 120, pack.metadata.charter, 8);
+						charterInput = new PsychUIInputText(textX + 150, textY, 120, pack.metadata.charter, 12);
 						charterInput.cameras = state.cameras;
 						charterInput.onChange = function(old:String, cur:String) pack.metadata.charter = cur;
 
 						var diffs:Array<String> = pack.metadata.playData.difficulties;
 						if(diffs == null || diffs.length < 0) pack.metadata.playData.difficulties = diffs = ['easy', 'normal', 'hard'];
-						difficultiesInput = new PsychUIInputText(textX, textY + 42, 160, diffs.join(', '), 8);
+						difficultiesInput = new PsychUIInputText(textX, textY + 42, 160, diffs.join(', '), 12);
 						difficultiesInput.cameras = state.cameras;
 						difficultiesInput.forceCase = LOWER_CASE;
 						difficultiesInput.onChange = function(old:String, cur:String)
@@ -6628,11 +6625,11 @@ for (i in 0...GRID_PLAYERS)
 								diffs.remove('');
 						}
 						
-						var artistTxt:FlxText = new FlxText(artistInput.x, artistInput.y - 15, 100, 'Artist/Composer:');
+						var artistTxt:FlxText = new FlxText(artistInput.x, artistInput.y - 15, 100, Language.get('charting_artist')).setFormat(Paths.font(Language.get('uitab_font')), 12);
 						artistTxt.cameras = state.cameras;
-						var charterTxt:FlxText = new FlxText(charterInput.x, charterInput.y - 15, 100, 'Charter:');
+						var charterTxt:FlxText = new FlxText(charterInput.x, charterInput.y - 15, 100, Language.get('charting_charter')).setFormat(Paths.font(Language.get('uitab_font')), 12);
 						charterTxt.cameras = state.cameras;
-						var difficultiesTxt:FlxText = new FlxText(difficultiesInput.x, difficultiesInput.y - 15, 100, 'Difficulties:');
+						var difficultiesTxt:FlxText = new FlxText(difficultiesInput.x, difficultiesInput.y - 15, 100, Language.get('charting_difficulties')).setFormat(Paths.font(Language.get('uitab_font')), 12);
 						difficultiesTxt.cameras = state.cameras;
 						state.add(artistTxt);
 						state.add(charterTxt);
@@ -6855,7 +6852,7 @@ for (i in 0...GRID_PLAYERS)
 		var tab_group = tab.menu;
 		var btnX = tab.x - upperBox.x;
 		var btnY = 1;
-		var btnWid = Std.int(tab.width);
+		var btnWid = 180; // 下拉选项条宽度，加宽以容纳较长文本单行显示
 
 		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_undo_tab2'), undo, btnWid);
 		btn.text.alignment = LEFT;
@@ -6955,11 +6952,13 @@ for (i in 0...GRID_PLAYERS)
 					};
 					maxFileStepper.cameras = state.cameras;
 
-					var txt1:FlxText = new FlxText(timeStepper.x, timeStepper.y - 15, 100, Language.get('autosave_time'));
-					txt1.font = Language.get('uitab_font');
+					var txt1:FlxText = new FlxText(timeStepper.x, timeStepper.y - 15, 200, Language.get('autosave_time'));
+					txt1.font = Paths.font(Language.get('uitab_font'));
+					txt1.size = 12;
 					txt1.cameras = state.cameras;
-					var txt2:FlxText = new FlxText(maxFileStepper.x, maxFileStepper.y - 15, 100, Language.get('autosave_filelimit'));
-					txt2.font = Language.get('uitab_font');
+					var txt2:FlxText = new FlxText(maxFileStepper.x, maxFileStepper.y - 15, 160, Language.get('autosave_filelimit'));
+					txt2.font = Paths.font(Language.get('uitab_font'));
+					txt2.size = 12;
 					txt2.cameras = state.cameras;
 
 					state.add(txt1);
@@ -7027,7 +7026,7 @@ for (i in 0...GRID_PLAYERS)
 		var tab_group = tab.menu;
 		var btnX = tab.x - upperBox.x;
 		var btnY = 1;
-		var btnWid = Std.int(tab.width);
+		var btnWid = 180; // 下拉选项条宽度，加宽以容纳较长文本单行显示
 
 		if(chartEditorSave.data.waveformEnabled != null)
 			waveformEnabled = chartEditorSave.data.waveformEnabled;
@@ -7141,8 +7140,9 @@ for (i in 0...GRID_PLAYERS)
 					radioGrp.checked = options.indexOf(waveformTarget);
 					state.add(radioGrp);
 
-					var txt1:FlxText = new FlxText(input.x, input.y - 15, 80, Language.get('waveform_color'));
-					txt1.font = Language.get('uitab_font');
+					var txt1:FlxText = new FlxText(input.x, input.y - 15, 140, Language.get('waveform_color'));
+					txt1.font = Paths.font(Language.get('uitab_font'));
+					txt1.size = 12;
 					txt1.cameras = state.cameras;
 					state.add(txt1);
 					state.add(input);
@@ -7168,10 +7168,12 @@ for (i in 0...GRID_PLAYERS)
 					var sectionStepper:PsychUINumericStepper = new PsychUINumericStepper(timeStepper.x + 160, timeStepper.y, 1, currentSec, 0, PlayState.SONG.notes.length - 1, 0);
 					sectionStepper.cameras = state.cameras;
 
-					var txt1:FlxText = new FlxText(timeStepper.x, timeStepper.y - 15, 100, Language.get('go2time_time'));
-					txt1.font = Language.get('uitab_font');
+					var txt1:FlxText = new FlxText(timeStepper.x, timeStepper.y - 15, 160, Language.get('go2time_time'));
+					txt1.font = Paths.font(Language.get('uitab_font'));
+					txt1.size = 12;
 					var txt2:FlxText = new FlxText(sectionStepper.x, sectionStepper.y - 15, 100, Language.get('go2time_section'));
-					txt2.font = Language.get('uitab_font');
+					txt2.font = Paths.font(Language.get('uitab_font'));
+					txt2.size = 12;
 					txt1.cameras = state.cameras;
 					txt2.cameras = state.cameras;
 					state.add(txt1);
@@ -7210,7 +7212,7 @@ for (i in 0...GRID_PLAYERS)
 						updateTime();
 					};
 
-					var btn:PsychUIButton = new PsychUIButton(0, timeTxt.y + 30, 'Go To', function()
+					var btn:PsychUIButton = new PsychUIButton(0, timeTxt.y + 30, Language.get('charting_goto_btn'), function()
 					{
 						curSec = currentSec;
 						FlxG.sound.music.time = FlxMath.bound(curTime, 0, FlxG.sound.music.length - 1);
@@ -7222,7 +7224,7 @@ for (i in 0...GRID_PLAYERS)
 					btn.x -= 60;
 					state.add(btn);
 
-					var btn:PsychUIButton = new PsychUIButton(0, btn.y, 'Cancel', state.close);
+					var btn:PsychUIButton = new PsychUIButton(0, btn.y, Language.get('charting_cancel_btn'), state.close);
 					btn.cameras = state.cameras;
 					btn.screenCenter(X);
 					btn.x += 60;
@@ -7298,7 +7300,8 @@ for (i in 0...GRID_PLAYERS)
 					}
 
 					var txt:FlxText = new FlxText(input.x, input.y - 15, 120, Language.get('theme_bgcolor'));
-					txt.font = Language.get('uitab_font');
+					txt.font = Paths.font(Language.get('uitab_font'));
+					txt.size = 12;
 					txt.cameras = state.cameras;
 					state.add(txt);
 					state.add(input);
@@ -7321,7 +7324,8 @@ for (i in 0...GRID_PLAYERS)
 					}
 
 					var txt:FlxText = new FlxText(input.x, input.y - 15, 120, Language.get('theme_gridcolor'));
-					txt.font = Language.get('uitab_font');
+					txt.font = Paths.font(Language.get('uitab_font'));
+					txt.size = 12;
 					txt.cameras = state.cameras;
 					state.add(txt);
 					state.add(input);
@@ -7358,7 +7362,8 @@ for (i in 0...GRID_PLAYERS)
 					}
 
 					var txt:FlxText = new FlxText(input.x, input.y - 15, 120, Language.get('theme_ngridcolor'));
-					txt.font = Language.get('uitab_font');
+					txt.font = Paths.font(Language.get('uitab_font'));
+					txt.size = 12;
 					txt.cameras = state.cameras;
 					state.add(txt);
 					state.add(input);
@@ -7458,7 +7463,6 @@ for (i in 0...GRID_PLAYERS)
 					{
 						chartEditorSave.data.showCharacters = showCharacterCheckBox.checked;
 						chartEditorSave.flush();
-						showCharactersCheckBox.checked = showCharacterCheckBox.checked;
 						if(!charactersLoaded && showCharacterCheckBox.checked)
 						{
 							initCharacters();
@@ -7485,7 +7489,7 @@ for (i in 0...GRID_PLAYERS)
 					state.add(dragCharacterCheckBox2);
 
 					var btnY = state.bg.y + 240;
-					var btn:PsychUIButton = new PsychUIButton(0, btnY, 'OK', state.close);
+					var btn:PsychUIButton = new PsychUIButton(0, btnY, Language.get('charting_ok_btn'), state.close);
 					btn.screenCenter(X);
 					btn.cameras = state.cameras;
 					state.add(btn);
@@ -7863,29 +7867,17 @@ function adaptNotesToNewTimes(oldTimes:Array<Float>)
 
 			case PsychUIBox.CLICK_EVENT:
 				ignoreClickForThisFrame = true;
-				if(sender == upperBox) updateUpperBoxBg();
 
 			case PsychUIBox.MINIMIZE_EVENT:
 				if(sender == upperBox)
 				{
 					upperBox.bg.visible = !upperBox.isMinimized;
-					updateUpperBoxBg();
+					// 背景板位置与尺寸由 PsychUIBox.bgFollowsSelectedTab 实时同步，无需手动更新
 				}
 
 			case PsychUIBox.DROP_EVENT:
 				chartEditorSave.data.mainBoxPosition = [mainBox.x, mainBox.y];
 				chartEditorSave.data.infoBoxPosition = [infoBox.x, infoBox.y];
-		}
-	}
-
-	function updateUpperBoxBg()
-	{
-		if(upperBox.selectedTab != null)
-		{
-			var menu = upperBox.selectedTab.menu;
-			upperBox.bg.x = upperBox.x + upperBox.selectedIndex * (upperBox.width/upperBox.tabs.length);
-			upperBox.bg.setGraphicSize(menu.width, menu.height + 21);
-			upperBox.bg.updateHitbox();
 		}
 	}
 
