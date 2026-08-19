@@ -1,5 +1,6 @@
 package backend.ui;
 
+import backend.Paths;
 import backend.ui.PsychUIBox.UIStyleData;
 
 class PsychUIButton extends FlxSpriteGroup
@@ -40,7 +41,7 @@ class PsychUIButton extends FlxSpriteGroup
 
 		text = new FlxText(0, 0, 1, '');
 		text.size = Std.parseInt(Language.get('button_text_size'));
-		text.font = Language.get('uitab_font');
+		text.font = Paths.font(Language.get('uitab_font'));
 		text.alignment = CENTER;
 		add(text);
 		resize(wid, hei);

@@ -1,5 +1,5 @@
 {
-	"score_font": "scoretxt/fusion-pixel-10px-monospaced-zh_hans.ttf",
+	"score_font": "fusion-pixel/10/fusion-pixel-10px-monospaced-zh_hans.ttf",
 	"score_label_score": "分数",
 	"score_label_nps": "NPS",
 	"score_label_miss": "漏击",

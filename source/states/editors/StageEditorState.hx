@@ -120,10 +120,32 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		super.create();
 	}
 
-	function lbl(x:Float, y:Float, w:Int, text:String, ?size:Int = 8):FlxText
+	function lbl(x:Float, y:Float, w:Int, text:String, ?size:Int = 12):FlxText
 	{
-		var s:Int = size != null ? size : 8;
-		return new FlxText(x, y, w, text, s).setFormat(Paths.font(Language.get('uitab_font')), s);
+		var s:Int = size != null ? size : 12;
+		var fontKey:String = (s <= 10) ? 'uitab_font_small' : 'uitab_font';
+		var flxText:FlxText = new FlxText(x, y, w, text, s).setFormat(Paths.font(Language.get(fontKey)), s);
+		// If text wraps within the given width, expand fieldWidth to fit on one line
+		var curHeight:Float = flxText.height;
+		var lineH:Float = s * 1.3; // Estimate line height from font size (CJK fonts are taller)
+		if (curHeight > lineH)
+		{
+			// Estimate needed width based on CJK character size (slightly wider than size)
+			var estWidth:Int = Std.int(text.length * (s + 2) + 20);
+			if (estWidth > w)
+				flxText.fieldWidth = estWidth;
+			// Verify and adjust if still wrapping
+			if (flxText.height > lineH)
+			{
+				var neededWidth:Int = w;
+				while (flxText.height > lineH && neededWidth < 2000)
+				{
+					neededWidth += 20;
+					flxText.fieldWidth = neededWidth;
+				}
+			}
+		}
+		return flxText;
 	}
 
 	function loadJsonAssetDirectory()
@@ -175,18 +197,27 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 
 		helpTexts = new FlxSpriteGroup();
 		helpTexts.cameras = [camHUD];
+		#if mobile
+		var helpSize:Int = 16;
+		var helpSpacing:Int = 32;
+		var helpWidth:Int = 680;
+		#else
+		var helpSize:Int = 12;
+		var helpSpacing:Int = 24;
+		var helpWidth:Int = 680;
+		#end
 		for (i => txt in str)
 		{
 			if(txt.length < 1) continue;
 
-			var helpText:FlxText = lbl(0, 0, 680, txt, 16);
-			helpText.setFormat(Paths.font(Language.get('uitab_font')), 16, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
+			var helpText:FlxText = lbl(0, 0, helpWidth, txt, helpSize);
+			helpText.setFormat(Paths.font(Language.get('uitab_font')), helpSize, FlxColor.WHITE, CENTER, OUTLINE_FAST, FlxColor.BLACK);
 			helpText.borderColor = FlxColor.BLACK;
 			helpText.scrollFactor.set();
 			helpText.borderSize = 1;
 			helpText.screenCenter();
 			add(helpText);
-			helpText.y += ((i - str.length/2) * 32) + 16;
+			helpText.y += ((i - str.length/2) * helpSpacing) + 16;
 			helpText.active = false;
 			helpTexts.add(helpText);
 		}
@@ -270,13 +301,13 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		focusRadioGroup.cameras = [camHUD];
 		add(focusRadioGroup);
 
-		lowQualityCheckbox = new PsychUICheckBox(FlxG.width - 240, 24, Language.get('stage_editor_can_see_low_quality'), 90);
+		lowQualityCheckbox = new PsychUICheckBox(FlxG.width - 340, 24, Language.get('stage_editor_can_see_low_quality'), 160);
 		lowQualityCheckbox.cameras = [camHUD];
 		lowQualityCheckbox.onClick = visibilityFilterUpdate;
 		lowQualityCheckbox.checked = false;
 		add(lowQualityCheckbox);
 
-		highQualityCheckbox = new PsychUICheckBox(FlxG.width - 120, 24, Language.get('stage_editor_can_see_high_quality'), 90);
+		highQualityCheckbox = new PsychUICheckBox(FlxG.width - 185, 24, Language.get('stage_editor_can_see_high_quality'), 160);
 		highQualityCheckbox.cameras = [camHUD];
 		highQualityCheckbox.onClick = visibilityFilterUpdate;
 		highQualityCheckbox.checked = true;
@@ -333,13 +364,13 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		focusRadioGroup.cameras = [camHUD];
 		add(focusRadioGroup);
 
-		lowQualityCheckbox = new PsychUICheckBox(FlxG.width - 240, FlxG.height - 36, Language.get('stage_editor_can_see_low_quality'), 90);
+		lowQualityCheckbox = new PsychUICheckBox(FlxG.width - 340, FlxG.height - 36, Language.get('stage_editor_can_see_low_quality'), 160);
 		lowQualityCheckbox.cameras = [camHUD];
 		lowQualityCheckbox.onClick = visibilityFilterUpdate;
 		lowQualityCheckbox.checked = false;
 		add(lowQualityCheckbox);
 
-		highQualityCheckbox = new PsychUICheckBox(FlxG.width - 120, FlxG.height - 36, Language.get('stage_editor_can_see_high_quality'), 90);
+		highQualityCheckbox = new PsychUICheckBox(FlxG.width - 185, FlxG.height - 36, Language.get('stage_editor_can_see_high_quality'), 160);
 		highQualityCheckbox.cameras = [camHUD];
 		highQualityCheckbox.onClick = visibilityFilterUpdate;
 		highQualityCheckbox.checked = true;
@@ -1045,11 +1076,11 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 
 		objY += 50;
 		tab_group.add(lbl(objX, objY - 18, 100, Language.get('stage_editor_ui_style')));
-		uiInputText = new PsychUIInputText(objX, objY, 100, stageJson.stageUI != null ? stageJson.stageUI : '', 8);
+		uiInputText = new PsychUIInputText(objX, objY, 100, stageJson.stageUI != null ? stageJson.stageUI : '', 12);
 		uiInputText.onChange = function(old:String, cur:String) stageJson.stageUI = uiInputText.text;
 
 		objY += 30;
-		hideGirlfriendCheckbox = new PsychUICheckBox(objX, objY, Language.get('stage_editor_hide_girlfriend'), 100);
+		hideGirlfriendCheckbox = new PsychUICheckBox(objX, objY, Language.get('stage_editor_hide_girlfriend'), 130);
 		hideGirlfriendCheckbox.onClick = function()
 		{
 			stageJson.hide_girlfriend = hideGirlfriendCheckbox.checked;
@@ -1196,8 +1227,8 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 
 		var objX = 10;
 		var objY = 30;
-		tab_group.add(lbl(objX, objY - 18, 150, Language.get('stage_editor_lua_hscript_name')));
-		nameInputText = new PsychUIInputText(objX, objY, 120, '', 8);
+		tab_group.add(lbl(objX, objY - 18, 280, Language.get('stage_editor_lua_hscript_name')));
+		nameInputText = new PsychUIInputText(objX, objY, 120, '', 12);
 		nameInputText.customFilterPattern = ~/[^a-zA-Z0-9_\-]*/g;
 		nameInputText.onChange = function(old:String, cur:String) {
 			// change name
@@ -1235,7 +1266,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		tab_group.add(nameInputText);
 
 		objY += 35;
-		imgTxt = lbl(objX, objY - 15, 200, Language.get('stage_editor_image'), 8);
+		imgTxt = lbl(objX, objY - 15, 140, Language.get('stage_editor_image'));
 		var imgButton:PsychUIButton = new PsychUIButton(objX, objY, Language.get('stage_editor_change_image'), function() {
 			#if mobile
 			openMobileChangeImage();
@@ -1271,7 +1302,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		
 		objY += 45;
 		tab_group.add(lbl(objX, objY - 18, 80, Language.get('stage_editor_color')));
-		colorInputText = new PsychUIInputText(objX, objY, 80, 'FFFFFF', 8);
+		colorInputText = new PsychUIInputText(objX, objY, 80, 'FFFFFF', 12);
 		colorInputText.filterMode = ONLY_ALPHANUMERIC;
 		colorInputText.onChange = function(old:String, cur:String) {
 			// change color
@@ -1324,7 +1355,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		};
 		tab_group.add(alphaStepper);
 
-		antialiasingCheckbox = new PsychUICheckBox(objX + 90, objY, Language.get('stage_editor_anti_aliasing'), 80);
+		antialiasingCheckbox = new PsychUICheckBox(objX + 90, objY, Language.get('stage_editor_anti_aliasing'), 100);
 		antialiasingCheckbox.onClick = function()
 		{
 			// antialiasing
@@ -1373,9 +1404,9 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		}
 
 		objY += 25;
-		flipXCheckBox = new PsychUICheckBox(objX, objY, Language.get('stage_editor_flip_x'), 60);
+		flipXCheckBox = new PsychUICheckBox(objX, objY, Language.get('stage_editor_flip_x'), 80);
 		flipXCheckBox.onClick = updateFlip;
-		flipYCheckBox = new PsychUICheckBox(objX + 90, objY, Language.get('stage_editor_flip_y'), 60);
+		flipYCheckBox = new PsychUICheckBox(objX + 100, objY, Language.get('stage_editor_flip_y'), 80);
 		flipYCheckBox.onClick = updateFlip;
 		tab_group.add(flipXCheckBox);
 		tab_group.add(flipYCheckBox);
@@ -1393,9 +1424,9 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 				selected.filters = filt;
 			}
 		};
-		tab_group.add(lbl(objX + 60, objY - 18, 100, Language.get('stage_editor_visible_in')));
-		lowQualityCheckbox = new PsychUICheckBox(objX, objY, Language.get('stage_editor_low_quality'), 70);
-		highQualityCheckbox = new PsychUICheckBox(objX + 90, objY, Language.get('stage_editor_high_quality'), 70);
+		tab_group.add(lbl(objX, objY - 18, 100, Language.get('stage_editor_visible_in')));
+		lowQualityCheckbox = new PsychUICheckBox(objX, objY, Language.get('stage_editor_low_quality'), 100);
+		highQualityCheckbox = new PsychUICheckBox(objX + 110, objY, Language.get('stage_editor_high_quality'), 100);
 		lowQualityCheckbox.onClick = recalcFilter;
 		highQualityCheckbox.onClick = recalcFilter;
 		tab_group.add(lowQualityCheckbox);
@@ -1543,8 +1574,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		dummyStage.normalStyle.textColor = FlxColor.WHITE;
 
 		stageDropDown = new PsychUIDropDownMenu(10, 30, [''], function(sel:Int, selected:String)
-		{
-			var characterPath:String = 'stages/$selected.json';
+		{			var characterPath:String = 'stages/$selected.json';
 			var path:String = Paths.getPath(characterPath, TEXT, null, true);
 			#if MODS_ALLOWED
 			if (FileSystem.exists(path))
@@ -1645,6 +1675,14 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		colorInputText.text = selected.color;
 		nameInputText.text = selected.name;
 		imgTxt.text = 'Image: ' + selected.image;
+		// Auto-expand imgTxt to prevent wrapping for long image paths
+		var lineH:Float = 12 * 1.3; // Estimate line height (font size 12)
+		var w:Int = 140;
+		while (imgTxt.height > lineH && w < 2000)
+		{
+			w += 20;
+			imgTxt.fieldWidth = w;
+		}
 
 		// Steppers
 		if (selected.type != 'square')
@@ -1774,7 +1812,10 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 
 		if(PsychUIInputText.focusOn != null) return;
 
-		if(FlxG.keys.justPressed.ESCAPE || touchPad.buttonB.justPressed)
+		var tp:TouchPad = touchPad;
+		var hasTouch:Bool = (tp != null);
+
+		if(FlxG.keys.justPressed.ESCAPE || (hasTouch && tp.buttonB.justPressed))
 		{
 			if(!unsavedProgress)
 			{
@@ -1785,14 +1826,14 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 			return;
 		}
 
-		if(FlxG.keys.justPressed.W || touchPad.buttonV.justPressed)
+		if(FlxG.keys.justPressed.W || (hasTouch && tp.buttonV.justPressed))
 		{
 			spriteListRadioGroup.checked = FlxMath.wrap(spriteListRadioGroup.checked - 1, 0, spriteListRadioGroup.labels.length-1);
 			trace(spriteListRadioGroup.checked);
 			checkUIOnObject();
 			updateSelectedUI();
 		}
-		else if(FlxG.keys.justPressed.S || touchPad.buttonD.justPressed)
+		else if(FlxG.keys.justPressed.S || (hasTouch && tp.buttonD.justPressed))
 		{
 			spriteListRadioGroup.checked = FlxMath.wrap(spriteListRadioGroup.checked + 1, 0, spriteListRadioGroup.labels.length-1);
 			trace(spriteListRadioGroup.checked);
@@ -1800,11 +1841,11 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 			updateSelectedUI();
 		}
 
-		if((FlxG.keys.justPressed.F1 || touchPad.buttonF.justPressed) || (helpBg.visible && FlxG.keys.justPressed.ESCAPE))
+		if((FlxG.keys.justPressed.F1 || (hasTouch && tp.buttonF.justPressed)) || (helpBg.visible && FlxG.keys.justPressed.ESCAPE))
 		{
-			if (controls.mobileC)
+			if (controls.mobileC && hasTouch)
 			{
-				touchPad.forEachAlive(function(button:TouchButton)
+				tp.forEachAlive(function(button:TouchButton)
 				{
 					if(button.tag != 'F')
 						button.visible = !button.visible;
@@ -1814,14 +1855,14 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 			helpTexts.visible = helpBg.visible;
 		}
 
-		if(#if FLX_DEBUG FlxG.keys.justPressed.F3 #else FlxG.keys.justPressed.F2 #end || (touchPad.buttonS.justPressed && !touchPad.buttonF.justPressed))
+		if(#if FLX_DEBUG FlxG.keys.justPressed.F3 #else FlxG.keys.justPressed.F2 #end || (hasTouch && tp.buttonS.justPressed && !tp.buttonF.justPressed))
 		{
 			UI_box.visible = !UI_box.visible;
 			UI_box.active = !UI_box.active;
 
-			if (controls.mobileC)
+			if (controls.mobileC && hasTouch)
 			{
-				touchPad.forEachAlive(function(button:TouchButton)
+				tp.forEachAlive(function(button:TouchButton)
 				{
 					if(button.tag != 'S')
 						button.visible = !button.visible;
@@ -1837,22 +1878,22 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 			spriteListRadioGroup.updateRadioItems();
 		}
 		
-		if(FlxG.keys.justPressed.F12 || (touchPad.buttonS.justPressed && !touchPad.buttonG.justPressed))
+		if(FlxG.keys.justPressed.F12 || (hasTouch && tp.buttonS.justPressed && !tp.buttonG.justPressed))
 			showSelectionQuad = !showSelectionQuad;
 		
 		var shiftMult:Float = 1;
 		var ctrlMult:Float = 1;
-		if(FlxG.keys.pressed.SHIFT || touchPad.buttonC.pressed) shiftMult = 4;
+		if(FlxG.keys.pressed.SHIFT || (hasTouch && tp.buttonC.pressed)) shiftMult = 4;
 		if(FlxG.keys.pressed.CONTROL) ctrlMult = 0.25;
 
 		// CAMERA CONTROLS
 		var camX:Float = 0;
 		var camY:Float = 0;
 		var camMove:Float = elapsed * 500 * shiftMult * ctrlMult;
-		if (FlxG.keys.pressed.J || (touchPad.buttonLeft.pressed && touchPad.buttonG.pressed)) camX -= camMove;
-		if (FlxG.keys.pressed.K || (touchPad.buttonDown.pressed && touchPad.buttonG.pressed)) camY += camMove;
-		if (FlxG.keys.pressed.L || (touchPad.buttonRight.pressed && touchPad.buttonG.pressed)) camX += camMove;
-		if (FlxG.keys.pressed.I || (touchPad.buttonUp.pressed && touchPad.buttonG.pressed)) camY -= camMove;
+		if (FlxG.keys.pressed.J || (hasTouch && tp.buttonLeft.pressed && tp.buttonG.pressed)) camX -= camMove;
+		if (FlxG.keys.pressed.K || (hasTouch && tp.buttonDown.pressed && tp.buttonG.pressed)) camY += camMove;
+		if (FlxG.keys.pressed.L || (hasTouch && tp.buttonRight.pressed && tp.buttonG.pressed)) camX += camMove;
+		if (FlxG.keys.pressed.I || (hasTouch && tp.buttonUp.pressed && tp.buttonG.pressed)) camY -= camMove;
 
 		if(camX != 0 || camY != 0)
 		{
@@ -1863,26 +1904,26 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 		}
 
 		var lastZoom = FlxG.camera.zoom;
-		if(FlxG.keys.justPressed.R || touchPad.buttonZ.justPressed && !FlxG.keys.pressed.CONTROL)
+		if(FlxG.keys.justPressed.R || (hasTouch && tp.buttonZ.justPressed && !FlxG.keys.pressed.CONTROL))
 			FlxG.camera.zoom = stageJson.defaultZoom;
-		else if (FlxG.keys.pressed.E || touchPad.buttonX.pressed && FlxG.camera.zoom < maxZoom)
+		else if (FlxG.keys.pressed.E || (hasTouch && tp.buttonX.pressed && FlxG.camera.zoom < maxZoom))
 			FlxG.camera.zoom = Math.min(maxZoom, FlxG.camera.zoom + elapsed * FlxG.camera.zoom * shiftMult * ctrlMult);
-		else if (FlxG.keys.pressed.Q || touchPad.buttonY.pressed && FlxG.camera.zoom > minZoom)
+		else if (FlxG.keys.pressed.Q || (hasTouch && tp.buttonY.pressed && FlxG.camera.zoom > minZoom))
 			FlxG.camera.zoom = Math.max(minZoom, FlxG.camera.zoom - elapsed * FlxG.camera.zoom * shiftMult * ctrlMult);
 		
 		// SPRITE X/Y
 		shiftMult = 1;
 		ctrlMult = 1;
-		if(FlxG.keys.pressed.SHIFT || touchPad.buttonC.pressed) shiftMult = 4;
+		if(FlxG.keys.pressed.SHIFT || (hasTouch && tp.buttonC.pressed)) shiftMult = 4;
 		if(FlxG.keys.pressed.CONTROL) ctrlMult = 0.2;
 
 		var moveX:Float = 0;
 		var moveY:Float = 0;
-		if (!touchPad.buttonG.pressed) {
-		if (FlxG.keys.justPressed.LEFT || touchPad.buttonLeft.justPressed) moveX -= 5 * shiftMult * ctrlMult;
-		if (FlxG.keys.justPressed.RIGHT || touchPad.buttonRight.justPressed) moveX += 5 * shiftMult * ctrlMult;
-		if (FlxG.keys.justPressed.UP || touchPad.buttonUp.justPressed) moveY -= 5 * shiftMult * ctrlMult;
-		if (FlxG.keys.justPressed.DOWN || touchPad.buttonDown.justPressed) moveY += 5 * shiftMult * ctrlMult;
+		if (!hasTouch || !tp.buttonG.pressed) {
+		if (FlxG.keys.justPressed.LEFT || (hasTouch && tp.buttonLeft.justPressed)) moveX -= 5 * shiftMult * ctrlMult;
+		if (FlxG.keys.justPressed.RIGHT || (hasTouch && tp.buttonRight.justPressed)) moveX += 5 * shiftMult * ctrlMult;
+		if (FlxG.keys.justPressed.UP || (hasTouch && tp.buttonUp.justPressed)) moveY -= 5 * shiftMult * ctrlMult;
+		if (FlxG.keys.justPressed.DOWN || (hasTouch && tp.buttonDown.justPressed)) moveY += 5 * shiftMult * ctrlMult;
 		}
 
 		if(FlxG.mouse.pressedRight && (FlxG.mouse.deltaScreenX != 0 || FlxG.mouse.deltaScreenY != 0))
@@ -2217,7 +2258,7 @@ class StageEditorState extends MusicBeatState implements PsychUIEventHandler.Psy
 			var modFolder:String = (Mods.currentModDirectory != null && Mods.currentModDirectory.length > 0) ? Paths.mods('${Mods.currentModDirectory}/images/') : Paths.mods('images/');
 			openSubState(new BasePrompt(480, 160, Language.get('stage_editor_prompt_stage_not_inside'), function(state:BasePrompt)
 			{
-				var txt:FlxText = lbl(0, state.bg.y + 60, 460, Language.get('stage_editor_prompt_copy_to_mods', [modFolder]), 11);
+				var txt:FlxText = lbl(0, state.bg.y + 60, 460, Language.get('stage_editor_prompt_copy_to_mods', [modFolder]), 12);
 				txt.alignment = CENTER;
 				txt.screenCenter(X);
 				txt.cameras = state.cameras;
@@ -2522,6 +2563,7 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 
 		openCallback = function()
 		{
+			if(target == null || target.sprite == null) return;
 			curAnim = 0;
 			originalZoom = FlxG.camera.zoom;
 			originalCamPoint = FlxPoint.weak(FlxG.camera.scroll.x, FlxG.camera.scroll.y);
@@ -2530,6 +2572,7 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 			originalAlpha = target.alpha;
 			FlxG.camera.zoom = 0.5;
 			FlxG.camera.scroll.set(0, 0);
+			FlxG.camera.target = null; // Stop camera from following any target
 
 			target.alpha = 1;
 			target.sprite.screenCenter();
@@ -2540,6 +2583,7 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 
 		closeCallback = function()
 		{
+			if(target == null) return;
 			FlxG.camera.zoom = originalZoom;
 			FlxG.camera.scroll.set(originalCamPoint.x, originalCamPoint.y);
 			FlxG.camera.target = originalCamTarget;
@@ -2547,12 +2591,12 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 			target.x = originalPosition.x;
 			target.y = originalPosition.y;
 			target.alpha = originalAlpha;
-			remove(target.sprite);
+			if(target.sprite != null) remove(target.sprite);
 
-			if(target.animations.length > 0)
+			if(target.animations != null && target.animations.length > 0)
 			{
 				if(target.firstAnimation == null) target.firstAnimation = target.animations[0].anim;
-				playAnim(target.firstAnimation);
+				if(target.firstAnimation != null) playAnim(target.firstAnimation);
 			}
 		};
 
@@ -2571,19 +2615,16 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 	{
 		var tab_group = UI_animationbox.getTab(Language.get('stage_editor_animations_tab')).menu;
 
-		#if mobile
 		var animSize:Int = 12;
-		#else
-		var animSize:Int = 8;
-		#end
 
-		animationInputText = new PsychUIInputText(15, 85, 80, '', animSize);
+		animationInputText = new PsychUIInputText(15, 85, 120, '', animSize);
 		animationNameInputText = new PsychUIInputText(animationInputText.x, animationInputText.y + 35, 150, '', animSize);
 		animationIndicesInputText = new PsychUIInputText(animationNameInputText.x, animationNameInputText.y + 40, 250, '', animSize);
 		animationFramerate = new PsychUINumericStepper(animationInputText.x + 170, animationInputText.y, 1, 24, 0, 240, 0);
-		animationLoopCheckBox = new PsychUICheckBox(animationNameInputText.x + 170, animationNameInputText.y - 1, 'Should it Loop?', 100);
+		animationLoopCheckBox = new PsychUICheckBox(animationNameInputText.x + 170, animationNameInputText.y - 1, Language.get('stage_editor_animation_should_loop'), 120);
 
 		animationDropDown = new PsychUIDropDownMenu(15, animationInputText.y - 55, [''], function(selectedAnimation:Int, pressed:String) {
+			if(target.animations == null || selectedAnimation < 0 || selectedAnimation >= target.animations.length) return;
 			var anim:AnimArray = target.animations[selectedAnimation];
 			if(anim == null) return;
 
@@ -2592,22 +2633,28 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 			animationLoopCheckBox.checked = anim.loop;
 			animationFramerate.value = anim.fps;
 
-			var indicesStr:String = anim.indices.toString();
-			animationIndicesInputText.text = indicesStr.substr(1, indicesStr.length - 2);
+			if(anim.indices != null)
+			{
+				var indicesStr:String = anim.indices.toString();
+				animationIndicesInputText.text = indicesStr.substr(1, indicesStr.length - 2);
+			}
+			else
+				animationIndicesInputText.text = '';
 		});
 
-		mainAnimTxt = new FlxText(160, animationDropDown.y - 18, 0, 'Main Anim.: ');
-		var initAnimButton:PsychUIButton = new PsychUIButton(160, animationDropDown.y, 'Main Animation', function() {
+		mainAnimTxt = new FlxText(160, animationDropDown.y - 18, 0, Language.get('stage_editor_animation_main_label').replace('{0}', '')).setFormat(Paths.font(Language.get('uitab_font')), 12);
+		var initAnimButton:PsychUIButton = new PsychUIButton(160, animationDropDown.y, Language.get('stage_editor_animation_main'), function() {
+			if(target.animations == null || curAnim < 0 || curAnim >= target.animations.length) return;
 			var anim:AnimArray = target.animations[curAnim];
 			if(anim == null) return;
 
-			mainAnimTxt.text = 'Main Anim.: ${anim.anim}';
+			mainAnimTxt.text = Language.get('stage_editor_animation_main_label').replace('{0}', anim.anim);
 			target.firstAnimation = anim.anim;
 		});
 		tab_group.add(mainAnimTxt);
 		tab_group.add(initAnimButton);
 
-		var addUpdateButton:PsychUIButton = new PsychUIButton(40, animationIndicesInputText.y + 35, 'Add/Update', function() {
+		var addUpdateButton:PsychUIButton = new PsychUIButton(40, animationIndicesInputText.y + 35, Language.get('stage_editor_animation_add_update'), function() {
 			if(animationInputText.text == '') return;
 
 			var indices:Array<Int> = [];
@@ -2623,12 +2670,17 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 
 			var lastAnim:String = (target.animations[curAnim] != null) ? target.animations[curAnim].anim : '';
 			var lastOffsets:Array<Int> = null;
+			var targetSprite:ModchartSprite = cast (target.sprite, ModchartSprite);
 			for (anim in target.animations)
 				if(animationInputText.text == anim.anim)
 				{
 					lastOffsets = anim.offsets;
-					cast (target.sprite, ModchartSprite).animOffsets.remove(animationInputText.text);
-					target.sprite.animation.remove(animationInputText.text);
+					if(targetSprite != null)
+					{
+						targetSprite.animOffsets.remove(animationInputText.text);
+						if(targetSprite.animation != null)
+							targetSprite.animation.remove(animationInputText.text);
+					}
 					target.animations.remove(anim);
 				}
 
@@ -2641,14 +2693,17 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 				offsets: lastOffsets
 			};
 
-			if(addedAnim.indices != null && addedAnim.indices.length > 0)
-				target.sprite.animation.addByIndices(addedAnim.anim, addedAnim.name, addedAnim.indices, '', addedAnim.fps, addedAnim.loop);
-			else
-				target.sprite.animation.addByPrefix(addedAnim.anim, addedAnim.name, addedAnim.fps, addedAnim.loop);
+			if(targetSprite != null && targetSprite.animation != null)
+			{
+				if(addedAnim.indices != null && addedAnim.indices.length > 0)
+					targetSprite.animation.addByIndices(addedAnim.anim, addedAnim.name, addedAnim.indices, '', addedAnim.fps, addedAnim.loop);
+				else
+					targetSprite.animation.addByPrefix(addedAnim.anim, addedAnim.name, addedAnim.fps, addedAnim.loop);
+			}
 
 			target.animations.push(addedAnim);
 			reloadAnimList();
-			playAnim(addedAnim.anim, true);
+			if(targetSprite != null) playAnim(addedAnim.anim, true);
 
 			curAnim = target.animations.length - 1;
 			updateTextColors();
@@ -2659,17 +2714,20 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 		{
 			for (anim in target.animations)
 			{
+				if(anim == null) continue;
 				if(animationInputText.text == anim.anim)
 				{
 					var targetSprite:ModchartSprite = cast (target.sprite, ModchartSprite);
 					var resetAnim:Bool = false;
-					if(targetSprite.animation.curAnim != null && anim.anim == targetSprite.animation.curAnim.name) resetAnim = true;
+					if(targetSprite != null && targetSprite.animation != null && targetSprite.animation.curAnim != null && anim.anim == targetSprite.animation.curAnim.name) resetAnim = true;
 
-					if(targetSprite.animOffsets.exists(anim.anim))
+					if(targetSprite != null && targetSprite.animOffsets.exists(anim.anim))
 						targetSprite.animOffsets.remove(anim.anim);
 
 					target.animations.remove(anim);
-					targetSprite.animation.remove(anim.anim);
+
+					if(targetSprite != null && targetSprite.animation != null)
+						targetSprite.animation.remove(anim.anim);
 
 					if(resetAnim && target.animations.length > 0)
 					{
@@ -2677,7 +2735,7 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 						playAnim(target.animations[curAnim].anim, true);
 						updateTextColors();
 					}
-					else if(target.animations.length < 1)
+					else if(target.animations.length < 1 && target.sprite != null && target.sprite.animation != null)
 						target.sprite.animation.curAnim = null;
 
 					trace('Removed animation: ' + animationInputText.text);
@@ -2687,11 +2745,11 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 			}
 		});
 
-		tab_group.add(new FlxText(animationDropDown.x, animationDropDown.y - 18, 0, 'Animations:'));
-		tab_group.add(new FlxText(animationInputText.x, animationInputText.y - 18, 0, 'Animation name:'));
-		tab_group.add(new FlxText(animationFramerate.x, animationFramerate.y - 18, 0, 'Framerate:'));
-		tab_group.add(new FlxText(animationNameInputText.x, animationNameInputText.y - 18, 0, 'Animation Symbol Name/Tag:'));
-		tab_group.add(new FlxText(animationIndicesInputText.x, animationIndicesInputText.y - 18, 0, 'ADVANCED - Animation Indices:'));
+		tab_group.add(new FlxText(animationDropDown.x, animationDropDown.y - 18, 0, Language.get('stage_editor_animations_list')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(animationInputText.x, animationInputText.y - 18, 0, Language.get('stage_editor_animation_name')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(animationFramerate.x, animationFramerate.y - 18, 0, Language.get('stage_editor_animation_framerate')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(animationNameInputText.x, animationNameInputText.y - 18, 0, Language.get('stage_editor_animation_symbol_tag')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(animationIndicesInputText.x, animationIndicesInputText.y - 18, 0, Language.get('stage_editor_animation_indices')).setFormat(Paths.font(Language.get('uitab_font')), 12));
 
 		tab_group.add(animationInputText);
 		tab_group.add(animationNameInputText);
@@ -2706,42 +2764,59 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 	function reloadAnimList()
 	{
 		if(target.animations == null) target.animations = [];
-		else if(target.animations.length > 0) playAnim(target.animations[0].anim, true);
+		else if(target.animations.length > 0 && target.sprite != null && target.sprite.animation != null)
+			playAnim(target.animations[0].anim, true);
 		curAnim = 0;
 
-		for (text in animsTxtGroup)
-			text.kill();
+		// Properly remove ALL old text objects from the group using splice=true
+		while(animsTxtGroup.members.length > 0)
+		{
+			var oldText:FlxText = animsTxtGroup.members[0];
+			if(oldText == null)
+			{
+				// All remaining members are likely null or corrupted; clear the group
+				animsTxtGroup.clear();
+				break;
+			}
+			animsTxtGroup.remove(oldText, true);
+			oldText.destroy();
+		}
 
 		var spr:ModchartSprite = cast (target.sprite, ModchartSprite);
+		if(spr == null) return;
+
 		if(target.animations.length > 0)
 		{
-			if(target.firstAnimation == null || !target.sprite.animation.exists(target.firstAnimation))
-				target.firstAnimation = target.animations[0].anim;
+			if(target.firstAnimation == null || target.sprite == null || target.sprite.animation == null || !target.sprite.animation.exists(target.firstAnimation))
+			{
+				if(target.animations[0] != null)
+					target.firstAnimation = target.animations[0].anim;
+			}
 
-			mainAnimTxt.text = 'Main Anim.: ${target.firstAnimation}';
+			mainAnimTxt.text = Language.get('stage_editor_animation_main_label').replace('{0}', target.firstAnimation);
 		}
 		else
 		{
 			target.firstAnimation = null;
-			mainAnimTxt.text = '(No Main Animation)';
+			mainAnimTxt.text = Language.get('stage_editor_animation_no_main');
 		}
 
 		for (num => anim in target.animations)
 		{
 			var text:FlxText = animsTxtGroup.recycle(FlxText);
 			text.x = 10;
-			text.y = 32 + (20 * num);
+			text.y = 32 + (24 * num);
 			text.fieldWidth = 400;
-			text.fieldHeight = 20;
-			if(anim.offsets != null)
-				text.text = '${anim.anim}: ${spr.animOffsets.get(anim.anim)}';
+			text.fieldHeight = 24;
+			var animName:String = (anim != null) ? anim.anim : 'null';
+			if(anim != null && anim.offsets != null)
+				text.text = '${animName}: ${spr.animOffsets.get(animName)}';
 			else
-				text.text = '${anim.anim}: No offsets';
+				text.text = '${animName}: ' + Language.get('stage_editor_animation_no_offsets');
 
-			text.setFormat(null, 16, FlxColor.WHITE, LEFT, OUTLINE_FAST, FlxColor.BLACK);
+			text.setFormat(Paths.font(Language.get('uitab_font')), 14, FlxColor.WHITE, LEFT, OUTLINE_FAST, FlxColor.BLACK);
 			text.scrollFactor.set();
 			text.borderSize = 1;
-			animsTxtGroup.add(text);
 		}
 		updateTextColors();
 		reloadAnimationDropDown();
@@ -2750,7 +2825,7 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 	function reloadAnimationDropDown() {
 		var animList:Array<String> = [];
 		for (anim in target.animations) animList.push(anim.anim);
-		if(animList.length < 1) animList.push('NO ANIMATIONS'); //Prevents crash
+		if(animList.length < 1) animList.push(Language.get('stage_editor_animation_no_animations')); //Prevents crash
 
 		animationDropDown.list = animList;
 	}
@@ -2767,6 +2842,7 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 	function playAnim(name:String, force:Bool = false)
 	{
 		var spr:ModchartSprite = cast (target.sprite, ModchartSprite);
+		if(spr == null) return;
 		spr.playAnim(name, force);
 		if(!spr.animOffsets.exists(name)) spr.updateHitbox();
 	}
@@ -2783,19 +2859,42 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 		
 		if(PsychUIInputText.focusOn != null) return;
 		if(target == null) return;
+		if(target.animations == null) target.animations = [];
+		
+		var tp:TouchPad = touchPad;
+		var hasTouch:Bool = (tp != null);
 
 		// ANIMATION SCROLLING
-		if(target.animations.length > 1)
+		if(target.animations.length > 0)
 		{
 			var changedAnim:Bool = false;
-			if(FlxG.keys.justPressed.W || touchPad.buttonUp.justPressed && (changedAnim = true)) curAnim--;
-			else if(FlxG.keys.justPressed.S || touchPad.buttonDown.justPressed && (changedAnim = true)) curAnim++;
+			if(FlxG.keys.justPressed.W || (hasTouch && tp.buttonUp != null && tp.buttonUp.justPressed))
+			{
+				curAnim--;
+				changedAnim = true;
+			}
+			else if(FlxG.keys.justPressed.S || (hasTouch && tp.buttonDown != null && tp.buttonDown.justPressed))
+			{
+				curAnim++;
+				changedAnim = true;
+			}
 			else if(FlxG.keys.justPressed.SPACE) changedAnim = true;
 
 			if(changedAnim)
 			{
 				curAnim = FlxMath.wrap(curAnim, 0, target.animations.length-1);
-				playAnim(target.animations[curAnim].anim, true);
+				if(target.animations[curAnim] != null)
+				{
+					var animName:String = target.animations[curAnim].anim;
+					var spr:ModchartSprite = cast (target.sprite, ModchartSprite);
+					if(spr != null)
+					{
+						// Force restart: stop first, then play — ensures replay even with 1 animation
+						if(spr.animation.curAnim != null && spr.animation.curAnim.name == animName)
+							spr.animation.stop();
+						spr.playAnim(animName, true);
+					}
+				}
 				updateTextColors();
 			}
 		}
@@ -2803,7 +2902,18 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 		var shiftMult:Float = 1;
 		var ctrlMult:Float = 1;
 		var shiftMultBig:Float = 1;
-		if(FlxG.keys.pressed.SHIFT || touchPad.buttonC.pressed)
+		var hasBtnC:Bool = hasTouch && tp.buttonC != null;
+		var hasBtnG:Bool = hasTouch && tp.buttonG != null;
+		var hasBtnZ:Bool = hasTouch && tp.buttonZ != null;
+		var hasBtnB:Bool = hasTouch && tp.buttonB != null;
+		var hasBtnLeft:Bool = hasTouch && tp.buttonLeft != null;
+		var hasBtnRight:Bool = hasTouch && tp.buttonRight != null;
+		var hasBtnUp:Bool = hasTouch && tp.buttonUp != null;
+		var hasBtnDown:Bool = hasTouch && tp.buttonDown != null;
+		var hasBtnX:Bool = hasTouch && tp.buttonX != null;
+		var hasBtnY:Bool = hasTouch && tp.buttonY != null;
+		
+		if(FlxG.keys.pressed.SHIFT || (hasBtnC && tp.buttonC.pressed))
 		{
 			shiftMult = 4;
 			shiftMultBig = 10;
@@ -2811,14 +2921,17 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 		if(FlxG.keys.pressed.CONTROL) ctrlMult = 0.25;
 
 		// OFFSET
-		if(target.sprite.animation.curAnim != null)
+		if(target.sprite != null && target.sprite.animation != null && target.sprite.animation.curAnim != null)
 		{
 			var spr:ModchartSprite = cast (target.sprite, ModchartSprite);
+			if(spr == null) return;
 			var anim:String = spr.animation.curAnim.name;
 			var changedOffset = false;
-			var moveKeysP = (controls.mobileC) ? [touchPad.buttonLeft.justPressed, touchPad.buttonRight.justPressed, touchPad.buttonUp.justPressed, touchPad.buttonDown.justPressed] : [FlxG.keys.justPressed.LEFT, FlxG.keys.justPressed.RIGHT, FlxG.keys.justPressed.UP, FlxG.keys.justPressed.DOWN];
-			var moveKeys = (controls.mobileC) ? [touchPad.buttonLeft.pressed, touchPad.buttonRight.pressed, touchPad.buttonUp.pressed, touchPad.buttonDown.pressed] : [FlxG.keys.pressed.LEFT, FlxG.keys.pressed.RIGHT, FlxG.keys.pressed.UP, FlxG.keys.pressed.DOWN];
-			if(moveKeysP.contains(true) && !touchPad.buttonG.pressed)
+			var useTouch:Bool = controls.mobileC && hasTouch;
+			var moveKeysP = useTouch ? [hasBtnLeft && tp.buttonLeft.justPressed, hasBtnRight && tp.buttonRight.justPressed, hasBtnUp && tp.buttonUp.justPressed, hasBtnDown && tp.buttonDown.justPressed] : [FlxG.keys.justPressed.LEFT, FlxG.keys.justPressed.RIGHT, FlxG.keys.justPressed.UP, FlxG.keys.justPressed.DOWN];
+			var moveKeys = useTouch ? [hasBtnLeft && tp.buttonLeft.pressed, hasBtnRight && tp.buttonRight.pressed, hasBtnUp && tp.buttonUp.pressed, hasBtnDown && tp.buttonDown.pressed] : [FlxG.keys.pressed.LEFT, FlxG.keys.pressed.RIGHT, FlxG.keys.pressed.UP, FlxG.keys.pressed.DOWN];
+			var btnGPressed:Bool = hasBtnG && tp.buttonG.pressed;
+			if(moveKeysP.contains(true) && !btnGPressed)
 			{
 				if(spr.animOffsets.get(anim) != null)
 				{
@@ -2829,7 +2942,7 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 				changedOffset = true;
 			}
 	
-			if(moveKeys.contains(true) && !touchPad.buttonG.pressed)
+			if(moveKeys.contains(true) && !btnGPressed)
 			{
 				holdingArrowsTime += elapsed;
 				if(holdingArrowsTime > 0.6)
@@ -2857,12 +2970,16 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 				changedOffset = true;
 			}
 
-			if (FlxG.keys.justPressed.R || touchPad.buttonZ.justPressed && FlxG.keys.pressed.CONTROL || touchPad.buttonC.pressed)
+			if ((FlxG.keys.justPressed.R || (hasBtnZ && tp.buttonZ.justPressed)) && (FlxG.keys.pressed.CONTROL || (hasBtnC && tp.buttonC.pressed)))
 			{
-				target.animations[curAnim].offsets = null;
-				spr.animOffsets.remove(anim);
-				spr.updateHitbox();
-				animsTxtGroup.members[curAnim].text = '${anim}: No offsets';
+				if(curAnim >= 0 && curAnim < target.animations.length && target.animations[curAnim] != null)
+				{
+					target.animations[curAnim].offsets = null;
+					spr.animOffsets.remove(anim);
+					spr.updateHitbox();
+					if(curAnim < animsTxtGroup.members.length && animsTxtGroup.members[curAnim] != null)
+						animsTxtGroup.members[curAnim].text = '${anim}: No offsets';
+				}
 			}
 			
 			if(changedOffset)
@@ -2871,8 +2988,12 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 				var offY = Math.round(spr.offset.y);
 
 				spr.addOffset(anim, offX, offY);
-				target.animations[curAnim].offsets = [offX, offY];
-				animsTxtGroup.members[curAnim].text = '${anim}: ${spr.animOffsets.get(anim)}';
+				if(curAnim >= 0 && curAnim < target.animations.length && target.animations[curAnim] != null)
+				{
+					target.animations[curAnim].offsets = [offX, offY];
+				}
+				if(curAnim < animsTxtGroup.members.length && animsTxtGroup.members[curAnim] != null)
+					animsTxtGroup.members[curAnim].text = '${anim}: ${spr.animOffsets.get(anim)}';
 			}
 		}
 		else
@@ -2885,10 +3006,10 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 		var camX:Float = 0;
 		var camY:Float = 0;
 		var camMove:Float = elapsed * 500 * shiftMult * ctrlMult;
-		if (FlxG.keys.pressed.J || (touchPad.buttonLeft.pressed && touchPad.buttonG.pressed)) camX -= camMove;
-		if (FlxG.keys.pressed.K || (touchPad.buttonDown.pressed && touchPad.buttonG.pressed)) camY += camMove;
-		if (FlxG.keys.pressed.L || (touchPad.buttonRight.pressed && touchPad.buttonG.pressed)) camX += camMove;
-		if (FlxG.keys.pressed.I || (touchPad.buttonUp.pressed && touchPad.buttonG.pressed)) camY -= camMove;
+		if (FlxG.keys.pressed.J || (hasBtnLeft && hasBtnG && tp.buttonLeft.pressed && tp.buttonG.pressed)) camX -= camMove;
+		if (FlxG.keys.pressed.K || (hasBtnDown && hasBtnG && tp.buttonDown.pressed && tp.buttonG.pressed)) camY += camMove;
+		if (FlxG.keys.pressed.L || (hasBtnRight && hasBtnG && tp.buttonRight.pressed && tp.buttonG.pressed)) camX += camMove;
+		if (FlxG.keys.pressed.I || (hasBtnUp && hasBtnG && tp.buttonUp.pressed && tp.buttonG.pressed)) camY -= camMove;
 
 		if(camX != 0 || camY != 0)
 		{
@@ -2897,14 +3018,14 @@ class StageEditorAnimationSubstate extends MusicBeatSubstate {
 		}
 
 		var lastZoom = FlxG.camera.zoom;
-		if(FlxG.keys.justPressed.R || touchPad.buttonZ.justPressed && !FlxG.keys.pressed.CONTROL)
+		if(FlxG.keys.justPressed.R || (hasBtnZ && tp.buttonZ.justPressed && !FlxG.keys.pressed.CONTROL))
 			FlxG.camera.zoom = 0.5;
-		else if (FlxG.keys.pressed.E || touchPad.buttonX.pressed && FlxG.camera.zoom < maxZoom)
+		else if ((FlxG.keys.pressed.E || (hasBtnX && tp.buttonX.pressed)) && FlxG.camera.zoom < maxZoom)
 			FlxG.camera.zoom = Math.min(maxZoom, FlxG.camera.zoom + elapsed * FlxG.camera.zoom * shiftMult * ctrlMult);
-		else if (FlxG.keys.pressed.Q || touchPad.buttonY.pressed && FlxG.camera.zoom > minZoom)
+		else if ((FlxG.keys.pressed.Q || (hasBtnY && tp.buttonY.pressed)) && FlxG.camera.zoom > minZoom)
 			FlxG.camera.zoom = Math.max(minZoom, FlxG.camera.zoom - elapsed * FlxG.camera.zoom * shiftMult * ctrlMult);
 
-		if(FlxG.keys.justPressed.ESCAPE #if android || FlxG.android.justReleased.BACK #end || touchPad.buttonB.justPressed)
+		if(FlxG.keys.justPressed.ESCAPE #if android || FlxG.android.justReleased.BACK #end || (hasBtnB && tp.buttonB.justPressed))
 		{
 			persistentDraw = true;
 			controls.isInSubstate = false;

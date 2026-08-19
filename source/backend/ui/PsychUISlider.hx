@@ -1,5 +1,7 @@
 package backend.ui;
 
+import backend.Paths;
+
 class PsychUISlider extends FlxSpriteGroup
 {
 	public static final CHANGE_EVENT = "slider_change";
@@ -28,22 +30,22 @@ class PsychUISlider extends FlxSpriteGroup
 		add(bar);
 
 		minText = new FlxText(0, 0, 80, '', Std.parseInt(Language.get('checkbox_font_size')));
-		minText.font = Language.get('uitab_font');
+		minText.font = Paths.font(Language.get('uitab_font'));
 		minText.alignment = CENTER;
 		minText.color = mainColor;
 		add(minText);
 		maxText = new FlxText(0, 0, 80, '', Std.parseInt(Language.get('checkbox_font_size')));
-		maxText.font = Language.get('uitab_font');
+		maxText.font = Paths.font(Language.get('uitab_font'));
 		maxText.alignment = CENTER;
 		maxText.color = mainColor;
 		add(maxText);
 		valueText = new FlxText(0, 0, 80, '', Std.parseInt(Language.get('checkbox_font_size')));
-		valueText.font = Language.get('uitab_font');
+		valueText.font = Paths.font(Language.get('uitab_font'));
 		valueText.alignment = CENTER;
 		valueText.color = handleColor;
 		add(valueText);
 		labelText = new FlxText(0, 0, wid, '', Std.parseInt(Language.get('checkbox_font_size')));
-		labelText.font = Language.get('uitab_font');
+		labelText.font = Paths.font(Language.get('uitab_font'));
 		labelText.alignment = CENTER;
 		add(labelText);
 

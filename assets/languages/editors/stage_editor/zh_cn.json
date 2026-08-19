@@ -38,7 +38,7 @@
     "stage_editor_compiled_assets": "编译资源：",
     "stage_editor_save": "保存",
     "stage_editor_ui_style": "UI 风格：",
-    "stage_editor_hide_girlfriend": "Hide Girlfriend?",
+    "stage_editor_hide_girlfriend": "隐藏 Girlfriend？",
     "stage_editor_camera_offsets": "镜头偏移：",
     "stage_editor_camera_data": "镜头数据：",
     "stage_editor_zoom": "缩放：",
@@ -107,5 +107,18 @@
     "stage_editor_help_d_select_rect": "F12 - 切换选择框",
     "stage_editor_help_d_fast": "按住 Shift - 物体与镜头移动加速 4 倍",
     "stage_editor_help_d_slow": "按住 Ctrl - 物体逐像素移动 且 镜头移动减速 4 倍",
-    "stage_editor_select_first": "请先选择一个精灵"
+    "stage_editor_select_first": "请先选择一个精灵",
+
+    "stage_editor_animations_list": "动画列表：",
+    "stage_editor_animation_name": "动画名称：",
+    "stage_editor_animation_framerate": "帧率：",
+    "stage_editor_animation_symbol_tag": "动画符号名/标签：",
+    "stage_editor_animation_indices": "高级 - 动画索引：",
+    "stage_editor_animation_should_loop": "是否循环？",
+    "stage_editor_animation_main": "主动画",
+    "stage_editor_animation_main_label": "主动画：{0}",
+    "stage_editor_animation_add_update": "添加/更新",
+    "stage_editor_animation_no_offsets": "无偏移",
+    "stage_editor_animation_no_animations": "无动画",
+    "stage_editor_animation_no_main": "（无主动画）"
 }

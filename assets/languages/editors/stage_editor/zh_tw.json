@@ -38,7 +38,7 @@
     "stage_editor_compiled_assets": "編譯資源：",
     "stage_editor_save": "儲存",
     "stage_editor_ui_style": "UI 風格：",
-    "stage_editor_hide_girlfriend": "Hide Girlfriend?",
+    "stage_editor_hide_girlfriend": "隱藏 Girlfriend？",
     "stage_editor_camera_offsets": "鏡頭偏移：",
     "stage_editor_camera_data": "鏡頭資料：",
     "stage_editor_zoom": "縮放：",
@@ -107,5 +107,18 @@
     "stage_editor_help_d_select_rect": "F12 - 切換選擇框",
     "stage_editor_help_d_fast": "按住 Shift - 物體與鏡頭移動加速 4 倍",
     "stage_editor_help_d_slow": "按住 Ctrl - 物體逐像素移動 且 鏡頭移動減速 4 倍",
-    "stage_editor_select_first": "請先選擇一個精靈"
+    "stage_editor_select_first": "請先選擇一個精靈",
+
+    "stage_editor_animations_list": "動畫列表：",
+    "stage_editor_animation_name": "動畫名稱：",
+    "stage_editor_animation_framerate": "幀率：",
+    "stage_editor_animation_symbol_tag": "動畫符號名/標籤：",
+    "stage_editor_animation_indices": "進階 - 動畫索引：",
+    "stage_editor_animation_should_loop": "是否循環？",
+    "stage_editor_animation_main": "主動畫",
+    "stage_editor_animation_main_label": "主動畫：{0}",
+    "stage_editor_animation_add_update": "新增/更新",
+    "stage_editor_animation_no_offsets": "無偏移",
+    "stage_editor_animation_no_animations": "無動畫",
+    "stage_editor_animation_no_main": "（無主動畫）"
 }

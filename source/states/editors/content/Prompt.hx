@@ -2,6 +2,7 @@ package states.editors.content;
 
 import flixel.util.FlxDestroyUtil;
 import backend.Language;
+import backend.Paths;
 
 class ExitConfirmationPrompt extends Prompt
 {
@@ -94,8 +95,8 @@ class BasePrompt extends MusicBeatSubstate
 		bg.cameras = cameras;
 		add(bg);
 		
-		titleText = new FlxText(0, bg.y + 30, 400, _title, 16);
-		titleText.font = Language.get('uitab_font');
+		titleText = new FlxText(0, bg.y + 30, 400, _title, 12);
+		titleText.font = Paths.font(Language.get('uitab_font'));
 		titleText.screenCenter(X);
 		titleText.alignment = CENTER;
 		titleText.cameras = cameras;

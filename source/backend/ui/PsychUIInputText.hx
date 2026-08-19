@@ -1,5 +1,7 @@
 package backend.ui;
 
+import backend.Paths;
+import backend.Language;
 import flixel.FlxObject;
 import flixel.input.keyboard.FlxKey;
 import flixel.util.FlxDestroyUtil;
@@ -62,7 +64,7 @@ class PsychUIInputText extends FlxSpriteGroup
 
 	public var selectedFormat:FlxTextFormat = new FlxTextFormat(FlxColor.WHITE);
 
-	public function new(x:Float = 0, y:Float = 0, wid:Int = 100, ?text:String = '', size:Int = 8, ?font:String, ?darkStyle:Bool = false)
+	public function new(x:Float = 0, y:Float = 0, wid:Int = 100, ?text:String = '', size:Int = 10, ?font:String, ?darkStyle:Bool = false)
 	{
 		super(x, y);
 		// 深色样式：内底深色 + 浅色文字；浅色样式：内底白色 + 深色文字
@@ -91,9 +93,10 @@ class PsychUIInputText extends FlxSpriteGroup
 		this.textObj.textField.multiline = false;
 		this.selection.color = 0xFF3B82F6;
 
-		// 可选自定义字体（如 unifont，用于支持 CJK / 特殊字形）
-		if (font != null && font.length > 0)
-			this.textObj.setFormat(font, size, textColor);
+		// 自动根据字号选择对应字体（未指定时）
+		if (font == null || font.length == 0)
+			font = (size <= 10) ? Paths.font(Language.get('uitab_font_small')) : Paths.font(Language.get('uitab_font'));
+		this.textObj.setFormat(font, size, textColor);
 
 		@:bypassAccessor fieldWidth = wid;
 		setGraphicSize(wid + 2, this.textObj.height + 2);

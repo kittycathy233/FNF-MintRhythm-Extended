@@ -1,5 +1,6 @@
 package backend.ui;
 
+import backend.Paths;
 import flixel.util.FlxDestroyUtil;
 import flixel.math.FlxPoint;
 
@@ -17,7 +18,7 @@ class PsychUITab extends FlxSprite
 		alpha = 0.6;
 
 		@:bypassAccessor this.name = name;
-		text = new FlxText(0, 0, 100, name);
+		text = new FlxText(0, 0, 200, name);
 		text.setFormat(Paths.font(Language.get('uitab_font')), Std.parseInt(Language.get('charting_tab_size')), FlxColor.BLACK, CENTER);
 	}
 

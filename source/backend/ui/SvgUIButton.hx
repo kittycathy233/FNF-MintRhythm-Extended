@@ -1,5 +1,6 @@
 package backend.ui;
 
+import backend.Paths;
 import flixel.group.FlxSpriteGroup;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
@@ -35,7 +36,7 @@ class SvgUIButton extends FlxSpriteGroup
         // 创建文本并确保其位于SVG中心
         text = new FlxText(0, 0, wid, label);
         text.size = Std.parseInt(Language.get('button_text_size'));
-        text.font = Language.get('uitab_font');
+        text.font = Paths.font(Language.get('uitab_font'));
         text.alignment = CENTER;
         text.borderStyle = OUTLINE;
         text.borderColor = FlxColor.BLACK;

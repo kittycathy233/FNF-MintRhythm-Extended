@@ -107,5 +107,18 @@
     "stage_editor_help_d_select_rect": "F12 - Toggle Selection Rectangle",
     "stage_editor_help_d_fast": "Hold Shift - Move Objects and Camera 4x faster",
     "stage_editor_help_d_slow": "Hold Control - Move Objects pixel-by-pixel and Camera 4x slower",
-    "stage_editor_select_first": "Please select a sprite first"
+    "stage_editor_select_first": "Please select a sprite first",
+
+    "stage_editor_animations_list": "Animations:",
+    "stage_editor_animation_name": "Animation name:",
+    "stage_editor_animation_framerate": "Framerate:",
+    "stage_editor_animation_symbol_tag": "Animation Symbol Name/Tag:",
+    "stage_editor_animation_indices": "ADVANCED - Animation Indices:",
+    "stage_editor_animation_should_loop": "Should it Loop?",
+    "stage_editor_animation_main": "Main Animation",
+    "stage_editor_animation_main_label": "Main Anim.: {0}",
+    "stage_editor_animation_add_update": "Add/Update",
+    "stage_editor_animation_no_offsets": "No offsets",
+    "stage_editor_animation_no_animations": "NO ANIMATIONS",
+    "stage_editor_animation_no_main": "(No Main Animation)"
 }

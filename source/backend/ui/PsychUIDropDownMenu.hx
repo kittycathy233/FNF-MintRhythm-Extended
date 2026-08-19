@@ -1,5 +1,7 @@
 package backend.ui;
 
+import backend.Paths;
+import backend.Language;
 import backend.ui.PsychUIBox.UIStyleData;
 
 class PsychUIDropDownMenu extends PsychUIInputText
@@ -306,8 +308,11 @@ class PsychUIDropDownItem extends FlxSpriteGroup
 		bg.updateHitbox();
 		add(bg);
 
-		text = new FlxText(0, 0, width, 8);
+		text = new FlxText(0, 0, width, '', 10);
+		text.font = Paths.font(Language.get('uitab_font_small'));
 		text.color = FlxColor.BLACK;
+		text.textField.wordWrap = false;
+		text.textField.multiline = false;
 		add(text);
 	}
 
