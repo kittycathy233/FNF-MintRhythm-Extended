@@ -185,9 +185,7 @@ class FunkinLua {
 		// Other settings
 		set('downscroll', ClientPrefs.data.downScroll);
 		set('middlescroll', ClientPrefs.data.middleScroll);
-		set('framerate', ClientPrefs.data.drawFramerate); //已弃用
-		set('drawFramerate', ClientPrefs.data.drawFramerate);
-		set('updateFramerate', ClientPrefs.data.updateFramerate);
+		set('framerate', ClientPrefs.data.framerate);
 		set('ghostTapping', ClientPrefs.data.ghostTapping);
 		set('hideHud', ClientPrefs.data.hideHud);
 		set('timeBarType', ClientPrefs.data.timeBarType);

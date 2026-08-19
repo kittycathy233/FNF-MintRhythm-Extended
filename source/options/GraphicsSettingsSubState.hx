@@ -3,13 +3,11 @@ package options;
 import objects.Character;
 import flixel.util.FlxColor;
 import flixel.text.FlxText;
-import backend.FramerateManager;
 
 class GraphicsSettingsSubState extends BaseOptionsMenu
 {
 	var antialiasingOption:Int;
-	var drawFramerateOption:Int;
-	var updateFramerateOption:Int;
+	var arisDance:Int;
 	var aris:FlxGifSprite = null;
 	var arisTween:FlxTween;
 	var warningText:FlxText; // 警告文本变量
@@ -76,31 +74,20 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 
 		#if !html5
-		// 渲染帧率（draw framerate）
-		var option:Option = new Option(Language.get('draw_framerate'),
-			Language.get("draw_framerate_desc"),
-			'drawFramerate',
+		// 帧率设置（非HTML5平台）
+		var option:Option = new Option(Language.get('framerate'),
+			Language.get("framerate_desc"),
+			'framerate',
 			INT);
+		addOption(option);
+		arisDance = optionsArray.length - 1;
+
+		final refreshRate:Int = FlxG.stage.application.window.displayMode.refreshRate;
 		option.minValue = 20;
 		option.maxValue = 1000;
-		option.defaultValue = ClientPrefs.data.drawFramerate;
+		option.defaultValue = Std.int(FlxMath.bound(refreshRate, option.minValue, option.maxValue));
 		option.displayFormat = '%v FPS';
-		option.onChange = onChangeDrawFramerate;
-		addOption(option);
-		drawFramerateOption = optionsArray.length - 1;
-
-		// 逻辑更新帧率（update framerate / TPS）
-		var option:Option = new Option(Language.get('update_framerate'),
-			Language.get("update_framerate_desc"),
-			'updateFramerate',
-			INT);
-		option.minValue = 1;
-		option.maxValue = 1000;
-		option.defaultValue = ClientPrefs.data.updateFramerate;
-		option.displayFormat = '%v FPS';
-		option.onChange = onChangeUpdateFramerate;
-		addOption(option);
-		updateFramerateOption = optionsArray.length - 1;
+		option.onChange = onChangeFramerate;
 		#end
 
 		var option:Option = new Option(Language.get('fps_rework'),
@@ -180,14 +167,26 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		}
 	}
 
-	function onChangeDrawFramerate()
+	function onChangeFramerate()
 	{
-		FramerateManager.applyDrawFramerate(ClientPrefs.data.drawFramerate);
-	}
-
-	function onChangeUpdateFramerate()
-	{
-		FramerateManager.applyUpdateFramerate(ClientPrefs.data.updateFramerate);
+		if(ClientPrefs.data.framerate > FlxG.drawFramerate)
+		{
+			ClientPrefs.data.fpsRework ? 
+				FlxG.stage.window.frameRate = ClientPrefs.data.framerate :
+				{
+					FlxG.updateFramerate = ClientPrefs.data.framerate;
+					FlxG.drawFramerate = ClientPrefs.data.framerate;
+				};
+		}
+		else
+		{
+			ClientPrefs.data.fpsRework ?
+				FlxG.stage.window.frameRate = ClientPrefs.data.framerate :
+				{
+					FlxG.drawFramerate = ClientPrefs.data.framerate;
+					FlxG.updateFramerate = ClientPrefs.data.framerate;
+				};
+		}
 	}
 
 	override function destroy()
@@ -198,13 +197,13 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 			arisTween.destroy();
 			arisTween = null;
 		}
-
+		
 		if (aris != null)
 		{
 			aris.destroy();
 			aris = null;
 		}
-
+		
 		super.destroy();
 	}
 
@@ -224,8 +223,8 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		if (aris != null && aris.exists)
 		{
 			arisTween = FlxTween.tween(aris, {
-				x: ((drawFramerateOption == curSelected) || (antialiasingOption == curSelected)) ? 900 : 1500,
-				angle: (drawFramerateOption == curSelected) ? aris.angle : (Math.round(aris.angle / 360) * 360)
+				x: ((arisDance == curSelected) || (antialiasingOption == curSelected)) ? 900 : 1500,
+				angle: (arisDance == curSelected) ? aris.angle : (Math.round(aris.angle / 360) * 360)
 			}, 0.4, {
 				ease: FlxEase.quadOut,
 				onComplete: function(twn:FlxTween) {
@@ -241,15 +240,15 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		super.update(elapsed);
 
 		// 更新Aris动画
-		if (aris != null && drawFramerateOption == curSelected)
+		if (aris != null && arisDance == curSelected)
 			//aris.angle += elapsed * 100; // 使用时间增量保持旋转速度一致
 			aris.angle += 1;
 
 		#if !html5
-		final showWarning:Bool = curSelected == drawFramerateOption &&
-			(ClientPrefs.data.drawFramerate < 60 || ClientPrefs.data.drawFramerate > 240);
+		final showWarning:Bool = curSelected == arisDance && 
+			(ClientPrefs.data.framerate < 60 || ClientPrefs.data.framerate > 240);
 
-		final isCritical:Bool = curSelected == drawFramerateOption && ClientPrefs.data.drawFramerate > 480;
+		final isCritical:Bool = curSelected == arisDance && ClientPrefs.data.framerate > 480;
 
 		warningText.visible = showWarning || isCritical;
 		if (isCritical) {

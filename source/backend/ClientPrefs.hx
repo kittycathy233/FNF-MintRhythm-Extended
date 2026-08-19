@@ -48,10 +48,7 @@ import openfl.display.StageQuality;
 	public var shaders:Bool = true;
 	public var cacheOnGPU:Bool = #if !switch false #else true #end; // GPU Caching made by Raltyro
 	public var playStatePixelPerfect:Bool = true; // 游戏内所有相机是否启用 pixelPerfectRender（关闭可显著改善全屏/高分辨率滚动性能）
-	public var framerate:Int = 60; // 游戏帧率（已弃用）
-	public var drawFramerate:Int = 90; // 渲染帧率（屏幕刷新上限）
-	public var updateFramerate:Int = 500; // 逻辑更新帧率（TPS）（实验性）
-
+	public var framerate:Int = 60;
 	public var camZooms:Bool = true;
 	public var stageQuality:String = 'MEDIUM'; // 矢量/文本渲染质量(StageQuality)：LOW/MEDIUM/HIGH/BEST，移动端建议 MEDIUM 及以下
 	public var comboSpritePooling:Bool = true; // rating/combo/数字 精灵对象池：true=复用(省GC、减命中卡顿)，false=回退传统 new/destroy(最大兼容性)
@@ -613,18 +610,27 @@ class ClientPrefs {
 			#if (!html5 && !switch)
 			FlxG.autoPause = ClientPrefs.data.autoPause;
 
-			if (FlxG.save.data.drawFramerate == null)
-			{
+			if(FlxG.save.data.framerate == null) {
 				final refreshRate:Int = FlxG.stage.application.window.displayMode.refreshRate;
-				// 取显示器当前刷新率作为默认值，上限放宽至 1000（避免高分辨率/高刷屏被 cap 到 240）
-				ClientPrefs.data.drawFramerate = Std.int(FlxMath.bound(refreshRate, 20, 1000));
-				ClientPrefs.data.updateFramerate = ClientPrefs.data.drawFramerate;
+				data.framerate = Std.int(FlxMath.bound(refreshRate, 60, 240));
 			}
 			#end
 
-			// 应用帧率设置（与 fpsRework 无关，draw/update 完全独立）
-			FramerateManager.applyDrawFramerate(ClientPrefs.data.drawFramerate);
-			FramerateManager.applyUpdateFramerate(ClientPrefs.data.updateFramerate);
+			if (data.fpsRework)
+				FlxG.stage.window.frameRate = data.framerate;
+			else
+			{
+				if (data.framerate > FlxG.drawFramerate)
+				{
+					FlxG.updateFramerate = data.framerate;
+					FlxG.drawFramerate = data.framerate;
+				}
+				else
+				{
+					FlxG.drawFramerate = data.framerate;
+					FlxG.updateFramerate = data.framerate;
+				}
+			}
 		}
 
 		if(FlxG.save.data.gameplaySettings != null)

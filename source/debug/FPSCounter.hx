@@ -393,8 +393,8 @@ class FPSCounter extends Sprite
 
 		if (ClientPrefs.data.fpsRework)
 		{
-			// fpsRework 保留用于其他统计功能；frameRate 同步已移至 FramerateManager，
-			// 不再在此处强制覆盖 window.frameRate，避免与用户设置冲突。
+			if (FlxG.stage.window.frameRate != ClientPrefs.data.framerate && FlxG.stage.window.frameRate != FlxG.game.focusLostFramerate)
+				FlxG.stage.window.frameRate = ClientPrefs.data.framerate;
 
 			var nowTime = openfl.Lib.getTimer();
 			framesCount++;
@@ -414,7 +414,7 @@ class FPSCounter extends Sprite
 			&& haxe.Timer.stamp() - lastFramerateUpdateTime >= 1.5
 			&& currentFPS >= 30)
 		{
-			var clamped = Std.int(Math.min(currentFPS, ClientPrefs.data.drawFramerate));
+			var clamped = Std.int(Math.min(currentFPS, ClientPrefs.data.framerate));
 			FlxG.updateFramerate = FlxG.drawFramerate = clamped;
 			lastFramerateUpdateTime = haxe.Timer.stamp();
 		}*/
