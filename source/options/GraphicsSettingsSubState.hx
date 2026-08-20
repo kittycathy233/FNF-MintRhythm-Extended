@@ -127,6 +127,23 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		option.displayFormat = '%v';
 		addOption(option);
 
+		// Hold Cover 数量限制设置（与飞溅数量限制类似）
+		var option:Option = new Option(Language.get('hold_cover_limit'),
+			Language.get("hold_cover_limit_desc"),
+			'holdCoverLimitEnabled',
+			BOOL);
+		addOption(option);
+
+		var option:Option = new Option(Language.get('max_hold_covers'),
+			Language.get("max_hold_covers_desc"),
+			'holdCoverLimit',
+			INT);
+		option.minValue = 1;
+		option.maxValue = 128;
+		option.defaultValue = 10;
+		option.displayFormat = '%v';
+		addOption(option);
+
 		// 资源加载线程数（默认 1 = 单线程；数值越大加载越并行，但更耗内存、低端机可能 OOM）
 		var option:Option = new Option(Language.get('loading_threads'),
 			Language.get("loading_threads_desc"),

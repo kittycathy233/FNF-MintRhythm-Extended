@@ -1,8 +1,21 @@
 {
 	"start": "holdCoverStartRed",
+	"holdOffset": [
+		0,
+		0
+	],
+	"endOffset": [
+		0,
+		0
+	],
+	"disableRGB": false,
 	"offsets": [
-		-8,
-		45
+		-90,
+		-85
+	],
+	"startOffset": [
+		0,
+		0
 	],
 	"end": "holdCoverEndRed",
 	"fps": 24,

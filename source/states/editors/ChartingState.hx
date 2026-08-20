@@ -1186,6 +1186,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 
 		noteTextureInputText.text = PlayState.SONG.arrowSkin;
 		noteSplashesInputText.text = PlayState.SONG.splashSkin;
+		holdCoverTextureInputText.text = PlayState.SONG.holdCoverSkin;
 	}
 	
 	var noteSelectionSine:Float = 0;
@@ -4800,6 +4801,7 @@ for (i in 0...GRID_PLAYERS)
 	var noRGBCheckBox:PsychUICheckBox;
 	var noteTextureInputText:PsychUIInputText;
 	var noteSplashesInputText:PsychUIInputText;
+	var holdCoverTextureInputText:PsychUIInputText;
 	function addDataTab()
 	{
 		var tab_group = mainBox.getTab(Language.get('charting_data_text')).menu;
@@ -4879,7 +4881,34 @@ for (i in 0...GRID_PLAYERS)
 			PlayState.SONG.splashSkin = cur;
 			if(cur.trim().length < 1) PlayState.SONG.splashSkin = null;
 		}
-	
+
+		objY += 40;
+		holdCoverTextureInputText = new PsychUIInputText(objX, objY, 150, '', 12);
+		holdCoverTextureInputText.unfocus = function()
+		{
+			var changed:Bool = false;
+			if(PlayState.SONG.holdCoverSkin != holdCoverTextureInputText.text) changed = true;
+			PlayState.SONG.holdCoverSkin = holdCoverTextureInputText.text.trim();
+			if(PlayState.SONG.holdCoverSkin.trim().length < 1) PlayState.SONG.holdCoverSkin = null;
+
+			if(changed)
+			{
+				var dir:String = (PlayState.SONG.holdCoverSkin != null) ? PlayState.SONG.holdCoverSkin : '';
+				if(dir.length > 0)
+				{
+					// 单曲自定义纹理目录：images/holdCover/{目录}/holdCover{Purple..}.png 或 sustain_cover.png
+					var found:Bool = Paths.fileExists('images/holdCover/$dir/holdCoverPurple.png', IMAGE)
+						|| Paths.fileExists('images/holdCover/$dir/sustain_cover.png', IMAGE);
+					if(!found)
+						showOutput(Language.get('charting_msg_texture_notfound', ['images/holdCover/$dir/']), true);
+					else
+						showOutput(Language.get('charting_msg_reload_holdcover_ok', ['holdCover/$dir']));
+				}
+				else
+					showOutput(Language.get('charting_msg_reload_notes_def'));
+			}
+		};
+
 		tab_group.add(new FlxText(gameOverCharDropDown.x, gameOverCharDropDown.y - 15, 120, Language.get('charting_gameover_char')).setFormat(Paths.font(Language.get('uitab_font')), 12));
 		tab_group.add(new FlxText(gameOverSndInputText.x, gameOverSndInputText.y - 15, 180, Language.get('charting_gameover_snd')).setFormat(Paths.font(Language.get('uitab_font')), 12));
 		tab_group.add(new FlxText(gameOverLoopInputText.x, gameOverLoopInputText.y - 15, 180, Language.get('charting_gameover_loop')).setFormat(Paths.font(Language.get('uitab_font')), 12));
@@ -4891,8 +4920,10 @@ for (i in 0...GRID_PLAYERS)
 
 		tab_group.add(new FlxText(noteTextureInputText.x, noteTextureInputText.y - 15, 100, Language.get('charting_note_texture')).setFormat(Paths.font(Language.get('uitab_font')), 12));
 		tab_group.add(new FlxText(noteSplashesInputText.x, noteSplashesInputText.y - 15, 120, Language.get('charting_note_splashes')).setFormat(Paths.font(Language.get('uitab_font')), 12));
+		tab_group.add(new FlxText(holdCoverTextureInputText.x, holdCoverTextureInputText.y - 15, 150, Language.get('charting_hold_cover_texture')).setFormat(Paths.font(Language.get('uitab_font')), 12));
 		tab_group.add(noteTextureInputText);
 		tab_group.add(noteSplashesInputText);
+		tab_group.add(holdCoverTextureInputText);
 
 		tab_group.add(gameOverCharDropDown); //lowest priority to display properly
 	}

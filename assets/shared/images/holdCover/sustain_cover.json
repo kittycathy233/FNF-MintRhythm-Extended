@@ -1,0 +1,24 @@
+{
+	"start": "sustain cover pre",
+	"holdOffset": [
+		-12,
+		-13
+	],
+	"endOffset": [
+		-50,
+		-30
+	],
+	"disableRGB": false,
+	"offsets": [
+		0,
+		10
+	],
+	"startOffset": [
+		10,
+		0
+	],
+	"end": "sustain cover end",
+	"fps": 24,
+	"hold": "sustain cover0",
+	"scale": 1.3
+}

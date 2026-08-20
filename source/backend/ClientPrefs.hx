@@ -42,8 +42,10 @@ import openfl.display.StageQuality;
 	public var splashSkin:String = 'Psych';
 	public var holdCoverSkin:String = 'Default'; // Hold Cover 皮肤（后缀，如 -Psych），Default 表示使用默认 holdCover{Color} 素材
 	public var splashAlpha:Float = 0.6;
-	public var splashLimitEnabled:Bool = false; // 是否启用飞溅数量限制
+	public var splashLimitEnabled:Bool = true; // 是否启用飞溅数量限制
 	public var splashLimit:Int = 16; // 飞溅最大同时存在数量（默认16）
+	public var holdCoverLimitEnabled:Bool = true; // 是否启用 Hold Cover 数量限制
+	public var holdCoverLimit:Int = 10; // Hold Cover 最大同时显示数量（默认10）
 	public var lowQuality:Bool = false;
 	public var shaders:Bool = true;
 	public var cacheOnGPU:Bool = #if !switch false #else true #end; // GPU Caching made by Raltyro
@@ -53,7 +55,7 @@ import openfl.display.StageQuality;
 	public var stageQuality:String = 'MEDIUM'; // 矢量/文本渲染质量(StageQuality)：LOW/MEDIUM/HIGH/BEST，移动端建议 MEDIUM 及以下
 	public var comboSpritePooling:Bool = true; // rating/combo/数字 精灵对象池：true=复用(省GC、减命中卡顿)，false=回退传统 new/destroy(最大兼容性)
 	public var comboSpritePoolSize:Int = 32; // 对象池容量上限（0=无限增长模式，>0=循环复用模式），推荐值16-64
-	public var loadingThreadCount:Int = 1; // 进入歌曲时资源加载的线程数（1=单线程，越大并行越高但更耗内存/可能触发OOM）
+	public var loadingThreadCount:Int = 2; // 进入歌曲时资源加载的线程数（1=单线程，越大并行越高但更耗内存/可能触发OOM）
 	public var hideHud:Bool = false;
 	public var noteOffset:Int = 0;
 	public var arrowRGB:Array<Array<FlxColor>> = [

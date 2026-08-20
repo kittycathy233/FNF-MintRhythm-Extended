@@ -33,6 +33,7 @@ typedef SwagSong =
 
 	@:optional var arrowSkin:String;
 	@:optional var splashSkin:String;
+	@:optional var holdCoverSkin:String;
 	@:optional var specialInst:String;
     @:optional var specialVocal:String;
     @:optional var specialEvents:String;
@@ -59,6 +60,7 @@ class Song
 	public var needsVoices:Bool = true;
 	public var arrowSkin:String;
 	public var splashSkin:String;
+	public var holdCoverSkin:String;
 	public var gameOverChar:String;
 	public var gameOverSound:String;
 	public var gameOverLoop:String;

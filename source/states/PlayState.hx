@@ -1484,8 +1484,13 @@ isReplaying = false;
 
 		// 预缓存 Hold Cover 贴图，避免第一次长条命中时卡顿
 		if(ClientPrefs.data.holdCovers)
-			for (c in NoteHoldCover.COVER_COLORS)
-				Paths.image(NoteHoldCover.getColorAtlasPath(c));
+		{
+			if (NoteHoldCover.isRGBSkin())
+				Paths.image(NoteHoldCover.getRGBAtlasPath());
+			else
+				for (c in NoteHoldCover.COVER_COLORS)
+					Paths.image(NoteHoldCover.getColorAtlasPath(c));
+		}
 
 		#if !android
 		addTouchPad('NONE', 'P');
@@ -3123,9 +3128,13 @@ tempScore += '${lblScore}: ${songScore}';
 		{
 			var strum:StrumNote = playerSideStrums().members[i];
 			if(strum == null) continue;
-			var cover:NoteHoldCover = new NoteHoldCover(strum, i);
-			grpHoldCovers.add(cover);
-			playerHoldCovers[i] = cover;
+			try
+			{
+				var cover:NoteHoldCover = new NoteHoldCover(strum, i);
+				grpHoldCovers.add(cover);
+				playerHoldCovers[i] = cover;
+			}
+			catch (e:Dynamic) { playerHoldCovers[i] = null; } // 自定义目录缺失时退化为不显示覆盖，避免崩溃
 		}
 
 		if(ClientPrefs.data.opponentHoldCovers)
@@ -3134,9 +3143,13 @@ tempScore += '${lblScore}: ${songScore}';
 			{
 				var strum:StrumNote = opponentSideStrums().members[i];
 				if(strum == null) continue;
-				var cover:NoteHoldCover = new NoteHoldCover(strum, i);
-				grpHoldCovers.add(cover);
-				opponentHoldCovers[i] = cover;
+				try
+				{
+					var cover:NoteHoldCover = new NoteHoldCover(strum, i);
+					grpHoldCovers.add(cover);
+					opponentHoldCovers[i] = cover;
+				}
+				catch (e:Dynamic) { opponentHoldCovers[i] = null; }
 			}
 		}
 	}
@@ -3146,6 +3159,17 @@ tempScore += '${lblScore}: ${songScore}';
 	{
 		if(!ClientPrefs.data.holdCovers || note == null || note.noteSplashData.disabled) return;
 		if(!playerSide && (!ClientPrefs.data.opponentHoldCovers || !ClientPrefs.data.cpuStrums)) return;
+
+		// Hold Cover 数量限制检查（与最大溅射数类似）：当前显示中的覆盖数达上限则跳过本次
+		if (ClientPrefs.data.holdCoverLimitEnabled)
+		{
+			var aliveCount:Int = 0;
+			for (covers in [playerHoldCovers, opponentHoldCovers])
+				for (c in covers)
+					if (c != null && c.visible) aliveCount++;
+			if (aliveCount >= ClientPrefs.data.holdCoverLimit)
+				return;
+		}
 
 		var covers:Array<NoteHoldCover> = playerSide ? playerHoldCovers : opponentHoldCovers;
 		if(note.noteData < 0 || note.noteData >= covers.length) return;
