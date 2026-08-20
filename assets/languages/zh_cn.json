@@ -366,6 +366,8 @@
     "time_bar_stripes_name": "时间条条纹",
     "resource_caching_name": "资源缓存",
     "enable_game_log_name": "启用游戏日志",
+    "garbage_collector_name": "启用原生GC",
+    "garbage_collector_desc": "开启Haxe/原生垃圾回收（GC）。\n关闭可减少周期性GC停顿导致的掉帧，\n但可能因内存不能及时回收而增加占用。",
     "hold_score_bonus_desc": "长条命中期间持续加分，直到长条结束（参考原版 Funkin，约每秒 250 分）。",
     "mobile_controls_menu_tip": "按 {0} 打开移动端控制菜单",
     "freeplay_replay_picker_title": "选择回放",

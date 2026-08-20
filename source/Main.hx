@@ -83,10 +83,18 @@ class Main extends Sprite
 	public static function main():Void
 	{
 		Lib.current.addChild(new Main());
+		applyGarbageCollectorSetting();
+	}
+
+	// 根据设置决定是否启用原生GC（cpp.NativeGc / hl.Gc）。
+	// 关闭原生GC可减少周期性GC停顿导致的掉帧；启动时与设置变更时调用，立即生效。
+	public static function applyGarbageCollectorSetting():Void
+	{
+		var enabled:Bool = (ClientPrefs.data != null) && ClientPrefs.data.garbageCollectorEnabled;
 		#if cpp
-		cpp.NativeGc.enable(true);
+		cpp.NativeGc.enable(enabled);
 		#elseif hl
-		hl.Gc.enable(true);
+		hl.Gc.enable(enabled);
 		#end
 	}
 
@@ -239,6 +247,8 @@ class Main extends Sprite
 		FlxG.signals.postGameStart.addOnce(() ->
 		{
 			ClientPrefs.loadPrefs();
+			// 加载完设置后再按保存值启用/关闭原生GC
+			applyGarbageCollectorSetting();
 		});
 
 		// 启动开屏模式: 'Kathy' = 自定义 Logo 开屏, 'Flixel' = Flixel 自带 splash, 'None' = 直接进游戏

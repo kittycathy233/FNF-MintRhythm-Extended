@@ -251,6 +251,7 @@ import openfl.display.StageQuality;
 	public var legacyMainMenu:Bool = false; // 是否使用旧版主菜单UI（Psych Engine v0.7.3原生样式）
 	public var developer:Bool = false; // 开发者模式：启用后可进入编辑器菜单(MasterEditorMenu)，legacy主界面显示toolbox入口
 	public var enableConsoleLog:Bool = true; // 是否在终端/控制台输出日志（debug/移动端默认启用，其余可自定义
+	public var garbageCollectorEnabled:Bool = true; // 是否启用原生GC（cpp.NativeGc / hl.Gc），关闭可减少周期性掉帧
 	public var useOptimizedNoteLoading:String = 'AUTO'; // OFF / ON / AUTO — AUTO 根据谱面 NPS 自动选择
 	public var requestAdminPrivilege:Bool = false; // 是否请求管理员权限（Windows专用）
 	public var keepSingAnimation:Bool = true; // 保持sing动画不返回idle（用于Hyperactive成就）

@@ -338,6 +338,16 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		enableConsoleLogOption = addOption(option);
 		#end
 
+		option = new Option(Language.get('garbage_collector_name'),
+			Language.get("garbage_collector_desc"),
+			'garbageCollectorEnabled',
+			BOOL);
+		option.onChange = function() {
+			// 变更后立即生效
+			Main.applyGarbageCollectorSetting();
+		};
+		addOption(option);
+
 	// PERCENT 类型设置
 		option = new Option(Language.get('ratings_opacity'),
 			Language.get("rating_opac_desc"),

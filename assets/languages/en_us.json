@@ -361,6 +361,8 @@
     "time_bar_stripes_name": "Time Bar Stripes",
     "resource_caching_name": "Resource Caching",
     "enable_game_log_name": "Enable Game Log",
+    "garbage_collector_name": "Enable Native GC",
+    "garbage_collector_desc": "Enables the Haxe/native Garbage Collector (GC).\nTurning it off may reduce periodic GC-stall frame drops,\nbut memory may not be reclaimed promptly.",
     "hold_score_bonus_desc": "Continue gaining score while holding a sustain note until it ends (similar to vanilla Funkin, roughly 250 score per second).",
     "mobile_controls_menu_tip": "Press {0} to Go Mobile Controls Menu",
     "freeplay_replay_picker_title": "Choose a Replay",

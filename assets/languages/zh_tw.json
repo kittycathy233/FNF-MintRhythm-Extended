@@ -373,5 +373,7 @@
     "results_confirm_replay": "確定要觀看本次回放嗎？",
     "results_confirm_save_title": "儲存確認",
     "results_confirm_save": "確定要儲存本次回放嗎？",
-    "results_replay_saved": "回放已儲存到 mods/{0}/replay/{1}"
+    "results_replay_saved": "回放已儲存到 mods/{0}/replay/{1}",
+    "garbage_collector_name": "啟用原生GC",
+    "garbage_collector_desc": "啟用 Haxe/原生垃圾回收（GC）。\n關閉可減少週期性 GC 停頓導致的掉幀，\n但記憶體可能無法即時回收而增加佔用。"
 }

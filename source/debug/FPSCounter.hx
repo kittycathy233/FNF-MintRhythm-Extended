@@ -124,7 +124,7 @@ class FPSCounter extends Sprite
 
 			var textLines:Array<String> = [];
 
-			if (ClientPrefs.data.simpleInfoShowFPS) textLines.push(currentFPS + " fps");
+			if (ClientPrefs.data.simpleInfoShowFPS) textLines.push(currentFPS + " fps" + gcStateLabel());
 			if (ClientPrefs.data.simpleInfoShowMem) textLines.push(formatSimpleMemory(memory) + " / " + formatSimpleMemory(memoryPeakMegas));
 			if (ClientPrefs.data.simpleInfoShowVersion)
 			{
@@ -177,8 +177,8 @@ class FPSCounter extends Sprite
 		// 构建所有信息的文本 - 使用数组避免多余空行
 		var textLines:Array<String> = [];
 
-		// FPS信息 - 根据设置显示
-		if (ClientPrefs.data.fpsShowFPS) textLines.push('FPS: $currentFPS');
+		// FPS信息 - 根据设置显示（附带原生GC开关状态标记）
+		if (ClientPrefs.data.fpsShowFPS) textLines.push('FPS: $currentFPS ${gcStateLabel()}');
 		if (ClientPrefs.data.fpsShowDelay) textLines.push('Delay: ${currentDelay}ms');
 		if (ClientPrefs.data.fpsShowRAM) textLines.push('RAM: ${formatMemory(memory)}');
 		if (ClientPrefs.data.fpsShowMemPeak) textLines.push('MEM Peak: ${formatMemory(memoryPeakMegas)}');
@@ -467,6 +467,12 @@ class FPSCounter extends Sprite
 		}
 
 		return count;
+	}
+
+	// 原生GC开关状态标记：仅当关闭时在 FPS 行显示 "NO GC" 提示
+	inline function gcStateLabel():String
+	{
+		return (ClientPrefs.data != null && !ClientPrefs.data.garbageCollectorEnabled) ? "(No GC)" : "";
 	}
 
 	function get_memoryMegas():Float
