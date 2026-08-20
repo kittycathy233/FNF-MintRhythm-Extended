@@ -59,6 +59,30 @@ class Paths
 	// define the locally tracked assets
 	public static var localTrackedAssets:Array<String> = [];
 
+	// 去重登记"本状态仍在使用"的资源 key。
+	// 原实现是每次 image()/returnSound()（哪怕命中缓存）都 push，导致 localTrackedAssets
+	// 在浏览期间无限堆积重复条目，且让 clearStoredMemory/clearUnusedMemory 的 contains 恒真，
+	// 永远释放不了任何资源。改为仅在首次出现时登记。
+	public static function trackLocalAsset(key:String):Void
+	{
+		if (key == null || key.length == 0) return;
+		if (!localTrackedAssets.contains(key))
+			localTrackedAssets.push(key);
+	}
+
+	// 仅判断歌曲音频文件是否存在，绝不加载/解码。
+	// 用于 FreeplayState 的 modHasAudio 存在性探测：原实现直接 loadSongAudio，
+	// 会把整段 Inst/Voices 解码进 currentTrackedSounds 且不登记释放，浏览期间只增不减。
+	public static function songAudioExists(song:String, fileBase:String, ?modDir:String = ''):Bool
+	{
+		var path:String = getSongAudioPath(song, fileBase, modDir);
+		#if sys
+		return FileSystem.exists(path);
+		#else
+		return OpenFlAssets.exists(path, SOUND);
+		#end
+	}
+
 	@:access(flixel.system.frontEnds.BitmapFrontEnd._cache)
 	public static function clearStoredMemory()
 	{
@@ -335,7 +359,7 @@ inline static public function inst(song:String, ?specialInst:String = null, ?mod
 		var bitmap:BitmapData = null;
 		if (currentTrackedAssets.exists(cacheKey))
 		{
-			localTrackedAssets.push(cacheKey);
+			trackLocalAsset(cacheKey);
 			return currentTrackedAssets.get(cacheKey);
 		}
 		return cacheBitmap(key, parentFolder, bitmap, allowGPU, cacheKey);
@@ -383,7 +407,7 @@ inline static public function inst(song:String, ?specialInst:String = null, ?mod
 		graph.destroyOnNoUse = false;
 
 		currentTrackedAssets.set(actualCacheKey, graph);
-		localTrackedAssets.push(actualCacheKey);
+		trackLocalAsset(actualCacheKey);
 		return graph;
 	}
 
@@ -567,7 +591,7 @@ inline static public function inst(song:String, ?specialInst:String = null, ?mod
 				return FlxAssets.getSound('flixel/sounds/beep');
 			}
 		}
-		localTrackedAssets.push(file);
+		trackLocalAsset(file);
 		return currentTrackedSounds.get(file);
 	}
 

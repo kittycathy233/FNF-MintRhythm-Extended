@@ -1020,9 +1020,11 @@ class FreeplayState extends MusicBeatState
 
 			// 先确定这首歌所属音频目录：优先用当前歌曲登记的 folder，缺失再用 findModWithSong 兜底，
 			// 与 PlayState 一致；Inst 与人声统一从 audioModDir 用 loadSongAudio 加载（不回退 funkin）。
+			// 存在性探测只查文件系统，绝不 loadSongAudio —— 原实现会把整段 Inst/Voices 解码进
+			// currentTrackedSounds 且不登记释放，浏览期间音频缓存只增不减。
 			function modHasAudio(mod:String, song:String, fileBase:String):Bool
 			{
-				return Paths.loadSongAudio(song, fileBase, mod) != null;
+				return Paths.songAudioExists(song, fileBase, mod);
 			}
 
 			// 探测某 mod 是否含有该曲音频：含 SpecialInst/SpecialVocal 的带后缀文件也算。
