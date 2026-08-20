@@ -271,11 +271,29 @@ inline static public function inst(song:String, ?specialInst:String = null, ?mod
 	// 缓存 key 与 returnSound 经 getPath 解析出的绝对路径完全一致，故 currentTrackedSounds / killAudio / precache 不受影响。
 	static public function loadSongAudio(song:String, fileBase:String, ?modDir:String = ''):Sound
 	{
+		return loadSoundAtPath(getSongAudioPath(song, fileBase, modDir));
+	}
+
+	// 与 loadSongAudio 完全一致的绝对路径解析，供外部按路径释放音频缓存时复用，
+	// 确保"释放"与"缓存"使用同一 key，避免路径不一致导致缓存永远清不掉。
+	inline public static function getSongAudioPath(song:String, fileBase:String, ?modDir:String = ''):String
+	{
 		var key:String = '${formatToSongPath(song)}/$fileBase.${SOUND_EXT}';
-		var path:String = (modDir != null && modDir.length > 0)
+		return (modDir != null && modDir.length > 0)
 			? mods('$modDir/songs/$key')
 			: getFolderPath(key, 'songs');
-		return loadSoundAtPath(path);
+	}
+
+	// 从 currentTrackedSounds 中移除指定音频缓存，并尽力释放其底层 asset 与解码数据，
+	// 让该 Sound 变为孤儿后能被 GC 回收。仅在确认不再播放该音频时调用。
+	public static function releaseSoundCache(file:String):Void
+	{
+		if (file == null || file.length == 0 || !currentTrackedSounds.exists(file))
+			return;
+		currentTrackedSounds.remove(file);
+		#if !html5
+		try { Assets.cache.clear(file); } catch (e:Dynamic) {}
+		#end
 	}
 
 	// 与 returnSound 相同的加载/缓存逻辑，但仅按给定绝对路径判定，不触发模组与原生之间的回退链。

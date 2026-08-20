@@ -13,7 +13,6 @@ import flixel.math.FlxMath;
 import flixel.util.FlxColor;
 import flixel.util.FlxDestroyUtil;
 import flixel.tweens.FlxTween;
-import flixel.graphics.FlxGraphic;
 import openfl.utils.AssetType;
 import openfl.utils.Assets;
 import flash.media.Sound;
@@ -39,8 +38,31 @@ class FreeplayState extends MusicBeatState
 	// 谱面数据缓存：避免试听和进入游戏时重复加载同一谱面
 	private static var _songDataCache:Map<String, SwagSong> = new Map();
 	private static var _songPathCache:Map<String, String> = new Map();
+	// LRU 访问顺序：最近一次访问的 key 在队尾，超限时淘汰队首，限制单次会话内谱面缓存常驻量
+	private static var _songCacheLRU:Array<String> = [];
+	private static inline var SONG_CACHE_MAX:Int = 60;
 	// 音频 mod 目录缓存：避免每次按空格时重复扫描所有 mod 目录
 	private static var _audioModCache:Map<String, String> = new Map();
+	// 当前试听加载过的音频绝对路径：停止试听/切换曲目时据此释放缓存，
+	// 避免"换着听 N 首歌"时 Inst/Vocals 永久累积在 currentTrackedSounds。
+	private static var _previewSoundFiles:Array<String> = [];
+	// 上次执行低频主动 GC 的时间点，避免每帧跑 NativeGc 造成卡顿
+	private static var _lastGcTime:Float = 0;
+	private static inline var GC_INTERVAL:Float = 5.0;
+
+	// 记录某 key 最近被访问/写入，并淘汰超出上限的最久未用项
+	private static function touchSongCache(key:String):Void
+	{
+		var idx:Int = _songCacheLRU.indexOf(key);
+		if (idx >= 0) _songCacheLRU.splice(idx, 1);
+		_songCacheLRU.push(key);
+		while (_songCacheLRU.length > SONG_CACHE_MAX)
+		{
+			var evict:String = _songCacheLRU.shift();
+			_songDataCache.remove(evict);
+			_songPathCache.remove(evict);
+		}
+	}
 
 	// 后台预解析：在玩家还在浏览列表时就把选中曲目的谱面 JSON 解析好，
 	// 这样按下确认键时不需要在主线程做 File.getContent + Json.parse，避免掉帧卡顿。
@@ -51,6 +73,7 @@ class FreeplayState extends MusicBeatState
 	private static var _prefetchMutex:sys.thread.Mutex = new sys.thread.Mutex();
 	private static var _prefetchDone:Map<String, SwagSong> = new Map(); // 仅在持锁时访问
 	private static var _prefetchBusy:Map<String, Bool> = new Map(); // 仅主线程访问
+	private static var _prefetchFailed:Map<String, Bool> = new Map(); // 解析失败标记：避免每帧反复重试同一首
 
 	// 任务队列：主线程投递，工作线程消费（用独立锁保护，避免与 _prefetchMutex 互相阻塞）
 	private static var _prefetchQueueMutex:sys.thread.Mutex = new sys.thread.Mutex();
@@ -68,7 +91,12 @@ class FreeplayState extends MusicBeatState
 		{
 			_prefetchBusy.remove(key);
 			if (data != null && !_songDataCache.exists(key))
+			{
 				_songDataCache.set(key, data);
+				touchSongCache(key);
+			}
+			else if (data == null)
+				_prefetchFailed.set(key, true); // 解析失败：标记后不再反复重试
 		}
 		_prefetchDone.clear();
 		_prefetchMutex.release();
@@ -123,19 +151,39 @@ class FreeplayState extends MusicBeatState
 	}
 
 	// 获取缓存的谱面数据，若不存在则加载并缓存
-	private static function getCachedSongData(folder:String, poop:String, songLowercase:String):SwagSong
+	private static function getCachedSongData(folder:String, poop:String, songLowercase:String, difficulty:Int = 1):SwagSong
 	{
 		drainPrefetched();
 
 		var cacheKey:String = folder + '_' + poop;
 		var songData:SwagSong = _songDataCache.get(cacheKey);
+		if (songData != null)
+			touchSongCache(cacheKey);
 		if (songData == null)
 		{
 			songData = Song.loadFromJson(poop, songLowercase);
+			if (songData == null && difficulty == 1)
+			{
+				// Compat: 部分旧模组 Normal 难度谱面带 -normal 后缀，而 no-suffix 版本缺失
+				var fallbackPoop:String = poop + '-normal';
+				var fallbackKey:String = folder + '_' + fallbackPoop;
+				songData = _songDataCache.get(fallbackKey);
+				if (songData != null)
+					touchSongCache(fallbackKey);
+				if (songData == null)
+					songData = Song.loadFromJson(fallbackPoop, songLowercase);
+				if (songData != null)
+				{
+					_songDataCache.set(fallbackKey, songData);
+					_songPathCache.set(fallbackKey, Song.chartPath);
+					touchSongCache(fallbackKey);
+				}
+			}
 			if (songData != null)
 			{
 				_songDataCache.set(cacheKey, songData);
 				_songPathCache.set(cacheKey, Song.chartPath);
+				touchSongCache(cacheKey);
 			}
 			return songData;
 		}
@@ -182,13 +230,23 @@ class FreeplayState extends MusicBeatState
 			return;
 		prefetchDelay = 0;
 
-		if (_songDataCache.exists(cacheKey) || _prefetchBusy.exists(cacheKey))
+		if (_songDataCache.exists(cacheKey) || _prefetchBusy.exists(cacheKey) || _prefetchFailed.exists(cacheKey))
 			return;
 
 		// 路径解析必须留在主线程（依赖 Mods.currentModDirectory 等全局状态）
 		var path:String = Song.getChartPath(poop, songLowercase);
 		if (path == null || !FileSystem.exists(path))
-			return; // 打包进 assets 的谱面走原来的同步分支
+		{
+			// Compat: Normal 难度尝试 -normal 后缀变体（部分旧模组只有此版本）
+			if (curDifficulty != 1)
+				return; // 非 Normal 难度，且无文件，跳过预取
+			var fallbackPoop:String = poop + '-normal';
+			path = Song.getChartPath(fallbackPoop, songLowercase);
+			if (path == null || !FileSystem.exists(path))
+				return; // 打包进 assets 的谱面走原来的同步分支
+			poop = fallbackPoop;
+			cacheKey = meta.folder + '_' + poop;
+		}
 
 		_prefetchBusy.set(cacheKey, true);
 		_songPathCache.set(cacheKey, path);
@@ -275,8 +333,10 @@ class FreeplayState extends MusicBeatState
 
 	override function create()
 	{
-		// Paths.clearStoredMemory();
-		// Paths.clearUnusedMemory();
+		// 进 Freeplay 前回收上一状态遗留的音频与图片纹理，
+		// 与其余状态保持一致，避免跨状态累积导致运存只增不减。
+		Paths.clearStoredMemory();
+		Paths.clearUnusedMemory();
 
 		persistentUpdate = true;
 		PlayState.isStoryMode = false;
@@ -355,6 +415,7 @@ class FreeplayState extends MusicBeatState
 
 		songs = songsFull;
 		reloadSongList();
+		preloadAllIcons(); // 一次性加载全部小图标：浏览时不再有新建/解码的分配抖动
 		WeekData.setDirectoryFromWeek();
 
 		if (curSelected >= songs.length)
@@ -617,6 +678,9 @@ class FreeplayState extends MusicBeatState
 		}
 
 		reloadSongList();
+		// 筛选后列表已重建，图标全部置为未加载；这里一次性全部预加载，
+		// 避免退化为 warmupIcons 每帧 2 个的懒加载，导致滚动时图标逐个冒出的现象。
+		preloadAllIcons();
 
 		if (curSelected >= songs.length)
 			curSelected = 0;
@@ -689,6 +753,18 @@ class FreeplayState extends MusicBeatState
 		{
 			lastWarmupSelected = curSelected;
 			warmupIcons();
+		}
+
+		// 低频主动 GC：每 GC_INTERVAL 秒在空闲时跑一次 NativeGc，
+		// 及时回收被 clearPreviewSounds / LRU 淘汰后沦为孤儿的 SwagSong、AudioBuffer 与废弃图标纹理，
+		// 把"反反复复爆浆"的锯齿内存曲线压平成稳定的低位平台。
+		_lastGcTime += elapsed;
+		if (_lastGcTime >= GC_INTERVAL)
+		{
+			_lastGcTime = 0;
+			#if cpp
+			cpp.NativeGc.run(true);
+			#end
 		}
 
 		if (FlxG.sound.music.volume < 0.7)
@@ -859,6 +935,8 @@ class FreeplayState extends MusicBeatState
 			else if (player.playingMusic)
 			{
 				FlxG.sound.music.stop();
+				// 停止试听时释放全部试听音频缓存，让内存回落到试听前的基线
+				clearPreviewSounds();
 				destroyFreeplayVocals();
 				FlxG.sound.music.volume = 0;
 				instPlaying = -1;
@@ -897,16 +975,21 @@ class FreeplayState extends MusicBeatState
 		{
 			if (instPlaying != curSelected && !player.playingMusic)
 			{
+				// 切换试听新歌前，释放上一次试听累积的音频缓存，避免多首歌音频永久驻留
+				clearPreviewSounds();
 				destroyFreeplayVocals();
 				FlxG.sound.music.volume = 0;
 
 				Mods.currentModDirectory = songs[curSelected].folder;
 				var poop:String = Highscore.formatSong(songs[curSelected].songName.toLowerCase(), curDifficulty);
-				var songData:SwagSong = getCachedSongData(songs[curSelected].folder, poop, songs[curSelected].songName.toLowerCase());
+				var songData:SwagSong = getCachedSongData(songs[curSelected].folder, poop, songs[curSelected].songName.toLowerCase(), curDifficulty);
 
 				if (songData == null) {
-							// 显示错误信息
-							missingText.text = 'ERROR: Could not load chart file: $poop';
+							// 显示错误信息（包含两次尝试记录）
+							var altPoop:String = curDifficulty == 1 ? poop + '-normal' : null;
+							missingText.text = altPoop != null
+								? 'ERROR: Could not load chart file: $poop\n(Also tried: $altPoop)'
+								: 'ERROR: Could not load chart file: $poop';
 							missingText.screenCenter(Y);
 							missingText.visible = true;
 							missingTextBG.visible = true;
@@ -989,6 +1072,8 @@ class FreeplayState extends MusicBeatState
 					// 优先 Voices-{角色}-SpecialVocal > Voices-Player/Opponent-SpecialVocal > Voices-SpecialVocal，命中即止（任一存在即可）。
 					if (PlayState.SONG.specialVocal != null && PlayState.SONG.specialVocal.length > 0)
 						fileBase += '-' + PlayState.SONG.specialVocal;
+					var fp:String = Paths.getSongAudioPath(PlayState.SONG.song, fileBase, audioModDir);
+					trackPreviewSound(fp);
 					return Paths.loadSongAudio(PlayState.SONG.song, fileBase, audioModDir);
 				}
 
@@ -1052,6 +1137,7 @@ class FreeplayState extends MusicBeatState
 				}
 
 				var instFileBase:String = (PlayState.SONG.specialInst != null && PlayState.SONG.specialInst.length > 0) ? 'Inst-${PlayState.SONG.specialInst}' : 'Inst';
+				trackPreviewSound(Paths.getSongAudioPath(PlayState.SONG.song, instFileBase, audioModDir));
 				FlxG.sound.playMusic(Paths.loadSongAudio(PlayState.SONG.song, instFileBase, audioModDir), 0.8);
 				FlxG.sound.music.pause();
 				instPlaying = curSelected;
@@ -1097,11 +1183,14 @@ class FreeplayState extends MusicBeatState
 
 			try
 			{
-				var songData:SwagSong = getCachedSongData(songs[curSelected].folder, poop, songLowercase);
+				var songData:SwagSong = getCachedSongData(songs[curSelected].folder, poop, songLowercase, curDifficulty);
 
 				if (songData == null) {
-								// 显示错误信息
-								missingText.text = 'ERROR: Could not load chart file: $poop';
+								// 显示错误信息（包含两次尝试记录）
+								var altPoop:String = curDifficulty == 1 ? poop + '-normal' : null;
+								missingText.text = altPoop != null
+									? 'ERROR: Could not load chart file: $poop\n(Also tried: $altPoop)'
+									: 'ERROR: Could not load chart file: $poop';
 								missingText.screenCenter(Y);
 								missingText.visible = true;
 								missingTextBG.visible = true;
@@ -1337,7 +1426,7 @@ class FreeplayState extends MusicBeatState
 
 		var songLowercase:String = Paths.formatToSongPath(songs[curSelected].songName);
 		var poop:String = Highscore.formatSong(songLowercase, curDifficulty);
-		var songData:SwagSong = getCachedSongData(songs[curSelected].folder, poop, songLowercase);
+		var songData:SwagSong = getCachedSongData(songs[curSelected].folder, poop, songLowercase, curDifficulty);
 
 		if (songData == null) {
 			// 显示错误信息
@@ -1503,6 +1592,21 @@ class FreeplayState extends MusicBeatState
 		if (opponentVocals != null)
 			opponentVocals.stop();
 		opponentVocals = FlxDestroyUtil.destroy(opponentVocals);
+	}
+
+	// 记录当前试听加载过的音频绝对路径，供后续释放缓存
+	public static function trackPreviewSound(file:String):Void
+	{
+		if (file != null && file.length > 0 && !_previewSoundFiles.contains(file))
+			_previewSoundFiles.push(file);
+	}
+
+	// 释放当前试听累积的所有音频缓存并清空记录（保留正在播放的引用交由 GC 处理）
+	public static function clearPreviewSounds():Void
+	{
+		for (f in _previewSoundFiles)
+			Paths.releaseSoundCache(f);
+		_previewSoundFiles = [];
 	}
 
 	function changeDiff(change:Int = 0)
@@ -1879,6 +1983,37 @@ class FreeplayState extends MusicBeatState
 		_lastIconVisibles = [];
 	}
 
+	/** 一次性把列表里所有小图标建好并常驻，与 PsychEngine 原版一致：
+	 *  浏览/滚动过程不再有任何新建或解码，内存进入 Freeplay 时即一次性到顶、之后保持稳定。
+	 */
+	private function preloadAllIcons():Void
+	{
+		if (songs.length == 0 || iconArray == null)
+			return;
+		for (i in 0...songs.length)
+		{
+			if (iconLoadStatus[i])
+				continue;
+			var __savedDir:String = Mods.currentModDirectory;
+			Mods.currentModDirectory = songs[i].folder;
+			var ic:HealthIcon = null;
+			try {
+				ic = new HealthIcon(songs[i].songCharacter);
+			} catch (e:Dynamic) {
+				trace('Failed to preload icon for ${songs[i].songName}: ' + e);
+			}
+			Mods.currentModDirectory = __savedDir;
+			iconLoadStatus[i] = true;
+			if (ic == null)
+				continue;
+			// 位置由 updateVisibleItems 用投影公式统一设置，不绑定 sprTracker
+			ic.sprTracker = null;
+			ic.visible = ic.active = false;
+			iconArray[i] = ic;
+			grpIcons.add(ic);
+		}
+	}
+
 	/**
 	 * 空闲时预加载“选中项附近 ±ICON_RADIUS”的小图标：每帧最多创建 ICON_WARM_PER_FRAME 个，
 	 * 把 PNG 解码/纹理上传开销摊到空闲帧，避免滚动过程中的间歇性卡顿。
@@ -2136,6 +2271,7 @@ class FreeplayState extends MusicBeatState
 		_songDataCache.clear();
 		_songPathCache.clear();
 		_audioModCache.clear();
+		_songCacheLRU = [];
 		#if (sys && FEATURE_FILESYSTEM)
 		// 停止后台预解析工作线程并清空队列，避免线程泄漏
 		_prefetchWorkerRunning = false;
@@ -2147,9 +2283,17 @@ class FreeplayState extends MusicBeatState
 		_prefetchDone.clear();
 		_prefetchMutex.release();
 		_prefetchBusy.clear();
+		_prefetchFailed.clear();
 		#end
 
+		// 离开 Freeplay 时释放残余的试听音频缓存（防止之前未来得及释放的累积）
+		clearPreviewSounds();
+
 		super.destroy();
+
+		// 退出 Freeplay 时立即回收本状态加载的图片纹理与音频，不再等下一个状态清理
+		Paths.clearStoredMemory();
+		Paths.clearUnusedMemory();
 
 		FlxG.autoPause = ClientPrefs.data.autoPause;
 		if (!FlxG.sound.music.playing && !stopMusicPlay)
