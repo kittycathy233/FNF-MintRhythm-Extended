@@ -55,6 +55,44 @@ class PsychUIButton extends FlxSpriteGroup
 	public var forceCheckNext:Bool = false;
 	public var broadcastButtonEvent:Bool = true;
 	var _firstFrame:Bool = true;
+
+	/** 移动端：根据触摸状态计算"是否刚按下/是否抬起/是否悬停"*/
+	function checkTouch():{pressed:Bool, released:Bool, overlaps:Bool}
+	{
+		#if FLX_TOUCH
+		if (camera == null) return {pressed: false, released: false, overlaps: false};
+
+		var touches = FlxG.touches.list;
+		var anyOverlapped:Bool = false;
+		var pressed:Bool = false;
+		var released:Bool = false;
+
+		for (touch in touches)
+		{
+			if (touch == null) continue;
+
+			var worldPos = touch.getWorldPosition(camera);
+			var overlapped:Bool = worldPos.x > bg.x && worldPos.x < bg.x + bg.width
+				&& worldPos.y > bg.y && worldPos.y < bg.y + bg.height;
+			if (overlapped)
+			{
+				anyOverlapped = true;
+				if (touch.justPressed) pressed = true;
+			}
+
+			// 任意触摸点刚抬起即视为 released
+			if (touch.justReleased) released = true;
+		}
+		return {pressed: pressed, released: released, overlaps: anyOverlapped};
+		#else
+		return {pressed: false, released: false, overlaps: false};
+		#end
+	}
+
+	/** 移动端：按下/抬起通知钩子，供外部（如子状态）统一监听触摸，避免依赖 FlxG.mouse */
+	public var onTouchJustPressed:Void->Void = null;
+	public var onTouchJustReleased:Void->Void = null;
+
 	override function update(elapsed:Float)
 	{
 		if (!active || !exists || camera == null) return;
@@ -67,12 +105,34 @@ class PsychUIButton extends FlxSpriteGroup
 			text.color = normalStyle.textColor;
 			_firstFrame = false;
 		}
-		
-		if(isClicked && FlxG.mouse.released)
+
+		#if FLX_TOUCH
+		var touch = checkTouch();
+		if (isClicked && (FlxG.mouse.released || touch.released))
 		{
 			forceCheckNext = true;
 			isClicked = false;
+			if (onTouchJustReleased != null) onTouchJustReleased();
 		}
+
+		if (touch.pressed)
+		{
+			isClicked = true;
+			bg.color = clickStyle.bgColor;
+			bg.alpha = clickStyle.bgAlpha;
+			text.color = clickStyle.textColor;
+			if (onClick != null) onClick();
+			if (broadcastButtonEvent) PsychUIEventHandler.event(CLICK_EVENT, this);
+			if (onTouchJustPressed != null) onTouchJustPressed();
+		}
+		else if(!isClicked)
+		{
+			var style:UIStyleData = (touch.overlaps) ? hoverStyle : normalStyle;
+			bg.color = style.bgColor;
+			bg.alpha = style.bgAlpha;
+			text.color = style.textColor;
+		}
+		#end
 
 		if(forceCheckNext || FlxG.mouse.justMoved || FlxG.mouse.justPressed)
 		{

@@ -218,6 +218,8 @@ class MusicPlayer extends FlxGroup
 		positionSong();
 		updateTimeTxt();
 		updatePlaybackTxt();
+		// 每帧按当前 music.time 刷新进度条，保证平滑推进（不止在打开播放器时更新一次）
+		progressBar.updateBar();
 	}
 
 	function setVocalsTime(time:Float)
@@ -337,14 +339,10 @@ class MusicPlayer extends FlxGroup
 		playbackTxt.x = playbackBG.x - playbackTxt.width / 2;
 		playbackTxt.y = playbackTxt.height;
 
+		// 进度条宽度与歌曲名文本相同，并以其中心水平居中（songTxt.x 已包含短歌名的偏移，公式自动跟随）
 		progressBar.setGraphicSize(Std.int(songTxt.width), 5);
 		progressBar.y = songTxt.y + songTxt.height + 10;
-		progressBar.x = songTxt.x + songTxt.width / 2 - 15;
-		if (shortName)
-		{
-			progressBar.scale.x += length / 2;
-			progressBar.x -= length - 10;
-		}
+		progressBar.x = songTxt.x + songTxt.width / 2 - progressBar.width / 2;
 
 		for (i in 0...2)
 		{

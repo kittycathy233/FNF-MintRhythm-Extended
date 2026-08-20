@@ -154,6 +154,7 @@ class PlayState extends MusicBeatState
 	// 静态变量用于传递回放数据
 	public static var pendingReplayData:Array<ReplayData> = null;	// 待加载的回放数据
 	public static var shouldStartReplay:Bool = false;			// 是否应该启动回放
+	public static var retainReplayOnRestart:Bool = false;		// 重玩仍需保留回放（下次重建 PlayState 继续回放）
 	public static var replayJudgmentSettings:Dynamic = null;	// 回放中的判定设置
 	public static var replayGameplaySettings:Dynamic = null;	// 回放中的游戏设置
 	
@@ -484,7 +485,7 @@ class PlayState extends MusicBeatState
 	private var requiresSyncing:Bool = false;
 	private var lastCorrectSongPos:Float = -1.0;
 
-	private static var _lastLoadedModDirectory:String = '';
+	public static var _lastLoadedModDirectory:String = '';
 	public static var nextReloadAll:Bool = false;
 
 	public var luaTouchPad:TouchPad;
@@ -582,6 +583,7 @@ class PlayState extends MusicBeatState
 			currentReplayIndex = 0;
 			shouldStartReplay = false;
 			pendingReplayData = null;
+			retainReplayOnRestart = false;
 			// 重置按键状态
 			replayHeldKeys = [false, false, false, false];
 			keyPressIndices = [-1, -1, -1, -1];
@@ -6693,9 +6695,20 @@ tempScore += '${lblScore}: ${songScore}';
 			if (Reflect.hasField(originalGameplaySettings, 'popUpRating')) ClientPrefs.data.popUpRating = originalGameplaySettings.popUpRating;
 		}
 		
-		// 重置回放设置静态变量
-		replayJudgmentSettings = null;
-		replayGameplaySettings = null;
+		// 重置回放设置静态变量。
+		// 若是"重玩"（队列新 PlayState 继续回放），则保留静态回放数据供下次消费；
+		// 否则为真正退出 PlayState，销毁回放数据避免污染后续流程。
+		if (retainReplayOnRestart)
+		{
+			retainReplayOnRestart = false; // 保留 pendingReplayData/shouldStartReplay 等，供新 PlayState 消费
+		}
+		else
+		{
+			shouldStartReplay = false;
+			pendingReplayData = null;
+			replayJudgmentSettings = null;
+			replayGameplaySettings = null;
+		}
 
 		// 退出PlayState时还原为原来的缩放模式（destroy在下一状态create之前执行，确保后续界面恢复原始分辨率）
 		if (_psAdaptiveActive)

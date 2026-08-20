@@ -10,6 +10,7 @@ import objects.MusicPlayer;
 import options.GameplayChangersSubstate;
 import substates.ResetScoreSubState;
 import flixel.math.FlxMath;
+import flixel.util.FlxColor;
 import flixel.util.FlxDestroyUtil;
 import flixel.tweens.FlxTween;
 import flixel.graphics.FlxGraphic;
@@ -18,10 +19,17 @@ import openfl.utils.Assets;
 import flash.media.Sound;
 import haxe.Json;
 import backend.ui.PsychUIInputText;
+import backend.ui.PsychUIRadioGroup;
+import backend.ui.PsychUIButton;
+import states.editors.content.Prompt;
+import flixel.ui.FlxButton;
+import flixel.graphics.frames.FlxTileFrames;
+import flixel.math.FlxPoint;
 #if FEATURE_FILESYSTEM
 import sys.FileSystem;
 import sys.io.File;
 import backend.Mods;
+import android.FlxVirtualPad;
 #end
 
 class FreeplayState extends MusicBeatState
@@ -254,6 +262,9 @@ class FreeplayState extends MusicBeatState
 	// 回放缓存相关
 	private var cachedReplayText:String = "";
 	private var cachedReplayIndex:Map<String, Array<String>> = new Map(); // 缓存回放文件索引：歌曲名 -> 难度列表
+	#if FEATURE_FILESYSTEM
+	private var replayButton:FlxButton = null; // 右上角 E 键回放按钮
+	#end
 
 	// 谱面信息面板（按 SPACE 预览时显示在右侧）
 	private var chartInfoBG:FlxSprite;
@@ -375,7 +386,7 @@ class FreeplayState extends MusicBeatState
 		missingTextBG.visible = false;
 
 		missingText = new FlxText(50, 0, FlxG.width - 100, '', 24);
-		missingText.setFormat(Paths.font("vcr.ttf"), 24, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		missingText.setFormat(Paths.font(Language.get('uitab_font')), 24, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		missingText.scrollFactor.set();
 		missingText.visible = false;
 
@@ -493,6 +504,26 @@ class FreeplayState extends MusicBeatState
 		preloadReplayIndex();
 
 		addTouchPad('LEFT_FULL', 'A_B_C_X_Y_Z');
+
+		#if FEATURE_FILESYSTEM
+		#if !desktop
+		// 右上角 E 键回放按钮（仅移动端显示）
+		replayButton = new FlxButton(0, 0);
+		replayButton.frames = FlxTileFrames.fromFrame(FlxVirtualPad.getFrames().getByName("e"), FlxPoint.get(44 * 3, 127));
+		replayButton.resetSizeFromFrame();
+		replayButton.solid = false;
+		replayButton.immovable = true;
+		replayButton.scrollFactor.set();
+		replayButton.alpha = 0.8;
+		replayButton.color = 0xFF7D00;
+		replayButton.antialiasing = true;
+		replayButton.scale.set(1.0, 1.0);
+		replayButton.setPosition(FlxG.width - replayButton.frameWidth - 60, 60);
+		replayButton.onDown.callback = function() loadReplay();
+		replayButton.visible = false;
+		add(replayButton);
+		#end
+		#end
 
 		// 桌面端：进入 Freeplay 时显示鼠标（方便点击搜索框等），手柄模式下隐藏
 		#if desktop
@@ -1137,8 +1168,24 @@ class FreeplayState extends MusicBeatState
 		#if FEATURE_FILESYSTEM
 		// 只在按下F7时扫描回放文件，而不是每帧都扫描
 		if (FlxG.keys.justPressed.F7 && !player.playingMusic && songs.length > 0)
-		{
-			var moddirLoad:String = (Mods.currentModDirectory != null && Mods.currentModDirectory.length > 0) ? Mods.currentModDirectory : 'global';
+			loadReplay();
+		#end
+
+		updateModText();
+		updateTexts(elapsed);
+		super.update(elapsed);
+	}
+
+	/**
+	 * 加载当前选中曲目与难度的最新回放（等价于桌面端 F7 的触发逻辑）
+	 * 供 F7 与右上角 E 键按钮共用
+	 */
+	#if FEATURE_FILESYSTEM
+	private function loadReplay():Void
+	{
+		if (songs.length == 0)
+			return;
+		var moddirLoad:String = (Mods.currentModDirectory != null && Mods.currentModDirectory.length > 0) ? Mods.currentModDirectory : 'global';
 			var replayFolderLoad:String = Paths.mods(moddirLoad + '/replay');
 			if (FileSystem.exists(replayFolderLoad))
 			{
@@ -1151,7 +1198,8 @@ class FreeplayState extends MusicBeatState
 					// Get currently selected difficulty name
 					var currentDifficultyName:String = Difficulty.getString(curDifficulty, false);
 
-					// Find latest replay file matching current song and difficulty
+					// 收集所有匹配当前曲目+难度的回放（按修改时间降序排序）
+					var matchedList:Array<Dynamic> = [];
 					var latest:String = null;
 					var latestM:Float = -1;
 					var savedSongName:String = null;
@@ -1185,6 +1233,7 @@ class FreeplayState extends MusicBeatState
 										else
 											m = Std.parseFloat(Std.string(mt));
 									}
+									matchedList.push({path: p, mtime: m, name: f});
 									if (m > latestM)
 									{
 										latestM = m;
@@ -1199,92 +1248,23 @@ class FreeplayState extends MusicBeatState
 							trace('Failed to read replay file ${f}: ' + e);
 						}
 					}
+					matchedList.sort((a:Dynamic, b:Dynamic) -> (Reflect.field(b, 'mtime') > Reflect.field(a, 'mtime') ? 1 : (Reflect.field(b, 'mtime') < Reflect.field(a, 'mtime') ? -1 : 0)));
 
 					if (latest != null)
 					{
-						// Load and play the replay
-						try
+						// 多个匹配回放时，弹出选择框让玩家挑选
+						if (matchedList.length > 1)
 						{
-							var content:String = File.getContent(latest);
-							var obj:Dynamic = Json.parse(content);
-							var replayArr = Reflect.field(obj, 'replay');
-							var meta:Dynamic = Reflect.field(obj, 'meta');
-							var chartPath:Dynamic = (meta != null && Reflect.hasField(meta, 'chartPath')) ? Reflect.field(meta, 'chartPath') : null;
-							var savedM:Dynamic = (meta != null && Reflect.hasField(meta, 'chartMTime')) ? Reflect.field(meta, 'chartMTime') : null;
-							var warn:Bool = false;
-							if (chartPath != null && FileSystem.exists(chartPath))
-							{
-								var s2 = FileSystem.stat(chartPath);
-								var curM = (s2 != null && Reflect.hasField(s2, 'mtime')) ? Reflect.field(s2, 'mtime') : null;
-								if (savedM != null && curM != null && Std.string(savedM) != Std.string(curM))
-									warn = true;
-							}
-							else
-								warn = true;
-							if (warn)
-							{
-								missingText.text = 'Warning: chart file changed since save. Playback may desync.';
-								missingText.screenCenter(Y);
-								missingText.visible = true;
-								missingTextBG.visible = true;
-							}
-							// Set pending replay data and load song
-						PlayState.pendingReplayData = replayArr;
-						PlayState.shouldStartReplay = true;
-						// 提取并保存判定设置
-						if (meta != null && Reflect.hasField(meta, 'judgmentSettings'))
-						{
-							PlayState.replayJudgmentSettings = Reflect.field(meta, 'judgmentSettings');
-						}
-						else
-						{
-							PlayState.replayJudgmentSettings = null;
-						}
-						// 提取并保存游戏设置
-						if (meta != null && Reflect.hasField(meta, 'gameplaySettings'))
-						{
-							PlayState.replayGameplaySettings = Reflect.field(meta, 'gameplaySettings');
-						}
-						else
-						{
-							PlayState.replayGameplaySettings = null;
-						}
-
-						// 显式设置当前mod目录，确保谱面文件路径正确
-						Mods.currentModDirectory = songs[curSelected].folder;
-
-						var songLowercase:String = Paths.formatToSongPath(songs[curSelected].songName);
-						var poop:String = Highscore.formatSong(songLowercase, curDifficulty);
-						var songData:SwagSong = getCachedSongData(songs[curSelected].folder, poop, songLowercase);
-
-						if (songData == null) {
-							// 显示错误信息
-							missingText.text = 'ERROR: Could not load chart file for replay: $poop';
-							missingText.screenCenter(Y);
-							missingText.visible = true;
-							missingTextBG.visible = true;
-							FlxG.sound.play(Paths.sound('cancelMenu'));
+							openReplayPicker(matchedList);
 							return;
 						}
-
-						PlayState.isStoryMode = false;
-						PlayState.storyDifficulty = curDifficulty;
-						// 桌面端：开始游玩（回放）时隐藏鼠标
-						#if desktop
-						FlxG.mouse.visible = false;
-						#end
-						LoadingState.prepareToSong();
-						LoadingState.loadAndSwitchState(new PlayState());
-						}
-						catch (e:Dynamic)
-						{
-							trace('Failed to load replay: ' + e);
-						}
+						// Load and play the replay（单条与回放列表选择共用）
+						playReplay(latest);
 					}
 					else
 					{
 						// Show prompt: current song and difficulty have no replay
-						missingText.text = 'No replay found for "${songs[curSelected].songName}" (${currentDifficultyName}).';
+						missingText.text = Language.get('freeplay_replay_none', [songs[curSelected].songName, currentDifficultyName]);
 						missingText.screenCenter(Y);
 						missingText.visible = true;
 						missingTextBG.visible = true;
@@ -1294,10 +1274,207 @@ class FreeplayState extends MusicBeatState
 		}
 		#end
 
-		updateModText();
-		updateTexts(elapsed);
-		super.update(elapsed);
+	/**
+	 * 播放指定的回放文件（单条回放与回放列表选择共用）
+	 */
+	#if FEATURE_FILESYSTEM
+	private function playReplay(replayPath:String):Void
+	{
+		try
+		{
+			var content:String = File.getContent(replayPath);
+			var obj:Dynamic = Json.parse(content);
+			var replayArr = Reflect.field(obj, 'replay');
+			var meta:Dynamic = Reflect.field(obj, 'meta');
+			var chartPath:Dynamic = (meta != null && Reflect.hasField(meta, 'chartPath')) ? Reflect.field(meta, 'chartPath') : null;
+			var savedM:Dynamic = (meta != null && Reflect.hasField(meta, 'chartMTime')) ? Reflect.field(meta, 'chartMTime') : null;
+			var warn:Bool = false;
+			if (chartPath != null && FileSystem.exists(chartPath))
+			{
+				var s2 = FileSystem.stat(chartPath);
+				var curM = (s2 != null && Reflect.hasField(s2, 'mtime')) ? Reflect.field(s2, 'mtime') : null;
+				if (savedM != null && curM != null && Std.string(savedM) != Std.string(curM))
+					warn = true;
+			}
+			else
+				warn = true;
+			// 谱面匹配时直接进入游玩，不弹"是否开始回放"确认框；
+			// 仅在谱面自保存后已变更（可能不同步）时才弹出警告确认，避免误收看信息一闪而过。
+			if (warn)
+				openReplayConfirm(replayPath, warn, replayArr, meta);
+			else
+				doPlayReplay(replayArr, meta);
+			}
+			catch (e:Dynamic)
+			{
+				trace('Failed to load replay: ' + e);
+			}
 	}
+
+	/**
+	 * 播放已解析的回放数据（单条回放与回放列表选择共用）。
+	 * 加载谱面并切换到游玩状态，不弹二次确认。
+	 */
+	#if FEATURE_FILESYSTEM
+	private function doPlayReplay(replayArr:Dynamic, meta:Dynamic):Void
+	{
+		// Set pending replay data and load song
+		PlayState.pendingReplayData = replayArr;
+		PlayState.shouldStartReplay = true;
+		// 提取并保存判定设置
+		if (meta != null && Reflect.hasField(meta, 'judgmentSettings'))
+			PlayState.replayJudgmentSettings = Reflect.field(meta, 'judgmentSettings');
+		else
+			PlayState.replayJudgmentSettings = null;
+		// 提取并保存游戏设置
+		if (meta != null && Reflect.hasField(meta, 'gameplaySettings'))
+			PlayState.replayGameplaySettings = Reflect.field(meta, 'gameplaySettings');
+		else
+			PlayState.replayGameplaySettings = null;
+
+		// 显式设置当前mod目录，确保谱面文件路径正确
+		Mods.currentModDirectory = songs[curSelected].folder;
+
+		var songLowercase:String = Paths.formatToSongPath(songs[curSelected].songName);
+		var poop:String = Highscore.formatSong(songLowercase, curDifficulty);
+		var songData:SwagSong = getCachedSongData(songs[curSelected].folder, poop, songLowercase);
+
+		if (songData == null) {
+			// 显示错误信息
+			missingText.text = Language.get('freeplay_error_chart_replay', [poop]);
+			missingText.screenCenter(Y);
+			missingText.visible = true;
+			missingTextBG.visible = true;
+			FlxG.sound.play(Paths.sound('cancelMenu'));
+			return;
+		}
+
+		PlayState.isStoryMode = false;
+		PlayState.storyDifficulty = curDifficulty;
+		// 桌面端：开始游玩（回放）时隐藏鼠标
+		#if desktop
+		FlxG.mouse.visible = false;
+		#end
+		LoadingState.prepareToSong();
+		LoadingState.loadAndSwitchState(new PlayState());
+	}
+	#end
+
+	/**
+	 * 播放回放前的二次确认框：每次通过 E 键或选择界面 Play 按钮播放回放时统一调用。
+	 * 在真正进入游玩前展示回放名称，若谱面自保存后已变更（可能不同步）则叠加警告，
+	 * 让玩家决定是继续播放还是取消，避免信息一闪而过直接跳转游玩。
+	 */
+	#if FEATURE_FILESYSTEM
+	private function openReplayConfirm(replayPath:String, warn:Bool, replayArr:Dynamic, meta:Dynamic):Void
+	{
+		// 从路径中提取回放文件名，去掉 .replay.json 后缀，仅保留 <song>-<timestamp> 部分
+		var fname:String = replayPath;
+		var sIdx:Int = fname.lastIndexOf('/');
+		if (sIdx >= 0)
+			fname = fname.substr(sIdx + 1);
+		if (StringTools.endsWith(fname, '.replay.json'))
+			fname = fname.substr(0, fname.length - '.replay.json'.length);
+
+		var msg:String = Language.get('freeplay_replay_confirm_msg', [fname]);
+		msg += '\n' + Language.get('freeplay_replay_play_question');
+		if (warn)
+			msg += '\n\n' + Language.get('freeplay_replay_warn_msg');
+
+		var titleKey:String = warn ? 'freeplay_replay_warn_title' : 'freeplay_replay_confirm_title';
+		var sizeY:Float = warn ? 240 : 190;
+		openSubState(new BasePrompt(500, sizeY, Language.get(titleKey),
+			function(state:BasePrompt) {
+				var msgText:FlxText = new FlxText(0, state.bg.y + 60, 460, msg, 14);
+				msgText.font = Paths.font(Language.get('uitab_font'));
+				msgText.alignment = CENTER;
+				msgText.color = warn ? FlxColor.ORANGE : FlxColor.WHITE;
+				msgText.screenCenter(X);
+				msgText.cameras = state.cameras;
+				state.add(msgText);
+
+				var yesBtn:PsychUIButton = new PsychUIButton(0, state.bg.y + state.bg.height - 60, Language.get('freeplay_replay_play'), function()
+				{
+					state.close();
+					doPlayReplay(replayArr, meta);
+				}, 200, 40);
+				yesBtn.cameras = state.cameras;
+				yesBtn.screenCenter(X);
+				yesBtn.x -= 110;
+				state.add(yesBtn);
+
+				var noBtn:PsychUIButton = new PsychUIButton(0, state.bg.y + state.bg.height - 60, Language.get('freeplay_replay_cancel'), function()
+				{
+					state.close();
+				}, 200, 40);
+				noBtn.normalStyle.bgColor = FlxColor.RED;
+				noBtn.normalStyle.textColor = FlxColor.WHITE;
+				noBtn.cameras = state.cameras;
+				noBtn.screenCenter(X);
+				noBtn.x += 110;
+				state.add(noBtn);
+			}
+		));
+	}
+	#end
+
+	/**
+	 * 当一首曲目存在多个回放时，弹出选择框让玩家挑选要播放的回放
+	 */
+	private function openReplayPicker(matchedList:Array<Dynamic>):Void
+	{
+		if (matchedList == null || matchedList.length == 0)
+			return;
+
+		var juncDisplay:Array<String> = [];
+		for (it in matchedList)
+		{
+			var name:String = Std.string(Reflect.field(it, 'name'));
+			// 去掉 .replay.json 后缀，只保留 <song>-<timestamp> 部分
+			// 命名格式: <song>-<timestamp>.replay.json
+			juncDisplay.push(name);
+		}
+
+		var maxItems:Int = Std.int(Math.min(5, juncDisplay.length));
+		var radioGrp:PsychUIRadioGroup = new PsychUIRadioGroup(0, 0, juncDisplay, 25, maxItems, false, 300);
+		radioGrp.checked = 0;
+
+		var hei:Float = radioGrp.height + 170;
+		openSubState(new BasePrompt(480, hei, Language.get('freeplay_replay_picker_title'),
+			function(state:BasePrompt) {
+				radioGrp.screenCenter(X);
+				radioGrp.y = state.bg.y + 80;
+				radioGrp.cameras = state.cameras;
+				state.add(radioGrp);
+
+				var btn:PsychUIButton = new PsychUIButton(0, radioGrp.y + radioGrp.height + 20, Language.get('freeplay_replay_play'), function()
+				{
+					var selected = matchedList[radioGrp.checked];
+					var path:String = Std.string(Reflect.field(selected, 'path'));
+					state.close();
+					// 交由 playReplay 统一处理（含谱面变更的二次确认）
+					playReplay(path);
+				}, 200, 40);
+				btn.cameras = state.cameras;
+				btn.screenCenter(X);
+				btn.x -= 110;
+				state.add(btn);
+
+				// 取消按钮：移动端无 ESC 键盘，必须有可点的退出途径，否则界面关不掉
+				var cancelBtn:PsychUIButton = new PsychUIButton(0, radioGrp.y + radioGrp.height + 20, Language.get('freeplay_replay_cancel'), function()
+				{
+					state.close();
+				}, 200, 40);
+				cancelBtn.normalStyle.bgColor = FlxColor.RED;
+				cancelBtn.normalStyle.textColor = FlxColor.WHITE;
+				cancelBtn.cameras = state.cameras;
+				cancelBtn.screenCenter(X);
+				cancelBtn.x += 110;
+				state.add(cancelBtn);
+			}
+		));
+	}
+	#end
 
 	function getVocalFromCharacter(char:String)
 	{
@@ -1383,6 +1560,12 @@ class FreeplayState extends MusicBeatState
 		Mods.currentModDirectory = songs[curSelected].folder;
 		PlayState.storyWeek = songs[curSelected].week;
 		Difficulty.loadFromWeek();
+
+		#if FEATURE_FILESYSTEM
+		// 切到新曲目（可能属于不同模组）后重建该模组目录下的回放索引，
+		// 否则 E 键/底部提示会一直用进入 Freeplay 时旧模组的索引，导致不显示。
+		preloadReplayIndex();
+		#end
 
 		var savedDiff:String = songs[curSelected].lastDifficulty;
 		var lastDiff:Int = Difficulty.list.indexOf(lastDifficultyName);
@@ -1527,6 +1710,10 @@ class FreeplayState extends MusicBeatState
 		var difficultyList:Array<String> = cachedReplayIndex.exists(currentSongName) ? cachedReplayIndex.get(currentSongName) : null;
 		var songReplayCount:Int = (difficultyList != null) ? difficultyList.length : 0;
 		var matchedReplayCount:Int = (difficultyList != null && difficultyList.indexOf(currentDifficultyName) != -1) ? 1 : 0;
+
+		// 右上角 E 键回放按钮：当前曲目+难度有回放文件时显示
+		if (replayButton != null)
+			replayButton.visible = matchedReplayCount > 0;
 		
 		// Generate hint text based on index data
 		if (songReplayCount > 0)
@@ -1534,7 +1721,11 @@ class FreeplayState extends MusicBeatState
 			if (matchedReplayCount > 0)
 			{
 				// Current difficulty has matching replays
+				#if !desktop
+				cachedReplayText = bottomString + '\nThis song has ${songReplayCount} replay(s) - Tap the E button (top-right) to watch';
+				#else
 				cachedReplayText = bottomString + '\nThis song has ${songReplayCount} replay(s) - Press F7 to watch';
+				#end
 			}
 			else
 			{
@@ -1580,7 +1771,9 @@ class FreeplayState extends MusicBeatState
 
 	private function updateModText():Void
 	{
-		var modDir:String = backend.Mods.currentModDirectory;
+		// 直接读当前选中曲目在歌单里记录的 folder，避免被全局 Mods.currentModDirectory
+		// 的临时切换污染（图标预热等会临时改全局目录）。若为 '' 则视为原版。
+		var modDir:String = (curSelected >= 0 && curSelected < songs.length) ? songs[curSelected].folder : '';
 		var newName:String = (modDir != null && modDir.length > 0) ? modDir : 'Friday Night Funkin\'';
 		var display:String = '◆ ' + newName + ' ◆';
 		if (modText.text != display)
@@ -1644,12 +1837,21 @@ class FreeplayState extends MusicBeatState
 			// 选中项若尚未预热，做一次同步创建（最多 1 次解码，保证焦点图标始终可见）
 			if (iconArray[i] == null && i == curSelected && !iconLoadStatus[i])
 			{
+				var __savedDir:String = Mods.currentModDirectory; // 保存当前目录，避免全局目录被污染
 				Mods.currentModDirectory = songs[i].folder;
-				var selIcon:HealthIcon = new HealthIcon(songs[i].songCharacter);
-				selIcon.sprTracker = null; // 位置在下方用投影公式手动设置
-				iconArray[i] = selIcon;
-				iconLoadStatus[i] = true;
-				grpIcons.add(selIcon);
+				var selIcon:HealthIcon = null;
+				try {
+					selIcon = new HealthIcon(songs[i].songCharacter);
+				} catch (e:Dynamic) {
+					trace('Failed to create selected icon for ${songs[i].songName}: ' + e);
+				}
+				Mods.currentModDirectory = __savedDir; // 无论成败都恢复选中曲目的目录
+				if (selIcon != null) {
+					selIcon.sprTracker = null; // 位置在下方用投影公式手动设置
+					iconArray[i] = selIcon;
+					iconLoadStatus[i] = true;
+					grpIcons.add(selIcon);
+				}
 			}
 
 			var icon:HealthIcon = iconArray[i];
@@ -1700,8 +1902,19 @@ class FreeplayState extends MusicBeatState
 
 			if (!iconLoadStatus[i])
 			{
+				var __savedDir:String = Mods.currentModDirectory; // 保存当前目录，避免全局目录被污染
 				Mods.currentModDirectory = songs[i].folder;
-				var ic:HealthIcon = new HealthIcon(songs[i].songCharacter);
+				var ic:HealthIcon = null;
+				try {
+					ic = new HealthIcon(songs[i].songCharacter);
+				} catch (e:Dynamic) {
+					trace('Failed to create icon for ${songs[i].songName}: ' + e);
+				}
+				Mods.currentModDirectory = __savedDir; // 无论成败都恢复选中曲目的目录
+				if (ic == null) { // 创建失败，标记已尝试，避免每帧重试
+					iconLoadStatus[i] = true;
+					continue;
+				}
 				// 不绑定 sprTracker：位置由 updateVisibleItems 用投影公式统一设置，
 				// 使图标能独立于文本可视窗口、在选中项附近 ±ICON_RADIUS 显示。
 				ic.sprTracker = null;

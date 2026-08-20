@@ -489,6 +489,15 @@ class PauseSubState extends MusicBeatSubstate
 	public static function restartSong(noTrans:Bool = false)
 	{
 		PlayState.instance.paused = true; // For lua
+
+		// 若当前正在回放，重玩时保留回放数据，使重建的 PlayState 继续回放同一段
+		if (PlayState.instance.isReplaying && PlayState.instance.replayData != null && PlayState.instance.replayData.length > 0)
+		{
+			PlayState.pendingReplayData = PlayState.instance.replayData.copy();
+			PlayState.shouldStartReplay = true;
+			PlayState.retainReplayOnRestart = true;
+		}
+
 		FlxG.sound.music.volume = 0;
 		PlayState.instance.vocals.volume = 0;
 
