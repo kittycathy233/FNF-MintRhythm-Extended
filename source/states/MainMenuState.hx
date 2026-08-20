@@ -505,25 +505,18 @@ class MainMenuState extends MusicBeatState
 					FlxTween.tween(menuItems.members[i], {alpha: 0}, 0.4, {ease: FlxEase.quadOut});
 				}
 			}
-			else if (controls.justPressed('debug_1') || touchPad.buttonE.justPressed)
+			#if desktop
+			if (controls.justPressed('debug_1'))
+			#else
+			else if (touchPad.buttonE.justPressed)
+			#end
 			{
 				// 仅在开发者模式启用时，才允许进入编辑器菜单(MasterEditorMenu)
 				if (ClientPrefs.data.developer)
 				{
-					if (ClientPrefs.data.legacyMainMenu)
-					{
-						// legacy 主界面样式下，注释掉按键7(debug_1)进入 MasterEditorMenu 的逻辑
-						// （legacy 样式请改用 toolbox 入口进入编辑器菜单）
-						// selectedSomethin = true;
-						// FlxG.mouse.visible = false;
-						// MusicBeatState.switchState(new MasterEditorMenu());
-					}
-					else
-					{
-						selectedSomethin = true;
-						FlxG.mouse.visible = false;
-						MusicBeatState.switchState(new MasterEditorMenu());
-					}
+					selectedSomethin = true;
+					FlxG.mouse.visible = false;
+					MusicBeatState.switchState(new MasterEditorMenu());
 				}
 			}
 		}
