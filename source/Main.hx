@@ -35,10 +35,6 @@ import flixel.tweens.FlxEase;
 import backend.ClientPrefs;
 import openfl.ui.Keyboard;
 
-#if windows
-import hxwindowmode.WindowColorMode;
-#end
-
 // NATIVE API STUFF, YOU CAN IGNORE THIS AND SCROLL //
 #if (linux && !debug)
 @:cppInclude('./external/gamemode_client.h')
@@ -323,11 +319,6 @@ class Main extends Sprite
 		Lib.current.stage.addChild(gameLogVar);
 
 		Language.load();
-
-	// Sets the window to dark mode. (returns true if it was successful)
-	#if windows
-	WindowColorMode.setDarkMode();
-	#end
 
 	#if (linux || mac) // fix the app icon not showing up on the Linux Panel / Mac Dock
 	var icon = Image.fromFile("icon.png");

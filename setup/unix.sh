@@ -28,8 +28,6 @@ haxelib install hxdiscord_rpc --quiet --skip-dependencies
 haxelib install hxvlc 2.3.0 --quiet --skip-dependencies
 haxelib install flxgif 1.0.3 --quiet
 haxelib install flxsvg 1.1.0 --quiet
-haxelib install sl-windows-api 1.1.0 --quiet
-haxelib install hxWindowColorMode 0.2.0 --quiet
 haxelib git haxeui-core https://github.com/kittycathy332/haxeui-core.git --quiet
 haxelib git haxeui-flixel https://github.com/kittycathy332/haxeui-flixel.git master --quiet --skip-dependencies
 haxelib git funkin.vis https://github.com/FunkinCrew/funkVis 22b1ce089dd924f15cdc4632397ef3504d464e90 --quiet --skip-dependencies

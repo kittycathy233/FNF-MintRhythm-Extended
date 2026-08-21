@@ -12,7 +12,7 @@ popd
 haxelib git lime https://github.com/kittycathy332/lime-kathy.git --quiet
 haxelib install openfl 9.4.2 --quiet --skip-dependencies
 haxelib install flixel 5.9.0 --quiet --skip-dependencies
-haxelib install flixel-addons 4.0.1 --quiet --skip-dependencies
+haxelib install flixel-addons 4.0.2 --quiet --skip-dependencies
 haxelib install flixel-tools 1.5.1 --quiet --skip-dependencies
 haxelib install flixel-ui 2.6.5 --quiet --skip-dependencies
 haxelib git flixel-text-input https://github.com/kittycathy332/flixel-text-input.git --quiet --skip-dependencies
@@ -26,8 +26,7 @@ haxelib install hxdiscord_rpc --quiet --skip-dependencies
 haxelib install hxvlc 2.3.0 --quiet --skip-dependencies
 haxelib install flxgif 1.0.3 --quiet
 haxelib install flxsvg 1.1.0 --quiet
-haxelib install sl-windows-api 1.1.0 --quiet --skip-dependencies
-haxelib install hxWindowColorMode 0.2.0 --quiet --skip-dependencies
+haxelib install sl-windows-api 1.4.0 --quiet --skip-dependencies
 haxelib install extension-androidtools 2.2.0 --quiet --skip-dependencies
 haxelib git haxeui-core https://github.com/kittycathy332/haxeui-core.git --quiet
 haxelib git haxeui-flixel https://github.com/kittycathy332/haxeui-flixel.git master --quiet --skip-dependencies
