@@ -151,7 +151,7 @@ class FreeplayState extends MusicBeatState
 	}
 
 	// 获取缓存的谱面数据，若不存在则加载并缓存
-	private static function getCachedSongData(folder:String, poop:String, songLowercase:String, difficulty:Int = 1):SwagSong
+	private static function getCachedSongData(folder:String, poop:String, songLowercase:String):SwagSong
 	{
 		drainPrefetched();
 
@@ -161,24 +161,9 @@ class FreeplayState extends MusicBeatState
 			touchSongCache(cacheKey);
 		if (songData == null)
 		{
+			// Song.loadFromJson 内部已内置 Normal 难度兼容：
+			// 无后缀谱面缺失时，回退尝试 -normal / 忽略大小写 / 已知拼写错误（如 -nuormal）变体。
 			songData = Song.loadFromJson(poop, songLowercase);
-			if (songData == null && difficulty == 1)
-			{
-				// Compat: 部分旧模组 Normal 难度谱面带 -normal 后缀，而 no-suffix 版本缺失
-				var fallbackPoop:String = poop + '-normal';
-				var fallbackKey:String = folder + '_' + fallbackPoop;
-				songData = _songDataCache.get(fallbackKey);
-				if (songData != null)
-					touchSongCache(fallbackKey);
-				if (songData == null)
-					songData = Song.loadFromJson(fallbackPoop, songLowercase);
-				if (songData != null)
-				{
-					_songDataCache.set(fallbackKey, songData);
-					_songPathCache.set(fallbackKey, Song.chartPath);
-					touchSongCache(fallbackKey);
-				}
-			}
 			if (songData != null)
 			{
 				_songDataCache.set(cacheKey, songData);
@@ -190,6 +175,21 @@ class FreeplayState extends MusicBeatState
 
 		// 命中缓存时同样要重新应用全局状态，否则 PlayState.SONG 还停留在上一次加载的谱面
 		return Song.applyChart(songData, songLowercase, _songPathCache.get(cacheKey));
+	}
+
+	// 谱面加载失败时的两行错误文案：第一行主错误，第二行列出实际尝试过的文件名
+	static function getChartMissingMessage(poop:String):String
+	{
+		var tried:Array<String> = [];
+		for (p in Song.lastTriedChartPaths)
+		{
+			var idx:Int = p.lastIndexOf('/');
+			var idx2:Int = p.lastIndexOf('\\');
+			if (idx2 > idx) idx = idx2;
+			tried.push(idx >= 0 ? p.substr(idx + 1) : p);
+		}
+		if (tried.length == 0) tried.push(poop);
+		return 'ERROR: Could not load chart file: $poop\n(Tried: ${tried.join(', ')})';
 	}
 
 	// 当前想要预解析的曲目 key，以及停留多久后才真正开始预解析（避免快速滚动列表时狂开线程）
@@ -233,20 +233,11 @@ class FreeplayState extends MusicBeatState
 		if (_songDataCache.exists(cacheKey) || _prefetchBusy.exists(cacheKey) || _prefetchFailed.exists(cacheKey))
 			return;
 
-		// 路径解析必须留在主线程（依赖 Mods.currentModDirectory 等全局状态）
+		// 路径解析必须留在主线程（依赖 Mods.currentModDirectory 等全局状态）。
+		// getChartPath 内部已包含 Normal 难度（-normal / 忽略大小写 / 拼写错误）的兼容回退。
 		var path:String = Song.getChartPath(poop, songLowercase);
 		if (path == null || !FileSystem.exists(path))
-		{
-			// Compat: Normal 难度尝试 -normal 后缀变体（部分旧模组只有此版本）
-			if (curDifficulty != 1)
-				return; // 非 Normal 难度，且无文件，跳过预取
-			var fallbackPoop:String = poop + '-normal';
-			path = Song.getChartPath(fallbackPoop, songLowercase);
-			if (path == null || !FileSystem.exists(path))
-				return; // 打包进 assets 的谱面走原来的同步分支
-			poop = fallbackPoop;
-			cacheKey = meta.folder + '_' + poop;
-		}
+			return; // 无文件（含打包进 assets 的谱面），跳过预取，走同步加载分支
 
 		_prefetchBusy.set(cacheKey, true);
 		_songPathCache.set(cacheKey, path);
@@ -982,14 +973,11 @@ class FreeplayState extends MusicBeatState
 
 				Mods.currentModDirectory = songs[curSelected].folder;
 				var poop:String = Highscore.formatSong(songs[curSelected].songName.toLowerCase(), curDifficulty);
-				var songData:SwagSong = getCachedSongData(songs[curSelected].folder, poop, songs[curSelected].songName.toLowerCase(), curDifficulty);
+				var songData:SwagSong = getCachedSongData(songs[curSelected].folder, poop, songs[curSelected].songName.toLowerCase());
 
 				if (songData == null) {
-							// 显示错误信息（包含两次尝试记录）
-							var altPoop:String = curDifficulty == 1 ? poop + '-normal' : null;
-							missingText.text = altPoop != null
-								? 'ERROR: Could not load chart file: $poop\n(Also tried: $altPoop)'
-								: 'ERROR: Could not load chart file: $poop';
+							// 显示错误信息（两行：主错误 + 实际尝试过的文件名）
+							missingText.text = getChartMissingMessage(poop);
 							missingText.screenCenter(Y);
 							missingText.visible = true;
 							missingTextBG.visible = true;
@@ -1185,14 +1173,11 @@ class FreeplayState extends MusicBeatState
 
 			try
 			{
-				var songData:SwagSong = getCachedSongData(songs[curSelected].folder, poop, songLowercase, curDifficulty);
+				var songData:SwagSong = getCachedSongData(songs[curSelected].folder, poop, songLowercase);
 
 				if (songData == null) {
-								// 显示错误信息（包含两次尝试记录）
-								var altPoop:String = curDifficulty == 1 ? poop + '-normal' : null;
-								missingText.text = altPoop != null
-									? 'ERROR: Could not load chart file: $poop\n(Also tried: $altPoop)'
-									: 'ERROR: Could not load chart file: $poop';
+								// 显示错误信息（两行：主错误 + 实际尝试过的文件名）
+								missingText.text = getChartMissingMessage(poop);
 								missingText.screenCenter(Y);
 								missingText.visible = true;
 								missingTextBG.visible = true;
@@ -1428,7 +1413,7 @@ class FreeplayState extends MusicBeatState
 
 		var songLowercase:String = Paths.formatToSongPath(songs[curSelected].songName);
 		var poop:String = Highscore.formatSong(songLowercase, curDifficulty);
-		var songData:SwagSong = getCachedSongData(songs[curSelected].folder, poop, songLowercase, curDifficulty);
+		var songData:SwagSong = getCachedSongData(songs[curSelected].folder, poop, songLowercase);
 
 		if (songData == null) {
 			// 显示错误信息

@@ -149,6 +149,8 @@ class Song
 
 	public static var chartPath:String;
 	public static var loadedSongName:String;
+	// 最近一次谱面加载失败时实际尝试过的路径（用于错误提示）
+	public static var lastTriedChartPaths:Array<String> = [];
 	public static function loadFromJson(jsonInput:String, ?folder:String):SwagSong
 	{
 		if(folder == null) folder = jsonInput;
@@ -156,7 +158,7 @@ class Song
 		
 		if(PlayState.SONG == null)
 		{
-			trace('Failed to load chart: $jsonInput');
+			trace('Failed to load chart: $jsonInput (tried: ${lastTriedChartPaths.join(', ')})');
 			return null;
 		}
 		
@@ -171,12 +173,101 @@ class Song
 	}
 
 	/**
-	 * 只计算谱面 JSON 的路径，不读文件。开销极小，可以在主线程调用后把路径丢给后台线程去读。
+	 * 计算谱面 JSON 的路径，不读文件。开销极小，可以在主线程调用后把路径丢给后台线程去读。
+	 * 内置 Normal 难度兼容：无后缀谱面缺失时，回退尝试 -normal / 忽略大小写 / 已知拼写错误变体。
 	 */
 	public static function getChartPath(jsonInput:String, ?folder:String):String
 	{
 		if(folder == null) folder = jsonInput;
-		return Paths.json('${Paths.formatToSongPath(folder)}/${Paths.formatToSongPath(jsonInput)}');
+
+		var formattedFolder:String = Paths.formatToSongPath(folder);
+		var formattedSong:String = Paths.formatToSongPath(jsonInput);
+		var basePath:String = Paths.json('${formattedFolder}/${formattedSong}');
+		lastTriedChartPaths = [basePath];
+
+		// Compat：Normal（无后缀）谱面缺失时，尝试 -normal 后缀 / 难度名（忽略大小写）及已知拼写错误变体
+		if(isDefaultDifficultyChart(formattedSong) && !chartFileExists(basePath))
+		{
+			var fallbackPath:String = findNormalFallbackChart(formattedFolder, formattedSong);
+			if(fallbackPath != null) return fallbackPath;
+		}
+		return basePath;
+	}
+
+	/**
+	 * 判断是否为"无后缀"（即 Normal / 默认难度）谱面名。
+	 * 只要不以当前难度列表里的某个非默认难度名结尾，就按无后缀谱面处理。
+	 */
+	static function isDefaultDifficultyChart(formattedSong:String):Bool
+	{
+		var defaultDiff:String = Paths.formatToSongPath(Difficulty.getDefault()); // 'normal'
+		for(diff in Difficulty.list)
+		{
+			var lower:String = Paths.formatToSongPath(diff);
+			if(lower.length == 0 || lower == defaultDiff) continue;
+			if(formattedSong.endsWith('-' + lower)) return false;
+		}
+		return true;
+	}
+
+	/**
+	 * 尝试寻找 Normal 难度兼容谱面文件：
+	 * 1) -normal 后缀精确路径（Windows/macOS 等大小写不敏感文件系统可一步命中）
+	 * 2) 谱面目录内忽略大小写的文件名匹配（覆盖大小写敏感文件系统）
+	 * 返回实际存在的路径；找不到返回 null。
+	 */
+	static function findNormalFallbackChart(formattedFolder:String, formattedSong:String):String
+	{
+		// 候选难度后缀（小写）。'nuormal' 是部分旧模组常见的拼写错误，可继续追加
+		var suffixes:Array<String> = ['normal', 'nuormal'];
+		var want:Array<String> = [];
+		for(s in suffixes)
+			want.push(formattedSong + '-' + s);
+
+		// 1) 精确路径尝试（mods 解析 + 打包资源）
+		for(w in want)
+		{
+			var p:String = Paths.json('$formattedFolder/$w');
+			lastTriedChartPaths.push(p);
+			if(chartFileExists(p)) return p;
+		}
+
+		// 2) 大小写敏感文件系统：扫描当前 mod 的谱面目录，忽略大小写匹配
+		#if (MODS_ALLOWED && sys)
+		try
+		{
+			if(Mods.currentModDirectory != null && Mods.currentModDirectory.length > 0)
+			{
+				var dir:String = Paths.mods(Mods.currentModDirectory + '/data/' + formattedFolder);
+				if(FileSystem.exists(dir) && FileSystem.isDirectory(dir))
+				{
+					for(f in FileSystem.readDirectory(dir))
+					{
+						var lower:String = f.toLowerCase();
+						for(w in want)
+						{
+							if(lower == w + '.json')
+							{
+								var fp:String = dir + '/' + f;
+								lastTriedChartPaths.push(fp);
+								return fp;
+							}
+						}
+					}
+				}
+			}
+		}
+		catch(e:Dynamic) { /* 目录不可读时忽略，按未找到处理 */ }
+		#end
+		return null;
+	}
+
+	static function chartFileExists(path:String):Bool
+	{
+		#if sys
+		if(FileSystem.exists(path)) return true;
+		#end
+		return Assets.exists(path, lime.utils.AssetType.TEXT);
 	}
 
 	/**
@@ -202,10 +293,9 @@ class Song
 	{
 		if(folder == null) folder = jsonInput;
 		var rawData:String = null;
-		
-		var formattedFolder:String = Paths.formatToSongPath(folder);
-		var formattedSong:String = Paths.formatToSongPath(jsonInput);
-		_lastPath = Paths.json('$formattedFolder/$formattedSong');
+
+		// 路径解析（含 Normal 难度兼容回退）
+		_lastPath = getChartPath(jsonInput, folder);
 
 		try
 		{
