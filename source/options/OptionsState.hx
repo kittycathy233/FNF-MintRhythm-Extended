@@ -10,6 +10,10 @@ import flixel.input.mouse.FlxMouse;
 import flixel.ui.FlxButton;
 import backend.CoolUtil;
 import lime.system.System;
+import haxe.ui.Toolkit;
+import haxe.ui.components.Button;
+import haxe.ui.core.Screen;
+import haxe.ui.events.MouseEvent;
 
 class OptionsState extends MusicBeatState
 {
@@ -51,9 +55,10 @@ class OptionsState extends MusicBeatState
 	var selectorLeft:FlxText;
 	var selectorRight:FlxText;
 	var descriptionText:FlxText;
-	var adminButton:FlxButton;
-	var clearFilesButton:FlxButton;
 	var sideGif:FlxGifSprite = null;
+
+	// HaxeUI 右上角按钮（取代原来的 adminButton / clearFilesButton）
+	private var haxeUITopRightButton:Button = null;
 
 	// speaki 语音列表（assets/shared/sounds/speaki 下的全部 .ogg）
 	private var speakiSounds:Array<String> = [
@@ -300,29 +305,8 @@ class OptionsState extends MusicBeatState
 		descriptionText.scrollFactor.set();
 		add(descriptionText);
 
-		// 添加管理员权限按钮（仅在 Windows 平台且没有管理员权限时显示）
-		#if (cpp && windows && !mobile)
-		if (!backend.Native.isAdmin()) {
-			adminButton = new FlxButton(FlxG.width - 220, 20, Language.get("request_admin_button"), onAdminButtonClick);
-			adminButton.setGraphicSize(200, 40);
-			adminButton.updateHitbox();
-			adminButton.label.setFormat(Paths.font(Language.get('game_font')), 16, FlxColor.WHITE, CENTER);
-			adminButton.label.fieldWidth = 200;
-			adminButton.label.alignment = CENTER;
-			add(adminButton);
-		}
-		#end
-
-		// 移动端：添加清空复制文件按钮
-		#if mobile
-		clearFilesButton = new FlxButton(FlxG.width - 220, 20, Language.get("clear_copied_files"), onClearFilesClick);
-		clearFilesButton.setGraphicSize(200, 40);
-		clearFilesButton.updateHitbox();
-		clearFilesButton.label.setFormat(Paths.font(Language.get('game_font')), 16, FlxColor.WHITE, CENTER);
-		clearFilesButton.label.fieldWidth = 200;
-		clearFilesButton.label.alignment = CENTER;
-		add(clearFilesButton);
-		#end
+		// 右上角按钮（Windows 为管理员权限，移动端为清空复制文件），改用 HaxeUI 实现
+		addHaxeUITopRightButton();
 
 		// 初始化选择器目标位置
 		changeSelection();
@@ -343,6 +327,46 @@ class OptionsState extends MusicBeatState
 		// 记住上次选中的项（仅本次游戏会话内有效，超出范围则回退到中间项）
 		curSelected = Std.int(Math.max(0, Math.min(options.length - 1, lastOptionsSelection)));
 		changeSelection(0); // 刷新高亮和描述
+	}
+
+	// 在设置主界面右上角添加 HaxeUI 按钮（取代原来的 Flixel 按钮）
+	private function addHaxeUITopRightButton():Void {
+		if (haxeUITopRightButton != null) return;
+
+		#if mobile
+		var btnText:String = Language.get("clear_copied_files");
+		var clickFn:Void->Void = onClearFilesClick;
+		var showBtn:Bool = true;
+		#elseif (cpp && windows)
+		var btnText:String = Language.get("request_admin_button");
+		var clickFn:Void->Void = onAdminButtonClick;
+		var showBtn:Bool = !backend.Native.isAdmin();
+		#else
+		var btnText:String = "";
+		var clickFn:Void->Void = null;
+		var showBtn:Bool = false;
+		#end
+
+		if (!showBtn) return;
+
+		// 首次使用时初始化 HaxeUI Toolkit（幂等）；
+		// 禁用 DPI 自动缩放，保证 HaxeUI 坐标与 Flixel 屏幕坐标一致
+		if (!Toolkit.initialized) {
+			Toolkit.autoScale = false;
+			Toolkit.init();
+		}
+
+		haxeUITopRightButton = new Button();
+		haxeUITopRightButton.text = btnText;
+		haxeUITopRightButton.x = FlxG.width - 220;
+		haxeUITopRightButton.y = 20;
+		haxeUITopRightButton.width = 200;
+		haxeUITopRightButton.height = 40;
+		// 使用 UI 字体（含中文字形），避免中文按钮文字显示为方框；字号与原 Flixel 按钮一致
+		haxeUITopRightButton.styleString = "font-name: " + Paths.font(Language.get('uitab_font')) + "; font-size: 12px;";
+		haxeUITopRightButton.registerEvent(MouseEvent.CLICK, function(_) clickFn());
+		// 加入 HaxeUI Screen，会自动挂到当前 FlixelState 之上渲染
+		Screen.instance.addComponent(haxeUITopRightButton);
 	}
 
 	override function closeSubState()
