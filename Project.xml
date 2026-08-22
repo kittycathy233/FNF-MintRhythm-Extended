@@ -118,7 +118,7 @@
 	<!-- 核心库 -->
 	<haxelib name="flixel" version="5.9.0"/>
 	<haxelib name="openfl" version="9.4.2"/>
-	<haxelib name="flixel-addons" version="4.0.1"/>
+	<haxelib name="flixel-addons" version="4.0.2"/>
 	<haxelib name="flixel-ui" version="2.6.5"/>
 	<haxelib name="tjson" version="1.4.0"/>
 	<haxelib name="away3d" version="5.0.9"/>

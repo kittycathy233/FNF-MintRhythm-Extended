@@ -14,7 +14,7 @@ HAXELIB_PATH=$(haxelib config)
 haxelib git lime https://github.com/kittycathy332/lime-kathy.git --quiet
 haxelib install openfl 9.4.2 --quiet
 haxelib install flixel 5.9.0 --quiet
-haxelib install flixel-addons 4.0.1 --quiet
+haxelib install flixel-addons 4.0.2 --quiet
 haxelib install flixel-tools 1.5.1 --quiet
 haxelib install flixel-ui 2.6.5 --quiet
 haxelib git flixel-text-input https://github.com/kittycathy332/flixel-text-input.git --quiet --skip-dependencies
