@@ -2106,7 +2106,7 @@ class FreeplayState extends MusicBeatState
 	override function beatHit():Void
 	{
 		// trace('beatHit called, curBeat: ' + curBeat + ', lastBeatHit: ' + lastBeatHit + ', playingMusic: ' + player.playingMusic);
-		if (lastBeatHit >= curBeat || !player.playingMusic || !FlxG.sound.music.playing)
+		if (lastBeatHit >= curBeat || !player.playingMusic)
 		{
 			// trace('beatHit blocked: lastBeatHit >= curBeat = ' + (lastBeatHit >= curBeat) + ', !playingMusic = ' + (!player.playingMusic));
 			return;
@@ -2129,7 +2129,7 @@ class FreeplayState extends MusicBeatState
 		// 背景每section缩放一次（每section触发一次）
 		// 不再调用super.sectionHit()，避免父类中的额外缩放
 		// 只有当缩放接近完成时才重新触发，避免在lerp动画中重复设置
-		if (bg != null && player.playingMusic && FlxG.sound.music.playing && bg.scale.x <= 1.01)
+		if (bg != null && player.playingMusic && bg.scale.x <= 1.01)
 		{
 			bg.scale.set(1.05, 1.05);
 			bgBeatElapsed = 0;
