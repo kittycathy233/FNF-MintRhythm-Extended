@@ -260,6 +260,22 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		option.decimals = 2;
 		addOption(option);
 
+		var option:Option = new Option(Language.get('hitsound_pool_enabled'),
+			Language.get('hitsound_pool_enabled_desc'),
+			'hitSoundPoolEnabled',
+			BOOL);
+		addOption(option);
+
+		var option:Option = new Option(Language.get('hitsound_pool_size'),
+			Language.get('hitsound_pool_size_desc'),
+			'hitSoundPoolSize',
+			INT);
+		option.scrollSpeed = 20;
+		option.minValue = 10;
+		option.maxValue = 500;
+		option.changeValue = 5;
+		addOption(option);
+
 		var option:Option = new Option(Language.get('rating_offset'),
 			Language.get("ratingoffset_desc"),
 			'ratingOffset',

@@ -6,6 +6,7 @@ import backend.Highscore;
 import backend.StageData;
 import backend.WeekData;
 import backend.Song;
+import backend.HitSoundPool;
 import backend.Language.ScoreLanguage;
 import backend.Rating;
 
@@ -340,6 +341,8 @@ class PlayState extends MusicBeatState
 	// new/destroy 带来的 GC 停顿。仅在 noteOptimization 且脚本未激活时启用（脚本激活时
 	// 由 effectiveDisableNoteLua() 控制退化为原始 new/destroy，保证回调语义不变）。
 	private var notePool:Map<String, Array<Note>> = new Map<String, Array<Note>>();
+	// 打击音 FlxSound 对象池：复用实例播放 hitsound/missnote，避免高密度谱每击分配与 GC 卡顿
+	var hitSoundPool:HitSoundPool;
 	private var useOptimizedLoading:Bool = false; // 本次歌曲实际采用的加载方式
 
 	// 分帧延迟初始化：将非关键操作分散到后续帧，避免 create() 中主线程长时间阻塞
@@ -1467,6 +1470,10 @@ isReplaying = false;
 			Paths.sound('hitsounds/' + ClientPrefs.data.hitsound);
 		if(!ClientPrefs.data.ghostTapping) for (i in 1...4) Paths.sound('missnote$i');
 		Paths.image('alphabet');
+
+		// 打击音对象池：预建 N 个 FlxSound 实例复用，避免高密度谱每击 new + GC 卡顿（可在设置中开关/调整大小）
+		if (ClientPrefs.data.hitSoundPoolEnabled)
+			hitSoundPool = new HitSoundPool(ClientPrefs.data.hitSoundPoolSize);
 
 		if (PauseSubState.songName != null)
 			Paths.music(PauseSubState.songName);
@@ -6083,7 +6090,7 @@ tempScore += '${lblScore}: ${songScore}';
 		if(ClientPrefs.data.ghostTapping) return; //fuck it
 
 		noteMissCommon(direction);
-		FlxG.sound.play(Paths.soundRandom('missnote', 1, 3), FlxG.random.float(0.1, 0.2));
+		playShortHitSound(Paths.soundRandom('missnote', 1, 3), FlxG.random.float(0.1, 0.2));
 		stagesFunc(function(stage:BaseStage) stage.noteMissPress(direction));
 		callOnScripts('noteMissPress', [direction]);
 	}
@@ -6283,6 +6290,20 @@ tempScore += '${lblScore}: ${songScore}';
 		if (!note.isSustainNote) invalidateNote(note);
 	}
 
+	// 通过打击音对象池播放短音效；未启用池时退回 FlxG.sound.play 原逻辑（保持原行为）
+	inline function playShortHitSound(sound:Sound, volume:Float, ?pitch:Float):Void
+	{
+		if (hitSoundPool != null)
+		{
+			hitSoundPool.play(sound, volume, pitch);
+			return;
+		}
+		var snd:FlxSound = FlxG.sound.play(sound, volume);
+		#if FLX_PITCH
+		if (snd != null && pitch != null) snd.pitch = pitch;
+		#end
+	}
+
 	public function goodNoteHit(note:Note):Void
 	{
 		if(note.wasGoodHit) return;
@@ -6318,12 +6339,11 @@ tempScore += '${lblScore}: ${songScore}';
 				var noteDiff:Float = note.strumTime - Conductor.songPosition + (cpuControlled ? 0 : ClientPrefs.data.ratingOffset);
 				var norm:Float = Math.max(-1.0, Math.min(1.0, noteDiff / Conductor.safeZoneOffset));
 				var pitch:Float = 1.0 + norm * ClientPrefs.data.hitsoundPitchRange;
-				var snd = FlxG.sound.play(Paths.sound(useSound), note.hitsoundVolume);
-				if (snd != null) snd.pitch = pitch;
+				playShortHitSound(Paths.sound(useSound), note.hitsoundVolume, pitch);
 			}
 			else
 			#end
-				FlxG.sound.play(Paths.sound(useSound), note.hitsoundVolume);
+				playShortHitSound(Paths.sound(useSound), note.hitsoundVolume);
 		}
 
 		if(!note.hitCausesMiss) //Common notes
@@ -6741,6 +6761,13 @@ tempScore += '${lblScore}: ${songScore}';
 			FlxG.resizeGame(FlxG.stage.stageWidth, FlxG.stage.stageHeight);
 			_psAdaptiveActive = false;
 			_psAdaptiveScaleMode = null;
+		}
+
+		// 释放打击音对象池（stop + destroy 并从 FlxG.sound.list 移除）
+		if (hitSoundPool != null)
+		{
+			hitSoundPool.destroy();
+			hitSoundPool = null;
 		}
 		
 		super.destroy();
