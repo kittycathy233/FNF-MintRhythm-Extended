@@ -2,6 +2,9 @@ package options;
 
 import states.MainMenuState;
 import backend.StageData;
+import com.yagp.Gif;
+import objects.GifSprite;
+import backend.GifAssets;
 import flixel.FlxG;
 import flixel.math.FlxMath;
 import flixel.tweens.FlxTween;
@@ -55,10 +58,32 @@ class OptionsState extends MusicBeatState
 	var selectorLeft:FlxText;
 	var selectorRight:FlxText;
 	var descriptionText:FlxText;
-	var sideGif:FlxGifSprite = null;
+	var sideGif:GifSprite = null;
 
 	// HaxeUI 右上角按钮（取代原来的 adminButton / clearFilesButton）
 	private var haxeUITopRightButton:Button = null;
+
+	// ===== 性能诊断（卡顿已优化完毕，逻辑暂时注释禁用；需要时可取消注释恢复）=====
+	private var _diagStart:Float = 0;
+	private var _diagLast:Float = 0;
+	inline function diagTick(tag:String):Void
+	{
+		// 性能诊断已禁用：不再计时、不再输出到控制台与 diag_options.txt
+		/*
+		var now:Float = Sys.cpuTime();
+		var msg:String = '[OptionsDiag] $tag: +${Math.round((now - _diagLast) * 1000)}ms (total ${Math.round((now - _diagStart) * 1000)}ms)';
+		trace(msg);
+		#if sys
+		try {
+			var f = sys.io.File.append(Sys.getCwd() + 'diag_options.txt');
+			f.writeString(msg + '\n');
+			f.close();
+		} catch (e:Dynamic) {}
+		#end
+		_diagLast = now;
+		*/
+	}
+	// ===== 性能诊断结束 =====
 
 	// speaki 语音列表（assets/shared/sounds/speaki 下的全部 .ogg）
 	private var speakiSounds:Array<String> = [
@@ -202,6 +227,10 @@ class OptionsState extends MusicBeatState
 		DiscordClient.changePresence("Options Menu", null);
 		#end
 
+		// 性能诊断起点（已禁用）
+		//_diagStart = Sys.cpuTime();
+		//_diagLast = _diagStart;
+
 		var bg:FlxSprite = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
 		bg.antialiasing = ClientPrefs.data.antialiasing;
 		bg.color = 0xFF00BFFF;
@@ -209,6 +238,7 @@ class OptionsState extends MusicBeatState
 
 		bg.screenCenter();
 		add(bg);
+		diagTick('bg(menuDesat)');
 
 		// 顶部居中大标题（跟随语言），使用自动尺寸以便精确测量文本宽度来定位 GIF
 		var titleText:FlxText = new FlxText(0, 40, 0, Language.get('options_title'), 48);
@@ -218,24 +248,41 @@ class OptionsState extends MusicBeatState
 		titleText.antialiasing = ClientPrefs.data.antialiasing;
 		titleText.x = (FlxG.width - titleText.width) / 2;
 		add(titleText);
+		diagTick('titleText+font');
 
-		// 标题左侧固定 GIF（minispeaki），由资源管理系统直接加载（兼容模组），尺寸稍大、静态显示
-		sideGif = new FlxGifSprite(0, 0);
-		sideGif.loadGif('assets/shared/images/gifs/minispeaki.gif');
-		sideGif.setGraphicSize(96);
-		sideGif.updateHitbox();
-		sideGifBaseScale = sideGif.scale.x; // 记录静止缩放（setGraphicSize(96) 后通常 < 1）
-		// 用默认左上角原点定位（origin 保持 0,0），与“添加动效前”完全一致：位于“设置”文本左侧，留 12px 间隙，垂直居中
-		sideGif.x = titleText.x - sideGif.width - 12;
-		sideGif.y = titleText.y + (titleText.height - sideGif.height) / 2;
+		// 标题左侧固定 GIF（minispeaki）：异步后台解码，避免低端机进入设置界面时同步解码
+		// 73 帧 GIF（约 500 万像素）导致卡顿数秒；解码结果由 GifAssets 全局缓存，再次进入秒开
+		sideGif = new GifSprite(0, 0);
+		sideGif.disposeGifOnDestroy = false; // 解码数据由 GifAssets 缓存共享，离开本界面不销毁
 		sideGif.antialiasing = ClientPrefs.data.antialiasing;
 		sideGif.scrollFactor.set();
+		sideGif.visible = false; // 解码完成后再显示
 		add(sideGif);
 
-		// 预加载 speaki 语音（总共约 1MB，常驻内存无负担）
-		for (s in speakiSounds)
-			Paths.sound(s);
+		GifAssets.load('assets/shared/images/gifs/minispeaki.gif', function(gif:Gif) {
+			diagTick('GIF解码完成->attachGif');
+			// 解码期间可能已切走 state（sideGif 字段非 null 但已销毁）：exists 为 false 则直接放弃挂载
+			if (sideGif == null || !sideGif.exists) return;
+			sideGif.attachGif(gif);
+			sideGif.setGraphicSize(96);
+			sideGif.updateHitbox();
+			sideGifBaseScale = sideGif.scale.x; // 记录静止缩放（setGraphicSize(96) 后通常 < 1）
+			// 用默认左上角原点定位（origin 保持 0,0），与“添加动效前”完全一致：位于“设置”文本左侧，留 12px 间隙，垂直居中
+			sideGif.x = titleText.x - sideGif.width - 12;
+			sideGif.y = titleText.y + (titleText.height - sideGif.height) / 2;
+			// 加载完成后渐显，避免瞬间弹出
+			sideGif.alpha = 0;
+			sideGif.visible = true;
+			FlxTween.tween(sideGif, {alpha: 1}, 0.5, {ease: FlxEase.quadOut});
+			diagTick('GIF attach 定位完成');
+		}, function() {
+			// 解码失败：保持隐藏，不影响其余界面
+			if (sideGif != null) sideGif.visible = false;
+		});
+		diagTick('GifAssets.load 发起');
 
+		// 不在此同步预加载全部 speaki 语音：Paths.sound() 底层是 Sound.fromFile 主线程同步解码，
+		// 13 个 OGG 在低端机上会让进入设置界面卡顿数秒。改为 pokeGif() 中按需加载（首次小卡顿，之后走缓存）
 		pokeCooldown = false;
 
 		if (controls.mobileC)
@@ -304,12 +351,15 @@ class OptionsState extends MusicBeatState
 		descriptionText.antialiasing = ClientPrefs.data.antialiasing;
 		descriptionText.scrollFactor.set();
 		add(descriptionText);
+		diagTick('grpOptions+selectors+desc');
 
 		// 右上角按钮（Windows 为管理员权限，移动端为清空复制文件），改用 HaxeUI 实现
 		addHaxeUITopRightButton();
+		diagTick('HaxeUI按钮');
 
 		// 初始化选择器目标位置
 		changeSelection();
+		diagTick('changeSelection(0)');
 
 		// 直接设置选择器初始位置
 		selectorLeft.x = selectorLeftTargetX;
@@ -318,15 +368,19 @@ class OptionsState extends MusicBeatState
 		selectorRight.y = selectorRightTargetY;
 
 		ClientPrefs.saveSettings();
+		diagTick('saveSettings');
 
 		addTouchPad('LEFT_FULL', 'A_B_C');
+		diagTick('addTouchPad');
 
 		super.create();
 		FlxG.mouse.visible = true;
+		diagTick('super.create');
 
 		// 记住上次选中的项（仅本次游戏会话内有效，超出范围则回退到中间项）
 		curSelected = Std.int(Math.max(0, Math.min(options.length - 1, lastOptionsSelection)));
 		changeSelection(0); // 刷新高亮和描述
+		diagTick('changeSelection(0) 结束');
 	}
 
 	// 在设置主界面右上角添加 HaxeUI 按钮（取代原来的 Flixel 按钮）
@@ -362,6 +416,8 @@ class OptionsState extends MusicBeatState
 		haxeUITopRightButton.y = 20;
 		haxeUITopRightButton.width = 200;
 		haxeUITopRightButton.height = 40;
+		// 禁止键盘焦点：否则回车/确认键会被 HaxeUI 动作系统路由到该按钮并触发点击（如桌面弹 UAC）
+		haxeUITopRightButton.allowFocus = false;
 		// 使用 UI 字体（含中文字形），避免中文按钮文字显示为方框；字号与原 Flixel 按钮一致
 		haxeUITopRightButton.styleString = "font-name: " + Paths.font(Language.get('uitab_font')) + "; font-size: 12px;";
 		haxeUITopRightButton.registerEvent(MouseEvent.CLICK, function(_) clickFn());
@@ -529,7 +585,7 @@ class OptionsState extends MusicBeatState
 		}
 
 		// 点击 sideGif：q弹戳戳 + 随机语音（有 cd，需等音频播完）
-		if (mouse.justPressed && allowInput && !_inSubState && sideGif != null)
+		if (mouse.justPressed && allowInput && !_inSubState && sideGif != null && sideGif.visible)
 		{
 			// origin 为默认左上角，故精灵中心 = (x + width/2, y + height/2)，命中判定须以真实中心为准
 			var cx:Float = sideGif.x + sideGif.width / 2;
@@ -577,7 +633,7 @@ class OptionsState extends MusicBeatState
 
 	private function pokeGif():Void
 	{
-		if (pokeCooldown || sideGif == null)
+		if (pokeCooldown || sideGif == null || !sideGif.visible)
 			return;
 		pokeCooldown = true;
 

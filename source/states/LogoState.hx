@@ -3,6 +3,7 @@ package states;
 import Main;
 import states.CommandLineLaunchState;
 import states.TitleState;
+import backend.GifAssets;
 
 /**
  * 开屏 Logo 画面（复刻自 Mint-Archive 的 LogoState）
@@ -36,6 +37,11 @@ class LogoState extends MusicBeatState
 
 		// 播放 Logo 音效
 		FlxG.sound.play(Paths.sound('bells-logo'), 1);
+
+		// 开机即预解码设置界面左上角的 GIF（minispeaki，73 帧 / 2.2MB，低端机 LZW 解码需数秒）。
+		// GifAssets 在后台线程解码并写入全局缓存：Logo/标题期间解码完毕，首次进入设置界面直接缓存命中，
+		// 避免在进入设置界面那一刻才同步读文件 + 后台解码抢占 CPU 造成"卡几秒"。
+		GifAssets.load('assets/shared/images/gifs/minispeaki.gif', function(_) {});
 
 		// 淡入 -> 停留 -> 淡出 -> 进入标题
 		FlxTween.tween(logo, {alpha: 1}, 1, {
