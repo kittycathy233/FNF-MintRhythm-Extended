@@ -44,6 +44,12 @@ class HealthIcon extends FlxSprite
 
 			var graphic = Paths.image(name, allowGPU);
 
+			// 保护图标纹理缓存：图标是 Freeplay 等场景反复使用的高频资源，
+			// 登记到 dumpExclusions 使其在 clearStoredMemory/clearUnusedMemory 时不被清除，
+			// 避免每次进入 Freeplay 都重复解码全部图标 PNG（低端设备进入慢的主要卡顿源）。
+			if (graphic != null && graphic.key != null && graphic.key.length > 0)
+				Paths.excludeAsset(graphic.key);
+
 			// 自适应切分：按 宽/高 推算图标数量，每个图标视为正方形。
 			// 这样 2:1（双态）、3:1（三态）等任意数量的图标条都能正确切分，避免把 2:1 误切成三份。
 			var iSize:Int = Math.round(graphic.width / graphic.height);

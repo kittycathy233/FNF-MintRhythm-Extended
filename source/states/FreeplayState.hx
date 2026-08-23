@@ -285,6 +285,20 @@ class FreeplayState extends MusicBeatState
 
 	private var iconArray:Array<HealthIcon> = null;
 	private var iconLoadStatus:Array<Bool> = []; // 记录每个图标是否已加载
+	// songTextArray[i] = songs[i] 的菜单条目：与 grpSongs.members 顺序解耦，支持分帧乱序构建
+	private var songTextArray:Array<Alphabet> = [];
+	private var _listBuildPriority:Array<Int> = null; // 分帧构建顺序：可见窗口优先，其余按序号
+	private var _listBuildIndex:Int = -1; // 分帧构建游标；-1 表示已构建完毕
+	// 进入 Freeplay 时只同步构建可见窗口，其余条目每空闲帧最多补建这么多条，
+	// 把“几百首歌一次全建”的卡顿摊到进入后的前几帧。
+	private static inline var LIST_BUILD_PER_FRAME:Int = 24;
+
+	// 图标分帧构建：与文本列表同理，进入时只同步建 curSelected ± ICON_RADIUS 的可见图标，
+	// 其余图标在 update() 空闲帧按 ICON_BUILD_PER_FRAME 逐帧补建，
+	// 避免进入时一次性同步创建全部图标精灵（含文件系统探测）造成的卡顿。
+	private var _iconBuildPriority:Array<Int> = null; // 图标分帧构建顺序：可见窗口优先，其余按序号
+	private var _iconBuildIndex:Int = -1; // 图标分帧游标；-1 表示已构建完毕
+	private static inline var ICON_BUILD_PER_FRAME:Int = 16;
 
 	var bg:FlxSprite;
 	var intendedColor:Int;
@@ -298,6 +312,9 @@ class FreeplayState extends MusicBeatState
 	var bottomString:String;
 	var bottomText:FlxText;
 	var bottomBG:FlxSprite;
+
+	// 分帧加载指示：进入 Freeplay 后列表/图标仍在空闲帧补建时，在右下角显示加载字样
+	private var loadingText:FlxText;
 
 	var player:MusicPlayer;
 
@@ -458,6 +475,14 @@ class FreeplayState extends MusicBeatState
 		bottomText.setFormat(Paths.font("vcr.ttf"), size, FlxColor.WHITE, CENTER);
 		bottomText.scrollFactor.set();
 
+		// 分帧加载提示：位于偏右下角（底部提示条上方），仅分帧构建进行中可见
+		// 使用 uitab_font（按语言映射的像素字体，中文为 zh_hans）以正确渲染「加载中…」
+		loadingText = new FlxText(0, 0, 0, '', 12);
+		loadingText.setFormat(Paths.font(Language.get('uitab_font')), 12, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		loadingText.scrollFactor.set();
+		loadingText.visible = false;
+		add(loadingText);
+
 		player = new MusicPlayer(this);
 
 		// 创建BPM变化提示背景（先创建，渲染在底层）
@@ -611,6 +636,9 @@ class FreeplayState extends MusicBeatState
 	/**
 	 * 重建歌曲显示列表（grpSongs / grpIcons / 图标状态数组）。
 	 * 在初始创建以及筛选条件变化时调用。
+	 *
+	 * 分帧构建：先同步建好"可见窗口"（±_drawDistance 文本行 + ±ICON_RADIUS 图标区），
+	 * 其余条目在 update() 的空闲帧里按 LIST_BUILD_PER_FRAME 逐帧补建，避免几百首歌一次性全建卡顿。
 	 */
 	private function reloadSongList():Void
 	{
@@ -618,10 +646,56 @@ class FreeplayState extends MusicBeatState
 		grpIcons.clear();
 		iconArray = new Array<HealthIcon>();
 		iconLoadStatus = new Array<Bool>();
+		songTextArray = new Array<Alphabet>();
 		_lastIconVisibles = []; // 列表重建后清空图标可见缓存
+		_lastVisibles = [];
 
+		// 预填占位：分帧构建期间 updateVisibleItems 对未就绪条目做 null 跳过
 		for (i in 0...songs.length)
 		{
+			songTextArray.push(null);
+			iconArray.push(null);
+			iconLoadStatus.push(false);
+		}
+
+		// 构建优先级：可见窗口排最前（同步建），其余按序号在空闲帧补建
+		var center:Int = Math.round(Math.max(0, Math.min(songs.length - 1, curSelected)));
+		_listBuildPriority = [];
+		function addPriority(i:Int):Void
+		{
+			if (i >= 0 && i < songs.length && _listBuildPriority.indexOf(i) == -1)
+				_listBuildPriority.push(i);
+		}
+		for (offset in (-_drawDistance)...(_drawDistance + 1))
+			addPriority(center + offset);
+		for (offset in (-ICON_RADIUS)...(ICON_RADIUS + 1))
+			addPriority(center + offset);
+		for (i in 0...songs.length)
+			addPriority(i);
+
+		// 同步先建可见窗口（窗口优先区最多 (±drawDistance*2+1)+(±ICON_RADIUS*2+1) 条）；
+		// 关闭分帧加载时一次性全量构建（回退原逻辑），其余走空闲帧补建
+		_listBuildIndex = 0;
+		var windowBudget:Int = (_drawDistance * 2 + 1) + (ICON_RADIUS * 2 + 1);
+		buildListBatch(ClientPrefs.data.freeplayFramedLoading ? windowBudget : songs.length);
+	}
+
+	/**
+	 * 按预算构建列表条目（Alphabet）。构建完成的条目由 updateVisibleItems 统一管理可见性。
+	 * @param budget 本批最多新建条数；windowBudget 用于同步补建可见窗口，LIST_BUILD_PER_FRAME 用于空闲帧补建。
+	 */
+	private function buildListBatch(budget:Int):Void
+	{
+		if (_listBuildIndex < 0 || _listBuildPriority == null)
+			return;
+
+		var built:Int = 0;
+		while (_listBuildIndex < _listBuildPriority.length && built < budget)
+		{
+			var i:Int = _listBuildPriority[_listBuildIndex++];
+			if (i < 0 || i >= songs.length || songTextArray[i] != null)
+				continue;
+
 			var songText:Alphabet = new Alphabet(90, 320, songs[i].songName, true);
 			songText.targetY = i;
 			grpSongs.add(songText);
@@ -629,14 +703,43 @@ class FreeplayState extends MusicBeatState
 			songText.scaleX = Math.min(1, 980 / songText.width);
 			songText.snapToPosition();
 
-			// 初始化图标占位符，但暂不创建（延迟加载）
-			iconArray.push(null);
-			iconLoadStatus.push(false);
-
 			// too laggy with a lot of songs, so i had to recode the logic for it
 			songText.visible = songText.active = songText.isMenuItem = false;
+			songTextArray[i] = songText;
+			built++;
 		}
-		_lastVisibles = [];
+
+		if (_listBuildIndex >= _listBuildPriority.length)
+		{
+			_listBuildIndex = -1;
+			_listBuildPriority = null;
+		}
+	}
+
+	/**
+	 * 分帧加载进行中时，在右下角显示加载提示（含剩余待构建数量）；构建完成后自动隐藏。
+	 * 仅在启用「Freeplay 分帧加载」且仍有条目/图标在空闲帧补建时显示。
+	 */
+	private function updateLoadingIndicator():Void
+	{
+		if (loadingText == null)
+			return;
+
+		var building:Bool = ClientPrefs.data.freeplayFramedLoading && (_listBuildIndex >= 0 || _iconBuildIndex >= 0);
+		loadingText.visible = building;
+		if (!building)
+			return;
+
+		var remaining:Int = 0;
+		if (_listBuildIndex >= 0 && _listBuildPriority != null)
+			remaining += (_listBuildPriority.length - _listBuildIndex);
+		if (_iconBuildIndex >= 0 && _iconBuildPriority != null)
+			remaining += (_iconBuildPriority.length - _iconBuildIndex);
+
+		loadingText.text = OptionsLanguage.get('freeplay_loading_text', 'Loading...') + (remaining > 0 ? ' (' + remaining + ')' : '');
+		// 偏右下角：距右缘 24px，位于底部提示条（高度 26）上方
+		loadingText.x = FlxG.width - loadingText.width - 24;
+		loadingText.y = FlxG.height - 55;
 	}
 
 	/**
@@ -668,14 +771,15 @@ class FreeplayState extends MusicBeatState
 			});
 		}
 
+		// 先钳位选中项再重建列表，让分帧构建的"可见窗口"围绕正确位置同步补建
+		if (curSelected >= songs.length)
+			curSelected = 0;
+		lerpSelected = curSelected;
+
 		reloadSongList();
 		// 筛选后列表已重建，图标全部置为未加载；这里一次性全部预加载，
 		// 避免退化为 warmupIcons 每帧 2 个的懒加载，导致滚动时图标逐个冒出的现象。
 		preloadAllIcons();
-
-		if (curSelected >= songs.length)
-			curSelected = 0;
-		lerpSelected = curSelected;
 
 		if (songs.length > 0)
 		{
@@ -704,6 +808,19 @@ class FreeplayState extends MusicBeatState
 	{
 		if (WeekData.weeksList.length < 1)
 			return;
+
+		// 空闲帧补建列表条目：可见窗口已在 reloadSongList 同步建好，
+		// 其余按 LIST_BUILD_PER_FRAME 逐帧补齐，避免一次性全建卡顿
+		if (_listBuildIndex >= 0)
+			buildListBatch(LIST_BUILD_PER_FRAME);
+
+		// 空闲帧补建图标：可见窗口已在 preloadAllIcons 同步建好，
+		// 其余按 ICON_BUILD_PER_FRAME 逐帧补齐，避免进入时同步创建全部图标精灵
+		if (_iconBuildIndex >= 0)
+			buildIconsBatch(ICON_BUILD_PER_FRAME);
+
+		// 分帧加载进行中时于右下角显示加载提示，构建完成后自动隐藏
+		updateLoadingIndicator();
 
 		// 是否正在搜索框中输入（避免空格/方向键等被 freeplay 逻辑拦截）
 		var typingSearch:Bool = (searchTxt != null && PsychUIInputText.focusOn == searchTxt);
@@ -1892,11 +2009,11 @@ class FreeplayState extends MusicBeatState
 
 	private function updateVisibleItems():Void
 	{
-		// 隐藏上一帧可见的文本对象
+		// 隐藏上一帧可见的文本对象（未构建的条目在 songTextArray 中为 null，跳过）
 		for (i in _lastVisibles)
 		{
-			if (grpSongs.members[i] != null)
-				grpSongs.members[i].visible = grpSongs.members[i].active = false;
+			if (songTextArray[i] != null)
+				songTextArray[i].visible = songTextArray[i].active = false;
 		}
 		_lastVisibles = [];
 
@@ -1904,10 +2021,12 @@ class FreeplayState extends MusicBeatState
 		var min:Int = Math.round(Math.max(0, Math.min(songs.length, lerpSelected - _drawDistance)));
 		var max:Int = Math.round(Math.max(0, Math.min(songs.length, lerpSelected + _drawDistance)));
 
-		// 只显示可见范围内的文本对象
+		// 只显示可见范围内的文本对象（分帧构建未就绪的条目先跳过）
 		for (i in min...max)
 		{
-			var item:Alphabet = grpSongs.members[i];
+			var item:Alphabet = songTextArray[i];
+			if (item == null)
+				continue;
 			item.visible = item.active = true;
 			item.x = ((item.targetY - lerpSelected) * item.distancePerItem.x) + item.startPosition.x;
 			item.y = ((item.targetY - lerpSelected) * 1.3 * item.distancePerItem.y) + item.startPosition.y;
@@ -1923,7 +2042,9 @@ class FreeplayState extends MusicBeatState
 		var iconMax:Int = Math.round(Math.max(0, Math.min(songs.length, lerpSelected + ICON_RADIUS)));
 		for (i in iconMin...iconMax)
 		{
-			var songItem:Alphabet = grpSongs.members[i];
+			var songItem:Alphabet = songTextArray[i];
+			if (songItem == null)
+				continue; // 文本行尚未构建，图标位置依赖其尺寸，先跳过
 
 			// 选中项若尚未预热，做一次同步创建（最多 1 次解码，保证焦点图标始终可见）
 			if (iconArray[i] == null && i == curSelected && !iconLoadStatus[i])
@@ -1972,15 +2093,51 @@ class FreeplayState extends MusicBeatState
 
 	/** 一次性把列表里所有小图标建好并常驻，与 PsychEngine 原版一致：
 	 *  浏览/滚动过程不再有任何新建或解码，内存进入 Freeplay 时即一次性到顶、之后保持稳定。
+	 *  分帧构建：curSelected ± ICON_RADIUS 的可见图标同步建好，其余在 update() 空闲帧按
+	 *  ICON_BUILD_PER_FRAME 逐帧补建，避免进入时同步创建全部图标精灵导致卡顿。
 	 */
 	private function preloadAllIcons():Void
 	{
 		if (songs.length == 0 || iconArray == null)
 			return;
-		for (i in 0...songs.length)
+
+		// 构建优先级：可见窗口（curSelected ± ICON_RADIUS）排最前（同步建），其余按序号空闲帧补建
+		var center:Int = Math.round(Math.max(0, Math.min(songs.length - 1, curSelected)));
+		_iconBuildPriority = [];
+		function addPriority(i:Int):Void
 		{
-			if (iconLoadStatus[i])
+			if (i >= 0 && i < songs.length && _iconBuildPriority.indexOf(i) == -1)
+				_iconBuildPriority.push(i);
+		}
+		for (offset in (-ICON_RADIUS)...(ICON_RADIUS + 1))
+			addPriority(center + offset);
+		for (i in 0...songs.length)
+			addPriority(i);
+
+		// 同步先建可见窗口；关闭分帧加载时一次性全量构建（回退原逻辑），其余由 update() 空闲帧补建
+		_iconBuildIndex = 0;
+		buildIconsBatch(ClientPrefs.data.freeplayFramedLoading ? (ICON_RADIUS * 2 + 1) : songs.length);
+	}
+
+	/**
+	 * 按预算批量创建图标精灵。与 buildListBatch 同理：同步调用用于补建可见窗口，
+	 * 空闲帧调用用于逐帧补齐其余图标，把 PNG 解码/文件系统探测/精灵创建摊到多帧。
+	 */
+	private function buildIconsBatch(budget:Int):Void
+	{
+		if (_iconBuildIndex < 0 || _iconBuildPriority == null)
+			return;
+
+		var built:Int = 0;
+		while (_iconBuildIndex < _iconBuildPriority.length && built < budget)
+		{
+			var i:Int = _iconBuildPriority[_iconBuildIndex++];
+			if (i < 0 || i >= songs.length || iconLoadStatus[i])
 				continue;
+
+			// 标记已尝试（创建失败也标记，避免每帧重试）；updateVisibleItems 的选中项兜底
+			// 依赖该标记，创建成功前若被选中会走其同步兜底逻辑。
+			iconLoadStatus[i] = true;
 			var __savedDir:String = Mods.currentModDirectory;
 			Mods.currentModDirectory = songs[i].folder;
 			var ic:HealthIcon = null;
@@ -1990,7 +2147,6 @@ class FreeplayState extends MusicBeatState
 				trace('Failed to preload icon for ${songs[i].songName}: ' + e);
 			}
 			Mods.currentModDirectory = __savedDir;
-			iconLoadStatus[i] = true;
 			if (ic == null)
 				continue;
 			// 位置由 updateVisibleItems 用投影公式统一设置，不绑定 sprTracker
@@ -1998,6 +2154,13 @@ class FreeplayState extends MusicBeatState
 			ic.visible = ic.active = false;
 			iconArray[i] = ic;
 			grpIcons.add(ic);
+			built++;
+		}
+
+		if (_iconBuildIndex >= _iconBuildPriority.length)
+		{
+			_iconBuildIndex = -1;
+			_iconBuildPriority = null;
 		}
 	}
 
