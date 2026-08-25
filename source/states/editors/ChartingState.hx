@@ -2587,7 +2587,7 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 					if(note.mustPress && hitsoundPlayerStepper.value > 0)
 					{
 						var sound:FlxSound = hitSoundPool[hitSoundPoolIndex];
-						sound.loadEmbedded(Paths.sound('CLAP'));
+						sound.loadEmbedded(Paths.sound('hitsounds/quaver'));
 						sound.volume = hitsoundPlayerStepper.value;
 						sound.play();
 						hitSoundPoolIndex = (hitSoundPoolIndex + 1) % hitSoundPoolSize;
@@ -2595,7 +2595,7 @@ var vortexPlaying:Bool = (vortexEnabled && FlxG.sound.music != null && FlxG.soun
 					else if(!note.mustPress && hitsoundOpponentStepper.value > 0)
 					{
 						var sound:FlxSound = hitSoundPool[hitSoundPoolIndex];
-						sound.loadEmbedded(Paths.sound('SNAP'));
+						sound.loadEmbedded(Paths.sound('hitsounds/stepmania'));
 						sound.volume = hitsoundOpponentStepper.value;
 						// sound.pan = 1; // 对手音符：纯右声道
 						sound.play();
