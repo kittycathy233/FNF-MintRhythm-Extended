@@ -1089,22 +1089,57 @@ class FreeplayState extends MusicBeatState
 				FlxG.sound.music.volume = 0;
 
 				Mods.currentModDirectory = songs[curSelected].folder;
-				var poop:String = Highscore.formatSong(songs[curSelected].songName.toLowerCase(), curDifficulty);
-				var songData:SwagSong = getCachedSongData(songs[curSelected].folder, poop, songs[curSelected].songName.toLowerCase());
+				var songLowercase:String = songs[curSelected].songName.toLowerCase();
+				var poop:String = Highscore.formatSong(songLowercase, curDifficulty);
+				var songData:SwagSong = null;
+				try
+				{
+					songData = getCachedSongData(songs[curSelected].folder, poop, songLowercase);
+				}
+				catch (e:haxe.Exception)
+				{
+					// 谱面解析异常（如 JSON 损坏）时的错误处理
+					var errorStr:String = e.message;
+					if (errorStr.contains('There is no TEXT asset with an ID of'))
+						errorStr = 'Missing file: ' + errorStr.substring(errorStr.indexOf(songLowercase), errorStr.length - 1);
+					else
+						errorStr += '\n\n' + e.stack;
+
+					missingText.text = 'ERROR WHILE LOADING CHART:\n$errorStr';
+					missingText.screenCenter(Y);
+					missingText.visible = true;
+					missingTextBG.visible = true;
+					FlxG.sound.play(Paths.sound('cancelMenu'));
+					chartInfoBG.visible = false;
+					chartInfoTitle.visible = false;
+					chartInfoText.visible = false;
+					_chartInfoBuilt = false;
+
+					// 必须调用 super.update 推进虚拟按键的 input.update()（JUST_PRESSED→PRESSED），
+					// 否则 buttonX.justPressed 会一直为 true，错误分支每帧重复执行导致卡死 + 反复 cancelMenu
+					updateTexts(elapsed);
+					super.update(elapsed);
+					return;
+				}
 
 				if (songData == null) {
-							// 显示错误信息（两行：主错误 + 实际尝试过的文件名）
-							missingText.text = getChartMissingMessage(poop);
-							missingText.screenCenter(Y);
-							missingText.visible = true;
-							missingTextBG.visible = true;
-							FlxG.sound.play(Paths.sound('cancelMenu'));
-							chartInfoBG.visible = false;
-							chartInfoTitle.visible = false;
-							chartInfoText.visible = false;
-							_chartInfoBuilt = false;
-							return;
-						}
+					// 显示错误信息（两行：主错误 + 实际尝试过的文件名）
+					missingText.text = getChartMissingMessage(poop);
+					missingText.screenCenter(Y);
+					missingText.visible = true;
+					missingTextBG.visible = true;
+					FlxG.sound.play(Paths.sound('cancelMenu'));
+					chartInfoBG.visible = false;
+					chartInfoTitle.visible = false;
+					chartInfoText.visible = false;
+					_chartInfoBuilt = false;
+
+					// 必须调用 super.update 推进虚拟按键的 input.update()（JUST_PRESSED→PRESSED），
+					// 否则 buttonX.justPressed 会一直为 true，错误分支每帧重复执行导致卡死 + 反复 cancelMenu
+					updateTexts(elapsed);
+					super.update(elapsed);
+					return;
+				}
 
 						buildChartInfo(songData);
 
