@@ -12,6 +12,10 @@ import flixel.tweens.FlxTween;
 import flixel.util.FlxTimer;
 import flixel.system.scaleModes.ChartingScaleMode;
 import flixel.system.scaleModes.BaseScaleMode;
+import flixel.addons.display.waveform.FlxWaveform;
+import flixel.addons.display.waveform.FlxWaveform.WaveformDrawMode;
+import flixel.addons.display.waveform.FlxWaveform.WaveformOrientation;
+import flixel.addons.display.waveform.FlxWaveform.WaveformAlignment;
 
 import openfl.events.Event;
 
@@ -29,6 +33,21 @@ import states.editors.content.MetaNote;
 import states.editors.content.VSlice;
 import states.editors.content.Prompt;
 import states.editors.content.*;
+
+import haxe.ui.Toolkit;
+import haxe.ui.core.Component;
+import haxe.ui.core.Screen;
+import haxe.ui.components.Button;
+import haxe.ui.components.Label;
+import haxe.ui.events.MouseEvent;
+import haxe.ui.events.MenuEvent;
+import haxe.ui.events.UIEvent as HaxeUIEvent;
+import haxe.ui.containers.menus.MenuBar;
+import haxe.ui.containers.menus.Menu;
+import haxe.ui.containers.menus.MenuItem;
+import haxe.ui.backend.flixel.MouseHelper;
+
+import states.MainMenuState;
 
 import backend.Song;
 import backend.StageData;
@@ -70,6 +89,13 @@ enum abstract WaveformTarget(String)
 	var INST = 'inst';
 	var PLAYER = 'voc';
 	var OPPONENT = 'opp';
+}
+
+// 频谱波形渲染方式：旧版自研逐字节实现，或 flixel-waveform 库实现
+enum abstract WaveformStyle(String)
+{
+	var LEGACY = 'legacy';
+	var LIBRARY = 'library';
 }
 
 class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychUIEvent
@@ -292,7 +318,6 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var nextOpponentGridBg:ChartingGridSprite;
 	var nextEventGridBg:ChartingGridSprite;
 	var nextPlayerGridBg:ChartingGridSprite;
-	var waveformSprite:FlxSprite;
 	var scrollY:Float = 0;
 	
 	// Grid轨道颜色覆盖层
@@ -396,7 +421,28 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	
 	var vortexEnabled:Bool = false;
 	var waveformEnabled:Bool = false;
-	var waveformTarget:WaveformTarget = INST;
+	var waveformTargets:Array<WaveformTarget> = [INST]; // 库版：可多选
+	var waveformTargetLegacy:WaveformTarget = INST;     // 旧版：单选
+	var waveformStyle:WaveformStyle = LIBRARY;
+	// flixel-waveform 库实现的频谱精灵，与旧版 waveformSprite 并存，供用户切换样式
+	var waveformSprites:Array<FlxSprite> = [];
+	// 库版频谱为双缓冲（前台显示 + 后台预渲染下一 section），消除 section 切换时的闪烁
+	var waveformLibSprites:Array<FlxWaveform> = [];      // 前台：当前显示的波形
+	var waveformLibBackSprites:Array<FlxWaveform> = [];  // 后台：预渲染下一 section 的备用波形
+	var waveformLibCacheSection:Array<Int> = [-1, -1, -1]; // 前台各目标当前缓存的 section
+	var waveformLibBackSection:Array<Int> = [-1, -1, -1];  // 后台各目标已预渲染的 section
+	var waveformLibPreRenderCursor:Int = 0;                 // 后台预渲染轮询游标
+	var waveformLibLoadedBuffers:Array<AudioBuffer> = [null, null, null];      // 前台各目标已加载的音频缓冲
+	var waveformLibBackLoadedBuffers:Array<AudioBuffer> = [null, null, null];  // 后台各目标已加载的音频缓冲（与前台独立，避免后台上台互跳过 loadData）
+	// flixel-waveform 库版的独立样式参数（与旧版各存一套，互不影响）
+	var waveformLibColor:String = '0F4C81';
+	var waveformLibDrawMode:String = 'COMBINED';
+	var waveformLibRMS:Bool = false;
+	var waveformLibRMSColor:String = '98B4D4';
+	var waveformLibBaseline:Bool = false;
+	var waveformLibBarSize:Int = 1;
+	var waveformLibBarPadding:Int = 0;
+	var waveformLibGain:Float = 1;
 
 	// 定义全局字体变量
 	public static var defaultFont:String = Paths.font(Language.get('uitab_font'));
@@ -431,7 +477,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 		_keysPressedBuffer.resize(keysArray.length);
 
 if(_shouldReset) Conductor.songPosition = 0;
-	persistentUpdate = false;
+	persistentUpdate = true; // 保持持续更新：确保淡入转场期间顶部条信息也能实时刷新
 	FlxG.mouse.visible = true;
 	FlxG.sound.list.add(vocals);
 	FlxG.sound.list.add(opponentVocals);
@@ -510,10 +556,38 @@ if(_shouldReset) Conductor.songPosition = 0;
 		createGrids();
 
 		var gridLayout = getGridLayout();
-		waveformSprite = new FlxSprite(gridLayout.startX, 0).makeGraphic(1, 1, 0x00FFFFFF);
-		waveformSprite.scrollFactor.x = 0;
-		waveformSprite.visible = false;
-		add(waveformSprite);
+		// 每个目标（伴奏/主唱/对唱）各建一份频谱精灵，支持同时显示多个
+		for (t in [INST, PLAYER, OPPONENT])
+		{
+			var ws = new FlxSprite(gridLayout.startX, 0).makeGraphic(1, 1, 0x00FFFFFF);
+			ws.scrollFactor.x = 0;
+			ws.visible = false;
+			add(ws);
+			waveformSprites.push(ws);
+
+			// flixel-waveform 库实现的频谱（默认隐藏，由 updateWaveform 按样式启用）
+		// 每目标双缓冲：前台显示当前 section，后台预渲染下一 section
+		var wl = new ChartingWaveform(gridLayout.startX, 0, 1, 1, FlxColor.WHITE, 0x00FFFFFF, COMBINED);
+		wl.scrollFactor.x = 0;
+		wl.waveformDrawBaseline = false;
+		wl.waveformBarSize = 1;
+		wl.waveformBarPadding = 0;
+		wl.visible = false;
+		// 后台缓冲关闭自动重绘，改由预渲染逻辑手动 generateWaveformBitmap()
+		wl.autoUpdateBitmap = false;
+		add(wl);
+		waveformLibSprites.push(wl);
+
+		var wlB = new ChartingWaveform(gridLayout.startX, 0, 1, 1, FlxColor.WHITE, 0x00FFFFFF, COMBINED);
+		wlB.scrollFactor.x = 0;
+		wlB.waveformDrawBaseline = false;
+		wlB.waveformBarSize = 1;
+		wlB.waveformBarPadding = 0;
+		wlB.visible = false;
+		wlB.autoUpdateBitmap = false;
+		add(wlB);
+		waveformLibBackSprites.push(wlB);
+	}
 
 		dummyArrow = new FlxSprite().makeGraphic(1, 1, FlxColor.WHITE);
 		dummyArrow.setGraphicSize(GRID_SIZE, GRID_SIZE);
@@ -740,6 +814,15 @@ if(_shouldReset) Conductor.songPosition = 0;
 		addViewTab();
 		//
 
+		// HaxeUI 顶部菜单栏替换原左上角下拉菜单（文件/编辑/视图）
+		createHaxeUIMenuBar();
+		upperBox.visible = false;
+		upperBox.active = false;
+
+		// 顶部条信息（FPS+内存峰值居中、版本右上角）+ 深浅色主题套用
+		createTopBarInfo();
+		applyTopBarTheme();
+
 		loadMusic();
 		reloadNotesDropdowns();
 		if(!_shouldReset)
@@ -782,18 +865,6 @@ if(_shouldReset) Conductor.songPosition = 0;
 		tipText.x = FlxG.width - tipText.width - 20;
 
 		add(tipText);
-
-		// 制谱器版本（左下角固定显示）
-		var versionText:FlxText = new FlxText(15, FlxG.height - 30, 280, 'v1.0.2', 16);
-		versionText.cameras = [camUI];
-		versionText.setFormat(Paths.font("unifont-16.0.02.otf"), 20, FlxColor.WHITE, LEFT);
-		versionText.borderColor = FlxColor.BLACK;
-		versionText.borderSize = 1;
-		versionText.scrollFactor.set();
-		versionText.active = false;
-		versionText.y = FlxG.height - versionText.height - 10;
-		versionText.x = 10;
-		add(versionText);
 
 		tipBg = new FlxSprite().makeGraphic(1, 1, FlxColor.BLACK);
 		tipBg.cameras = [camUI];
@@ -1111,6 +1182,9 @@ if(_shouldReset) Conductor.songPosition = 0;
 				nextPlayerGridBg.vortexLineSpace = GRID_SIZE * 4 * curZoom;
 			}
 		}
+
+		// 制谱器内切换主题时，若顶部条设置为"默认（跟随制谱器主题）"，则同步菜单条深浅色
+		applyTopBarTheme();
 	}
 
 	function openNewChart()
@@ -1195,6 +1269,25 @@ if(_shouldReset) Conductor.songPosition = 0;
 	var outputAlpha:Float = 0;
 	var songFinished:Bool = false;
 
+	// HaxeUI 顶部菜单栏（文件/编辑/视图）相关
+	var haxeMenuBar:MenuBar;
+	var haxeMenuOpen:Bool = false;
+	var haxeMenuIgnoreFrames:Int = 0;
+	var haxeMenuBarHeight:Float = 30;
+	// HaxeUI 菜单项 ↔ 原 PsychUIButton 映射，用于同步动态文本（如视图菜单的前三项、便捷制谱器开关）
+	var haxeMenuItemMappings:Array<{item:MenuItem, btn:PsychUIButton}> = [];
+
+	// 顶部条信息：FPS+内存峰值（水平居中一行）与版本（右上角）
+	// 用 FlxText 叠加在 HaxeUI 菜单条之上渲染：不用 HaxeUI Label 是因为全宽 Label 会拦截菜单按钮的点击事件
+	var topBarFpsMemText:FlxText;
+	var topBarVersionText:FlxText;
+	var haxeMenuStyleLight:Bool = true; // 当前 HaxeUI 菜单条是否为浅色（下拉菜单打开时套用对应配色）
+	// 制谱器独立 FPS 计数（不依赖 Main.fpsVar，后者在 visible=false 时停止刷新）
+	var _topBarFrameCount:Int = 0;
+	var _topBarFrameTime:Float = 0;
+	var _topBarFPS:Float = 0;
+	var _topBarPeakMem:Float = 0; // 峰值内存（字节），自行跟踪
+
 	var fileDialog:FileDialogHandler = new FileDialogHandler();
 	var lastFocus:PsychUIInputText;
 
@@ -1211,6 +1304,45 @@ if(_shouldReset) Conductor.songPosition = 0;
 		{
 			lastFocus = PsychUIInputText.focusOn;
 			return;
+		}
+
+		// HaxeUI 菜单栏点击穿透保护：点击菜单栏区域、菜单打开或刚关闭时忽略制谱器的鼠标操作。
+		// 必须用 HaxeUI 自己的坐标（MouseHelper.currentWorldY），它与菜单栏的命中测试一致；
+		// 不能用 screenY（屏幕像素坐标，窗口缩放后会漏）或 FlxG.mouse.y（制谱器默认相机纵向滚动，会偏移）。
+		if(FlxG.mouse.justPressed && (haxeMenuOpen || haxeMenuIgnoreFrames > 0 || MouseHelper.currentWorldY <= haxeMenuBarHeight))
+			ignoreClickForThisFrame = true;
+		if(haxeMenuIgnoreFrames > 0) haxeMenuIgnoreFrames--;
+
+		// 同步 HaxeUI 菜单项文本与底层动态按钮文本（如视图菜单前三项、便捷制谱器开关）
+		syncHaxeMenuTexts();
+
+		// 顶部条 FPS + 内存峰值实时刷新
+		updateTopBarInfo(elapsed);
+
+		// 库版频谱后台预渲染：空闲帧里把已显示目标的"下一 section"提前画到后台缓冲
+		// 这样 section 切换时前台可直接换显后台缓冲，避免切换瞬间先看到旧图的闪烁
+		if(waveformStyle == LIBRARY)
+		{
+			var targetOrder:Array<WaveformTarget> = [INST, PLAYER, OPPONENT];
+			// 每帧最多预渲染一个目标，分摊开销
+			for(c in 0...targetOrder.length)
+			{
+				var i:Int = (waveformLibPreRenderCursor + c) % targetOrder.length;
+				if(waveformTargets.indexOf(targetOrder[i]) == -1) continue;
+				var src:Int = waveformLibCacheSection[i];
+				if(src < 0 || src >= cachedSectionTimes.length - 1) continue;
+				var nxt:Int = src + 1;
+				if(waveformLibBackSection[i] == nxt && waveformLibBackSprites[i] != null) continue;
+				waveformLibBackSprites[i].autoUpdateBitmap = false; // 后台缓冲手动重绘，避免 setter 标记 dirty 拖到换显时重复重绘
+				if(paintLibWaveform(waveformLibBackSprites[i], targetOrder[i], nxt, waveformLibBackLoadedBuffers))
+				{
+					waveformLibBackSprites[i].generateWaveformBitmap();
+					waveformLibBackSprites[i].dirty = true;
+					waveformLibBackSection[i] = nxt;
+				}
+				waveformLibPreRenderCursor = (i + 1) % targetOrder.length;
+				break;
+			}
 		}
 
 		for (num => key in keysArray)
@@ -6023,6 +6155,240 @@ for (i in 0...GRID_PLAYERS)
 		tab_group.add(specialEventsInputText);
 	}
 
+	function createHaxeUIMenuBar()
+	{
+		// 首次使用时初始化 HaxeUI Toolkit（幂等）；禁用 DPI 自动缩放，保证坐标与 Flixel 屏幕坐标一致
+		if (!Toolkit.initialized)
+		{
+			Toolkit.autoScale = false;
+			Toolkit.init();
+		}
+
+		haxeMenuBar = new MenuBar();
+		haxeMenuBar.x = 0;
+		haxeMenuBar.y = 0;
+		haxeMenuBar.width = FlxG.width;
+		haxeMenuBar.height = haxeMenuBarHeight;
+		haxeMenuBar.percentWidth = 100; // 窗口缩放时菜单条自动跟随宽度
+		haxeMenuBar.styleString = 'font-name: ${Paths.font(Language.get('uitab_font'))}; font-size: 12px;';
+
+		var menuFont:String = Paths.font(Language.get('uitab_font'));
+		var tabNames:Array<String> = [Language.get('charting_file_text'), Language.get('charting_edit_text'), Language.get('charting_view_text')];
+		var menus:Array<Menu> = [];
+		for (tabName in tabNames)
+		{
+			var tab:PsychUITab = upperBox.getTab(tabName);
+			if (tab == null || tab.menu == null) continue;
+
+			var menu:Menu = new Menu();
+			menu.text = tabName;
+			menu.styleString = 'font-name: $menuFont; font-size: 12px;';
+
+			for (member in tab.menu.members)
+			{
+				if (!(member is PsychUIButton)) continue;
+				var pb:PsychUIButton = cast member;
+				if (pb.onClick == null) continue;
+
+				var item:MenuItem = new MenuItem();
+				item.text = (pb.label != null && pb.label.length > 0) ? pb.label : pb.text.text;
+				item.styleString = 'font-name: $menuFont; font-size: 12px;';
+
+				var onClick:Void->Void = pb.onClick;
+				var thisMenu:Menu = menu; // 捕获当前菜单，供点击后立即收起下拉使用
+				item.registerEvent(MouseEvent.CLICK, function(_)
+				{
+					ignoreClickForThisFrame = true;
+					if (onClick != null) onClick();
+					// 点击后立即收起下拉框：HaxeUI 默认延迟 100ms 收起，会被 openSubState 等打断，
+					// 通过派发 UIEvent.CLOSE 触发 MenuBar 内部的 hideCurrentMenu 立即收起。
+					thisMenu.dispatch(new HaxeUIEvent(HaxeUIEvent.CLOSE));
+				});
+				menu.addComponent(item);
+
+				// 记录菜单项与底层按钮的映射，用于后续同步动态文本
+				haxeMenuItemMappings.push({item: item, btn: pb});
+			}
+
+			menus.push(menu);
+			haxeMenuBar.addComponent(menu);
+		}
+
+		// MenuBar.Builder 为每个 Menu 内部创建的按钮不继承容器的 styleString，默认主题字体不含中文字形，
+		// 必须把游戏字体显式应用到菜单按钮、菜单项及其内部 label 上，否则中文显示为空白。
+		applyMenuFont(haxeMenuBar, menuFont);
+		for (menu in menus) applyMenuFont(menu, menuFont);
+
+		// 加宽菜单条顶部按钮（文件/编辑/视图），保证文本有足够的显示长度
+		for (child in haxeMenuBar.childComponents)
+		{
+			if (child is Button)
+				child.styleString = 'font-name: $menuFont; font-size: 12px; min-width: 100px;';
+		}
+
+		haxeMenuBar.registerEvent(MenuEvent.MENU_OPENED, function(e:MenuEvent)
+		{
+			haxeMenuOpen = true;
+			haxeMenuIgnoreFrames = 2;
+			styleMenuComponent(e.menu); // 深浅色模式下套用下拉菜单配色
+		});
+		haxeMenuBar.registerEvent(MenuEvent.MENU_CLOSED, function(_)
+		{
+			haxeMenuOpen = false;
+			haxeMenuIgnoreFrames = 2;
+		});
+
+		Screen.instance.addComponent(haxeMenuBar);
+	}
+
+	/** 创建顶部条信息：FPS+内存峰值（水平居中一行）与版本（右上角），以 FlxText 叠加在菜单条之上渲染 */
+	function createTopBarInfo()
+	{
+		var font:String = Paths.font(Language.get('uitab_font'));
+		var fgColor:Int = isChartEditorLightTheme() ? 0xFF444444 : 0xFFFFFFFF;
+
+		// FPS+内存峰值：全宽字段 + 水平居中，文本垂直居中对齐
+		topBarFpsMemText = new FlxText(0, 0, FlxG.width, '', 12);
+		topBarFpsMemText.setFormat(font, 12, fgColor, CENTER);
+		topBarFpsMemText.scrollFactor.set();
+		topBarFpsMemText.antialiasing = ClientPrefs.data.antialiasing;
+		topBarFpsMemText.text = 'FPS: --    内存峰值: --MB';
+		topBarFpsMemText.y = (haxeMenuBarHeight - topBarFpsMemText.height) / 2;
+		add(topBarFpsMemText);
+
+		// 版本号：右上角，右对齐
+		topBarVersionText = new FlxText(0, 0, 200, 'v' + MainMenuState.psychEngineVersion, 12);
+		topBarVersionText.setFormat(font, 12, fgColor, RIGHT);
+		topBarVersionText.scrollFactor.set();
+		topBarVersionText.antialiasing = ClientPrefs.data.antialiasing;
+		topBarVersionText.x = FlxG.width - topBarVersionText.width - 8;
+		topBarVersionText.y = (haxeMenuBarHeight - topBarVersionText.height) / 2;
+		add(topBarVersionText);
+	}
+
+	/** 判断顶部 HaxeUI 菜单条当前应为浅色还是深色：优先取设置，设置默认时跟随制谱器内保存的主题 */
+	function isChartEditorLightTheme():Bool
+	{
+		var pref:String = ClientPrefs.data.chartEditorTheme;
+		if (pref == 'Light') return true;
+		if (pref == 'Dark') return false;
+		// 默认：跟随制谱器内保存的主题（LIGHT→浅色，其余→深色）
+		return (theme == LIGHT);
+	}
+
+	/** 将深浅色配色套用到顶部菜单条、其按钮以及顶部条信息文字上 */
+	function applyTopBarTheme()
+	{
+		var light:Bool = isChartEditorLightTheme();
+		haxeMenuStyleLight = light;
+		var bgColor:String = light ? '#f6f6f6' : '#3d3f41';
+		var fgColor:String = light ? '#444444' : '#ffffff';
+		var fgColorInt:Int = light ? 0xFF444444 : 0xFFFFFFFF;
+		var borderColor:String = light ? '#d2d2d2' : '#555555';
+		var font:String = Paths.font(Language.get('uitab_font'));
+
+		if (haxeMenuBar != null)
+		{
+			haxeMenuBar.styleString = 'font-name: $font; font-size: 12px; background-color: $bgColor; color: $fgColor; border-bottom-color: $borderColor;';
+			for (child in haxeMenuBar.childComponents)
+			{
+				if (child is Button)
+					child.styleString = 'font-name: $font; font-size: 12px; min-width: 100px; background-color: $bgColor; color: $fgColor;';
+			}
+			haxeMenuBar.invalidateComponentStyle(true);
+			haxeMenuBar.invalidateComponent();
+		}
+		if (topBarFpsMemText != null)
+			topBarFpsMemText.color = fgColorInt;
+		if (topBarVersionText != null)
+			topBarVersionText.color = fgColorInt;
+	}
+
+	/** 下拉菜单打开时，按当前深浅色配色递归套用到菜单及菜单项 */
+	function styleMenuComponent(menu:Menu)
+	{
+		if (menu == null) return;
+		var light:Bool = haxeMenuStyleLight;
+		var menuBg:String = light ? '#ffffff' : '#2d2f31';
+		var menuFg:String = light ? '#444444' : '#ffffff';
+		var selBg:String = light ? '#b4cbe4' : '#4a6a8a';
+		var border:String = light ? '#d2d2d2' : '#555555';
+		var font:String = Paths.font(Language.get('uitab_font'));
+
+		menu.styleString = 'background-color: $menuBg; border-color: $border;';
+		styleMenuComponentRecursive(menu, menuBg, menuFg, selBg, font);
+		menu.invalidateComponentStyle(true);
+		menu.invalidateComponent();
+	}
+
+	/** 递归为菜单组件及其内部 label 套用深浅色配色 */
+	function styleMenuComponentRecursive(comp:Component, menuBg:String, menuFg:String, selBg:String, font:String)
+	{
+		if (comp is MenuItem)
+		{
+			comp.styleString = 'font-name: $font; font-size: 12px; background-color: $menuBg; color: $menuFg;';
+		}
+		else if (comp is Label)
+		{
+			comp.styleString = 'font-name: $font; font-size: 12px; color: $menuFg;';
+		}
+		else if (comp is Menu)
+		{
+			comp.styleString = 'background-color: $menuBg; border-color: ${(menuBg == '#ffffff') ? '#d2d2d2' : '#555555'};';
+		}
+		for (child in comp.childComponents)
+			styleMenuComponentRecursive(child, menuBg, menuFg, selBg, font);
+	}
+
+	/** 顶部条 FPS+内存实时刷新（独立计数，不依赖 Main.fpsVar；内存显示为 当前/峰值 MB） */
+	function updateTopBarInfo(elapsed:Float)
+	{
+		if (topBarFpsMemText == null) return;
+		// 独立 FPS 计数（基于帧数和时间，不受 Main.fpsVar.visible 影响）
+		_topBarFrameCount++;
+		_topBarFrameTime += elapsed;
+		if (_topBarFrameTime >= 1.0)
+		{
+			_topBarFPS = _topBarFrameCount / _topBarFrameTime;
+			_topBarFrameCount = 0;
+			_topBarFrameTime = 0;
+		}
+		// 内存：memoryMegas getter 直接读系统（与 visible 无关），自行跟踪峰值
+		var curMemBytes:Float = 0;
+		if (Main.fpsVar != null)
+			curMemBytes = Main.fpsVar.memoryMegas;
+		if (curMemBytes > _topBarPeakMem)
+			_topBarPeakMem = curMemBytes;
+		var curMB:Int = Std.int(curMemBytes / (1024 * 1024));
+		var peakMB:Int = Std.int(_topBarPeakMem / (1024 * 1024));
+		var newText:String = 'FPS: ' + Std.int(_topBarFPS) + '    内存: ' + curMB + '/' + peakMB + 'MB';
+		if (topBarFpsMemText.text != newText) topBarFpsMemText.text = newText;
+	}
+
+	/** 递归将游戏字体应用到菜单按钮/菜单项及其内部 label，确保中文正常显示 */
+	function applyMenuFont(comp:Component, font:String)
+	{
+		if (comp is Button || comp is MenuItem || comp is Label)
+		{
+			comp.styleString = 'font-name: $font; font-size: 12px;';
+		}
+		for (child in comp.childComponents)
+			applyMenuFont(child, font);
+	}
+
+	/** 同步 HaxeUI 菜单项文本与底层 PsychUIButton 的动态文本（如视图菜单前三项、便捷制谱器开关） */
+	function syncHaxeMenuTexts()
+	{
+		if (haxeMenuItemMappings == null || haxeMenuItemMappings.length == 0) return;
+		for (pair in haxeMenuItemMappings)
+		{
+			if (pair == null || pair.item == null || pair.btn == null || pair.btn.text == null) continue;
+			var t:String = pair.btn.text.text;
+			if (t != null && t != pair.item.text)
+				pair.item.text = t;
+		}
+	}
+
 	function addFileTab()
 	{
 		var tab = upperBox.getTab(Language.get("charting_file_text"));
@@ -7061,10 +7427,37 @@ for (i in 0...GRID_PLAYERS)
 
 		if(chartEditorSave.data.waveformEnabled != null)
 			waveformEnabled = chartEditorSave.data.waveformEnabled;
-		if(chartEditorSave.data.waveformTarget != null)
-			waveformTarget = chartEditorSave.data.waveformTarget;
+		if(chartEditorSave.data.waveformTargets != null)
+		{
+			waveformTargets = [];
+			var savedTargets:Array<String> = cast chartEditorSave.data.waveformTargets;
+			for (s in savedTargets)
+				waveformTargets.push(cast s);
+			if(waveformTargets.length == 0) waveformTargets = [INST];
+		}
+		if(chartEditorSave.data.waveformTargetLegacy != null)
+			waveformTargetLegacy = cast chartEditorSave.data.waveformTargetLegacy;
 		if(chartEditorSave.data.waveformColor != null)
-			waveformSprite.color = CoolUtil.colorFromString(chartEditorSave.data.waveformColor);
+			for (ws in waveformSprites)
+				ws.color = CoolUtil.colorFromString(chartEditorSave.data.waveformColor);
+		if(chartEditorSave.data.waveformStyle != null)
+			waveformStyle = chartEditorSave.data.waveformStyle;
+		if(chartEditorSave.data.waveformLibColor != null)
+			waveformLibColor = chartEditorSave.data.waveformLibColor;
+		if(chartEditorSave.data.waveformLibDrawMode != null)
+			waveformLibDrawMode = chartEditorSave.data.waveformLibDrawMode;
+		if(chartEditorSave.data.waveformLibRMS != null)
+			waveformLibRMS = chartEditorSave.data.waveformLibRMS;
+		if(chartEditorSave.data.waveformLibRMSColor != null)
+			waveformLibRMSColor = chartEditorSave.data.waveformLibRMSColor;
+		if(chartEditorSave.data.waveformLibBaseline != null)
+			waveformLibBaseline = chartEditorSave.data.waveformLibBaseline;
+		if(chartEditorSave.data.waveformLibBarSize != null)
+			waveformLibBarSize = chartEditorSave.data.waveformLibBarSize;
+		if(chartEditorSave.data.waveformLibBarPadding != null)
+			waveformLibBarPadding = chartEditorSave.data.waveformLibBarPadding;
+		if(chartEditorSave.data.waveformLibGain != null)
+			waveformLibGain = chartEditorSave.data.waveformLibGain;
 
 		showLastGridButton = new PsychUIButton(btnX, btnY, '', function()
 		{
@@ -7126,7 +7519,7 @@ for (i in 0...GRID_PLAYERS)
 		var btn:PsychUIButton = new PsychUIButton(btnX, btnY, Language.get('charting_waveform_tab3'), function()
 		{
 			ClientPrefs.toggleVolumeKeys(false);
-			openSubState(new BasePrompt(320, 200, Language.get('prompt_waveform_tab'),
+			openSubState(new BasePrompt(620, 560, Language.get('prompt_waveform_tab'),
 				function(state:BasePrompt) {
 					upperBox.isMinimized = true;
 					upperBox.bg.visible = false;
@@ -7135,7 +7528,8 @@ for (i in 0...GRID_PLAYERS)
 					btn.cameras = state.cameras;
 					state.add(btn);
 
-					var check:PsychUICheckBox = new PsychUICheckBox(state.bg.x + 40, state.bg.y + 80, Language.get('enabled_text'), 60);
+					// ===== 通用：启用 / 目标 / 渲染样式 =====
+					var check:PsychUICheckBox = new PsychUICheckBox(state.bg.x + 40, state.bg.y + 70, Language.get('enabled_text'), 60);
 					check.onClick = function()
 					{
 						chartEditorSave.data.waveformEnabled = waveformEnabled = check.checked;
@@ -7145,38 +7539,256 @@ for (i in 0...GRID_PLAYERS)
 					check.checked = waveformEnabled;
 					state.add(check);
 
+					var targetOptions:Array<WaveformTarget> = [INST, PLAYER, OPPONENT];
+					var targetLabels:Array<String> = [Language.get('waveform_inst'), Language.get('waveform_mainvoice'), Language.get('waveform_dadvoice')];
+					var targetCheckX = check.x + 250;
+					var libraryTargetChecks:Array<PsychUICheckBox> = []; // 库版：复选（可多选）
+					var legacyTargetChecks:Array<PsychUICheckBox> = [];   // 旧版：单选（互斥）
+					for (i in 0...targetOptions.length)
+					{
+						var opt:WaveformTarget = targetOptions[i];
+
+						// 库版：复选，可多选
+						var tc:PsychUICheckBox = new PsychUICheckBox(targetCheckX, check.y + i * 20, targetLabels[i], 130);
+						tc.checked = waveformTargets.indexOf(opt) != -1;
+						tc.onClick = function()
+						{
+							if(tc.checked)
+							{
+								if(waveformTargets.indexOf(opt) == -1)
+									waveformTargets.push(opt);
+							}
+							else
+							{
+								waveformTargets = waveformTargets.filter(function(x) return x != opt);
+							}
+							if(waveformTargets.length == 0) waveformTargets.push(opt);
+							var savedTargets:Array<String> = [];
+							for (w in waveformTargets) savedTargets.push(cast w);
+							chartEditorSave.data.waveformTargets = savedTargets;
+							updateWaveform();
+						};
+						tc.cameras = state.cameras;
+						state.add(tc);
+						libraryTargetChecks.push(tc);
+
+						// 旧版：单选（互斥），勾选时取消勾选其余
+						var leg:PsychUICheckBox = new PsychUICheckBox(targetCheckX, check.y + i * 20, targetLabels[i], 130);
+						leg.checked = (waveformTargetLegacy == opt);
+						leg.onClick = function()
+						{
+							if(leg.checked)
+							{
+								waveformTargetLegacy = opt;
+								for (j in 0...legacyTargetChecks.length)
+									legacyTargetChecks[j].checked = (targetOptions[j] == opt);
+								chartEditorSave.data.waveformTargetLegacy = cast opt;
+								updateWaveform();
+							}
+							else
+								leg.checked = true; // 单选不允许全部取消，点击已选中的项视为保持选中
+						};
+						leg.cameras = state.cameras;
+						state.add(leg);
+						legacyTargetChecks.push(leg);
+					}
+					function refreshTargetControls()
+					{
+						for (c in libraryTargetChecks) c.visible = (waveformStyle == LIBRARY);
+						for (c in legacyTargetChecks) c.visible = (waveformStyle == LEGACY);
+					}
+					refreshTargetControls();
+
+					// 渲染样式切换（旧版逐字节 / flixel-waveform 库版）
+					var styleOptions:Array<WaveformStyle> = [LEGACY, LIBRARY];
+					var styleLabels:Array<String> = [Language.get('waveform_style_legacy') + Language.get('deprecated_suffix'), Language.get('waveform_style_library')];
+					var styleDrop:PsychUIDropDownMenu = new PsychUIDropDownMenu(check.x, check.y + 50, styleLabels, function(id:Int, val:String)
+					{
+						waveformStyle = chartEditorSave.data.waveformStyle = styleOptions[id];
+						refreshTargetControls();
+						updateWaveform();
+					}, 240);
+					styleDrop.selectedLabel = styleLabels[styleOptions.indexOf(waveformStyle)];
+					styleDrop.cameras = state.cameras;
+					state.add(styleDrop);
+
+					var txtStyle:FlxText = new FlxText(styleDrop.x, styleDrop.y - 15, 240, Language.get('waveform_style'));
+					txtStyle.font = Paths.font(Language.get('uitab_font'));
+					txtStyle.size = 12;
+					txtStyle.cameras = state.cameras;
+					state.add(txtStyle);
+
+					// ===== 旧版样式：独立颜色 =====
+					var txtLeg:FlxText = new FlxText(check.x, styleDrop.y + 48, 300, Language.get('waveform_style_legacy'));
+					txtLeg.font = Paths.font(Language.get('uitab_font'));
+					txtLeg.size = 12;
+					txtLeg.cameras = state.cameras;
+					state.add(txtLeg);
+
 					var waveformC:String = '0000FF';
 					if(chartEditorSave.data.waveformColor != null)
 						waveformC = chartEditorSave.data.waveformColor;
 
-					var input:PsychUIInputText = new PsychUIInputText(check.x, check.y + 50, 60, waveformC, 10);
-					input.onChange = function(old:String, cur:String)
+					var legColorInput:PsychUIInputText = new PsychUIInputText(check.x, txtLeg.y + 25, 60, waveformC, 10);
+					legColorInput.onChange = function(old:String, cur:String)
 					{
 						chartEditorSave.data.waveformColor = cur;
-						waveformSprite.color = CoolUtil.colorFromString(cur);
+						for (ws in waveformSprites)
+							ws.color = CoolUtil.colorFromString(cur);
 					}
-					input.maxLength = 6;
-					input.filterMode = ONLY_HEXADECIMAL;
-					input.cameras = state.cameras;
-					input.forceCase = UPPER_CASE;
+					legColorInput.maxLength = 6;
+					legColorInput.filterMode = ONLY_HEXADECIMAL;
+					legColorInput.cameras = state.cameras;
+					legColorInput.forceCase = UPPER_CASE;
+					var txtLegColor:FlxText = new FlxText(legColorInput.x, legColorInput.y - 15, 140, Language.get('waveform_color'));
+					txtLegColor.font = Paths.font(Language.get('uitab_font'));
+					txtLegColor.size = 12;
+					txtLegColor.cameras = state.cameras;
+					state.add(txtLegColor);
+					state.add(legColorInput);
 
-					var options:Array<WaveformTarget> = [INST, PLAYER, OPPONENT];
-					var radioGrp:PsychUIRadioGroup = new PsychUIRadioGroup(check.x + 120, check.y, [Language.get('waveform_inst'), Language.get('waveform_mainvoice'), Language.get('waveform_dadvoice')]);
-					radioGrp.cameras = state.cameras;
-					radioGrp.onClick = function()
+					// ===== 库版样式：独立参数 =====
+					var colAX:Float = check.x;
+					var colBX:Float = check.x + 240;
+					var secY:Float = txtLeg.y + 60;
+					var rowY:Float = secY + 25;
+
+					var txtLib:FlxText = new FlxText(check.x, secY, 300, Language.get('waveform_style_library'));
+					txtLib.font = Paths.font(Language.get('uitab_font'));
+					txtLib.size = 12;
+					txtLib.cameras = state.cameras;
+					state.add(txtLib);
+
+					// 行1：颜色（方向固定为竖向 VERTICAL，随制谱器网格方向）
+					var libColorInput:PsychUIInputText = new PsychUIInputText(colAX, rowY, 60, waveformLibColor, 10);
+					libColorInput.onChange = function(old:String, cur:String)
 					{
-						waveformTarget = chartEditorSave.data.waveformTarget = options[radioGrp.checked];
+						waveformLibColor = chartEditorSave.data.waveformLibColor = cur;
+						updateWaveform();
+					}
+					libColorInput.maxLength = 6;
+					libColorInput.filterMode = ONLY_HEXADECIMAL;
+					libColorInput.cameras = state.cameras;
+					libColorInput.forceCase = UPPER_CASE;
+					var txtLibColor:FlxText = new FlxText(libColorInput.x, libColorInput.y - 15, 140, Language.get('waveform_lib_color'));
+					txtLibColor.font = Paths.font(Language.get('uitab_font'));
+					txtLibColor.size = 12;
+					txtLibColor.cameras = state.cameras;
+					state.add(txtLibColor);
+					state.add(libColorInput);
+
+					// 行2：绘制模式 | 基线
+					rowY += 50;
+					var drawOptions:Array<String> = ['COMBINED', 'SPLIT_CHANNELS'];
+					var drawLabels:Array<String> = [Language.get('waveform_drawmode_combined'), Language.get('waveform_drawmode_split')];
+					var drawDrop:PsychUIDropDownMenu = new PsychUIDropDownMenu(colAX, rowY, drawLabels, function(id:Int, val:String)
+					{
+						waveformLibDrawMode = chartEditorSave.data.waveformLibDrawMode = drawOptions[id];
+						updateWaveform();
+					}, 180);
+					drawDrop.selectedLabel = drawLabels[drawOptions.indexOf(waveformLibDrawMode)];
+					drawDrop.cameras = state.cameras;
+					state.add(drawDrop);
+					var txtDraw:FlxText = new FlxText(drawDrop.x, drawDrop.y - 15, 200, Language.get('waveform_drawmode'));
+					txtDraw.font = Paths.font(Language.get('uitab_font'));
+					txtDraw.size = 12;
+					txtDraw.cameras = state.cameras;
+					state.add(txtDraw);
+
+					var baseCheck:PsychUICheckBox = new PsychUICheckBox(colBX, rowY, Language.get('waveform_baseline'), 140);
+					baseCheck.checked = waveformLibBaseline;
+					baseCheck.onClick = function()
+					{
+						waveformLibBaseline = chartEditorSave.data.waveformLibBaseline = baseCheck.checked;
 						updateWaveform();
 					};
-					radioGrp.checked = options.indexOf(waveformTarget);
-					state.add(radioGrp);
+					baseCheck.cameras = state.cameras;
+					state.add(baseCheck);
 
-					var txt1:FlxText = new FlxText(input.x, input.y - 15, 140, Language.get('waveform_color'));
-					txt1.font = Paths.font(Language.get('uitab_font'));
-					txt1.size = 12;
-					txt1.cameras = state.cameras;
-					state.add(txt1);
-					state.add(input);
+					// 行3：响度(RMS) | 响度颜色
+					rowY += 50;
+					var rmsCheck:PsychUICheckBox = new PsychUICheckBox(colAX, rowY, Language.get('waveform_rms'), 150);
+					rmsCheck.checked = waveformLibRMS;
+					rmsCheck.onClick = function()
+					{
+						waveformLibRMS = chartEditorSave.data.waveformLibRMS = rmsCheck.checked;
+						updateWaveform();
+					};
+					rmsCheck.cameras = state.cameras;
+					state.add(rmsCheck);
+
+					var rmsColorInput:PsychUIInputText = new PsychUIInputText(colBX, rowY, 60, waveformLibRMSColor, 10);
+					rmsColorInput.onChange = function(old:String, cur:String)
+					{
+						waveformLibRMSColor = chartEditorSave.data.waveformLibRMSColor = cur;
+						updateWaveform();
+					}
+					rmsColorInput.maxLength = 6;
+					rmsColorInput.filterMode = ONLY_HEXADECIMAL;
+					rmsColorInput.cameras = state.cameras;
+					rmsColorInput.forceCase = UPPER_CASE;
+					var txtRmsColor:FlxText = new FlxText(rmsColorInput.x, rmsColorInput.y - 15, 140, Language.get('waveform_rms_color'));
+					txtRmsColor.font = Paths.font(Language.get('uitab_font'));
+					txtRmsColor.size = 12;
+					txtRmsColor.cameras = state.cameras;
+					state.add(txtRmsColor);
+					state.add(rmsColorInput);
+
+					// 行4：柱宽 | 柱间距
+					rowY += 50;
+					var sizeInput:PsychUIInputText = new PsychUIInputText(colAX, rowY, 60, Std.string(waveformLibBarSize), 10);
+					sizeInput.onChange = function(old:String, cur:String)
+					{
+						var parsedSize:Null<Int> = Std.parseInt(cur);
+						var v:Int = (parsedSize == null || parsedSize < 1) ? 1 : parsedSize;
+						waveformLibBarSize = chartEditorSave.data.waveformLibBarSize = v;
+						updateWaveform();
+					}
+					sizeInput.maxLength = 3;
+					sizeInput.filterMode = ONLY_NUMERIC;
+					sizeInput.cameras = state.cameras;
+					var txtSize:FlxText = new FlxText(sizeInput.x, sizeInput.y - 15, 140, Language.get('waveform_barsize'));
+					txtSize.font = Paths.font(Language.get('uitab_font'));
+					txtSize.size = 12;
+					txtSize.cameras = state.cameras;
+					state.add(txtSize);
+					state.add(sizeInput);
+
+					var padInput:PsychUIInputText = new PsychUIInputText(colBX, rowY, 60, Std.string(waveformLibBarPadding), 10);
+					padInput.onChange = function(old:String, cur:String)
+					{
+						var parsedPad:Null<Int> = Std.parseInt(cur);
+						var v:Int = (parsedPad == null || parsedPad < 0) ? 0 : parsedPad;
+						waveformLibBarPadding = chartEditorSave.data.waveformLibBarPadding = v;
+						updateWaveform();
+					}
+					padInput.maxLength = 3;
+					padInput.filterMode = ONLY_NUMERIC;
+					padInput.cameras = state.cameras;
+					var txtPad:FlxText = new FlxText(padInput.x, padInput.y - 15, 140, Language.get('waveform_barpadding'));
+					txtPad.font = Paths.font(Language.get('uitab_font'));
+					txtPad.size = 12;
+					txtPad.cameras = state.cameras;
+					state.add(txtPad);
+					state.add(padInput);
+
+					// 行5：增益
+					rowY += 50;
+					var gainInput:PsychUIInputText = new PsychUIInputText(colAX, rowY, 60, Std.string(waveformLibGain), 10);
+					gainInput.onChange = function(old:String, cur:String)
+					{
+						var v:Float = Std.parseFloat(cur);
+						if(Math.isNaN(v) || v < 0) v = 1;
+						waveformLibGain = chartEditorSave.data.waveformLibGain = v;
+						updateWaveform();
+					}
+					gainInput.cameras = state.cameras;
+					var txtGain:FlxText = new FlxText(gainInput.x, gainInput.y - 15, 140, Language.get('waveform_gain'));
+					txtGain.font = Paths.font(Language.get('uitab_font'));
+					txtGain.size = 12;
+					txtGain.cameras = state.cameras;
+					state.add(txtGain);
+					state.add(gainInput);
 				}
 			));
 		}, btnWid);
@@ -7924,7 +8536,7 @@ function adaptNotesToNewTimes(oldTimes:Array<Float>)
 
 		openSubState(new EditorPlayState(cast notes, [vocals, opponentVocals]));
 		upperBox.isMinimized = true;
-		upperBox.visible = mainBox.visible = infoBox.visible = false;
+		mainBox.visible = infoBox.visible = false;
 	}
 
 	function goToPlayState()
@@ -7942,8 +8554,10 @@ function adaptNotesToNewTimes(oldTimes:Array<Float>)
 	
 	override function openSubState(SubState:FlxSubState)
 	{
-		if(!persistentUpdate) setSongPlaying(false);
+		setSongPlaying(false);
 		super.openSubState(SubState);
+		// 顶部 HaxeUI 菜单栏始终可见，不随子状态隐藏（用户要求顶栏不自动隐藏）
+		// if(haxeMenuBar != null) haxeMenuBar.visible = false;
 	}
 
 	override function closeSubState()
@@ -7951,15 +8565,19 @@ function adaptNotesToNewTimes(oldTimes:Array<Float>)
 		ClientPrefs.toggleVolumeKeys(true);
 		super.closeSubState();
 		upperBox.isMinimized = true;
-		upperBox.visible = mainBox.visible = infoBox.visible = true;
+		mainBox.visible = infoBox.visible = true;
 		upperBox.bg.visible = false;
 		updateAudioVolume();
+		// 顶部 HaxeUI 菜单栏始终可见，不随子状态隐藏
+		// if(haxeMenuBar != null) haxeMenuBar.visible = true;
 	}
 
 	override function destroy()
 	{
 		// 退出制谱器时停止窗口缩放监听
 		FlxG.stage.removeEventListener(Event.RESIZE, onWindowResized);
+
+		// 顶部条信息（FPS/内存/版本）为 FlxText，随状态销毁自动清理
 
 		// 还原 FPS 计数器的可见性（恢复为 showFPS 设置）
 		Main.forceHideFPS = false;
@@ -8091,6 +8709,7 @@ function adaptNotesToNewTimes(oldTimes:Array<Float>)
 		_resizeText.y = _resizeBg.y + pad;
 
 		_resizeButton.visible = persistent;
+		_resizeButton.active = persistent; // 仅常驻（显示“重载界面”按钮）时可点击，隐藏时禁用防止误触重载
 		_resizeButton.x = (FlxG.width - btnW) / 2;
 		_resizeButton.y = _resizeBg.y + bgH - btnH - pad / 2;
 
@@ -8127,6 +8746,7 @@ function adaptNotesToNewTimes(oldTimes:Array<Float>)
 		_resizePromptActive = false;
 		_resizePromptPersistent = false;
 		if (_resizeDismissTimer != null) { _resizeDismissTimer.cancel(); _resizeDismissTimer = null; }
+		if (_resizeButton != null) _resizeButton.active = false; // 隐藏时禁用点击，防止不可见按钮（默认位于左上角）被误触而重载界面
 		if (_resizeBg == null) return;
 
 		if (immediate)
@@ -8433,19 +9053,148 @@ function adaptNotesToNewTimes(oldTimes:Array<Float>)
 		#if (lime_cffi && !macro)
 		if(curSec < 0 || curSec >= cachedSectionTimes.length || !waveformEnabled)
 		{
-			waveformSprite.visible = false;
+			for (ws in waveformSprites) ws.visible = false;
+			for (wl in waveformLibSprites) wl.visible = false;
 			return;
 		}
 
+		var targetOrder:Array<WaveformTarget> = [INST, PLAYER, OPPONENT];
 
-		waveformSprite.visible = true;
-		waveformSprite.y = opponentGridBg.y;
+		// flixel-waveform 库版分支
+		if(waveformStyle == LIBRARY)
+		{
+			for (ws in waveformSprites) ws.visible = false;
+			updateLibraryWaveform();
+			return;
+		}
+		for (wl in waveformLibSprites) wl.visible = false;
+
+		// 旧版逐字节绘制：旧版为单选，只绘制选中的那个目标
 		var gridLayout = getGridLayout();
+		var height:Int = Std.int(opponentGridBg.height);
+		for (t in [waveformTargetLegacy])
+		{
+			var waveformX:Float;
+			var width:Int;
+			switch(t)
+			{
+				case INST:
+					waveformX = gridLayout.eventX;
+					width = Std.int(GRID_SIZE * EVENT_TRACK_COUNT);
+				case PLAYER:
+					waveformX = gridLayout.playerX;
+					width = Std.int(GRID_SIZE * GRID_COLUMNS_PER_PLAYER);
+				case OPPONENT:
+					waveformX = gridLayout.opponentX;
+					width = Std.int(GRID_SIZE * GRID_COLUMNS_PER_PLAYER);
+			}
+
+			var ws:FlxSprite = waveformSprites[targetOrder.indexOf(t)];
+			ws.visible = true;
+			ws.y = opponentGridBg.y;
+			ws.x = waveformX;
+			if(Std.int(ws.height) != height && ws.pixels != null)
+			{
+				ws.pixels.dispose();
+				ws.pixels.disposeImage();
+				ws.makeGraphic(width, height, 0x00FFFFFF);
+			}
+			ws.pixels.fillRect(new Rectangle(0, 0, width, height), 0x00FFFFFF);
+
+			wavData[0][0].resize(0);
+			wavData[0][1].resize(0);
+			wavData[1][0].resize(0);
+			wavData[1][1].resize(0);
+
+			var sound:FlxSound = switch(t)
+			{
+				case INST: FlxG.sound.music;
+				case PLAYER: vocals;
+				case OPPONENT: opponentVocals;
+				default: null;
+			}
+
+			@:privateAccess
+			if (sound != null && sound._sound != null && sound._sound.__buffer != null)
+			{
+				var bytes:Bytes = sound._sound.__buffer.data.toBytes();
+				wavData = waveformData(sound._sound.__buffer, bytes, cachedSectionTimes[curSec] - Conductor.offset, cachedSectionTimes[curSec+1] - Conductor.offset, 1, wavData, height);
+			}
+
+			// Draws
+			var gSize:Int = width;
+			var hSize:Int = Std.int(gSize / 2);
+			var size:Float = 1;
+
+			var leftLength:Int = (wavData[0][0].length > wavData[0][1].length ? wavData[0][0].length : wavData[0][1].length);
+			var rightLength:Int = (wavData[1][0].length > wavData[1][1].length ? wavData[1][0].length : wavData[1][1].length);
+			var length:Int = leftLength > rightLength ? leftLength : rightLength;
+
+			for (index in 0...length)
+			{
+				var lmin:Float = FlxMath.bound(((index < wavData[0][0].length && index >= 0) ? wavData[0][0][index] : 0) * (gSize / 1.12), -hSize, hSize) / 2;
+				var lmax:Float = FlxMath.bound(((index < wavData[0][1].length && index >= 0) ? wavData[0][1][index] : 0) * (gSize / 1.12), -hSize, hSize) / 2;
+				var rmin:Float = FlxMath.bound(((index < wavData[1][0].length && index >= 0) ? wavData[1][0][index] : 0) * (gSize / 1.12), -hSize, hSize) / 2;
+				var rmax:Float = FlxMath.bound(((index < wavData[1][1].length && index >= 0) ? wavData[1][1][index] : 0) * (gSize / 1.12), -hSize, hSize) / 2;
+				ws.pixels.fillRect(new Rectangle(hSize - (lmin + rmin), index * size, (lmin + rmin) + (lmax + rmax), size), FlxColor.WHITE);
+			}
+		}
+		#else
+		for (ws in waveformSprites) ws.visible = false;
+		for (wl in waveformLibSprites) wl.visible = false;
+		#end
+	}
+
+	// flixel-waveform 库实现：双缓冲显示当前 section（命中后台预渲染则直接换显，零闪烁；未命中则就地重绘）
+	function updateLibraryWaveform()
+	{
+		#if (lime_cffi && !macro)
+		var targetOrder:Array<WaveformTarget> = [INST, PLAYER, OPPONENT];
+
+		for (l in waveformLibSprites) l.visible = false;
+		for (l in waveformLibBackSprites) l.visible = false;
+
+		for (t in waveformTargets)
+		{
+			var i:Int = targetOrder.indexOf(t);
+
+			// 1) 后台已预渲染好本 section → 交换前后台缓冲，前台可直接显示，无需重绘
+			if(waveformLibBackSection[i] == curSec)
+			{
+				var tmp:FlxWaveform = waveformLibSprites[i];
+				waveformLibSprites[i] = waveformLibBackSprites[i];
+				waveformLibBackSprites[i] = tmp;
+				var tmpS:Int = waveformLibCacheSection[i];
+				waveformLibCacheSection[i] = waveformLibBackSection[i];
+				waveformLibBackSection[i] = tmpS;
+			}
+
+			var wl:FlxWaveform = waveformLibSprites[i];
+			wl.autoUpdateBitmap = true; // 前台交给 FlxWaveform 在 draw 时重绘（未变更时不会触发）
+			var ok:Bool = paintLibWaveform(wl, t, curSec);
+			if(ok) waveformLibCacheSection[i] = curSec;
+
+			wl.visible = ok;
+			waveformLibBackSprites[i].visible = false;
+		}
+		#else
+		for (l in waveformLibSprites) l.visible = false;
+		for (l in waveformLibBackSprites) l.visible = false;
+		#end
+	}
+
+	// 把目标 t 的波形按给定 section 配置到位（几何、音轨、样式、时间窗口）。
+	// 返回是否有可用音频缓冲；前台由 autoUpdateBitmap 触发重绘，后台由调用方手动 generateWaveformBitmap()
+	// loadedBuffers：记录该精灵已加载的音频缓冲（前台/后台各自独立，避免后台上台互跳过 loadData）
+	function paintLibWaveform(wl:FlxWaveform, t:WaveformTarget, section:Int, ?loadedBuffers:Array<AudioBuffer>):Bool
+	{
+		#if (lime_cffi && !macro)
+		if(loadedBuffers == null) loadedBuffers = waveformLibLoadedBuffers;
+		var gridLayout = getGridLayout();
+		var height:Int = Std.int(opponentGridBg.height);
 		var waveformX:Float;
 		var width:Int;
-		var height:Int = Std.int(opponentGridBg.height);
-		
-		switch(waveformTarget)
+		switch(t)
 		{
 			case INST:
 				waveformX = gridLayout.eventX;
@@ -8457,62 +9206,57 @@ function adaptNotesToNewTimes(oldTimes:Array<Float>)
 				waveformX = gridLayout.opponentX;
 				width = Std.int(GRID_SIZE * GRID_COLUMNS_PER_PLAYER);
 		}
-		waveformSprite.x = waveformX;
-		if(Std.int(waveformSprite.height) != height && waveformSprite.pixels != null)
+		var i:Int = [INST, PLAYER, OPPONENT].indexOf(t);
+
+		wl.x = waveformX;
+		wl.y = opponentGridBg.y;
+		if(wl.waveformWidth != width || wl.waveformHeight != height)
+			wl.resize(width, height);
+
+		var sound:FlxSound = switch(t)
 		{
-			waveformSprite.pixels.dispose();
-			waveformSprite.pixels.disposeImage();
-			waveformSprite.makeGraphic(width, height, 0x00FFFFFF);
-
+			case INST: FlxG.sound.music;
+			case PLAYER: vocals;
+			case OPPONENT: opponentVocals;
 		}
-		waveformSprite.pixels.fillRect(new Rectangle(0, 0, width, height), 0x00FFFFFF);
-
-		wavData[0][0].resize(0);
-		wavData[0][1].resize(0);
-		wavData[1][0].resize(0);
-		wavData[1][1].resize(0);
-
-		var sound:FlxSound = switch(waveformTarget)
-		{
-			case INST:
-				FlxG.sound.music;
-			case PLAYER:
-				vocals;
-			case OPPONENT:
-				opponentVocals;
-			default:
-				null;
-		}
-		
 		@:privateAccess
-		if (sound != null && sound._sound != null && sound._sound.__buffer != null)
+		var buffer:AudioBuffer = (sound != null && sound._sound != null) ? sound._sound.__buffer : null;
+		if(buffer == null || buffer.data == null)
 		{
-			var bytes:Bytes = sound._sound.__buffer.data.toBytes();
-			wavData = waveformData(sound._sound.__buffer, bytes, cachedSectionTimes[curSec] - Conductor.offset, cachedSectionTimes[curSec+1] - Conductor.offset, 1, wavData, height);
+			wl.visible = false;
+			return false;
 		}
 
-		// Draws
-		var gSize:Int = width;
-		var hSize:Int = Std.int(gSize / 2);
-		var size:Float = 1;
-
-		var leftLength:Int = (wavData[0][0].length > wavData[0][1].length ? wavData[0][0].length : wavData[0][1].length);
-		var rightLength:Int = (wavData[1][0].length > wavData[1][1].length ? wavData[1][0].length : wavData[1][1].length);
-
-		var length:Int = leftLength > rightLength ? leftLength : rightLength;
-
-		for (index in 0...length)
+		if(buffer != loadedBuffers[i])
 		{
-			var lmin:Float = FlxMath.bound(((index < wavData[0][0].length && index >= 0) ? wavData[0][0][index] : 0) * (gSize / 1.12), -hSize, hSize) / 2;
-			var lmax:Float = FlxMath.bound(((index < wavData[0][1].length && index >= 0) ? wavData[0][1][index] : 0) * (gSize / 1.12), -hSize, hSize) / 2;
-
-			var rmin:Float = FlxMath.bound(((index < wavData[1][0].length && index >= 0) ? wavData[1][0][index] : 0) * (gSize / 1.12), -hSize, hSize) / 2;
-			var rmax:Float = FlxMath.bound(((index < wavData[1][1].length && index >= 0) ? wavData[1][1][index] : 0) * (gSize / 1.12), -hSize, hSize) / 2;
-
-			waveformSprite.pixels.fillRect(new Rectangle(hSize - (lmin + rmin), index * size, (lmin + rmin) + (lmax + rmax), size), FlxColor.WHITE);
+			loadedBuffers[i] = buffer;
+			wl.loadDataFromAudioBuffer(buffer);
 		}
+
+		// 应用库版独立样式参数（各 setter 仅在该值变化时重绘）
+		wl.waveformDrawMode = switch(waveformLibDrawMode)
+		{
+			case 'SPLIT_CHANNELS': SPLIT_CHANNELS;
+			case 'SINGLE_CHANNEL': SINGLE_CHANNEL(0);
+			default: COMBINED;
+		};
+		wl.waveformOrientation = VERTICAL; // 制谱器网格为竖向滚动，方向固定为竖向
+		wl.waveformAlignment = CENTER(false);
+		wl.waveformDrawRMS = waveformLibRMS;
+		wl.waveformDrawBaseline = waveformLibBaseline;
+		wl.waveformBarSize = waveformLibBarSize;
+		wl.waveformBarPadding = waveformLibBarPadding;
+		wl.waveformGainMultiplier = waveformLibGain;
+		wl.waveformColor = CoolUtil.colorFromString(waveformLibColor);
+		wl.waveformRMSColor = CoolUtil.colorFromString(waveformLibRMSColor);
+
+		wl.waveformTime = cachedSectionTimes[section] - Conductor.offset;
+		var endIdx:Int = section + 1;
+		if(endIdx >= cachedSectionTimes.length) endIdx = section;
+		wl.waveformDuration = cachedSectionTimes[endIdx] - cachedSectionTimes[section];
+		return true;
 		#else
-		waveformSprite.visible = false;
+		return false;
 		#end
 	}
 

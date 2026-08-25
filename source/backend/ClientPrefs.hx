@@ -279,6 +279,9 @@ import openfl.display.StageQuality;
 
 	public var chartEditorFollowWindow:Bool = false; // 制谱器分辨率是否跟随窗口：true=跟随窗口(720p~1080p自适应)，false=使用游戏默认固定分辨率1280x720
 
+	// 制谱器深浅色模式：'Light' 亮色 | 'Dark' 深色 | 'Default' 跟随制谱器内保存的主题
+	public var chartEditorTheme:String = 'Default';
+
 	// 当模组没有perfect/marvelous贴图时，是否改用sick贴图显示
 	public var fallbackPerfectToSick:Bool = true;
 	public var fallbackEXPerfectToSick:Bool = true;

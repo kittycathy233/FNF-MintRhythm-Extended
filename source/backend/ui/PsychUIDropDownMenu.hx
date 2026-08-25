@@ -26,6 +26,8 @@ class PsychUIDropDownMenu extends PsychUIInputText
 		_itemWidth = width - 2;
 		setGraphicSize(width, 20);
 		updateHitbox();
+		// 让闭合框的选中标签文字宽度跟随下拉框实际宽度，避免文字超出后被裁剪（默认固定 ~98 与宽度脱钩）
+		fieldWidth = Std.int(width - 5);
 		textObj.y += 2;
 
 		button = new FlxSprite(Math.max(0, width - 5), 0).loadGraphic(Paths.image('psych-ui/dropdown_button', 'embed'), true, 20, 20);

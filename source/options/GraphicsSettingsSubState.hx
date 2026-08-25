@@ -110,6 +110,14 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		// 制谱器深浅色主题
+		var option:Option = new Option(Language.get('chart_editor_theme'),
+			Language.get("chart_editor_theme_desc"),
+			'chartEditorTheme',
+			STRING,
+			['Default', 'Light', 'Dark']);
+		addOption(option);
+
 		// 飞溅数量限制设置
 		var option:Option = new Option(Language.get('splash_limit'),
 			Language.get("splash_limit_desc"),
