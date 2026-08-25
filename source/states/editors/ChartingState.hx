@@ -1276,6 +1276,10 @@ if(_shouldReset) Conductor.songPosition = 0;
 	var haxeMenuBarHeight:Float = 30;
 	// HaxeUI 菜单项 ↔ 原 PsychUIButton 映射，用于同步动态文本（如视图菜单的前三项、便捷制谱器开关）
 	var haxeMenuItemMappings:Array<{item:MenuItem, btn:PsychUIButton}> = [];
+	// 顶部菜单条按钮 ↔ 菜单映射（顺序一致），用于切换菜单时精确控制按钮高亮
+	var haxeMenuBarMenus:Array<Menu> = [];
+	var haxeMenuBarButtons:Array<Button> = [];
+	var haxeMenuOpenMenu:Menu = null; // 当前打开的下拉菜单（用于按钮高亮判断，比 selected 更可靠）
 
 	// 顶部条信息：FPS+内存峰值（水平居中一行）与版本（右上角）
 	// 用 FlxText 叠加在 HaxeUI 菜单条之上渲染：不用 HaxeUI Label 是因为全宽 Label 会拦截菜单按钮的点击事件
@@ -6208,9 +6212,12 @@ for (i in 0...GRID_PLAYERS)
 
 				// 记录菜单项与底层按钮的映射，用于后续同步动态文本
 				haxeMenuItemMappings.push({item: item, btn: pb});
+				// 注册悬停浅蓝高亮
+				registerMenuItemHover(item);
 			}
 
 			menus.push(menu);
+			haxeMenuBarMenus.push(menu);
 			haxeMenuBar.addComponent(menu);
 		}
 
@@ -6223,18 +6230,29 @@ for (i in 0...GRID_PLAYERS)
 		for (child in haxeMenuBar.childComponents)
 		{
 			if (child is Button)
+			{
 				child.styleString = 'font-name: $menuFont; font-size: 12px; min-width: 100px;';
+				registerTopBarButtonHover(cast child);
+				haxeMenuBarButtons.push(cast child);
+			}
 		}
 
 		haxeMenuBar.registerEvent(MenuEvent.MENU_OPENED, function(e:MenuEvent)
 		{
 			haxeMenuOpen = true;
+			haxeMenuOpenMenu = e.menu;
 			haxeMenuIgnoreFrames = 2;
 			styleMenuComponent(e.menu); // 深浅色模式下套用下拉菜单配色
+			setMenuButtonHighlight(e.menu, true); // 打开菜单的按钮高亮
 		});
 		haxeMenuBar.registerEvent(MenuEvent.MENU_CLOSED, function(_)
 		{
 			haxeMenuOpen = false;
+			if (haxeMenuOpenMenu != null)
+			{
+				setMenuButtonHighlight(haxeMenuOpenMenu, false); // 关闭时恢复该按钮底色
+				haxeMenuOpenMenu = null;
+			}
 			haxeMenuIgnoreFrames = 2;
 		});
 
@@ -6297,6 +6315,9 @@ for (i in 0...GRID_PLAYERS)
 			}
 			haxeMenuBar.invalidateComponentStyle(true);
 			haxeMenuBar.invalidateComponent();
+			// 主题切换重设了按钮 styleString，若此时有菜单打开，重新套用其按钮高亮
+			if (haxeMenuOpenMenu != null)
+				setMenuButtonHighlight(haxeMenuOpenMenu, true);
 		}
 		if (topBarFpsMemText != null)
 			topBarFpsMemText.color = fgColorInt;
@@ -6374,6 +6395,58 @@ for (i in 0...GRID_PLAYERS)
 		}
 		for (child in comp.childComponents)
 			applyMenuFont(child, font);
+	}
+
+	/** 返回菜单对应的顶部按钮（菜单与按钮按加入顺序一一对应） */
+	function getMenuBarButton(menu:Menu):Button
+	{
+		var idx = haxeMenuBarMenus.indexOf(menu);
+		if (idx < 0 || idx >= haxeMenuBarButtons.length) return null;
+		return haxeMenuBarButtons[idx];
+	}
+
+	/** 高亮/恢复菜单对应按钮：打开菜单时浅蓝，关闭时恢复底色 */
+	function setMenuButtonHighlight(menu:Menu, active:Bool)
+	{
+		var btn = getMenuBarButton(menu);
+		if (btn == null) return;
+		btn.backgroundColor = active
+			? (haxeMenuStyleLight ? 0xFFB4CBE4 : 0xFF4A6A8A)
+			: (haxeMenuStyleLight ? 0xFFF6F6F6 : 0xFF3D3F41);
+	}
+
+	/** 顶部菜单条按钮：注册鼠标悬停浅蓝高亮。styleString 无法携带 :hover 伪类，
+		只能用 MOUSE_OVER/MOUSE_OUT 事件动态改背景色（主题的 hover 已被内联 background-color 覆盖） */
+	function registerTopBarButtonHover(btn:Button)
+	{
+		if (btn == null) return;
+		btn.registerEvent(MouseEvent.MOUSE_OVER, function(_)
+		{
+			btn.backgroundColor = (haxeMenuStyleLight ? 0xFFB4CBE4 : 0xFF4A6A8A);
+		});
+		btn.registerEvent(MouseEvent.MOUSE_OUT, function(_)
+		{
+			// 仅当该按钮对应的下拉菜单正处于打开状态时才保持高亮，否则恢复底色。
+			// 用 haxeMenuOpenMenu 判断而非 selected：切换菜单时 MOUSE_OUT 会先于 MenuBar
+			// 更新 selected 触发，若按 selected 判断会误留高亮，导致多个按钮同时变蓝。
+			btn.backgroundColor = (haxeMenuOpenMenu != null && getMenuBarButton(haxeMenuOpenMenu) == btn)
+				? (haxeMenuStyleLight ? 0xFFB4CBE4 : 0xFF4A6A8A)
+				: (haxeMenuStyleLight ? 0xFFF6F6F6 : 0xFF3D3F41);
+		});
+	}
+
+	/** 下拉菜单项：注册鼠标悬停浅蓝高亮（颜色同下拉选中色 selBg），悬停离开恢复底色 */
+	function registerMenuItemHover(item:MenuItem)
+	{
+		if (item == null) return;
+		item.registerEvent(MouseEvent.MOUSE_OVER, function(_)
+		{
+			item.backgroundColor = (haxeMenuStyleLight ? 0xFFB4CBE4 : 0xFF4A6A8A);
+		});
+		item.registerEvent(MouseEvent.MOUSE_OUT, function(_)
+		{
+			item.backgroundColor = (haxeMenuStyleLight ? 0xFFFFFFFF : 0xFF2D2F31);
+		});
 	}
 
 	/** 同步 HaxeUI 菜单项文本与底层 PsychUIButton 的动态文本（如视图菜单前三项、便捷制谱器开关） */
@@ -8534,6 +8607,11 @@ function adaptNotesToNewTimes(oldTimes:Array<Float>)
 		setSongPlaying(false);
 		chartEditorSave.flush(); //just in case a random crash happens before loading
 
+		// 预览游玩期间暂停制谱器主逻辑：
+		// 1) 避免父状态每帧用已暂停的 FlxG.sound.music.time 覆盖 Conductor.songPosition（否则预览卡在同一时机不动）；
+		// 2) persistentUpdate=false 使打开子状态时触发 FlxG.inputs.onStateSwitch() 清空 justPressed，
+		//    防止 F12 在同一帧被子状态的退出判断捕获导致预览瞬间关闭（vanilla104 即为 persistentUpdate=false）。
+		persistentUpdate = false;
 		openSubState(new EditorPlayState(cast notes, [vocals, opponentVocals]));
 		upperBox.isMinimized = true;
 		mainBox.visible = infoBox.visible = false;
@@ -8562,6 +8640,7 @@ function adaptNotesToNewTimes(oldTimes:Array<Float>)
 
 	override function closeSubState()
 	{
+		persistentUpdate = true; // 预览游玩结束，恢复制谱器主逻辑更新
 		ClientPrefs.toggleVolumeKeys(true);
 		super.closeSubState();
 		upperBox.isMinimized = true;
@@ -9251,9 +9330,13 @@ function adaptNotesToNewTimes(oldTimes:Array<Float>)
 		wl.waveformRMSColor = CoolUtil.colorFromString(waveformLibRMSColor);
 
 		wl.waveformTime = cachedSectionTimes[section] - Conductor.offset;
-		var endIdx:Int = section + 1;
-		if(endIdx >= cachedSectionTimes.length) endIdx = section;
-		wl.waveformDuration = cachedSectionTimes[endIdx] - cachedSectionTimes[section];
+		// 末段没有下一段起点缓存，用歌曲总时长作结束点；避免 duration=0 导致窗口为空/除零 → 波形空白
+		var endTime:Float = (section + 1 < cachedSectionTimes.length)
+			? cachedSectionTimes[section + 1]
+			: FlxG.sound.music.length;
+		var duration:Float = endTime - cachedSectionTimes[section];
+		if(duration <= 0) duration = 1;
+		wl.waveformDuration = duration;
 		return true;
 		#else
 		return false;

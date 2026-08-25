@@ -38,4 +38,18 @@ class ChartingWaveform extends FlxWaveform
 		if (channel < waveformBuffer.numChannels)
 			buildDrawData(channel, drawPoints, false, true);
 	}
+
+	/**
+	 * 原库的 set_waveformTime 只标记 _waveformDirty、不标记 _drawDataDirty。
+	 * 绘制数据数组按"绝对采样位置"索引，当相邻 section 时长相同（waveformDuration 不变）时，
+	 * 切 section 只有 time 变化，会导致 generateWaveformBitmap() 跳过绘制数据重建，
+	 * drawPeaks() 读到旧窗口位置上的空数据 → 波形空白（制谱器里三个频谱会同时出问题）。
+	 * 这里在 time 变化时强制标记重建绘制数据，保证每次切 section 都按新窗口重算。
+	 */
+	override function set_waveformTime(value:Float):Float
+	{
+		if (waveformTime != value)
+			_drawDataDirty = true;
+		return super.set_waveformTime(value);
+	}
 }
