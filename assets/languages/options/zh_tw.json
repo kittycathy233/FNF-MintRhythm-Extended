@@ -80,6 +80,8 @@
     "keyviewer_cal_offset": "目前偏移  X: {0}  Y: {1}",
     "keyviewer_cal_pending": "  (未儲存…)",
     "keyviewer_cal_saved": "已儲存",
+    "keyviewer_trail_speed": "軌跡速度",
+    "keyviewer_trail_speed_desc": "按鍵軌跡（白塊）的移動速度。數值越大速度越快。",
     "gameovervibration_desc": "開啟後失敗(BlueBall)時設備會震動",
     "sustainsasone_desc": "開啟後長按音符只判定一次，MISS後無法再按\n關閉可恢復舊版輸入方式",
     "hitsoundvolume_desc": "命中音符時會發出《響亮》的音效",

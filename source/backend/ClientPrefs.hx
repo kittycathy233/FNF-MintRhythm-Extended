@@ -344,6 +344,8 @@ import openfl.display.StageQuality;
 	// KeyViewer 位置偏移（像素，相对默认位置）：在设置内拖动校准，跨重启持久化
 	public var keyViewerPosX:Float = 0;
 	public var keyViewerPosY:Float = 0;
+	// KeyViewer 轨迹速度（像素/秒），可在设置中调节
+	public var keyViewerTrailSpeed:Float = 300;
 
 }
 

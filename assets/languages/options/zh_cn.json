@@ -82,6 +82,8 @@
     "keyviewer_cal_offset": "当前偏移  X: {0}  Y: {1}",
     "keyviewer_cal_pending": "  (未保存…)",
     "keyviewer_cal_saved": "已保存",
+    "keyviewer_trail_speed": "轨迹速度",
+    "keyviewer_trail_speed_desc": "按键轨迹（白块）的移动速度。数值越大速度越快。",
     "gameovervibration_desc": "开启后失败(BlueBall)时设备会震动",
     "sustainsasone_desc": "开启后长按音符只判定一次，MISS后无法再按\n关闭可恢复旧版输入方式",
     "hitsoundvolume_desc": "命中音符时会发出《响亮》的音效",

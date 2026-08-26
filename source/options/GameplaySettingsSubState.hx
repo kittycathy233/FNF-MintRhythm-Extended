@@ -56,6 +56,17 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 			MusicBeatState.switchState(new KeyViewerPosState());
 		};
 
+		var option:Option = new Option(Language.get('key_viewer_trail_speed'),
+			Language.get("keyviewer_trail_speed_desc"),
+			'keyViewerTrailSpeed',
+			FLOAT);
+		option.scrollSpeed = 10;
+		option.minValue = 100;
+		option.maxValue = 1000;
+		option.changeValue = 10;
+		option.decimals = 0;
+		addOption(option);
+
 		var option:Option = new Option(Language.get('middlescroll'),
 			Language.get("middlescroll_desc"),
 			'middleScroll',

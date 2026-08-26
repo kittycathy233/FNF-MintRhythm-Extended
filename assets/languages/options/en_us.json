@@ -81,6 +81,8 @@
     "keyviewer_cal_offset": "Current Offset  X: {0}  Y: {1}",
     "keyviewer_cal_pending": "  (Unsaved...)",
     "keyviewer_cal_saved": "Saved",
+    "keyviewer_trail_speed": "Trail Speed",
+    "keyviewer_trail_speed_desc": "Movement speed of the key trail (white blocks). Higher = faster.",
     "gameovervibration_desc": "When enabled, the device vibrates on failure (BlueBall)",
     "sustainsasone_desc": "When enabled, hold notes are judged only once; cannot be pressed again after a MISS\nDisable to restore the old input method",
     "hitsoundvolume_desc": "Plays a 'loud' hit sound effect when notes are hit",

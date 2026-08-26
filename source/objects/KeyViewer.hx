@@ -114,7 +114,7 @@ class KeyViewer extends FlxGroup
 	static final DEFAULT_NAME:String = 'PLAYER';
 
 	// ---- 按键轨迹可视化（复刻 JKPS Key press visualization）----
-	static final VIS_SPEED:Float = 2.5;       // 每帧向上移动/拉长速度（≈ JKPS speed 60 的缩放）
+	static final VIS_SPEED:Float = 300;       // 默认每秒向上移动/拉长速度（像素/秒，与帧率无关）
 	static final FADE_DIST:Float = 500;       // 飘出消失距离（Fade out distance）
 	static final MAX_STRETCH:Float = 250;     // 按住时长条最大拉长量（上限）
 	static final FADE_LINE:Float = 200;       // 遮罩线：距按键顶端 200px，白块超出此线被裁切渐隐
@@ -437,6 +437,7 @@ class KeyViewer extends FlxGroup
 		var textW:Float = TEXT_AREA_W - BTN_GAP;
 		statsText = new FlxText(textX, 0, textW, 'KPS: 0\nTotal: 0\nMax: 0', 14);
 		statsText.setFormat(Paths.font(FONT_NAME), 14, TEXT_COLOR, LEFT);
+		statsText.fieldWidth = 0; // 禁用 fieldWidth 限制，防止 Total 达到6位及以上时文本换行
 		statsText.scrollFactor.set(0, 0);
 		statsText.y = Math.round(yPos + (BTN_SIZE - statsText.height) / 2);
 		add(statsText);
@@ -537,7 +538,7 @@ class KeyViewer extends FlxGroup
 			if (controls.pressed(action))
 			{
 				// 按住中：长条从 0 高度向上拉长，到遮罩线(200)即暂停（封顶不再变长）
-				stretch[p] = Math.min(FADE_LINE, stretch[p] + VIS_SPEED);
+				stretch[p] = Math.min(FADE_LINE, stretch[p] + ClientPrefs.data.keyViewerTrailSpeed * elapsed);
 			}
 			else
 			{
@@ -546,11 +547,11 @@ class KeyViewer extends FlxGroup
 			}
 		}
 		else
-		{
-			// 已松开：整条沿轨迹方向飘走（高度保持）
-			drift[p] += VIS_SPEED;
-			spr.y += d ? VIS_SPEED : -VIS_SPEED; // 下落 / 上升
-		}
+			{
+				// 已松开：整条沿轨迹方向飘走（高度保持），漂移量同步更新 spr.y
+				drift[p] += ClientPrefs.data.keyViewerTrailSpeed * elapsed;
+			spr.y += d ? ClientPrefs.data.keyViewerTrailSpeed * elapsed : -ClientPrefs.data.keyViewerTrailSpeed * elapsed; // 下落 / 上升
+			}
 
 		// 长条高度完全由 stretch 决定（stretch=0 即最小高度≈0，瞬间点击不产生高块）
 		var h:Float = Math.max(1, stretch[p]);
@@ -558,41 +559,39 @@ class KeyViewer extends FlxGroup
 		spr.updateHitbox();
 		if (holding[p])
 		{
-			// 上升：底部钉在按键顶端(anchorY)，顶部向上延伸 h；下落：顶部钉在按键底端(anchorY)，向下延伸 h
+			// 按住中：钉住锚点，顶部/底边随 stretch 变化，不叠加漂移
 			spr.y = d ? anchorY[p] : anchorY[p] - h;
 			spr.alpha = 1;
 		}
-		// 飘走阶段：spr.y 已在前面 spr.y -= VIS_SPEED 累积上飘，这里不再重设（否则会被钉回原位）
+		// 飘走阶段：spr.y 已在上面累加，这里不再重设
 
-			// 遮罩线（fade line）：上升=按键顶端上方 FADE_LINE；下落=按键底端下方 FADE_LINE。
-			// 白块超出该线的部分被裁断渐隐。clipRect 使用帧（纹理）坐标，需把屏幕局部差按
-			// scale.y 换算回帧坐标，否则 setGraphicSize 拉长后坐标单位不一致会误裁。
-			// 上升：保留线以下（靠近按键）部分 → frame[lineLocalTex .. frameHeight]
-			// 下落：保留线以上（靠近按键）部分 → frame[0 .. lineLocalTex]
+			// 剪辑与移动同步完成：在统一应用 spr.y 之后立即计算 clipRect
+			// 遮罩线：上升=按键顶端上方 FADE_LINE；下落=按键底端下方 FADE_LINE。
+			// clipRect 使用帧坐标，需按 scale.y 换算屏幕差值。
 			var fadeLineY:Float = d ? (anchorY[p] + FADE_LINE) : (anchorY[p] - FADE_LINE);
-			var lineLocalTex:Float = (fadeLineY - spr.y) / spr.scale.y; // 遮罩线在帧局部坐标系的 y
-			if (d)
+			var lineLocalTex:Float = (fadeLineY - spr.y) / spr.scale.y;
+			if (d) // 下落：保留线以上部分
 			{
 				if (lineLocalTex <= 0)
-					spr.clipRect = new flixel.math.FlxRect(0, 0, spr.frameWidth, 0); // 整条已越过线：不可见
+					spr.clipRect = new flixel.math.FlxRect(0, 0, spr.frameWidth, 0);
 				else if (lineLocalTex >= spr.frameHeight)
-					spr.clipRect = null; // 整条都在线以内：完整显示
+					spr.clipRect = null;
 				else
 					spr.clipRect = new flixel.math.FlxRect(0, 0, spr.frameWidth, lineLocalTex);
 			}
-			else
+			else // 上升：保留线以下部分
 			{
 				if (lineLocalTex <= 0)
-					spr.clipRect = null; // 整条都在线以内：完整显示
+					spr.clipRect = null;
 				else if (lineLocalTex >= spr.frameHeight)
-					spr.clipRect = new flixel.math.FlxRect(0, 0, spr.frameWidth, 0); // 整条已越过线：不可见
+					spr.clipRect = new flixel.math.FlxRect(0, 0, spr.frameWidth, 0);
 				else
 					spr.clipRect = new flixel.math.FlxRect(0, lineLocalTex, spr.frameWidth, spr.frameHeight - lineLocalTex);
 			}
 
 			// 飘走阶段整体淡出
 			if (!holding[p])
-				spr.alpha = Math.max(0, spr.alpha - VIS_SPEED / FADE_DIST);
+				spr.alpha = Math.max(0, spr.alpha - (ClientPrefs.data.keyViewerTrailSpeed / FADE_DIST) * elapsed);
 
 		// 回收：仅飘走阶段，整条越过遮罩线（上升=底部到线以上，下落=顶部到线以下）或 alpha 归零
 		var bottomY:Float = spr.y + spr.height;
