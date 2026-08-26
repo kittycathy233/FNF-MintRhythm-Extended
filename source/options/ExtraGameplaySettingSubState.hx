@@ -102,6 +102,13 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			['Kathy', 'Kade']);
 		addOption(option);
 
+		option = new Option(Language.get('ms_timing_offset_mode'),
+			Language.get("ms_timing_offset_mode_desc"),
+			'msTimingOffsetMode',
+			STRING,
+			['independent', 'numScore']);
+		addOption(option);
+
 		option = new Option(Language.get('show_nps'),
 			Language.get("nps_desc"),
 			'showNPS',

@@ -158,7 +158,7 @@ import openfl.display.StageQuality;
 		'playOpponent' => false
 	];
 
-	public var comboOffset:Array<Int> = [0, 0, 0, 0, 0, 0];
+	public var comboOffset:Array<Int> = [0, 0, 0, 0, 0, 0, 0, 0]; // [0,1]评级 [2,3]combo数字(combo字样共用) [4,5]额外的EX评级 [6,7]msTimeTxt(始终作为二次偏移)
 	public var ratingOffset:Int = 0;
 	public var hitWindowPreset:String = 'Psych / Kade';
 	public var perfectWindow:Float = 23.00;
@@ -198,6 +198,7 @@ import openfl.display.StageQuality;
 	public var rmmsTimeTxt:Bool = false;
 	public var showModeLabelInMsTxt:Bool = true;
 	public var msTimingStyle:String = 'Kathy'; // ms 毫秒显示风格: 'Kathy'(Psych 静态文本) / 'Kade'(Kade 弹出+判定颜色)
+	public var msTimingOffsetMode:String = 'independent'; // msTimeTxt 位置偏移方式: 'independent'(独立偏移 [6,7]) / 'numScore'(跟随 combo 数字 [2,3])
 	public var scoretxtbounce:Bool = false;
 	public var exratbounce:Bool = false;
 	public var iconbopstyle:String = 'Kathy';
@@ -552,6 +553,17 @@ class ClientPrefs {
 		if (data.soundTrayStyle == null) {
 			data.soundTrayStyle = 'Flixel';
 		}
+
+		// 为 comboOffset 新增的槽位补默认值（兼容老存档升级；[6,7]msTimeTxt，超出槽位保留但已不使用）
+		if (data.comboOffset == null)
+			data.comboOffset = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+		else if (data.comboOffset.length < 10) {
+			while (data.comboOffset.length < 10) data.comboOffset.push(0);
+		}
+
+		// 新增 msTimeTxt 偏移方式字段默认值（兼容老存档升级）
+		if (!Reflect.hasField(FlxG.save.data, 'msTimingOffsetMode'))
+			data.msTimingOffsetMode = 'independent';
 
 		// 为 1.5.x 新增的移动端判定补偿字段填充默认值（兼容老存档升级）
 		// FlxG.save.data 里没有对应键时，Reflect.hasField 返回 false，此时保持类声明中的默认值。

@@ -1187,8 +1187,17 @@ isReplaying = false;
 		msTimeTxt.borderSize = 1.3;
 		/*mstimeTxt.y = comboSpr.y + 20;
 		mstimeTxt.x += comboSpr.x + 100;*/
-		msTimeTxt.x = ClientPrefs.data.comboOffset[2] + 480;
-		msTimeTxt.y = -ClientPrefs.data.comboOffset[3] + 480 ;
+		// [6,7] 始终作为 msTimeTxt 二次偏移；'numScore' 时额外沿用 combo 数字槽位 [2,3] 作为基础锚点
+		var msInitBaseX:Int = 0;
+		var msInitBaseY:Int = 0;
+		if (ClientPrefs.data.msTimingOffsetMode != 'independent') {
+			msInitBaseX = ClientPrefs.data.comboOffset[2];
+			msInitBaseY = ClientPrefs.data.comboOffset[3];
+		} else {
+			msInitBaseX = 150; // 独立偏移：默认在此基础上额外右移 150
+		}
+		msTimeTxt.x = FlxG.width * 0.35 + 100 + msInitBaseX + ClientPrefs.data.comboOffset[6] + 60 - 20 - 40;
+		msTimeTxt.y = (FlxG.height * 0.5) + 80 - 40 - msInitBaseY - ClientPrefs.data.comboOffset[7];
 		addToHUD(msTimeTxt);
 
 		iconP1 = new HealthIcon(boyfriend.healthIcon, true);
@@ -1304,9 +1313,7 @@ isReplaying = false;
 		watermarkText = new FlxText(20, FlxG.height - 20, 0, watermarkContent, 14);
 		watermarkText.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		watermarkText.scrollFactor.set();
-		watermarkText.borderSize = 1.2;
-		watermarkText.y = !ClientPrefs.data.downScroll ? 20 : FlxG.height - 20;
-		watermarkText.alpha = 0.8;
+		watermarkText.y = !ClientPrefs.data.downScroll ? (watermarkText.height * 0.5) : FlxG.height - (watermarkText.height * 1.5);
 		watermarkText.visible = !ClientPrefs.data.hideHud;
 		if (ClientPrefs.data.waterMarkPlay)	addToHUD(watermarkText);
 
@@ -5129,10 +5136,6 @@ tempScore += '${lblScore}: ${songScore}';
 				}
 				msTimeTxt.alpha = 1;
 				msTimeTxt.visible = true;
-				if (isPixelStage) {
-					msTimeTxt.font = Paths.font("pixel.otf");
-					msTimeTxt.size = 16;
-				}
 				// Kade 原生：颜色随判定变化（bad/shit 红、good 绿、sick 青）；Perfect 引擎无原生配色，用浅粉高亮
 				switch (daRating.name) {
 					case 'perfect':
@@ -5146,10 +5149,18 @@ tempScore += '${lblScore}: ${songScore}';
 				}
 				msTimeTxt.text = CoolUtil.floorDecimal(noteDiff, 2) + "ms";
 				msTimeTxt.updateHitbox();
-				var kadeCam:FlxCamera = ClientPrefs.data.ratingsPos == 'camHUD' ? camHUD : camGame;
-				// Kade: x = combo.x + 100, y = rating.y + 100（锚定判定区右侧偏下）
-				msTimeTxt.x = FlxG.width * 0.35 + ClientPrefs.data.comboOffset[0] + 160;
-				msTimeTxt.y = (kadeCam.height / 2) + 170 - ClientPrefs.data.comboOffset[1];
+			// 统一使用 NoteOffsetState 预览位置（Kathy 基准），Kade 只保留颜色/淡出差异
+			// [6,7] 始终作为 msTimeTxt 二次偏移；'numScore' 时沿用 combo 数字槽位 [2,3] 作为基础锚点
+			var msBaseX:Int = 0;
+			var msBaseY:Int = 0;
+			if (ClientPrefs.data.msTimingOffsetMode != 'independent') {
+			msBaseX = ClientPrefs.data.comboOffset[2];
+			msBaseY = ClientPrefs.data.comboOffset[3];
+		} else {
+			msBaseX = 150; // 独立偏移：默认在此基础上额外右移 150
+		}
+		msTimeTxt.x = FlxG.width * 0.35 + 100 + msBaseX + ClientPrefs.data.comboOffset[6] + 60 - 20 - 40;
+			msTimeTxt.y = (FlxG.height * 0.5) + 80 - 40 - msBaseY - ClientPrefs.data.comboOffset[7];
 				msTimeTxt.acceleration.y = 600;
 				msTimeTxt.velocity.y = -150;
 				msTimeTxt.velocity.x = FlxG.random.float(0, 10);
@@ -5183,7 +5194,17 @@ tempScore += '${lblScore}: ${songScore}';
 
 			}
 			msTimeTxt.alpha = ratingAlpha;
-			msTimeTxt.y = -ClientPrefs.data.comboOffset[3] + 480;
+		// [6,7] 始终作为 msTimeTxt 二次偏移；'numScore' 时额外沿用 combo 数字槽位 [2,3] 作为基础锚点
+		var msLiveBaseX:Int = 0;
+		var msLiveBaseY:Int = 0;
+		if (ClientPrefs.data.msTimingOffsetMode != 'independent') {
+			msLiveBaseX = ClientPrefs.data.comboOffset[2];
+			msLiveBaseY = ClientPrefs.data.comboOffset[3];
+		} else {
+			msLiveBaseX = 150; // 独立偏移：默认在此基础上额外右移 150
+		}
+		msTimeTxt.x = FlxG.width * 0.35 + 100 + msLiveBaseX + ClientPrefs.data.comboOffset[6] + 60 - 20 - 40;
+		msTimeTxt.y = (FlxG.height * 0.5) + 80 - 40 - msLiveBaseY - ClientPrefs.data.comboOffset[7];
 			// 调整显示格式，保留两位小数
 			var modeLabel:String = "";
 			if (ClientPrefs.data.showModeLabelInMsTxt) {
@@ -5207,17 +5228,15 @@ tempScore += '${lblScore}: ${songScore}';
 			msTimeTxtTween1 = FlxTween.tween(msTimeTxt, {alpha: 0}, 0.5, {
 				onComplete: function(tw:FlxTween) {msTimeTxtTween1 = null;}, startDelay: (60 / Conductor.bpm) * 0.5
 			});
-
-			if (msTimeTxtTween2 != null){
-				msTimeTxtTween2.cancel(); msTimeTxtTween2.destroy(); // top 10 awesome code
+			// Kathy 风格：命中时向下位移 10px（恢复历史行为；NoteOffsetState 预览为静态不位移，属预期差异）
+			if (msTimeTxtTween2 != null) {
+				msTimeTxtTween2.cancel(); msTimeTxtTween2.destroy();
 			}
-			msTimeTxtTween2 = FlxTween.tween(msTimeTxt, {y: msTimeTxt.y + 10}, 0.2, {
-				ease: FlxEase.quintOut,
-			});
+			msTimeTxtTween2 = FlxTween.tween(msTimeTxt, {y: msTimeTxt.y + 10}, 0.32, {ease: FlxEase.circOut});
 			}
 		}
 
-		var placement:Float = FlxG.width * 0.35;
+		var placement:Float = FlxG.width * 0.35 + 100;
 		var score:Int = 350;
 
 		// 复用上方已计算的 daRating（避免重复调用 judgeNote）
@@ -5286,8 +5305,8 @@ tempScore += '${lblScore}: ${songScore}';
 			rating.x = placement - 40;
 			rating.y -= 60;
 			rating.visible = (!ClientPrefs.data.hideHud && showRating);
-			rating.x += ClientPrefs.data.comboOffset[0] - 30;
-			rating.y -= ClientPrefs.data.comboOffset[1] - 130;
+			rating.x += ClientPrefs.data.comboOffset[0];
+			rating.y -= ClientPrefs.data.comboOffset[1];
 			rating.antialiasing = antialias;
 
 			theEXrating.loadGraphic(_exRatingGfxCache != null ? _exRatingGfxCache.get(displayExRatingName) : Paths.image(uiFolder + displayExRatingName + exratingexspr + uiPostfix));
@@ -5295,8 +5314,8 @@ tempScore += '${lblScore}: ${songScore}';
 			theEXrating.x = placement - 40;
 			theEXrating.y -= 60;
 			theEXrating.visible = (!ClientPrefs.data.hideHud && showEXRating);
-			theEXrating.x += ClientPrefs.data.comboOffset[4] - 220;
-			theEXrating.y += -ClientPrefs.data.comboOffset[5] + 150;
+			theEXrating.x += ClientPrefs.data.comboOffset[4] - 140;
+			theEXrating.y -= ClientPrefs.data.comboOffset[5]; // y 基础已在上方 -=60，与 rating 对齐
 			theEXrating.antialiasing = antialias;
 			theEXrating.angle = 0;
 
@@ -5338,10 +5357,10 @@ tempScore += '${lblScore}: ${songScore}';
 			//comboSpr.velocity.y -= FlxG.random.int(140, 160) * playbackRate;
 			//comboSpr.velocity.x += FlxG.random.int(1, 10) * playbackRate;
 			comboSpr.visible = (!ClientPrefs.data.hideHud && showThisCombo);
-			comboSpr.x += ClientPrefs.data.comboOffset[0] + 60;
-			comboSpr.y -= ClientPrefs.data.comboOffset[1];
+			// comboSpr 不跟随 rating：改为跟在 combo 数字之后，沿用 numScore 的偏移槽位 [2,3]（不可独立调整），并上移 30px 修正靠下问题
+			comboSpr.y -= ClientPrefs.data.comboOffset[3];
+			comboSpr.y += 50;
 			comboSpr.antialiasing = antialias;
-			comboSpr.y += 160;
 
 			if (isCamellia)
 			{
@@ -5519,8 +5538,8 @@ tempScore += '${lblScore}: ${songScore}';
 				var numIdx:Int = Std.parseInt(separatedScore.charAt(i));
 				numScore.loadGraphic((_numGfxCache != null && numIdx < _numGfxCache.length) ? _numGfxCache[numIdx] : Paths.image(uiFolder + 'num' + numIdx + uiPostfix));
 				numScore.screenCenter();
-				numScore.x = placement + (43 * daLoop) - 70 + ClientPrefs.data.comboOffset[2];
-				numScore.y += 80 - ClientPrefs.data.comboOffset[3] + 110;
+				numScore.x = placement + (43 * daLoop) - 90 + ClientPrefs.data.comboOffset[2];
+				numScore.y += 80 - ClientPrefs.data.comboOffset[3];
 				numScore.alpha = ratingAlpha;
 
 				if (!PlayState.isPixelStage)
@@ -5605,7 +5624,15 @@ tempScore += '${lblScore}: ${songScore}';
 				if (numScore.x > xThing)
 					xThing = numScore.x;
 			}
-			comboSpr.x = xThing + 50;
+			comboSpr.x = xThing + 50; // 跟随最大数字 xThing，偏移由 numScore 的 [2,3] 承载，不可独立调整
+			// msTimeTxt 基于 numScore 对齐：启用 "combo" 单词(comboSprDisplay)时跟到单词之后，否则紧跟数字末位，
+			// comboOffset[6] 作为二次微调（与 NoteOffsetState 预览保持一致）
+			if (ClientPrefs.data.msTimingOffsetMode == 'numScore') {
+				if (ClientPrefs.data.comboSprDisplay)
+					msTimeTxt.x = comboSpr.x + comboSpr.width + 5 - 20 - 40 + ClientPrefs.data.comboOffset[6];
+				else
+					msTimeTxt.x = xThing + 60 - 20 - 40 + ClientPrefs.data.comboOffset[6];
+			}
 		comboJustBroke = false; // 本次命中已消费断连标记
 
 			// 根据不同的跳动风格设置渐隐延迟

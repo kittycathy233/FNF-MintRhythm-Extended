@@ -25,6 +25,8 @@ class NoteOffsetState extends MusicBeatState
 
 	//新东西
 	var theEXrating:FlxSprite;
+	var msTimeTxt:FlxText;
+	var comboWordSpr:FlxSprite; // "combo" 字样精灵（跟随 numScore，共用其偏移槽位 [2,3]，不可独立调整）
 	public var scoreTxt:FlxText;
 	var scoreTxtTween:FlxTween;
 	public var health:Float = 1;
@@ -83,7 +85,7 @@ class NoteOffsetState extends MusicBeatState
 		// Combo stuff
 		coolText = new FlxText(0, 0, 0, '', 32);
 		coolText.screenCenter();
-		coolText.x = FlxG.width * 0.35;
+		coolText.x = FlxG.width * 0.35 + 100;
 
 		//rating = new FlxSprite().loadGraphic(Paths.image('sick'));
 		if(ClientPrefs.data.rmPerfect == 'enable')
@@ -107,6 +109,26 @@ class NoteOffsetState extends MusicBeatState
 		theEXrating.antialiasing = ClientPrefs.data.antialiasing;
 
 		if(ClientPrefs.data.exratingDisplay) add(theEXrating);
+
+		// msTimeTxt（Kathy 静态）用于预览/调整独立偏移 [6,7]
+		msTimeTxt = new FlxText(0, 0, 250, "11.45ms", 24);
+		if (ClientPrefs.data.msTimingStyle == 'Kade')
+			msTimeTxt.setFormat(null, 24, FlxColor.WHITE, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK); // Kade 风格：默认字体
+		else
+			msTimeTxt.setFormat(Paths.font('vcr.ttf'), 24, FlxColor.WHITE, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		msTimeTxt.scrollFactor.set();
+		msTimeTxt.borderSize = 1.3;
+		msTimeTxt.cameras = [camHUD];
+		add(msTimeTxt);
+
+		// "combo" 字样精灵（沿用 [0,1] 偏移）
+		comboWordSpr = new FlxSprite().loadGraphic(Paths.image('combo'));
+		comboWordSpr.cameras = [camHUD];
+		comboWordSpr.antialiasing = ClientPrefs.data.antialiasing;
+		comboWordSpr.setGraphicSize(Std.int(comboWordSpr.width * 0.65));
+		comboWordSpr.updateHitbox();
+		// "combo" 单词不可触摸：其触摸拖动分支已移除（repositionCombo 位置仍跟随数字串联动）
+		add(comboWordSpr);
 
 		healthBar = new Bar(0, FlxG.height * (!ClientPrefs.data.downScroll ? 0.89 : 0.11), 'healthBar', function() return health, 0, 2);
 		healthBar.screenCenter(X);
@@ -222,6 +244,8 @@ class NoteOffsetState extends MusicBeatState
 		// 更新 rating 和 theEXrating 的图层
 		if (rating != null) rating.cameras = targetCamera;
 		if (theEXrating != null) theEXrating.cameras = targetCamera;
+		if (msTimeTxt != null) msTimeTxt.cameras = targetCamera;
+		if (comboWordSpr != null) comboWordSpr.cameras = targetCamera;
 
 		// 更新 comboNums 的图层
 		comboNums.cameras = targetCamera;
@@ -231,6 +255,8 @@ class NoteOffsetState extends MusicBeatState
 	var onComboMenu:Bool = true;
 	var holdingObjectType:Null<Bool> = null;
 	var theEXratingDrag:Null<Bool> = null;
+	var msTimeTxtDrag:Bool = false;
+	var comboWordDrag:Bool = false;
 
 	var startMousePos:FlxPoint = new FlxPoint();
 	var startComboOffset:FlxPoint = new FlxPoint();
@@ -371,6 +397,8 @@ class NoteOffsetState extends MusicBeatState
 				{
 					holdingObjectType = null;
 					theEXratingDrag = null;
+					msTimeTxtDrag = false;
+					comboWordDrag = false;
 	
 					if(!controls.controllerMode)
 						FlxG.mouse.getScreenPosition(camHUD, startMousePos);
@@ -381,10 +409,10 @@ class NoteOffsetState extends MusicBeatState
 						startMousePos.y - comboNums.y >= 0 && startMousePos.y - comboNums.y <= comboNums.height)
 					{
 						holdingObjectType = true;
-						startComboOffset.x = ClientPrefs.data.comboOffset[2];
-						startComboOffset.y = ClientPrefs.data.comboOffset[3];
-						//trace('yo bro');
-					}
+					startComboOffset.x = ClientPrefs.data.comboOffset[2];
+					startComboOffset.y = ClientPrefs.data.comboOffset[3];
+					//trace('yo bro');
+				}
 					else if (startMousePos.x - rating.x >= 0 && startMousePos.x - rating.x <= rating.width &&
 							 startMousePos.y - rating.y >= 0 && startMousePos.y - rating.y <= rating.height)
 					{
@@ -400,12 +428,28 @@ class NoteOffsetState extends MusicBeatState
 						startComboOffset.x = ClientPrefs.data.comboOffset[4];
 						startComboOffset.y = ClientPrefs.data.comboOffset[5];
 					}
+					else if (comboWordSpr.visible && startMousePos.x >= comboWordSpr.x && startMousePos.x <= comboWordSpr.x + comboWordSpr.width &&
+						startMousePos.y >= comboWordSpr.y && startMousePos.y <= comboWordSpr.y + comboWordSpr.height)
+					{
+						comboWordDrag = true;
+						startComboOffset.x = ClientPrefs.data.comboOffset[2];
+						startComboOffset.y = ClientPrefs.data.comboOffset[3];
+					}
+					else if (startMousePos.x >= msTimeTxt.x && startMousePos.x <= msTimeTxt.x + msTimeTxt.width &&
+						startMousePos.y >= msTimeTxt.y && startMousePos.y <= msTimeTxt.y + msTimeTxt.height)
+					{
+						msTimeTxtDrag = true;
+						startComboOffset.x = ClientPrefs.data.comboOffset[6];
+						startComboOffset.y = ClientPrefs.data.comboOffset[7];
+					}
 					
 				}
 	
 				if(FlxG.mouse.justReleased || gamepadReleased) {
 					holdingObjectType = null;
 					theEXratingDrag = null;
+					msTimeTxtDrag = false;
+					comboWordDrag = false;
 					//trace('dead');
 				}
 
@@ -433,6 +477,27 @@ class NoteOffsetState extends MusicBeatState
 					var addNumm:Int = theEXratingDrag ? 0 : 0;
 					ClientPrefs.data.comboOffset[addNumm + 4] = Math.round((mmousePos.x - startMousePos.x) + startComboOffset.x);
 					ClientPrefs.data.comboOffset[addNumm + 5] = -Math.round((mmousePos.y - startMousePos.y) - startComboOffset.y);
+					repositionCombo();
+				}
+			}
+			if(msTimeTxtDrag)
+			{
+				if(FlxG.mouse.justMoved)
+				{
+					var msMousePos:FlxPoint = FlxG.mouse.getScreenPosition(camHUD);
+					ClientPrefs.data.comboOffset[6] = Math.round((msMousePos.x - startMousePos.x) + startComboOffset.x);
+					ClientPrefs.data.comboOffset[7] = -Math.round((msMousePos.y - startMousePos.y) - startComboOffset.y);
+					repositionCombo();
+				}
+			}
+			if(comboWordDrag)
+			{
+				if(FlxG.mouse.justMoved)
+				{
+					var cwMousePos:FlxPoint = FlxG.mouse.getScreenPosition(camHUD);
+					// 拖动 "combo" 字样：写入共用的 numScore 偏移槽位 [2,3]，两者同时移动
+					ClientPrefs.data.comboOffset[2] = Math.round((cwMousePos.x - startMousePos.x) + startComboOffset.x);
+					ClientPrefs.data.comboOffset[3] = -Math.round((cwMousePos.y - startMousePos.y) - startComboOffset.y);
 					repositionCombo();
 				}
 			}
@@ -572,22 +637,43 @@ class NoteOffsetState extends MusicBeatState
 	{
 		rating.screenCenter();
 		rating.x = coolText.x - 40 + ClientPrefs.data.comboOffset[0];
-		rating.y -= 60 + ClientPrefs.data.comboOffset[1] - 100;
+		rating.y -= 60 + ClientPrefs.data.comboOffset[1];
 
 		comboNums.screenCenter();
 		comboNums.x = coolText.x - 90 + ClientPrefs.data.comboOffset[2];
-		comboNums.y += 80 - ClientPrefs.data.comboOffset[3] + 80;
+		comboNums.y += 80 - ClientPrefs.data.comboOffset[3];
 		
 		theEXrating.screenCenter();
-		theEXrating.x = coolText.x - 40 + ClientPrefs.data.comboOffset[4] - 170;
-		theEXrating.y += 0 - ClientPrefs.data.comboOffset[5] + 80;
-		
+		theEXrating.x = coolText.x - 40 + ClientPrefs.data.comboOffset[4] - 140;
+		theEXrating.y -= 60 + ClientPrefs.data.comboOffset[5]; // y 与 rating 对齐
+
+		// "combo" 字样精灵：跟在 combo 数字之后，沿用 numScore 的偏移槽位 [2,3]（不可独立调整），上移 30px 与 PlayState 一致
+		comboWordSpr.screenCenter();
+		comboWordSpr.x = comboNums.x + 43 * 2 + 50;
+		comboWordSpr.y = comboNums.y - 30;
+
+		// msTimeTxt 预览与 PlayState 一致：[6,7] 始终作为二次偏移，'numScore' 时额外沿用 combo 数字槽位 [2,3] 作为基础锚点
+		var msBaseX:Int = 0;
+		var msBaseY:Int = 0;
+		if (ClientPrefs.data.msTimingOffsetMode != 'independent') {
+			msBaseX = ClientPrefs.data.comboOffset[2];
+			msBaseY = ClientPrefs.data.comboOffset[3];
+		} else {
+			msBaseX = 150; // 独立偏移：默认在此基础上额外右移 150
+		}
+		msTimeTxt.y = (FlxG.height * 0.5) + 80 - 20 - msBaseY - ClientPrefs.data.comboOffset[7];
+		// 启用 "combo" 单词(comboSprDisplay)时，msTimeTxt 跟到单词之后；否则紧跟数字（与 PlayState 保持一致）
+		if (ClientPrefs.data.comboSprDisplay && ClientPrefs.data.msTimingOffsetMode != 'independent')
+			msTimeTxt.x = comboWordSpr.x + comboWordSpr.width + 5 - 20 - 100 + ClientPrefs.data.comboOffset[6];
+		else
+			msTimeTxt.x = FlxG.width * 0.35 + 100 + msBaseX + ClientPrefs.data.comboOffset[6] + 60 - 20 - 100;
+
 		reloadTexts();
 	}
 
 	function createTexts()
 	{
-		for (i in 0...6)
+		for (i in 0...8)
 		{
 			var text:FlxText = new FlxText(10, 48 + (i * 30), 0, '', 24);
 			text.setFormat(Paths.font("vcr.ttf"), 24, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -615,6 +701,8 @@ class NoteOffsetState extends MusicBeatState
 				case 3: dumbTexts.members[i].text = '[' + ClientPrefs.data.comboOffset[2] + ', ' + ClientPrefs.data.comboOffset[3] + ']';
 				case 4: dumbTexts.members[i].text = 'Extra Rating Offset:';
 				case 5: dumbTexts.members[i].text = '[' + ClientPrefs.data.comboOffset[4] + ', ' + ClientPrefs.data.comboOffset[5] + ']';
+				case 6: dumbTexts.members[i].text = 'MS Time Text Offset:';
+				case 7: dumbTexts.members[i].text = '[' + ClientPrefs.data.comboOffset[6] + ', ' + ClientPrefs.data.comboOffset[7] + ']';
 			}
 		}
 	}
@@ -630,6 +718,8 @@ class NoteOffsetState extends MusicBeatState
 		rating.visible = onComboMenu;
 		theEXrating.visible = onComboMenu;
 		comboNums.visible = onComboMenu;
+		msTimeTxt.visible = onComboMenu;
+		comboWordSpr.visible = (onComboMenu && ClientPrefs.data.comboSprDisplay); // 启用 comboSprDisplay 才显示 "combo" 单词
 		dumbTexts.visible = onComboMenu;
 		healthBar.visible = onComboMenu;
 		scoreTxt.visible = onComboMenu;

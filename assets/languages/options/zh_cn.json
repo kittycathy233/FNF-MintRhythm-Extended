@@ -327,6 +327,8 @@
     "show_mode_label_in_ms_text": "在“毫秒”文本中显示特殊标签",
     "ms_timing_style": "毫秒判定显示风格",
     "ms_timing_style_desc": "每次命中音符时，毫秒数值的显示风格：\nKathy = 判定区附近的静止文本（Psych 风格），原地更新并淡出。\nKade = 每次命中从判定区向上飞出的一次性弹幕，颜色随判定变化（ban/bad 红、good 绿、sick 青）。",
+    "ms_timing_offset_mode": "毫秒文本偏移方式",
+    "ms_timing_offset_mode_desc": "毫秒判定文本的位置偏移方式：\nindependent = 使用其专属独立偏移（可在「连击偏移」界面拖动文本调整）。\nnumScore = 跟随 combo 数字的偏移。",
     "show_nps": "显示 NPS",
     "keep_sing_animation": "角色保持演唱动画",
     "ghost_effect_multi_press": "重影特效（多键同按）",
