@@ -128,6 +128,10 @@ class PlayState extends MusicBeatState
 	var msTimeTxt:FlxText;
 	var msTimeTxtTween1:FlxTween;
 	var msTimeTxtTween2:FlxTween;
+	// 标记 msTimeTxt 当前是否处于 Kade 风格（20px/1px描边），用于切换回 Kathy 时恢复原样式
+	var msTimeTxtKadeStyle:Bool = false;
+	// Kade 风格下 ms 文本是否处于逐帧淡出中（每帧 alpha -= 0.02，Kade 原版逻辑）
+	var msTimingShownActive:Bool = false;
 	var scoreTxtTweenAngle:FlxTween;
 
 	// 存储打击数据供 HitGraph 使用 [diff, judge, time]
@@ -999,12 +1003,16 @@ isReplaying = false;
 
 		if (ClientPrefs.data.timeBarType == 'Song Name' && ClientPrefs.data.timebarStyle != "Leather" && ClientPrefs.data.timebarStyle != "Leather (Legacy)")
 		{
-			timeTxt.text = SONG.song;
+			timeTxt.text = (ClientPrefs.data.timebarStyle == "Kade") ? SONG.song.replace(" ", "-") : SONG.song;
+		}
+		else if (ClientPrefs.data.timebarStyle == "Kade" && ClientPrefs.data.timeBarType != 'Song Name')
+		{
+			timeTxt.text = SONG.song.replace(" ", "-");
 		}
 
 		// 确定条样式
 		var barStyle:String = "timeBar";
-		if (ClientPrefs.data.timebarStyle == "Kade (Legacy)")
+		if (ClientPrefs.data.timebarStyle == "Kade")
 		{
 			barStyle = "barKEL";
 		}
@@ -1057,32 +1065,27 @@ isReplaying = false;
 				timeTxt.y = timeBar.y + timeBar.height;
 			}
 			timeTxt.text = SONG.song + " ~ " + Difficulty.getString().toUpperCase() + " (0:00)";
+			// 对于 Leather (Legacy) 样式，设置为青色
+			timeBar.setColors(FlxColor.CYAN, FlxColor.BLACK);
 		}
 		else
 		{
 			timeBar.y = timeTxt.y + (timeTxt.height / 4);
 		}
 
-		// Kade (Legacy)：让 timeTxt 在时间条内垂直居中（水平居中已由 screenCenter(X) 处理）
-		if (ClientPrefs.data.timebarStyle == "Kade (Legacy)") {
-			timeTxt.y = timeBar.y;
-			timeTxt.x = timeBar.x;
-		}
-
 		// 先添加条再添加文本，确保文本在上面
 		addToHUD(timeBar);
 		addToHUD(timeTxt);
-		// 对于 Leather (Legacy) 样式，设置为青色
-		if (ClientPrefs.data.timebarStyle == "Leather (Legacy)") {
-			timeBar.setColors(FlxColor.CYAN, FlxColor.BLACK);
-		}
-		// 对于 Kade (Legacy) 样式：保留 barKEL.png 边框纹理
+		// 对于 Kade 样式：保留 barKEL.png 边框纹理
 		// 填充为 LIME，空白为 GRAY（填充色从贴图透明中心透出）
-		if (ClientPrefs.data.timebarStyle == "Kade (Legacy)") {
+		if (ClientPrefs.data.timebarStyle == "Kade") {
 			timeBar.setColors(FlxColor.LIME, FlxColor.GRAY);
 			// 沿用 songName 样式：字号16、白色、居中、黑色描边，描边粗细1
 			timeTxt.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			timeTxt.borderSize = 1;
+			timeTxt.y = timeBar.y;
+			timeTxt.y -= (ClientPrefs.data.downScroll == true) ? 3 : 0;
+			timeTxt.x = timeBar.x;
 		}
 
 		// Psych样式下的渐变时间条：对手色→玩家色
@@ -1104,7 +1107,7 @@ isReplaying = false;
 		}
 
 		// 处理Song Name类型的调整（排除Leather样式）
-		if (ClientPrefs.data.timeBarType == 'Song Name' && ClientPrefs.data.timebarStyle != "Leather" && ClientPrefs.data.timebarStyle != "Leather (Legacy)")
+		if (ClientPrefs.data.timeBarType == 'Song Name' && ClientPrefs.data.timebarStyle != "Leather" && ClientPrefs.data.timebarStyle != "Leather (Legacy)" && ClientPrefs.data.timebarStyle != "Kade")
 		{
 			timeTxt.size = 24;
 			timeTxt.y += 3;
@@ -3422,6 +3425,20 @@ tempScore += '${lblScore}: ${songScore}';
 			_deferredInitStep++;
 		}
 
+		// Kade 风格 ms 文本淡出：每帧 alpha -= 0.02（Kade 原版逻辑，非线性 Tween）
+		if (msTimingShownActive)
+		{
+			msTimeTxt.alpha -= 0.02;
+			if (msTimeTxt.alpha <= 0)
+			{
+				msTimeTxt.alpha = 0;
+				msTimingShownActive = false;
+				// 归零运动，避免淡出结束后仍在屏幕外继续漂移
+				msTimeTxt.velocity.set(0, 0);
+				msTimeTxt.acceleration.set(0, 0);
+			}
+		}
+
 		// 移动端右上角暂停按钮：跟随移动控制整体可见性（暂停/结算时会自动隐藏）
 		if (mobilePauseBtn != null)
 			mobilePauseBtn.visible = controls.mobileC && mobileControls.instance.visible;
@@ -3733,7 +3750,8 @@ tempScore += '${lblScore}: ${songScore}';
 
 				// 构建显示文本
 				var timeString:String = FlxStringUtil.formatTime(secondsLeft, false);
-				var displayText:String = SONG.song + " ~ " + Difficulty.getString().toUpperCase() + " (" + timeString + ")";
+				var kadeSongName:String = (ClientPrefs.data.timebarStyle == "Kade") ? SONG.song.replace(" ", "-") : SONG.song;
+				var displayText:String = kadeSongName + " ~ " + Difficulty.getString().toUpperCase() + " (" + timeString + ")";
 
 				// 添加模式标识
 				if (cpuControlled)
@@ -3743,7 +3761,7 @@ tempScore += '${lblScore}: ${songScore}';
 
 				timeTxt.text = displayText;
 			}
-			else if (ClientPrefs.data.timeBarType != 'Song Name')
+			else if (ClientPrefs.data.timeBarType != 'Song Name' && ClientPrefs.data.timebarStyle != "Kade")
 			{
 				var songCalc:Float = (songLength - curTime);
 				if (ClientPrefs.data.timeBarType == 'Time Elapsed')
@@ -5101,6 +5119,64 @@ tempScore += '${lblScore}: ${songScore}';
 		}
 
 		if (!ClientPrefs.data.rmmsTimeTxt) {
+			if (ClientPrefs.data.msTimingStyle == 'Kade') {
+				// ===== Kade 风格：复用原 msTimeTxt，覆盖为 Kade 样式（20px/1px黑描边/居中）=====
+				if (!msTimeTxtKadeStyle) {
+					msTimeTxt.setFormat(null, 20, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+					msTimeTxt.borderSize = 1;
+					msTimeTxt.width = 0; // 让文本自适应宽度（Kade 无固定宽度）
+					msTimeTxtKadeStyle = true;
+				}
+				msTimeTxt.alpha = 1;
+				msTimeTxt.visible = true;
+				if (isPixelStage) {
+					msTimeTxt.font = Paths.font("pixel.otf");
+					msTimeTxt.size = 16;
+				}
+				// Kade 原生：颜色随判定变化（bad/shit 红、good 绿、sick 青）；Perfect 引擎无原生配色，用浅粉高亮
+				switch (daRating.name) {
+					case 'perfect':
+						msTimeTxt.color = 0xFFFFC0CB;
+					case 'sick':
+						msTimeTxt.color = FlxColor.CYAN;
+					case 'good':
+						msTimeTxt.color = FlxColor.GREEN;
+					default:
+						msTimeTxt.color = FlxColor.RED; // bad / shit
+				}
+				msTimeTxt.text = CoolUtil.floorDecimal(noteDiff, 2) + "ms";
+				msTimeTxt.updateHitbox();
+				var kadeCam:FlxCamera = ClientPrefs.data.ratingsPos == 'camHUD' ? camHUD : camGame;
+				// Kade: x = combo.x + 100, y = rating.y + 100（锚定判定区右侧偏下）
+				msTimeTxt.x = FlxG.width * 0.35 + ClientPrefs.data.comboOffset[0] + 160;
+				msTimeTxt.y = (kadeCam.height / 2) + 170 - ClientPrefs.data.comboOffset[1];
+				msTimeTxt.acceleration.y = 600;
+				msTimeTxt.velocity.y = -150;
+				msTimeTxt.velocity.x = FlxG.random.float(0, 10);
+				// 复用同一个文本：Kade 原版淡出——不建 tween，改为 update 中每帧 alpha -= 0.02
+				if (msTimeTxtTween1 != null) {
+					msTimeTxtTween1.cancel();
+					msTimeTxtTween1.destroy();
+				}
+				// 若刚从 Kathy 风格切换过来，可能有残留的 y 位移补间，一并取消
+				if (msTimeTxtTween2 != null) {
+					msTimeTxtTween2.cancel();
+					msTimeTxtTween2.destroy();
+				}
+				// 标记开始 Kade 逐帧淡出；本次命中已把 alpha 重置为 1
+				msTimingShownActive = true;
+			}
+			else {
+				// 从 Kade 风格切回 Kathy：恢复原样式并清零运动
+				if (msTimeTxtKadeStyle) {
+					msTimeTxt.setFormat(Paths.font('vcr.ttf'), 24, FlxColor.WHITE, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+					msTimeTxt.borderSize = 1.3;
+					msTimeTxt.borderColor = FlxColor.BLACK;
+					msTimeTxt.width = 250;
+					msTimeTxtKadeStyle = false;
+				}
+				msTimeTxt.velocity.set(0, 0);
+				msTimeTxt.acceleration.set(0, 0);
 			if (isPixelStage) {
 				msTimeTxt.font = Paths.font("pixel.otf");
 				msTimeTxt.size = 16;
@@ -5138,6 +5214,7 @@ tempScore += '${lblScore}: ${songScore}';
 			msTimeTxtTween2 = FlxTween.tween(msTimeTxt, {y: msTimeTxt.y + 10}, 0.2, {
 				ease: FlxEase.quintOut,
 			});
+			}
 		}
 
 		var placement:Float = FlxG.width * 0.35;

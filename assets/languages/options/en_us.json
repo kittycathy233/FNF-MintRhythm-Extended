@@ -320,6 +320,8 @@
     "perfect_judgement_mode": "Perfect Judgement Mode",
     "remove_the_ms_offset": "Remove 'ms' Offset Display",
     "show_mode_label_in_ms_text": "Show Special Label in 'ms' Text",
+    "ms_timing_style": "ms Timing Display Style",
+    "ms_timing_style_desc": "Style of the ms timing text shown on each NOTE HIT.\nKathy = persistent static text near the combo (Psych-style), updates in place and fades out.\nKade = a per-hit popup that floats up from the rating area, colored by judgment (bad/shit red, good green, sick cyan).",
     "show_nps": "Show NPS",
     "keep_sing_animation": "Keep Singing Animation",
     "ghost_effect_multi_press": "Ghost Effect (Multi-Press)",

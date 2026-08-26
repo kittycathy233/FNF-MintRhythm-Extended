@@ -319,6 +319,8 @@
     "perfect_judgement_mode": "Perfect判定模式",
     "remove_the_ms_offset": "移除“毫秒”偏移顯示效果",
     "show_mode_label_in_ms_text": "在“毫秒”文本中顯示特殊標籤",
+    "ms_timing_style": "毫秒判定顯示風格",
+    "ms_timing_style_desc": "每次擊中音符時，毫秒數值的顯示風格：\nKathy = 判定區附近的靜止文字（Psych 風格），原地更新並淡出。\nKade = 每次擊中從判定區向上飛出的一次性彈幕，顏色隨判定變化（ban/bad 紅、good 綠、sick 青）。",
     "show_nps": "顯示 NPS",
     "keep_sing_animation": "角色保持演唱動畫",
     "ghost_effect_multi_press": "重影特效（多鍵同按）",

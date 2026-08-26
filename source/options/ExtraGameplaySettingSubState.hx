@@ -95,6 +95,13 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		option = new Option(Language.get('ms_timing_style'),
+			Language.get("ms_timing_style_desc"),
+			'msTimingStyle',
+			STRING,
+			['Kathy', 'Kade']);
+		addOption(option);
+
 		option = new Option(Language.get('show_nps'),
 			Language.get("nps_desc"),
 			'showNPS',
@@ -429,7 +436,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			Language.get("timebar_style_desc"),
 			'timebarStyle',
 			STRING,
-			['Psych', 'Kade (Legacy)', 'Leather', 'Leather (Legacy)']);
+			['Psych', 'Kade', 'Leather', 'Leather (Legacy)']);
 		option.onChange = function() {
 			updateBiggerInfoTextVisibility();
 		};

@@ -197,6 +197,7 @@ import openfl.display.StageQuality;
 	public var scoreLanguage:String = 'auto'; // 分数文字（scoreTxt）显示语言：'auto' 跟随游戏语言，或指定 English/简体中文/繁體中文/日本語/한국어
 	public var rmmsTimeTxt:Bool = false;
 	public var showModeLabelInMsTxt:Bool = true;
+	public var msTimingStyle:String = 'Kathy'; // ms 毫秒显示风格: 'Kathy'(Psych 静态文本) / 'Kade'(Kade 弹出+判定颜色)
 	public var scoretxtbounce:Bool = false;
 	public var exratbounce:Bool = false;
 	public var iconbopstyle:String = 'Kathy';
