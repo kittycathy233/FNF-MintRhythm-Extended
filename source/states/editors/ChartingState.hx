@@ -2694,8 +2694,31 @@ if(_shouldReset) Conductor.songPosition = 0;
 		{
 			var curTime:String = FlxStringUtil.formatTime(Conductor.songPosition / 1000, true);
 			var songLength:String = (FlxG.sound.music != null) ? FlxStringUtil.formatTime(FlxG.sound.music.length / 1000, true) : '???';
+			var curSecData:SwagSection = PlayState.SONG.notes[curSecPure];
+			var oppCount:Int = 0;
+			var playCount:Int = 0;
+			for(secIdx in 0...curSecPure)
+			{
+				var secData = PlayState.SONG.notes[secIdx];
+				if(secData == null) continue;
+				for(note in secData.sectionNotes)
+				{
+					if(note == null) continue;
+					if(note[1] < 4) playCount++; else oppCount++;
+				}
+			}
+			if(curSecData != null)
+			{
+				for(note in curSecData.sectionNotes)
+				{
+					if(note == null) continue;
+					if(note[0] > Conductor.songPosition) continue;
+					if(note[1] < 4) playCount++; else oppCount++;
+				}
+			}
 			var str:String =  '$curTime / $songLength' +
 							  '\n\nSection: $curSecPure' +
+							  '\nNote: $oppCount / $playCount' +
 							  '\nBeat: $curBeatPure' +
 							  '\nStep: $curStepPure' +
 							  '\n\nBeat Snap: ${curQuant} / 16' +
