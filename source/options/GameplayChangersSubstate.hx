@@ -76,6 +76,7 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 		optionsArray.push(new GameplayOption('Practice Mode', 'practice', BOOL, false));
 		optionsArray.push(new GameplayOption('Botplay', 'botplay', BOOL, false));
 		optionsArray.push(new GameplayOption('Play Opponent', 'playOpponent', BOOL, false));
+		optionsArray.push(new GameplayOption('Kade Health Model', 'kadehealth', BOOL, false));
 	}
 
 	public function getOptionByVar(variable:String)

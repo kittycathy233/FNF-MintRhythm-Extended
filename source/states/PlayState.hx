@@ -691,6 +691,11 @@ class PlayState extends MusicBeatState
 			if (Reflect.hasField(replayGameplaySettings, 'practice')) ClientPrefs.data.gameplaySettings.set('practice', replayGameplaySettings.practice);
 			if (Reflect.hasField(replayGameplaySettings, 'botplay')) ClientPrefs.data.gameplaySettings.set('botplay', replayGameplaySettings.botplay);
 			if (Reflect.hasField(replayGameplaySettings, 'playOpponent')) ClientPrefs.data.gameplaySettings.set('playOpponent', replayGameplaySettings.playOpponent);
+			if (Reflect.hasField(replayGameplaySettings, 'kadehealth')) ClientPrefs.data.gameplaySettings.set('kadehealth', replayGameplaySettings.kadehealth);
+			if (Reflect.hasField(replayGameplaySettings, 'breakComboOnBad')) ClientPrefs.data.breakComboOnBad = replayGameplaySettings.breakComboOnBad;
+			if (Reflect.hasField(replayGameplaySettings, 'breakComboOnShit')) ClientPrefs.data.breakComboOnShit = replayGameplaySettings.breakComboOnShit;
+			// 断连依赖校正：shit 断连关闭时，bad 断连一并关闭
+			if (!ClientPrefs.data.breakComboOnShit) ClientPrefs.data.breakComboOnBad = false;
 		}
 	}
 	else
@@ -6571,7 +6576,26 @@ tempScore += '${lblScore}: ${songScore}';
 			}
 			var gainHealth:Bool = true; // prevent health gain, *if* sustains are treated as a singular note
 			if (guitarHeroSustains && note.isSustainNote) gainHealth = false;
-			if (gainHealth) health += note.hitHealth * healthGain;
+			if (gainHealth) {
+				// Kade 血量模型：按固定加减血规则结算（sick/good 加血，bad/shit 扣血）
+				if (ClientPrefs.getGameplaySetting('kadehealth', false)) {
+					switch (note.rating) {
+						case 'perfect' | 'sick': health += 0.1  * healthGain;
+						case 'good':            health += 0.04 * healthGain;
+						case 'bad':             health -= 0.06 * healthLoss;
+						case 'shit':            health -= 0.2  * healthLoss;
+						default:                health += note.hitHealth * healthGain; // 长条/未知评级保持原加血
+					}
+				} else {
+					health += note.hitHealth * healthGain;
+				}
+			}
+
+			// 断连逻辑：命中 bad/shit 评级时，按设置强制中断连击
+			if (note.rating == 'bad' && ClientPrefs.data.breakComboOnBad)
+				combo = 0;
+			else if (note.rating == 'shit' && ClientPrefs.data.breakComboOnShit)
+				combo = 0;
 
 		}
 		else //Notes that count as a miss if you hit them (Hurt notes for example)

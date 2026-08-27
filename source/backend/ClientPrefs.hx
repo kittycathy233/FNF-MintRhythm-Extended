@@ -155,7 +155,8 @@ import openfl.display.StageQuality;
 		'instakill' => false,
 		'practice' => false,
 		'botplay' => false,
-		'playOpponent' => false
+		'playOpponent' => false,
+		'kadehealth' => false,          // Kade 血量模型：强制开启后按 Kade 固定加减血规则
 	];
 
 	public var comboOffset:Array<Int> = [0, 0, 0, 0, 0, 0, 0, 0]; // [0,1]评级 [2,3]combo数字(combo字样共用) [4,5]额外的EX评级 [6,7]msTimeTxt(始终作为二次偏移)
@@ -170,6 +171,8 @@ import openfl.display.StageQuality;
 	public var softJudgmentEdge:Bool = false; // 是否在判定窗口边缘启用软边缘插值（避免卡边界时判定跳变）
 	public var safeFrames:Float = 10.0;
 	public var guitarHeroSustains:Bool = true;
+	public var breakComboOnBad:Bool = false; // 命中 bad 时断连
+	public var breakComboOnShit:Bool = false; // 命中 shit 时断连
 	public var sustainTailFix:String = 'off'; // 长按音符尾条判定优化: 'off'=原版, 'extend'=延伸末段到可见尾部(A), 'earlyHit'=放宽末段提前命中(B), 'both'=两者皆用
 	public var holdReleaseInstantMiss:Bool = false; // 特性1: 启用guitarHeroSustains时，长条命中期间松手立刻判定miss
 	public var holdTailJudge:Bool = false; // 特性2: 长条尾部算一个有效命中(加combo+显示评级,但不加分;超时未命中照样断连并miss)

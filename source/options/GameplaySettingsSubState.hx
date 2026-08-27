@@ -387,6 +387,20 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(softEdgeOption);
 
+		breakComboShitOption = new Option(Language.get('break_combo_shit'),
+			Language.get("break_combo_shit_desc", ["启用后，命中 Shit 评级会中断连击；关闭它会同时禁用「命中 Bad 时断连」"]),
+			'breakComboOnShit',
+			BOOL);
+		breakComboShitOption.onChange = onChangeBreakComboShit;
+		addOption(breakComboShitOption);
+
+		breakComboBadOption = new Option(Language.get('break_combo_bad'),
+			Language.get("break_combo_bad_desc", ["启用后，命中 Bad 评级会中断连击；需先启用「命中 Shit 时断连」才能开启"]),
+			'breakComboOnBad',
+			BOOL);
+		breakComboBadOption.onChange = onChangeBreakComboBad;
+		addOption(breakComboBadOption);
+
 		presetDependentOptions = [perfectWindowOption, sickWindowOption, goodWindowOption, badWindowOption, shitWindowOption];
 
 		super();
@@ -397,9 +411,42 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		super.onOptionsBuilt();
 		// 初始化完成后，根据当前预设刷新禁用状态
 		refreshPresetDisabledState();
+		// 同步断连选项的初始化可用性（加载到不一致状态时强制校正）
+		refreshBreakComboDependency();
 	}
 
 	var presetDependentOptions:Array<Option> = null;
+	var breakComboBadOption:Option = null;  // 命中 Bad 断连
+	var breakComboShitOption:Option = null; // 命中 Shit 断连
+
+	// 依赖规则：Shit 断连不启用时，Bad 断连无法启用；
+	// 反之若 Bad 断连被关闭，则两者必须同时禁用。
+	function onChangeBreakComboShit()
+	{
+		// 关闭 Shit 断连时，同步关闭并禁用 Bad 断连
+		if (!ClientPrefs.data.breakComboOnShit)
+			ClientPrefs.data.breakComboOnBad = false;
+		refreshBreakComboDependency();
+	}
+
+	function onChangeBreakComboBad()
+	{
+		// 关闭 Bad 断连时，Shit 断连也必须一并关闭（两者同时禁用）
+		if (!ClientPrefs.data.breakComboOnBad)
+			ClientPrefs.data.breakComboOnShit = false;
+		refreshBreakComboDependency();
+	}
+
+	// 一致性校正 + 刷新禁用状态/文本：
+	// Bad 断连仅在 Shit 断连启用时才可操作。
+	function refreshBreakComboDependency()
+	{
+		if (breakComboBadOption != null)
+			breakComboBadOption.disabled = !ClientPrefs.data.breakComboOnShit;
+
+		reloadCheckboxes();
+		changeSelection(0);
+	}
 
 	function onChangeHitsoundVolume()
 	{
