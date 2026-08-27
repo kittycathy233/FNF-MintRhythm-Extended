@@ -88,7 +88,15 @@ class Bar extends FlxSpriteGroup
 			stripedOverlay.alpha = stripeBaseAlpha * value;
 		return value;
 	}
-	
+
+	override function set_visible(Value:Bool):Bool
+	{
+		var result = super.set_visible(Value);
+		if(stripedOverlay != null)
+			stripedOverlay.visible = showStripes && Value;
+		return result;
+	}
+
 	public function setBounds(min:Float, max:Float)
 	{
 		bounds.min = min;
