@@ -1198,7 +1198,7 @@ isReplaying = false;
 		}
 		msTimeTxt.x = FlxG.width * 0.35 + 100 + msInitBaseX + ClientPrefs.data.comboOffset[6] + 60 - 20 - 40;
 		msTimeTxt.y = (FlxG.height * 0.5) + 80 - 40 - msInitBaseY - ClientPrefs.data.comboOffset[7];
-		addToHUD(msTimeTxt);
+		addToComboLayer(msTimeTxt);
 
 		iconP1 = new HealthIcon(boyfriend.healthIcon, true);
 		if (ClientPrefs.data.healthbarstyle == 'Leather') {
@@ -1346,7 +1346,6 @@ isReplaying = false;
 		noteGroup.cameras = [camHUD];
 		//comboGroup.cameras = [camHUD];
 		comboGroup.cameras = [ClientPrefs.data.ratingsPos == 'camHUD' ? camHUD : camGame];
-		msTimeTxt.cameras = [ClientPrefs.data.ratingsPos == 'camHUD' ? camHUD : camGame];
 		startingSong = true;
 
 		// PER-SONG CUSTOM EVENTS & NOTETYPES (take priority over global)
@@ -5121,6 +5120,7 @@ tempScore += '${lblScore}: ${songScore}';
 			for (spr in comboGroup.members.copy())
 			{
 				if(spr == null) continue;
+				if (spr == msTimeTxt) continue; // 排除 msTimeTxt，避免 comboStacking 关闭时被销毁导致空引用
 				killComboSprite(spr);
 			}
 		}
