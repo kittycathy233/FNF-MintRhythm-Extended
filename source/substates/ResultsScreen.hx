@@ -456,7 +456,10 @@ class ResultsScreen extends FlxSubState
 						playOpponent: ClientPrefs.getGameplaySetting('playOpponent', false),
 						kadehealth: ClientPrefs.getGameplaySetting('kadehealth', false),
 						breakComboOnBad: ClientPrefs.data.breakComboOnBad,
-						breakComboOnShit: ClientPrefs.data.breakComboOnShit
+						breakComboOnShit: ClientPrefs.data.breakComboOnShit,
+						accuracyMode: ClientPrefs.data.accuracyMode,
+						sustainAccuracy: ClientPrefs.data.sustainAccuracy,
+						kadeScoring: ClientPrefs.data.kadeScoring
 					}
 				},
 				replay: PlayState.instance.replayData

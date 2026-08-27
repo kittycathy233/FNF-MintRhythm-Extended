@@ -694,6 +694,9 @@ class PlayState extends MusicBeatState
 			if (Reflect.hasField(replayGameplaySettings, 'kadehealth')) ClientPrefs.data.gameplaySettings.set('kadehealth', replayGameplaySettings.kadehealth);
 			if (Reflect.hasField(replayGameplaySettings, 'breakComboOnBad')) ClientPrefs.data.breakComboOnBad = replayGameplaySettings.breakComboOnBad;
 			if (Reflect.hasField(replayGameplaySettings, 'breakComboOnShit')) ClientPrefs.data.breakComboOnShit = replayGameplaySettings.breakComboOnShit;
+			if (Reflect.hasField(replayGameplaySettings, 'accuracyMode')) ClientPrefs.data.accuracyMode = replayGameplaySettings.accuracyMode;
+			if (Reflect.hasField(replayGameplaySettings, 'sustainAccuracy')) ClientPrefs.data.sustainAccuracy = replayGameplaySettings.sustainAccuracy;
+			if (Reflect.hasField(replayGameplaySettings, 'kadeScoring')) ClientPrefs.data.kadeScoring = replayGameplaySettings.kadeScoring;
 			// 断连依赖校正：shit 断连关闭时，bad 断连一并关闭
 			if (!ClientPrefs.data.breakComboOnShit) ClientPrefs.data.breakComboOnBad = false;
 		}
@@ -5245,13 +5248,33 @@ tempScore += '${lblScore}: ${songScore}';
 		var score:Int = 350;
 
 		// 复用上方已计算的 daRating（避免重复调用 judgeNote）
-		totalNotesHit += daRating.ratingMod;
+		// 准确率模式：'accurate' 按评级固定加权(ratingMod)；'complex' 用 wife3 毫秒精度函数
+		var accGain:Float = daRating.ratingMod;
+		if(ClientPrefs.data.accuracyMode.toLowerCase() == 'complex')
+		{
+			// 长条(尾音)命中：无论开关都按 Kade 固定满分 +1，不套毫秒权重
+			accGain = note.isSustainNote ? 1 : Math.max(0, wife3Accuracy(-noteDiff / playbackRate, playbackRate));
+		}
+		// 长条准确率开关：关闭时长条(尾音)命中不计入分子（仅分母 totalPlayed++，等效忽略长条对准确率的贡献）
+		if(note.isSustainNote && !ClientPrefs.data.sustainAccuracy) accGain = 0;
+		totalNotesHit += accGain;
 		note.ratingMod = daRating.ratingMod;
 		if(!note.ratingDisabled) daRating.hits++;
 		note.rating = daRating.name;
 		score = daRating.score;
+		if (ClientPrefs.data.kadeScoring)
+		{
+			// Kade 计分：bad=0 / shit=-300 / good=200 / sick=350（Perfect 归入 sick 分，无额外加分）
+			switch (daRating.name)
+			{
+				case 'shit': score = -300;
+				case 'bad': score = 0;
+				case 'good': score = 200;
+				default: score = 350;
+			}
+		}
 		// Sick+ 给予 Perfect 分数(500)
-		if (isSickPlus) score = 500;
+		else if (isSickPlus) score = 500;
 		// Sick+ 计数（纯统计用，不影响FC/准度）
 		if (isSickPlus && !note.ratingDisabled) songSickPlus++;
 
@@ -5262,7 +5285,7 @@ tempScore += '${lblScore}: ${songScore}';
 		if(!cpuControlled || ClientPrefs.data.botplayScore)
 		{
     		if(scoreGain) songScore += score; // 特性2：长条尾部命中不加分
-    		if(!note.ratingDisabled) 
+    		if(!note.ratingDisabled && !(note.isSustainNote && !ClientPrefs.data.sustainAccuracy))
     		{
         		songHits++;
         		totalPlayed++; 
@@ -6279,11 +6302,28 @@ tempScore += '${lblScore}: ${songScore}';
 		combo = 0;
 		if (lastCombo > 0) comboJustBroke = true; // 仅在真正断连(此前有combo)时置位
 
-		health -= subtract * healthLoss;
+		// Kade 计分：miss 固定扣血 0.04 × healthLoss（命中侧已按 kadehealth/kadeScoring 套用 healthGain/healthLoss 倍率）
+		if (ClientPrefs.data.kadeScoring)
+			health -= 0.04 * healthLoss;
+		else
+			health -= subtract * healthLoss;
+		// Kade 计分：长条(sustain) miss 额外再扣 0.075 × healthLoss（对齐 Kade tooLate 分支的额外惩罚）
+		if (ClientPrefs.data.kadeScoring && note != null && note.isSustainNote)
+			health -= 0.075 * healthLoss;
 		songScore -= 10;
 		if(!endingSong) songMisses++;
-		totalPlayed++;
-		RecalculateRating(true);
+		// Kade Complex 模式：miss 时准确率分子 -1（等效 miss_weight=-5.5 的归一化扣减）
+		// 长条准确率开关关闭时，长条 miss 不影响分子（完全忽略长条对准确率的贡献）
+		if(ClientPrefs.data.accuracyMode.toLowerCase() == 'complex' && (note == null || !note.isSustainNote || ClientPrefs.data.sustainAccuracy))
+			totalNotesHit -= 1;
+		// 长条准确率开关关闭时，长条 miss 也不计入分母（与命中侧一致，完全忽略长条对准确率的贡献）
+		if(note == null || !note.isSustainNote || ClientPrefs.data.sustainAccuracy)
+		{
+			totalPlayed++;
+			RecalculateRating(true);
+		}
+		else
+			RecalculateRating(true);
 
 		// play character anims（playOpponent 时受控角色是 dad）
 		var char:Character = playerSideChar();
@@ -6306,6 +6346,41 @@ tempScore += '${lblScore}: ${songScore}';
 		// playOpponent 时玩家唱的是对手人声轨
 		if(playOpponent && opponentVocals.length > 0) opponentVocals.volume = 0;
 		else vocals.volume = 0;
+	}
+
+	// Kade Complex 准确率模式的 wife3 权重函数（移植自 Etterna）
+	// maxms: 偏移毫秒（正值=偏晚）；ts: 歌曲时间缩放（对应 playbackRate）
+	inline function wife3Accuracy(maxms:Float, ts:Float):Float
+	{
+		var max_points:Float = 1.0;
+		var miss_weight:Float = -5.5;
+		var ridic:Float = 5 * ts;
+		var max_boo_weight:Float = 180 * ts;
+		var ts_pow:Float = 0.75;
+		var zero:Float = 65 * Math.pow(ts, ts_pow);
+		var power:Float = 2.5;
+		var dev:Float = 22.7 * Math.pow(ts, ts_pow);
+		var absMs:Float = Math.abs(maxms);
+
+		if (absMs <= ridic) // 低于该阈值（按判定缩放）记满分
+			return max_points;
+		else if (absMs <= zero) // ma/pa 区间，指数
+			return max_points * erf((zero - absMs) / dev);
+		else if (absMs <= max_boo_weight) // cb 区间，线性
+			return (absMs - zero) * miss_weight / (max_boo_weight - zero);
+		else
+			return miss_weight;
+	}
+
+	// erf 误差函数（A&S 7.1.26 近似）
+	inline function erf(x:Float):Float
+	{
+		var sign:Int = 1;
+		if (x < 0) sign = -1;
+		x = Math.abs(x);
+		var t:Float = 1.0 / (1.0 + 0.3275911 * x);
+		var y:Float = 1.0 - (((((1.061405429 * t + -1.453152027) * t) + 1.421413741) * t + -0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+		return sign * y;
 	}
 
 	function opponentNoteHit(note:Note):Void
@@ -6574,11 +6649,18 @@ tempScore += '${lblScore}: ${songScore}';
 				notesHitArray.unshift(haxe.Timer.stamp() * 1000);
 				popUpScore(note, false, tailLeniencyMs); // scoreGain=false：只显示评级/计入准度，不加 songScore
 			}
+			// 长条按住期间每个命中节段：开启长条准确率时计入准确率（分子/分母各 +1）
+			else if (note.isSustainNote && ClientPrefs.data.sustainAccuracy && !note.ratingDisabled)
+			{
+				totalNotesHit += 1;
+				totalPlayed++;
+				RecalculateRating(false);
+			}
 			var gainHealth:Bool = true; // prevent health gain, *if* sustains are treated as a singular note
 			if (guitarHeroSustains && note.isSustainNote) gainHealth = false;
 			if (gainHealth) {
 				// Kade 血量模型：按固定加减血规则结算（sick/good 加血，bad/shit 扣血）
-				if (ClientPrefs.getGameplaySetting('kadehealth', false)) {
+				if (ClientPrefs.getGameplaySetting('kadehealth', false) || ClientPrefs.data.kadeScoring) {
 					switch (note.rating) {
 						case 'perfect' | 'sick': health += 0.1  * healthGain;
 						case 'good':            health += 0.04 * healthGain;
@@ -6596,6 +6678,13 @@ tempScore += '${lblScore}: ${songScore}';
 				combo = 0;
 			else if (note.rating == 'shit' && ClientPrefs.data.breakComboOnShit)
 				combo = 0;
+
+			// Kade 计分：命中 Shit 强制断连并计入 Miss 数（相当于 Kade 的 case 'shit' 行为）
+			if (ClientPrefs.data.kadeScoring && note.rating == 'shit')
+			{
+				combo = 0;
+				songMisses++;
+			}
 
 		}
 		else //Notes that count as a miss if you hit them (Hurt notes for example)

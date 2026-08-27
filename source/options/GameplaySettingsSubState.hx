@@ -401,6 +401,25 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		breakComboBadOption.onChange = onChangeBreakComboBad;
 		addOption(breakComboBadOption);
 
+		var accuracyModeOption:Option = new Option(Language.get('accuracy_mode'),
+			Language.get("accuracy_mode_desc", ["选择准确率的计算方式：Accurate 按评级固定加权，Complex 使用 Kade/wife3 毫秒精度"]),
+			'accuracyMode',
+			STRING,
+			['Accurate', 'Complex']);
+		addOption(accuracyModeOption);
+
+		var sustainAccuracyOption:Option = new Option(Language.get('sustain_accuracy'),
+			Language.get("sustain_accuracy_desc", ["启用后长条(尾音)命中会计入准确率；关闭后完全忽略长条对准确率的贡献"]),
+			'sustainAccuracy',
+			BOOL);
+		addOption(sustainAccuracyOption);
+
+		var kadeScoringOption:Option = new Option(Language.get('kade_scoring'),
+			Language.get("kade_scoring_desc", ["启用后采用 Kade 计分制：bad=0 / shit=-300 / good=200 / sick=350，命中 Shit 会断连并计入 Miss，并套用 Kade 的命中/miss 加减血规则"]),
+			'kadeScoring',
+			BOOL);
+		addOption(kadeScoringOption);
+
 		presetDependentOptions = [perfectWindowOption, sickWindowOption, goodWindowOption, badWindowOption, shitWindowOption];
 
 		super();

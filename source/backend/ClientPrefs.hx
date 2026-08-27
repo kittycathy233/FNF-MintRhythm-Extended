@@ -173,6 +173,9 @@ import openfl.display.StageQuality;
 	public var guitarHeroSustains:Bool = true;
 	public var breakComboOnBad:Bool = false; // 命中 bad 时断连
 	public var breakComboOnShit:Bool = false; // 命中 shit 时断连
+	public var accuracyMode:String = 'accurate'; // 准确率模式: 'accurate' (按评级固定加权) 或 'complex' (wife3 毫秒精度)
+	public var sustainAccuracy:Bool = true; // 长条(尾音)命中是否计入准确率
+	public var kadeScoring:Bool = false; // Kade 计分制：bad=0/shit=-300/good=200/sick=350，命中Shit断连并计miss，套用Kade加减血
 	public var sustainTailFix:String = 'off'; // 长按音符尾条判定优化: 'off'=原版, 'extend'=延伸末段到可见尾部(A), 'earlyHit'=放宽末段提前命中(B), 'both'=两者皆用
 	public var holdReleaseInstantMiss:Bool = false; // 特性1: 启用guitarHeroSustains时，长条命中期间松手立刻判定miss
 	public var holdTailJudge:Bool = false; // 特性2: 长条尾部算一个有效命中(加combo+显示评级,但不加分;超时未命中照样断连并miss)
