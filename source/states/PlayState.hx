@@ -5041,7 +5041,21 @@ tempScore += '${lblScore}: ${songScore}';
 		// scoreGain=false 时（特性2 长条尾部判定）：显示评级/计入准度，但不加 songScore、不写回放数据
 		// 移除Math.abs()来允许显示负值
 		// BotPlay 不是人类输入，不应套用 ratingOffset / 移动端补偿：这些校准值仅用于补偿玩家本人的手感，
-		// 否则会让 bot 的“完美命中”被系统性地偏移 ratingOffset 毫秒，导致整体爆 good/bad。
+		// 否则会让 bot 的"完美命中"被系统性地偏移 ratingOffset 毫秒，导致整体爆 good/bad。
+
+		// Kade 样式 ShowCase：Botplay（cpuControlled，非回放）下只显示 numScore 数字，隐藏 rating/exRating 贴图。
+		// 对齐 Kade Engine 原版行为：if(!PlayStateChangeables.botPlay || loadRep) add(rating);
+		if (ClientPrefs.data.showcaseStyle == 'Kade' && cpuControlled && !isReplaying)
+		{
+			showRating = false;
+			showEXRating = false;
+		}
+		else
+		{
+			showRating = true;
+			showEXRating = ClientPrefs.data.exratingDisplay;
+		}
+
 		var noteDiff:Float = note.strumTime - Conductor.songPosition + (cpuControlled ? 0 : ClientPrefs.data.ratingOffset);
 
 		// 移动端判定补偿：触屏输入倾向于出现额外正向(偏晚) 延迟，
@@ -5655,11 +5669,13 @@ tempScore += '${lblScore}: ${songScore}';
 			comboSpr.x = xThing + 50; // 跟随最大数字 xThing，偏移由 numScore 的 [2,3] 承载，不可独立调整
 			// msTimeTxt 基于 numScore 对齐：启用 "combo" 单词(comboSprDisplay)时跟到单词之后，否则紧跟数字末位，
 			// comboOffset[6] 作为二次微调（与 NoteOffsetState 预览保持一致）
+			// 注意：必须用 showThisCombo（本次是否真的可见）而非 comboSprDisplay（模式开关），
+			// 否则 OG Funkin 模式 combo≤10 时 comboSpr 隐藏但 xThing=0，会导致 msTimeTxt 被推到屏幕极左。
 			if (ClientPrefs.data.msTimingOffsetMode == 'numScore') {
-				if (ClientPrefs.data.comboSprDisplay)
+				if (showThisCombo)
 					msTimeTxt.x = comboSpr.x + comboSpr.width + 5 - 20 - 40 + ClientPrefs.data.comboOffset[6];
 				else
-					msTimeTxt.x = xThing + 60 - 20 - 40 + ClientPrefs.data.comboOffset[6];
+					msTimeTxt.x = FlxG.width * 0.35 + 100 + ClientPrefs.data.comboOffset[2] + ClientPrefs.data.comboOffset[6] + 60 - 20 - 40;
 			}
 		comboJustBroke = false; // 本次命中已消费断连标记
 
