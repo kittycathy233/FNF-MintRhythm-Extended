@@ -2,6 +2,7 @@ package objects;
 
 import backend.animation.PsychAnimationController;
 import backend.NoteTypesConfig;
+import backend.ClientPrefs;
 
 import shaders.RGBPalette;
 import shaders.RGBPalette.RGBShaderReference;
@@ -146,6 +147,20 @@ class Note extends FlxSprite
 	public var lowPriority:Bool = false;
 
 	public static var SUSTAIN_SIZE:Int = 44;
+
+	/** kadeHoldVisual 开启时，长条段之间留出的间隙系数（<1 使每段比一个 step 略矮，露出断续块缝） */
+	public static function kadeHoldGapScale():Float {
+		return ClientPrefs.data.kadeHoldVisual ? 0.9 : 1.0;
+	}
+
+	/**
+	 * Kade 长条视觉：判定区“提前吞噬”量（毫秒）。
+	 * 已命中的长条（prevNote.wasGoodHit）在其 strumTime 到来前提前 killPre 毫秒隐藏，
+	 * 让长条前端贴住判定线逐段被吃掉。当前提前 1 个 step；想更激进可改 1.5 或 2。
+	 */
+	public static function kadeHoldKillPre():Float {
+		return Conductor.stepCrochet * 1.0;
+	}
 	public static var swagWidth:Float = 160 * 0.7;
 	public static var colArray:Array<String> = ['purple', 'blue', 'green', 'red'];
 
@@ -400,8 +415,17 @@ class Note extends FlxSprite
 
 		if (isSustainNote && prevNote != null)
 		{
-			alpha = 0.6;
-			multAlpha = 0.6;
+			// Kade 长条视觉开启时长条完全不透明；关闭时保持原默认半透明
+			if(ClientPrefs.data.kadeHoldVisual)
+			{
+				alpha = 1.0;
+				multAlpha = 1.0;
+			}
+			else
+			{
+				alpha = 0.6;
+				multAlpha = 0.6;
+			}
 			hitsoundDisabled = true;
 			if(ClientPrefs.data.downScroll) flipY = true;
 
@@ -734,8 +758,17 @@ class Note extends FlxSprite
 
 		if (isSustainNote && this.prevNote != this)
 		{
-			alpha = 0.6;
-			multAlpha = 0.6;
+			// Kade 长条视觉开启时长条完全不透明；关闭时保持原默认半透明
+			if(ClientPrefs.data.kadeHoldVisual)
+			{
+				alpha = 1.0;
+				multAlpha = 1.0;
+			}
+			else
+			{
+				alpha = 0.6;
+				multAlpha = 0.6;
+			}
 			hitsoundDisabled = true;
 			if (ClientPrefs.data.downScroll) flipY = true;
 			copyAngle = false;
@@ -981,7 +1014,22 @@ class Note extends FlxSprite
 				tooLate = true;
 		}
 
-		if (tooLate && !inEditor)
+		// Kade 长条视觉：段只在这些情况隐藏——
+		// 1) 本段已“被消费”（wasGoodHit 命中/按住）
+		// 2) 本段“断连”（missed，松开或漏接）
+		// 3) 所属长条已命中到前一段（prevNote.wasGoodHit，hold 正在吞噬途中），
+		//    且本段进入提前吞噬窗口（strumTime 前 kadeHoldKillPre() 毫秒）——让玩家/对手位
+		//    长条前端都贴住判定线逐段提前消失，未命中的整条长条绝不提前消失。
+		if (ClientPrefs.data.kadeHoldVisual && isSustainNote)
+		{
+			if (wasGoodHit || missed)
+				visible = false;
+			else if (prevNote != null && prevNote.wasGoodHit
+				&& timeUntilHit <= kadeHoldKillPre())
+				visible = false;
+		}
+
+		if (!ClientPrefs.data.kadeHoldVisual && tooLate && !inEditor)
 		{
 			if (alpha > 0.3)
 				alpha = 0.3;
@@ -1049,6 +1097,10 @@ class Note extends FlxSprite
 
 	public function clipToStrumNote(myStrum:StrumNote)
 	{
+		// Kade 长条视觉：开启时不裁剪，改为靠 update 里按段时间淡出到 0.3（保持整条恒显示）
+		if (ClientPrefs.data.kadeHoldVisual)
+			return;
+
 		var center:Float = myStrum.y + offsetY + Note.swagWidth / 2;
 		if((mustPress || !ignoreNote) && (wasGoodHit || (prevNote.wasGoodHit && !canBeHit)))
 		{

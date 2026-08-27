@@ -420,6 +420,12 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(kadeScoringOption);
 
+		var kadeHoldVisualOption:Option = new Option(Language.get('kade_hold_visual'),
+			Language.get("kade_hold_visual_desc", ["启用 Kade 长条视觉：长条显示为分段，判定区间已走过的段淡出到 0.3（纯视觉，不改判定与回放）"]),
+			'kadeHoldVisual',
+			BOOL);
+		addOption(kadeHoldVisualOption);
+
 		presetDependentOptions = [perfectWindowOption, sickWindowOption, goodWindowOption, badWindowOption, shitWindowOption];
 
 		super();

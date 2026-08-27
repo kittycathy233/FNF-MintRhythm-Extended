@@ -409,6 +409,8 @@
     "sustain_accuracy_desc": "启用后长条(尾音)命中会计入准确率；关闭后完全忽略长条对准确率的贡献。",
     "kade_scoring": "Kade 计分制",
     "kade_scoring_desc": "启用后采用 Kade 计分：bad=0 / shit=-300 / good=200 / sick=350；命中 Shit 会断连并计入 Miss，并套用 Kade 的命中/miss 加减血规则。",
+    "kade_hold_visual": "Kade 长条视觉",
+    "kade_hold_visual_desc": "启用 Kade 长条视觉：长条显示为分段，判定区间已走过的段淡出到 0.3（纯视觉，不改判定与回放）。",
     "key_viewer": "键盘可视化",
     "key_viewer_profile": "键盘可视“附加资料”",
     "reset_key_viewer_total": "重置“键盘可视”内统计总数",

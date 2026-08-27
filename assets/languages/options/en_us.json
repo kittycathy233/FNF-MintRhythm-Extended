@@ -404,6 +404,8 @@
     "sustain_accuracy_desc": "When enabled, sustain (tail) hits count toward accuracy; when disabled they are completely ignored.",
     "kade_scoring": "Kade Scoring",
     "kade_scoring_desc": "Enable Kade scoring: bad=0 / shit=-300 / good=200 / sick=350. Hitting a Shit breaks the combo and counts as a Miss, and Kade's hit/miss health is applied.",
+    "kade_hold_visual": "Kade Hold Visual",
+    "kade_hold_visual_desc": "Enable Kade hold visuals: sustains render as segments, and the part of the hold that has passed the judge window fades to 0.3 (visual only, doesn't affect judgment or replays).",
     "key_viewer": "Key Viewer",
     "key_viewer_profile": "Key Viewer 'Profile'",
     "reset_key_viewer_total": "Reset Key Viewer Total Count",

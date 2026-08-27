@@ -2785,7 +2785,7 @@ tempScore += '${lblScore}: ${songScore}';
 						{
 							if(oldNote.isSustainNote)
 							{
-								oldNote.scale.y *= Note.SUSTAIN_SIZE / oldNote.frameHeight;
+								oldNote.scale.y *= Note.SUSTAIN_SIZE / oldNote.frameHeight * Note.kadeHoldGapScale();
 								oldNote.scale.y /= playbackRate;
 								oldNote.resizeByRatio(curStepCrochet / Conductor.stepCrochet);
 							}
@@ -3898,7 +3898,7 @@ tempScore += '${lblScore}: ${songScore}';
 						// 处理 oldNote 的 scale 调整
 						if (oldNote != null && oldNote.isSustainNote && noteData.needsOldNoteScaleAdjust) {
 							if (!noteData.isPixelStage) {
-								oldNote.scale.y *= Note.SUSTAIN_SIZE / oldNote.frameHeight;
+								oldNote.scale.y *= Note.SUSTAIN_SIZE / oldNote.frameHeight * Note.kadeHoldGapScale();
 								oldNote.scale.y /= playbackRate;
 								oldNote.resizeByRatio(noteData.curStepCrochet / Conductor.stepCrochet);
 							} else {
