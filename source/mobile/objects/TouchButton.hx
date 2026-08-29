@@ -203,11 +203,6 @@ class TypedTouchButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 	 */
 	public var independentLabelColor:Bool = false;
 
-	// 性能优化：缓存上次检查的触摸点和时间
-	var _lastTouchCheckTime:Float = 0;
-	var _cachedTouchPositions:Array<FlxPoint> = [];
-	var _touchCacheValid:Bool = false;
-
 	/**
 	 * Creates a new `FlxTypedButton` object with a gray background.
 	 *

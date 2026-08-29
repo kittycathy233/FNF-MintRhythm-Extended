@@ -37,47 +37,8 @@ class TouchUtil
 	public static var released(get, never):Bool;
 	public static var touch(get, never):FlxTouch;
 
-	// 性能优化：触摸点缓存
-	private static var _cachedTouchPositions:Array<FlxPoint> = [];
-	private static var _lastCacheTime:Float = -1;
-	private static inline var CACHE_EXPIRE_TIME:Float = 0.016; // 60fps，约16ms
-
-	/**
-	 * 性能优化：获取缓存的触摸点位置
-	 */
-	public static function getCachedTouchPositions(forceRefresh:Bool = false):Array<FlxPoint>
-	{
-		var currentTime = FlxG.game.ticks / 1000;
-
-		// 如果缓存过期或强制刷新，重新计算
-		if (forceRefresh || _lastCacheTime < 0 || currentTime - _lastCacheTime > CACHE_EXPIRE_TIME)
-		{
-			updateTouchCache();
-			_lastCacheTime = currentTime;
-		}
-
-		return _cachedTouchPositions;
-	}
-
-	/**
-	 * 更新触摸点缓存
-	 */
-	private static function updateTouchCache():Void
-	{
-		// 清空旧缓存
-		while (_cachedTouchPositions.length > 0)
-		{
-			var point = _cachedTouchPositions.pop();
-			point.put();
-		}
-
-		// 添加新的触摸点位置
-		for (touch in FlxG.touches.list)
-		{
-			var point = FlxPoint.get(touch.x, touch.y);
-			_cachedTouchPositions.push(point);
-		}
-	}
+	// 注意：不要在此处缓存/反复分配 FlxPoint。
+	// 触摸点是逐帧轮询的，缓存会造成大量对象分配回收（GC 卡顿），反而加剧触控延迟。
 
 	public static function overlaps(object:FlxObject, ?camera:FlxCamera):Bool
 	{
