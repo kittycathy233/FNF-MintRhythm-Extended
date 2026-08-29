@@ -31,7 +31,10 @@ class ChartingWaveform extends FlxWaveform
 		else if (channel == 1)
 			drawPoints = _drawPointsRight;
 
-		var arrayLength:Int = Math.ceil(waveformBuffer.length / _durationSamples) * _effectiveSize;
+		// full=false 时 buildDrawData 只会填充 [0.._effectiveSize) 范围的数据，
+		// 无需为全曲预留空间。按全曲长度分配（ceil(songLen/duration)*effectiveSize）
+		// 会在长曲末段触发巨大的无用数组，导致内存暴涨后崩溃。
+		var arrayLength:Int = _effectiveSize;
 		drawPoints.resize(arrayLength);
 		resetDrawArray(drawPoints);
 
