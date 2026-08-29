@@ -154,13 +154,13 @@ class Song
 	public static function loadFromJson(jsonInput:String, ?folder:String):SwagSong
 	{
 		if(folder == null) folder = jsonInput;
-		PlayState.SONG = getChart(jsonInput, folder);
-		
-		if(PlayState.SONG == null)
+		var newSong:SwagSong = getChart(jsonInput, folder);
+		if(newSong == null)
 		{
 			trace('Failed to load chart: $jsonInput (tried: ${lastTriedChartPaths.join(', ')})');
 			return null;
 		}
+		PlayState.SONG = newSong;
 		
 		loadedSongName = folder;
 		chartPath = _lastPath;

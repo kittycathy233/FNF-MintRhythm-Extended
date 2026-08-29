@@ -348,13 +348,30 @@ class PauseSubState extends MusicBeatSubstate
 		{
 			if (menuItems == difficultyChoices)
 			{
+				if (PlayState.SONG == null)
+				{
+					menuItems = menuItemsOG;
+					regenMenu();
+					super.update(elapsed);
+					return;
+				}
 				var songLowercase:String = Paths.formatToSongPath(PlayState.SONG.song);
 				var poop:String = Highscore.formatSong(songLowercase, curSelected);
 				try
 				{
 					if(menuItems.length - 1 != curSelected && difficultyChoices.contains(daSelected))
 					{
-						Song.loadFromJson(poop, songLowercase);
+						var loadedSong = Song.loadFromJson(poop, songLowercase);
+						if(loadedSong == null)
+						{
+							missingText.text = 'ERROR WHILE LOADING CHART:\nMissing chart file for difficulty: ${poop}';
+							missingText.screenCenter(Y);
+							missingText.visible = true;
+							missingTextBG.visible = true;
+							FlxG.sound.play(Paths.sound('cancelMenu'));
+							super.update(elapsed);
+							return;
+						}
 						PlayState.storyDifficulty = curSelected;
 						MusicBeatState.resetState();
 						FlxG.sound.music.volume = 0;

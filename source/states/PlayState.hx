@@ -4093,72 +4093,76 @@ tempScore += '${lblScore}: ${songScore}';
 				{
 					if(startedCountdown)
 					{
-						var fakeCrochet:Float = (60 / SONG.bpm) * 1000;
-						var i:Int = 0;
-						while(i < notes.length)
+						if (SONG != null)
 						{
-							var daNote:Note = notes.members[i];
-							if(daNote == null)
+							var fakeCrochet:Float = (60 / SONG.bpm) * 1000;
+							var i:Int = 0;
+							while(i < notes.length)
 							{
-								i++;
-								continue;
-							}
+								var daNote:Note = notes.members[i];
+								if(daNote == null)
+								{
+									i++;
+									continue;
+								}
 
-					// 渲染归组只按原版几何关系：bf 音符(mustPress)在右侧 playerStrums，dad 音符在左侧 opponentStrums。
-					// 不随 playOpponent 改变——playOpponent 时你打的音符(dad 侧)天然就在左侧对手箭头上。
-					var strumGroup:FlxTypedGroup<StrumNote> = playerStrums;
-					if(!daNote.mustPress) strumGroup = opponentStrums;
+								// 渲染归组只按原版几何关系：bf 音符(mustPress)在右侧 playerStrums，dad 音符在左侧 opponentStrums。
+								// 不随 playOpponent 改变——playOpponent 时你打的音符(dad 侧)天然就在左侧对手箭头上。
+								var strumGroup:FlxTypedGroup<StrumNote> = playerStrums;
+								if(!daNote.mustPress) strumGroup = opponentStrums;
 
-						var strum:StrumNote = strumGroup.members[daNote.noteData];
-						if (strum == null)
-						{
-							// 该轨已无对应箭头（异常谱面），隐藏音符避免报错。
-							daNote.visible = false;
-							i++;
-							continue;
-						}
-						daNote.followStrumNote(strum, fakeCrochet, songSpeed / playbackRate);
+								var strum:StrumNote = strumGroup.members[daNote.noteData];
+								if (strum == null)
+								{
+									// 该轨已无对应箭头（异常谱面），隐藏音符避免报错。
+									daNote.visible = false;
+									i++;
+									continue;
+								}
+								daNote.followStrumNote(strum, fakeCrochet, songSpeed / playbackRate);
 
-						if(isPlayerNote(daNote))
-						{
-						// 长条头部也必须在到达 strumTime 后才首次命中，避免提前窗口导致
-						// 对手箭头飞溅/holdcover 在真实判定点之前就触发（尾段 earlyHitMult=0 不受影响）。
-						if(cpuControlled && !daNote.blockHit && daNote.canBeHit && daNote.strumTime <= Conductor.songPosition)
-							goodNoteHit(daNote);
-						}
-						else if (!daNote.hitByOpponent && !daNote.ignoreNote && daNote.canBeHit && daNote.strumTime <= Conductor.songPosition)
-						{
-							opponentNoteHit(daNote);
-							if (!daNote.isSustainNote) daNote.wasGoodHit = true;
-						}
-							else if (daNote.wasGoodHit && !daNote.hitByOpponent && !daNote.ignoreNote)
-								opponentNoteHit(daNote);
+								if(isPlayerNote(daNote))
+								{
+									// 长条头部也必须在到达 strumTime 后才首次命中，避免提前窗口导致
+									// 对手箭头飞溅/holdcover 在真实判定点之前就触发（尾段 earlyHitMult=0 不受影响）。
+									if(cpuControlled && !daNote.blockHit && daNote.canBeHit && daNote.strumTime <= Conductor.songPosition)
+										goodNoteHit(daNote);
+								}
+								else if (!daNote.hitByOpponent && !daNote.ignoreNote && daNote.canBeHit && daNote.strumTime <= Conductor.songPosition)
+								{
+									opponentNoteHit(daNote);
+									if (!daNote.isSustainNote) daNote.wasGoodHit = true;
+								}
+								else if (daNote.wasGoodHit && !daNote.hitByOpponent && !daNote.ignoreNote)
+									opponentNoteHit(daNote);
 
-							if(daNote.isSustainNote && strum.sustainReduce) daNote.clipToStrumNote(strum);
+								if(daNote.isSustainNote && strum.sustainReduce) daNote.clipToStrumNote(strum);
 
-							// Kill extremely late notes and cause misses
-							if (Conductor.songPosition - daNote.strumTime > noteKillOffset)
-							{
-								if (isPlayerNote(daNote) /*&& !cpuControlled */&& !daNote.ignoreNote && !endingSong && (daNote.tooLate || !daNote.wasGoodHit))
-									noteMiss(daNote);
+								// Kill extremely late notes and cause misses
+								if (Conductor.songPosition - daNote.strumTime > noteKillOffset)
+								{
+									if (isPlayerNote(daNote) /*&& !cpuControlled */&& !daNote.ignoreNote && !endingSong && (daNote.tooLate || !daNote.wasGoodHit))
+										noteMiss(daNote);
 
-								daNote.active = daNote.visible = false;
-								invalidateNote(daNote);
-							}
-							// 提前剔除已错过音符的渲染（低延迟/性能模式）：
-							// 已错过且离开屏幕（或逼近 kill 阈值）的音符提前隐藏，减少 SPAM 谱下大量“死音符”的绘制负担。
-							// 注意仍保留其在 notes 组内，错过判定/漏击仍由上面的 kill 逻辑在 noteKillOffset 处统一处理。
-							else if (effectiveHideMissed() && daNote.tooLate && !daNote.ignoreNote && (daNote.active || daNote.visible))
-							{
-								var offscreen:Bool = (
-									daNote.y > FlxG.height || daNote.y + daNote.height < 0 ||
-									daNote.x > FlxG.width || daNote.x + daNote.width < 0
-								);
-								var extremelyLate:Bool = (Conductor.songPosition - daNote.strumTime > noteKillOffset * 0.9);
-								if (offscreen || extremelyLate)
 									daNote.active = daNote.visible = false;
+									invalidateNote(daNote);
+								}
+								// 提前剔除已错过音符的渲染（低延迟/性能模式）：
+								// 已错过且离开屏幕（或逼近 kill 阈值）的音符提前隐藏，减少 SPAM 谱下大量"死音符"的绘制负担。
+								// 注意仍保留其在 notes 组内，错过判定/漏击仍由上面的 kill 逻辑在 noteKillOffset 处统一处理。
+								else if (effectiveHideMissed() && daNote.tooLate && !daNote.ignoreNote && (daNote.active || daNote.visible))
+								{
+									var offscreen:Bool = (
+										daNote.y > FlxG.height || daNote.y + daNote.height < 0 ||
+										daNote.x > FlxG.width || daNote.x + daNote.width < 0
+									);
+									var extremelyLate:Bool = (Conductor.songPosition - daNote.strumTime > noteKillOffset * 0.9);
+									if (offscreen || extremelyLate)
+										daNote.active = daNote.visible = false;
+								}
+
+								if(daNote.exists) i++;
 							}
-							if(daNote.exists) i++;
 						}
 					}
 					else
