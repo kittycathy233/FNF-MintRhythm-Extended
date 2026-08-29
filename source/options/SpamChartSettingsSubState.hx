@@ -50,6 +50,12 @@ class SpamChartSettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		option = new Option(Language.get('lua_note_index_perf'),
+			Language.get("lua_note_index_perf_desc"),
+			'luaNoteIndexPerf',
+			BOOL);
+		addOption(option);
+
 		option = new Option(Language.get('max_notes_spawned_frame'),
 			Language.get("max_notes_per_frame_desc"),
 			'maxNotesPerFrame',

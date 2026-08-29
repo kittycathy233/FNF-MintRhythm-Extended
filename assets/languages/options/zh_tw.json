@@ -245,6 +245,8 @@
     "max_notes_per_frame_desc": "限制單幀可創建的音符精靈數量（0 = 不限）\n卡頓後積壓會在多幀分攤，而不是一次性生成數百個\n音符不會被丟棄，只是延遲一兩幀。",
     "note_optimization_desc": "綜合音符性能優化:\n[容器優化、三角函數/計時緩存、內存佈局優化等（不改變音符對象生命週期，腳本安全）]\n關閉即全量回退原始邏輯，便於排查兼容問題。",
     "note_pooling_desc": "⚠ 僅在你確認所用譜面/modchart 不依賴音符對象持久引用時開啟\n開啟後按列分桶複用普通音符實例以消除 GC 停頓\n若腳本的 onSpawnNote/goodNoteHit/noteMiss 保存了 Note 引用並跨 spawn 讀取，可能讀到被複用的髒數據。",
+    "lua_note_index_perf": "腳本回調索引改用穩定序號",
+    "lua_note_index_perf_desc": "對 Lua/HScript 音符回調（onSpawnNote / goodNoteHit / noteMiss / opponentNoteHit）的 index 參數，改用穩定生成序號，替代全陣列掃描（notes.members.indexOf），可顯著降低腳本啟用時密集譜面的 CPU 開銷。⚠ 啟用後腳本收到的 index 是穩定生成順序，而非音符在 notes 陣列中的當前位置；若某 modchart 依賴陣列位置語義請保持關閉。預設關閉 = 沿用 Psych 原版 indexOf 行為，保證既有模組完全相容。",
     "ratcounter_anim_desc": "評分計數器更新時額外增加動效。",
     "enable_console_log_desc": "將遊戲日誌輸出到系統控制台（終端機）。",
     "time_bar_gradient_desc": "僅對 Psych 風格生效。從對手顏色漸變到玩家顏色。",

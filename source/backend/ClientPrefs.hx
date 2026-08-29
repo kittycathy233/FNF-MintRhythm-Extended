@@ -118,6 +118,12 @@ import openfl.display.StageQuality;
 	// 可能读到被复用的脏数据。默认关闭；仅在你确认所用脚本不依赖音符对象持久引用时开启。
 	public var notePooling:Bool = false;
 
+	// 脚本回调 index 参数归一化：开启后用稳定生成序号 preloadIndex 替代 notes.members.indexOf()，
+	// 消除脚本激活时每次命中/生成的全数组 O(n) 扫描（SPAM 谱 + 脚本 mod 掉的明显 CPU 源）。
+	// ⚠ 开启后脚本回调里的 index 将读到"生成序号"而非"notes 当前数组位置"，若某 modchart 依赖后者请保持关闭。
+	// 默认关闭 = 沿用 indexOf 语义，与 Psych 原版回调行为完全一致，保证既有模组兼容性。
+	public var luaNoteIndexPerf:Bool = false;
+
 	public var timeBarType:String = 'Time Left';
 	public var scoreZoom:Bool = true;
 	public var noReset:Bool = false;

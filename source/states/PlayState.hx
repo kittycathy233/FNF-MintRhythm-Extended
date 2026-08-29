@@ -345,6 +345,10 @@ class PlayState extends MusicBeatState
 	// new/destroy 带来的 GC 停顿。仅在 noteOptimization 且脚本未激活时启用（脚本激活时
 	// 由 effectiveDisableNoteLua() 控制退化为原始 new/destroy，保证回调语义不变）。
 	private var notePool:Map<String, Array<Note>> = new Map<String, Array<Note>>();
+	// 传统加载模式的音符生成序号。优化模式用 notesAddedCount，传统模式没有预解析数组可对齐，
+	// 故用此自增序号作为 Lua/HScript 回调 index 参数的稳定标识（仅标识用，不代表 notes 数组位置，
+	// 不随 notes.remove() 漂移，避免原 notes.members.indexOf() 的 O(n) 扫描）。
+	private var noteSpawnSeq:Int = 0;
 	// 打击音 FlxSound 对象池：复用实例播放 hitsound/missnote，避免高密度谱每击分配与 GC 卡顿
 	var hitSoundPool:HitSoundPool;
 	private var useOptimizedLoading:Bool = false; // 本次歌曲实际采用的加载方式
@@ -3964,7 +3968,7 @@ tempScore += '${lblScore}: ${songScore}';
 					// 调用回调（关闭逐音符脚本时跳过）
 					if (!effectiveDisableNoteLua())
 					{
-						callOnLuas('onSpawnNote', [notes.members.indexOf(note), note.noteData, note.noteType, note.isSustainNote, note.strumTime]);
+						callOnLuas('onSpawnNote', [luaNoteIndex(note), note.noteData, note.noteType, note.isSustainNote, note.strumTime]);
 						callOnHScript('onSpawnNote', [note]);
 					}
 
@@ -4018,6 +4022,7 @@ tempScore += '${lblScore}: ${songScore}';
 					// 保持原来的行为
 					notes.insert(0, dunceNote);
 				}
+				dunceNote.preloadIndex = noteSpawnSeq++;
 				dunceNote.ensureCurrentSkin(); // 按当前皮肤懒加载一次
 				dunceNote.spawned = true;
 
@@ -4026,7 +4031,7 @@ tempScore += '${lblScore}: ${songScore}';
 					// 调用回调（关闭逐音符脚本时跳过）
 					if (!effectiveDisableNoteLua())
 					{
-						callOnLuas('onSpawnNote', [notes.members.indexOf(dunceNote), dunceNote.noteData, dunceNote.noteType, dunceNote.isSustainNote, dunceNote.strumTime]);
+						callOnLuas('onSpawnNote', [luaNoteIndex(dunceNote), dunceNote.noteData, dunceNote.noteType, dunceNote.isSustainNote, dunceNote.strumTime]);
 						callOnHScript('onSpawnNote', [dunceNote]);
 					}
 
@@ -6257,7 +6262,7 @@ tempScore += '${lblScore}: ${songScore}';
 		stagesFunc(function(stage:BaseStage) stage.noteMiss(daNote));
 		if (!effectiveDisableNoteLua())
 		{
-			var result:Dynamic = callOnLuas('noteMiss', [notes.members.indexOf(daNote), daNote.noteData, daNote.noteType, daNote.isSustainNote]);
+			var result:Dynamic = callOnLuas('noteMiss', [luaNoteIndex(daNote), daNote.noteData, daNote.noteType, daNote.isSustainNote]);
 			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript('noteMiss', [daNote]);
 		}
 	}
@@ -6288,6 +6293,11 @@ tempScore += '${lblScore}: ${songScore}';
 		if (!keysPressed.contains(key))
 			keysPressed.push(key);
 	}
+
+	// 音符回调的 index 参数取值：默认沿用 notes.members.indexOf()（Psych 原版语义，完全兼容既有 modchart）；
+	// 仅在 luaNoteIndexPerf 开启时改用稳定生成序号 preloadIndex，消除脚本激活时每次命中/生成的全数组 O(n) 扫描。
+	inline function luaNoteIndex(n:Note):Int
+		return ClientPrefs.data.luaNoteIndexPerf ? n.preloadIndex : notes.members.indexOf(n);
 
 	function noteMissCommon(direction:Int, note:Note = null)
 	{
@@ -6434,7 +6444,7 @@ tempScore += '${lblScore}: ${songScore}';
 		if (!effectiveDisableNoteLua())
 		{
 			var preCbName:String = playOpponent ? 'goodNoteHitPre' : 'opponentNoteHitPre';
-			result = callOnLuas(preCbName, [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
+			result = callOnLuas(preCbName, [luaNoteIndex(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
 			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) result = callOnHScript(preCbName, [note]);
 		}
 
@@ -6512,7 +6522,7 @@ tempScore += '${lblScore}: ${songScore}';
 		if (!effectiveDisableNoteLua())
 		{
 			var cbName:String = playOpponent ? 'goodNoteHit' : 'opponentNoteHit';
-			var result:Dynamic = callOnLuas(cbName, [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
+			var result:Dynamic = callOnLuas(cbName, [luaNoteIndex(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
 			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript(cbName, [note]);
 		}
 
@@ -6546,7 +6556,7 @@ tempScore += '${lblScore}: ${songScore}';
 		if (!effectiveDisableNoteLua())
 		{
 			var preCbName:String = playOpponent ? 'opponentNoteHitPre' : 'goodNoteHitPre';
-			result = callOnLuas(preCbName, [notes.members.indexOf(note), leData, leType, isSus]);
+			result = callOnLuas(preCbName, [luaNoteIndex(note), leData, leType, isSus]);
 			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) result = callOnHScript(preCbName, [note]);
 		}
 
@@ -6759,7 +6769,7 @@ tempScore += '${lblScore}: ${songScore}';
 		if (!effectiveDisableNoteLua())
 		{
 			var cbName:String = playOpponent ? 'opponentNoteHit' : 'goodNoteHit';
-			var result:Dynamic = callOnLuas(cbName, [notes.members.indexOf(note), leData, leType, isSus]);
+			var result:Dynamic = callOnLuas(cbName, [luaNoteIndex(note), leData, leType, isSus]);
 			if(result != LuaUtils.Function_Stop && result != LuaUtils.Function_StopHScript && result != LuaUtils.Function_StopAll) callOnHScript(cbName, [note]);
 		}
 		if(!note.isSustainNote) invalidateNote(note);
