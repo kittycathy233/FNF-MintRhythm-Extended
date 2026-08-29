@@ -1167,7 +1167,7 @@ isReplaying = false;
 			healthBarY = FlxG.height * (!ClientPrefs.data.downScroll ? 0.89 : 0.11);
 		}
 
-		healthBar = new Bar(0, healthBarY, 'healthBar', function() return health, 0, 2);
+		healthBar = new Bar(0, healthBarY, 'healthBar', function() return (ClientPrefs.data.smoothHP ? smoothHealth : health), 0, 2);
 		healthBar.screenCenter(X);
 		// 普通模式：leftToRight=false，玩家(bf 在右)命中使右侧颜色向左扩张，维持原本逻辑。
 		// playOpponent：玩家改为控制左侧 dad，血条改为“由左到右、从低到高”填充（leftToRight=true），
@@ -4197,6 +4197,10 @@ tempScore += '${lblScore}: ${songScore}';
 	var _cachedIconSpeedMult:Float = 9; // 缓存 speedMultiplier，仅在 iconbopstyle 改变时更新，避免每帧字符串比较
 	var _lastIconBopStyle:String = null; // 记录上次检查的 iconbopstyle，用于检测变更
 
+	// V-Slice(New) 复刻 funkin 跳动用的线性补间引用，用于在连续 beat 时取消旧的补间
+	var vsliceBopTweenP1:FlxTween = null;
+	var vsliceBopTweenP2:FlxTween = null;
+
 	// 图标缩放回弹的插值因子：
 	// - 归一化(iconbopNormalize=true)：1 - e^(-k·dt·playbackRate)，任意刷新率/倍速下表现一致（高刷屏不再偏快/偏慢）
 	// - 关闭：沿用旧版逐帧线性公式 k·dt·playbackRate，保留旧手感（低帧下可能偏离）
@@ -4205,6 +4209,21 @@ tempScore += '${lblScore}: ${songScore}';
 		if (ClientPrefs.data.iconbopNormalize)
 			return 1 - Math.exp(-perSec * playbackRate * dt);
 		return perSec * playbackRate * dt;
+	}
+
+	/**
+	 * 复刻 funkin 的图标跳动：beat 时把图标整体放大到 1.2，
+	 * 再用默认(linear)匀速补间在约一个 step 内缩回 1.0（时长上限 0.175s，与 funkin 原版一致）。
+	 * 返回新创建的补间，调用方负责存到对应图标字段，以便下次 beat 时取消。
+	 */
+	function iconBopFunkin(icon:HealthIcon, before:FlxTween):FlxTween
+	{
+		before?.cancel();
+		icon.scale.set(1.2, 1.2);
+		icon.updateHitbox();
+		return FlxTween.tween(icon.scale, {x: 1, y: 1}, Math.min(Conductor.stepCrochet * 0.002, 0.175), {
+			ease: FlxEase.linear
+		});
 	}
 
 	public dynamic function updateIconsScale(elapsed:Float)
@@ -4263,7 +4282,13 @@ tempScore += '${lblScore}: ${songScore}';
         iconP1.scale.y = FlxMath.lerp(iconP1.scale.y, targetScale, kathyFactor);
         iconP2.scale.x = FlxMath.lerp(iconP2.scale.x, targetScale, kathyFactor);
         iconP2.scale.y = FlxMath.lerp(iconP2.scale.y, targetScale, kathyFactor);
-    } else {
+    }
+    else if (ClientPrefs.data.iconbopstyle == "VSlice(New)")
+    {
+        // funkin 复刻：回弹完全由 beat 时启动的 linear 补间驱动，这里不再做指数衰减
+    }
+    else
+    {
 			// 使用缓存的 speedMultiplier，仅在 style 变更时由同步逻辑更新
 			var speedMultiplier:Float = _cachedIconSpeedMult;
 
@@ -7074,7 +7099,12 @@ tempScore += '${lblScore}: ${songScore}';
 						iconP1.scale.add(0.2 * iconP1.startSize, 0.2 * iconP1.startSize);
 						iconP2.scale.add(0.2 * iconP2.startSize, 0.2 * iconP2.startSize);
 
-            	case "VSlice(New)" | "Codename" | "VSlice(Old)" | "NovaFlare" | "Kathy":
+            	case "VSlice(New)":
+						// funkin 复刻：整体放大到 1.2，linear 匀速缩回
+						vsliceBopTweenP1 = iconBopFunkin(iconP1, vsliceBopTweenP1);
+						vsliceBopTweenP2 = iconBopFunkin(iconP2, vsliceBopTweenP2);
+
+            	case "Codename" | "VSlice(Old)" | "NovaFlare" | "Kathy":
 						iconP1.scale.set(1.3, 1.3);
 						iconP2.scale.set(1.3, 1.3);
 
