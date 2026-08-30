@@ -30,8 +30,8 @@ package mobile.objects;
  */
 class MobileControls extends FlxTypedSpriteGroup<MobileInputManager>
 {
-	public var touchPad:TouchPad = new TouchPad('NONE', 'NONE', NONE);
-	public var hitbox:Hitbox = new Hitbox(NONE);
+	public var touchPad:TouchPad = new TouchPad('NONE', 'NONE', ZERO);
+	public var hitbox:Hitbox = new Hitbox(ZERO);
 
 	public function new(?forceType:Int, ?extra:Bool = true)
 	{
@@ -55,7 +55,7 @@ class MobileControls extends FlxTypedSpriteGroup<MobileInputManager>
 	{
 		var extraAction = MobileData.extraActions.get(ClientPrefs.data.extraButtons);
 		if (!extra)
-			extraAction = NONE;
+			extraAction = ZERO;
 		switch (controlMode)
 		{
 			case 0:

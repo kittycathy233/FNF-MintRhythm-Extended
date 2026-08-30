@@ -19,51 +19,21 @@ class ExtraFunctions
 		// Keyboard & Gamepads
 		Lua_helper.add_callback(lua, "keyboardJustPressed", function(name:String)
 		{
-			switch (name.toUpperCase())
-			{
-				case 'SPACE':
-					var space = Reflect.getProperty(FlxG.keys.justPressed, 'SPACE');
-					var mobileShit:Bool = false;
-					if (Controls.instance.mobileC)
-						if (MusicBeatState.getState().mobileControls != null)
-							mobileShit = MusicBeatState.getState().mobileControls.buttonExtra.justPressed;
-					return space || mobileShit;
-
-				default:
-					return Reflect.getProperty(FlxG.keys.justPressed, name.toUpperCase());
-			}
+			var n = name.toUpperCase();
+			if (checkExtraKeyState(n, 0)) return true; // 额外键绑定的物理键(justPressed)
+			return Reflect.getProperty(FlxG.keys.justPressed, n);
 		});
 		Lua_helper.add_callback(lua, "keyboardPressed", function(name:String)
 		{
-			switch (name.toUpperCase())
-			{
-				case 'SPACE':
-					var space = Reflect.getProperty(FlxG.keys.pressed, 'SPACE');
-					var mobileShit:Bool = false;
-					if (Controls.instance.mobileC)
-						if (MusicBeatState.getState().mobileControls != null)
-							mobileShit = MusicBeatState.getState().mobileControls.buttonExtra.pressed;
-					return space || mobileShit;
-
-				default:
-					return Reflect.getProperty(FlxG.keys.pressed, name.toUpperCase());
-			}
+			var n = name.toUpperCase();
+			if (checkExtraKeyState(n, 1)) return true; // 额外键绑定的物理键(pressed)
+			return Reflect.getProperty(FlxG.keys.pressed, n);
 		});
 		Lua_helper.add_callback(lua, "keyboardReleased", function(name:String)
 		{
-			switch (name.toUpperCase())
-			{
-				case 'SPACE':
-					var space = Reflect.getProperty(FlxG.keys.justReleased, 'SPACE');
-					var mobileShit:Bool = false;
-					if (Controls.instance.mobileC)
-						if (MusicBeatState.getState().mobileControls != null)
-							mobileShit = MusicBeatState.getState().mobileControls.buttonExtra.justReleased;
-					return space || mobileShit;
-
-				default:
-					return Reflect.getProperty(FlxG.keys.justReleased, name.toUpperCase());
-			}
+			var n = name.toUpperCase();
+			if (checkExtraKeyState(n, 2)) return true; // 额外键绑定的物理键(justReleased)
+			return Reflect.getProperty(FlxG.keys.justReleased, n);
 		});
 	
 		Lua_helper.add_callback(lua, "anyGamepadJustPressed", function(name:String) return FlxG.gamepads.anyJustPressed(name.toUpperCase()));
@@ -113,13 +83,9 @@ class ExtraFunctions
 				case 'down': return PlayState.instance.controls.NOTE_DOWN_P;
 				case 'up': return PlayState.instance.controls.NOTE_UP_P;
 				case 'right': return PlayState.instance.controls.NOTE_RIGHT_P;
-				case 'space':
-					var mobileShit:Bool = false;
-					if (Controls.instance.mobileC)
-						if (MusicBeatState.getState().mobileControls != null)
-							mobileShit = MusicBeatState.getState().mobileControls.buttonExtra.justPressed;
-					return PlayState.instance.controls.justPressed('space') || mobileShit;
-				default: return PlayState.instance.controls.justPressed(name);
+				default:
+					if (checkExtraKeyState(name.toUpperCase(), 0)) return true; // 额外键绑定的物理键(justPressed)
+					return PlayState.instance.controls.justPressed(name);
 			}
 			return false;
 		});
@@ -130,13 +96,9 @@ class ExtraFunctions
 				case 'down': return PlayState.instance.controls.NOTE_DOWN;
 				case 'up': return PlayState.instance.controls.NOTE_UP;
 				case 'right': return PlayState.instance.controls.NOTE_RIGHT;
-				case 'space':
-					var mobileShit:Bool = false;
-					if (Controls.instance.mobileC)
-						if (MusicBeatState.getState().mobileControls != null)
-							mobileShit = MusicBeatState.getState().mobileControls.buttonExtra.pressed;
-					return PlayState.instance.controls.pressed('space') || mobileShit;
-				default: return PlayState.instance.controls.pressed(name);
+				default:
+					if (checkExtraKeyState(name.toUpperCase(), 1)) return true; // 额外键绑定的物理键(pressed)
+					return PlayState.instance.controls.pressed(name);
 			}
 			return false;
 		});
@@ -147,13 +109,9 @@ class ExtraFunctions
 				case 'down': return PlayState.instance.controls.NOTE_DOWN_R;
 				case 'up': return PlayState.instance.controls.NOTE_UP_R;
 				case 'right': return PlayState.instance.controls.NOTE_RIGHT_R;
-				case 'space':
-					var mobileShit:Bool = false;
-					if (Controls.instance.mobileC)
-						if (MusicBeatState.getState().mobileControls != null)
-							mobileShit = MusicBeatState.getState().mobileControls.buttonExtra.justReleased;
-					return PlayState.instance.controls.justReleased('space') || mobileShit;
-				default: return PlayState.instance.controls.justReleased(name);
+				default:
+					if (checkExtraKeyState(name.toUpperCase(), 2)) return true; // 额外键绑定的物理键(justReleased)
+					return PlayState.instance.controls.justReleased(name);
 			}
 			return false;
 		});
@@ -331,5 +289,37 @@ class ExtraFunctions
 				return false;
 			#end
 		});
+	}
+
+	/**
+	 * 检测指定物理键名是否被某个额外键绑定，返回该额外键按钮的状态。
+	 * @param name     物理键名（大写）
+	 * @param mode     0=justPressed, 1=pressed, 2=justReleased
+	 */
+	public static function checkExtraKeyState(name:String, mode:Int):Bool
+	{
+		if (MusicBeatState.getState().mobileControls == null) return false;
+
+		var mc = MusicBeatState.getState().mobileControls;
+		var keyReturns:Array<String> = [
+			ClientPrefs.data.extraKeyReturn1, ClientPrefs.data.extraKeyReturn2,
+			ClientPrefs.data.extraKeyReturn3, ClientPrefs.data.extraKeyReturn4
+		];
+		var btns:Array<Dynamic> = [mc.buttonExtra, mc.buttonExtra2, mc.buttonExtra3, mc.buttonExtra4];
+
+		for (i in 0...4)
+		{
+			if (btns[i] == null) continue;
+			if (name == keyReturns[i].toUpperCase())
+			{
+				switch (mode)
+				{
+					case 0: return btns[i].justPressed;
+					case 1: return btns[i].pressed;
+					case 2: return btns[i].justReleased;
+				}
+			}
+		}
+		return false;
 	}
 }

@@ -86,6 +86,8 @@ enum abstract MobileInputID(Int) from Int to Int
 	// Extra Buttons
 	var EXTRA_1 = 42;
 	var EXTRA_2 = 43;
+	var EXTRA_3 = 49;
+	var EXTRA_4 = 50;
 	// 多键额外音符（5~9 键，索引 4~8），供动态触屏按钮使用
 	var NOTE_4 = 44;
 	var NOTE_5 = 45;

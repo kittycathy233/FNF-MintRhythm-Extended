@@ -67,6 +67,8 @@ class TouchPad extends MobileInputManager implements IMobileControls
 	public var buttonZ:TouchButton = new TouchButton(0, 0, [MobileInputID.Z]);
 	public var buttonExtra:TouchButton = new TouchButton(0, 0, [MobileInputID.EXTRA_1]);
 	public var buttonExtra2:TouchButton = new TouchButton(0, 0, [MobileInputID.EXTRA_2]);
+	public var buttonExtra3:TouchButton = new TouchButton(0, 0, [MobileInputID.EXTRA_3]);
+	public var buttonExtra4:TouchButton = new TouchButton(0, 0, [MobileInputID.EXTRA_4]);
 
 	public var instance:MobileInputManager;
 	public var onButtonDown:FlxTypedSignal<TouchButton->Void> = new FlxTypedSignal<TouchButton->Void>();
@@ -81,7 +83,7 @@ class TouchPad extends MobileInputManager implements IMobileControls
 	 * @param   DPadMode     The D-Pad mode. `LEFT_FULL` for example.
 	 * @param   ActionMode   The action buttons mode. `A_B_C` for example.
 	 */
-	public function new(DPad:String, Action:String, ?Extra:ExtraActions = NONE)
+	public function new(DPad:String, Action:String, ?Extra:ExtraActions = ZERO)
 	{
 		super();
 
@@ -120,19 +122,39 @@ class TouchPad extends MobileInputManager implements IMobileControls
 			}
 		}
 
+		var count:Int = 0;
 		switch (Extra)
 		{
-			case SINGLE:
-				add(buttonExtra = createButton(0, FlxG.height - 137, 's', 0xFF0066FF));
-				_buttonCache.set('buttonExtra', buttonExtra);
-				setExtrasPos();
-			case DOUBLE:
-				add(buttonExtra = createButton(0, FlxG.height - 137, 's', 0xFF0066FF));
-				add(buttonExtra2 = createButton(FlxG.width - 132, FlxG.height - 137, 'g', 0xA6FF00));
-				_buttonCache.set('buttonExtra', buttonExtra);
-				_buttonCache.set('buttonExtra2', buttonExtra2);
-				setExtrasPos();
-			case NONE: // nothing
+			case ONE: count = 1;
+			case TWO: count = 2;
+			case THREE: count = 3;
+			case FOUR: count = 4;
+			default: count = 0;
+		}
+
+		if (count > 0)
+		{
+			// 额外键自左向右均匀排布在底部，图形依次为 S/G/T/P
+			var extraNames:Array<String> = ['buttonExtra', 'buttonExtra2', 'buttonExtra3', 'buttonExtra4'];
+			var extraGraphics:Array<String> = ['s', 'g', 't', 'p'];
+			var extraColors:Array<Int> = [0xFF0066FF, 0xA6FF00, 0xFF00A6FF, 0xFFFFA600];
+			var slotW:Float = 132;
+			var totalW:Float = count * slotW;
+			var startX:Float = (FlxG.width - totalW) / 2;
+			for (i in 0...count)
+			{
+				var btn:TouchButton = createButton(startX + i * slotW, FlxG.height - 137, extraGraphics[i], extraColors[i]);
+				switch (i)
+				{
+					case 0: buttonExtra = btn;
+					case 1: buttonExtra2 = btn;
+					case 2: buttonExtra3 = btn;
+					default: buttonExtra4 = btn;
+				}
+				add(btn);
+				_buttonCache.set(extraNames[i], btn);
+			}
+			setExtrasPos();
 		}
 
 		alpha = ClientPrefs.data.controlsAlpha;
@@ -201,6 +223,8 @@ class TouchPad extends MobileInputManager implements IMobileControls
 		_buttonCache.set('buttonZ', buttonZ);
 		_buttonCache.set('buttonExtra', buttonExtra);
 		_buttonCache.set('buttonExtra2', buttonExtra2);
+		_buttonCache.set('buttonExtra3', buttonExtra3);
+		_buttonCache.set('buttonExtra4', buttonExtra4);
 	}
 
 	/**
@@ -216,7 +240,9 @@ class TouchPad extends MobileInputManager implements IMobileControls
 	{
 		var extraButtons:Array<TouchButton> = [
 			buttonExtra,
-			buttonExtra2
+			buttonExtra2,
+			buttonExtra3,
+			buttonExtra4
 		];
 
 		if (MobileData.save.data.extraData == null)
@@ -237,7 +263,9 @@ class TouchPad extends MobileInputManager implements IMobileControls
 	{
 		var extraButtons:Array<TouchButton> = [
 			buttonExtra,
-			buttonExtra2
+			buttonExtra2,
+			buttonExtra3,
+			buttonExtra4
 		];
 
 		if (MobileData.save.data.extraData == null)

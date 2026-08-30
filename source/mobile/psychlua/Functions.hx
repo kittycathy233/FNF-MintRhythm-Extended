@@ -43,69 +43,13 @@ class MobileFunctions
 
 		Lua_helper.add_callback(lua, 'mobileControlsMode', getMobileControlsAsString());
 
-		Lua_helper.add_callback(lua, "extraButtonPressed", (button:String) ->
-		{
-			button = button.toLowerCase();
-			if (MusicBeatState.getState().mobileControls != null)
-			{
-				switch (button)
-				{
-					case 'second':
-						return MusicBeatState.getState().mobileControls.buttonExtra2.pressed;
-					default:
-						return MusicBeatState.getState().mobileControls.buttonExtra.pressed;
-				}
-			}
-			return false;
-		});
+		Lua_helper.add_callback(lua, "extraButtonPressed", (button:String) -> getExtraButtonState(button, 1));
 
-		Lua_helper.add_callback(lua, "extraButtonJustPressed", (button:String) ->
-		{
-			button = button.toLowerCase();
-			if (MusicBeatState.getState().mobileControls != null)
-			{
-				switch (button)
-				{
-					case 'second':
-						return MusicBeatState.getState().mobileControls.buttonExtra2.justPressed;
-					default:
-						return MusicBeatState.getState().mobileControls.buttonExtra.justPressed;
-				}
-			}
-			return false;
-		});
+		Lua_helper.add_callback(lua, "extraButtonJustPressed", (button:String) -> getExtraButtonState(button, 0));
 
-		Lua_helper.add_callback(lua, "extraButtonJustReleased", (button:String) ->
-		{
-			button = button.toLowerCase();
-			if (MusicBeatState.getState().mobileControls != null)
-			{
-				switch (button)
-				{
-					case 'second':
-						return MusicBeatState.getState().mobileControls.buttonExtra2.justReleased;
-					default:
-						return MusicBeatState.getState().mobileControls.buttonExtra.justReleased;
-				}
-			}
-			return false;
-		});
+		Lua_helper.add_callback(lua, "extraButtonJustReleased", (button:String) -> getExtraButtonState(button, 2));
 
-		Lua_helper.add_callback(lua, "extraButtonReleased", (button:String) ->
-		{
-			button = button.toLowerCase();
-			if (MusicBeatState.getState().mobileControls != null)
-			{
-				switch (button)
-				{
-					case 'second':
-						return MusicBeatState.getState().mobileControls.buttonExtra2.released;
-					default:
-						return MusicBeatState.getState().mobileControls.buttonExtra.released;
-				}
-			}
-			return false;
-		});
+		Lua_helper.add_callback(lua, "extraButtonReleased", (button:String) -> getExtraButtonState(button, 3));
 
 		Lua_helper.add_callback(lua, "vibrate", (?duration:Int, ?period:Int) ->
 		{
@@ -319,6 +263,47 @@ class MobileFunctions
 			default:
 				return 'none';
 		}
+	}
+
+	/**
+	 * 获取某个额外键按钮的状态。
+	 * @param button 按钮标识（first/second/third/fourth 或 1~4）
+	 * @param mode   0=justPressed, 1=pressed, 2=justReleased, 3=released
+	 */
+	private static function getExtraButtonState(button:String, mode:Int):Bool
+	{
+		button = button.toLowerCase();
+		var idx:Int = -1;
+		switch (button)
+		{
+			case 'first', '1': idx = 0;
+			case 'second', '2': idx = 1;
+			case 'third', '3': idx = 2;
+			case 'fourth', '4': idx = 3;
+		}
+		if (idx < 0) return false;
+
+		if (MusicBeatState.getState().mobileControls != null)
+		{
+			var btn:Dynamic = switch (idx)
+			{
+				case 0: MusicBeatState.getState().mobileControls.buttonExtra;
+				case 1: MusicBeatState.getState().mobileControls.buttonExtra2;
+				case 2: MusicBeatState.getState().mobileControls.buttonExtra3;
+				default: MusicBeatState.getState().mobileControls.buttonExtra4;
+			}
+			if (btn != null)
+			{
+				switch (mode)
+				{
+					case 0: return btn.justPressed;
+					case 1: return btn.pressed;
+					case 2: return btn.justReleased;
+					case 3: return btn.released;
+				}
+			}
+		}
+		return false;
 	}
 }
 

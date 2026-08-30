@@ -10,7 +10,11 @@ import openfl.display.StageQuality;
 // Add a variable here and it will get automatically saved
 @:structInit class SaveVariables {
 	// Mobile and Mobile Controls Releated
-	public var extraButtons:String = "NONE"; // mobile extra button option
+	public var extraButtons:String = "0"; // mobile extra button option (count: 0-4)
+	public var extraKeyReturn1:String = 'SPACE'; // 额外键1绑定到的虚拟控制键名
+	public var extraKeyReturn2:String = 'SPACE'; // 额外键2绑定到的虚拟控制键名
+	public var extraKeyReturn3:String = 'SHIFT'; // 额外键3绑定到的虚拟控制键名
+	public var extraKeyReturn4:String = 'SHIFT'; // 额外键4绑定到的虚拟控制键名
 	public var hitboxPos:Bool = true; // hitbox extra button position option
 	public var dynamicColors:Bool = true; // yes cause its cool -Karim
 	public var controlsAlpha:Float = FlxG.onMobile ? 0.6 : 0;

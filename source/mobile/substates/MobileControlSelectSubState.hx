@@ -53,7 +53,7 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 	public function new()
 	{
 		super();
-		if (ClientPrefs.data.extraButtons != 'NONE')
+		if (Std.parseInt(ClientPrefs.data.extraButtons) > 0)
 			options.push('Pad-Extra');
 
 		// 简单的变暗背景效果
@@ -355,7 +355,20 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 			}
 			else
 			{
-				positionText.text = 'S X: ${control.touchPad.buttonExtra.x} - Y: ${control.touchPad.buttonExtra.y}\n\n\n\nG X: ${control.touchPad.buttonExtra2.x} - Y: ${control.touchPad.buttonExtra2.y}';
+				var pad = control.touchPad;
+				positionText.text = '';
+				var pairs:Array<Array<Dynamic>> = [
+					['S', pad.buttonExtra],
+					['G', pad.buttonExtra2],
+					['T', pad.buttonExtra3],
+					['P', pad.buttonExtra4]
+				];
+				for (p in pairs)
+				{
+					if (p[1] != null)
+						positionText.text += p[0] + ' X: ' + p[1].x + ' - Y: ' + p[1].y + '\n';
+				}
+				positionText.text = positionText.text.substr(0, positionText.text.length - 1);
 			}
 			positionText.setPosition(0, (((positionTextBg.height - positionText.height) / 2) + positionTextBg.y));
 		}

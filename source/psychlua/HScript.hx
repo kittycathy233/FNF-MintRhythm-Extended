@@ -276,7 +276,9 @@ class HScript extends Iris
 				case 'down': return Controls.instance.NOTE_DOWN_P;
 				case 'up': return Controls.instance.NOTE_UP_P;
 				case 'right': return Controls.instance.NOTE_RIGHT_P;
-				default: return Controls.instance.justPressed(name);
+				default:
+					if (ExtraFunctions.checkExtraKeyState(name.toUpperCase(), 0)) return true; // 额外键绑定的物理键
+					return Controls.instance.justPressed(name);
 			}
 			return false;
 		});
@@ -287,7 +289,9 @@ class HScript extends Iris
 				case 'down': return Controls.instance.NOTE_DOWN;
 				case 'up': return Controls.instance.NOTE_UP;
 				case 'right': return Controls.instance.NOTE_RIGHT;
-				default: return Controls.instance.pressed(name);
+				default:
+					if (ExtraFunctions.checkExtraKeyState(name.toUpperCase(), 1)) return true; // 额外键绑定的物理键
+					return Controls.instance.pressed(name);
 			}
 			return false;
 		});
@@ -298,7 +302,9 @@ class HScript extends Iris
 				case 'down': return Controls.instance.NOTE_DOWN_R;
 				case 'up': return Controls.instance.NOTE_UP_R;
 				case 'right': return Controls.instance.NOTE_RIGHT_R;
-				default: return Controls.instance.justReleased(name);
+				default:
+					if (ExtraFunctions.checkExtraKeyState(name.toUpperCase(), 2)) return true; // 额外键绑定的物理键
+					return Controls.instance.justReleased(name);
 			}
 			return false;
 		});

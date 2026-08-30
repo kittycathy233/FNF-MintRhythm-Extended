@@ -29,7 +29,7 @@ import options.Option;
 
 class MobileOptionsSubState extends BaseOptionsMenu
 {
-	final exControlTypes:Array<String> = ["NONE", "SINGLE", "DOUBLE"];
+	final exControlTypes:Array<String> = ["0", "1", "2", "3", "4"];
 	final hintOptions:Array<String> = ["No Gradient", "No Gradient (Old)", "Gradient", "Hidden"];
 	var option:Option;
 
@@ -40,6 +40,21 @@ class MobileOptionsSubState extends BaseOptionsMenu
 
 		option = new Option('Extra Controls', Language.get("extra_controls_desc"),
 			'extraButtons', STRING, exControlTypes);
+		option.onChange = () ->
+		{
+			// 数量变化后重新生成触屏控件，让新数量的额外键生效
+			removeMobileControls();
+			addMobileControls();
+		};
+		addOption(option);
+
+		option = new Option('Extra Key Bindings',
+			"Choose which specific key each extra button simulates", '_extraKeyBindings', BUTTON);
+		option.onChange = () ->
+		{
+			persistentUpdate = false;
+			openSubState(new mobile.substates.MobileExtraControl(this));
+		};
 		addOption(option);
 
 		option = new Option('Mobile Controls Opacity',

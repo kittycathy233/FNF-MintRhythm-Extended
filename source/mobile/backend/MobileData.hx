@@ -58,8 +58,12 @@ class MobileData
 		}
 		#end
 
+		var index:Int = 0;
 		for (data in ExtraActions.createAll())
-			extraActions.set(data.getName(), data);
+		{
+			extraActions.set(Std.string(index), data);
+			index++;
+		}
 	}
 
 	public static function setTouchPadCustom(touchPad:TouchPad):Void
@@ -201,7 +205,9 @@ typedef ButtonsData =
 
 enum ExtraActions
 {
-	SINGLE;
-	DOUBLE;
-	NONE;
+	ZERO;
+	ONE;
+	TWO;
+	THREE;
+	FOUR;
 }

@@ -7811,7 +7811,7 @@ tempScore += '${lblScore}: ${songScore}';
 		if(!variables.exists("luaTouchPad"))
 			variables.set("luaTouchPad", luaTouchPad);
 
-		luaTouchPad = new TouchPad(DPadMode, ActionMode, NONE);
+		luaTouchPad = new TouchPad(DPadMode, ActionMode, ZERO);
 		luaTouchPad.alpha = ClientPrefs.data.controlsAlpha;
 	}
 	
