@@ -271,15 +271,15 @@ class PlayState extends MusicBeatState
 	public var songSpeedType:String = "multiplicative";
 	public var noteKillOffset:Float = 350;
 
-	// 低延迟 / 已错过音符剔除相关
-	// 有效自动重同步：用户开启 autoResync 且未启用低延迟模式时为真
-	private inline function effectiveAutoResync():Bool return ClientPrefs.data.autoResync && !ClientPrefs.data.lowLatency;
-	// 有效已错过音符剔除：用户开启 hideMissedNotes 或启用低延迟模式时为真
-	private inline function effectiveHideMissed():Bool return ClientPrefs.data.hideMissedNotes || ClientPrefs.data.lowLatency;
-	// 有效过期即时结算：用户开启 instantResolveExpired 或启用低延迟模式时为真
-	private inline function effectiveInstantResolve():Bool return ClientPrefs.data.instantResolveExpired || ClientPrefs.data.lowLatency;
-	// 有效关闭逐音符脚本：用户开启 disableNoteLua 或启用低延迟模式时为真
-	private inline function effectiveDisableNoteLua():Bool return ClientPrefs.data.disableNoteLua || ClientPrefs.data.lowLatency;
+	// 低延迟 / 已错过音符剔除相关（已移除 lowLatency 聚合开关，各行为直接由对应设置决定）
+	// 有效自动重同步：用户开启 autoResync 时为真
+	private inline function effectiveAutoResync():Bool return ClientPrefs.data.autoResync;
+	// 有效已错过音符剔除：用户开启 hideMissedNotes 时为真
+	private inline function effectiveHideMissed():Bool return ClientPrefs.data.hideMissedNotes;
+	// 有效过期即时结算：用户开启 instantResolveExpired 时为真
+	private inline function effectiveInstantResolve():Bool return ClientPrefs.data.instantResolveExpired;
+	// 有效关闭逐音符脚本：用户开启 disableNoteLua 时为真
+	private inline function effectiveDisableNoteLua():Bool return ClientPrefs.data.disableNoteLua;
 	// 本帧已新建的音符精灵计数（用于 maxNotesPerFrame 每帧生成预算），每帧生成前清零
 	private var notesSpawnedThisFrame:Int = 0;
 
@@ -976,7 +976,6 @@ isReplaying = false;
 
 		uiGroup = new FlxSpriteGroup();
 		comboGroup = new FlxSpriteGroup();
-		comboSpritePool = new FlxTypedGroup<FlxSprite>(ClientPrefs.data.comboSpritePoolSize);
 		noteGroup = new FlxTypedGroup<FlxBasic>();
 		add(laneCovers);
 		// 旧版HUD模式(legacyHUD): 不将 comboGroup/uiGroup/noteGroup 加入 state,
@@ -3523,7 +3522,8 @@ tempScore += '${lblScore}: ${songScore}';
 
 				if(notes.length > 0) {
 					for (n in notes) {
-						var canHit:Bool = (n != null && !strumsBlocked[n.noteData] && n.canBeHit
+						if (n == null || !n.exists) continue; // 帧末批量模式下跳过本帧已销毁的“死音符”
+						var canHit:Bool = (!strumsBlocked[n.noteData] && n.canBeHit
 							&& isPlayerNote(n) && !n.tooLate && !n.wasGoodHit && !n.blockHit);
 
 						if (canHit && n.isSustainNote) {
@@ -3597,8 +3597,8 @@ tempScore += '${lblScore}: ${songScore}';
 							// 正常按键，找到对应的音符并打击
 							var targetNotes:Array<Note> = notes.members.filter(function(n:Note):Bool {
 								// 使用小容差（5ms）来匹配音符，避免浮点数精度问题
-								return n != null && isPlayerNote(n) && n.noteData == replayAction.key && !n.wasGoodHit
-									&& Math.abs(n.strumTime - replayAction.noteTime) < 5;
+								return n != null && n.exists && isPlayerNote(n) && n.noteData == replayAction.key && !n.wasGoodHit
+								&& Math.abs(n.strumTime - replayAction.noteTime) < 5;
 							});
 							for(note in targetNotes)
 							{
@@ -4105,7 +4105,8 @@ tempScore += '${lblScore}: ${songScore}';
 							while(i < notes.length)
 							{
 								var daNote:Note = notes.members[i];
-								if(daNote == null)
+								// 跳过 null 及帧末批量 compact 模式下一帧内已销毁但尚未剔除的“死音符”。
+								if(daNote == null || !daNote.exists)
 								{
 									i++;
 									continue;
@@ -4166,7 +4167,9 @@ tempScore += '${lblScore}: ${songScore}';
 										daNote.active = daNote.visible = false;
 								}
 
-								if(daNote.exists) i++;
+								if (ClientPrefs.data.batchCompactNotes)
+									i++; // 批量模式不改数组成员，稳定前进
+								else if (daNote.exists) i++; // legacy 即时 splice：exists=false 时保持索引，补偿左移
 							}
 						}
 					}
@@ -4181,6 +4184,16 @@ tempScore += '${lblScore}: ${songScore}';
 				}
 			}
 			eventHandler.checkEventNote();
+		}
+
+		// 帧末批量 compact：batchCompactNotes 开启时销毁被延迟到帧末才真正收缩数组。
+		// 一次性单遍紧凑 notes/normalNotes/holdNotes，把 SPAM 高密度谱下每颗销毁 3 次 O(n)
+		// 左移（乐/MS/holdNotes）降为一帧一次的 O(n)，是销毁路径的主要 CPU 优化。
+		// 生成循环在本段之前运行 → 本帧被销毁的音符不会被本帧复用，故此处剔除安全、无重复入组。
+		if (ClientPrefs.data.batchCompactNotes) {
+			compactNoteArray(notes.members);
+			compactNoteArray(normalNotes.members);
+			compactNoteArray(holdNotes.members);
 		}
 
 		#if debug
@@ -4856,13 +4869,18 @@ tempScore += '${lblScore}: ${songScore}';
 	}
 
 	public function KillNotes() {
-		while(notes.length > 0) {
-			var daNote:Note = notes.members[0];
+		// batchCompactNotes 下 invalidateNote 不再即时 splice，不能再依赖 while(notes.length>0) 收敛。
+		// 改为先快照依次击杀（复进对象池/销毁），再显式清空三个数组。
+		var snapshot:Array<Note> = notes.members.copy();
+		for (daNote in snapshot)
+		{
+			if (daNote == null) continue;
 			daNote.active = false;
 			daNote.visible = false;
 			invalidateNote(daNote);
 		}
-		// 同时清空 normalNotes 和 holdNotes
+		// 批量模式下数组仍留死成员，直接清空；legacy 模式下已即时移除，clear 幂等无害。
+		notes.clear();
 		normalNotes.clear();
 		holdNotes.clear();
 		unspawnNotes = [];
@@ -4880,26 +4898,11 @@ tempScore += '${lblScore}: ${songScore}';
 	// Stores Ratings and Combo Sprites in a group
 	public var comboGroup:FlxSpriteGroup;
 
-	// rating/combo/数字 精灵的对象池：避免每次命中都 new/destroy，减少 GC 停顿与命中卡顿。
-	// 该池只用于对象复用管理，不加入 state（不参与 update/draw），实际显示仍通过 comboGroup。
-	var comboSpritePool:FlxTypedGroup<FlxSprite>;
-
-	// 取出一个干净的 rating/combo 精灵：
-	//  - comboSpritePooling=true  → 从对象池 recycle（复用，省 GC / 减命中卡顿）
-	//  - comboSpritePooling=false → 传统 new（不入池），行为与旧引擎/模组完全一致（最大兼容性）
-	// 无论走哪条，都会重置所有可能残留的状态后再返回。
+	// 取一个全新的、干净的 rating/combo 精灵：直接 new，行为与旧引擎/模组完全一致。
+	// （已移除 comboSpritePooling 对象池——之前池复用会残留视觉状态，改为每次 new 确保渲染符合预期。）
 	function recycleComboSprite():FlxSprite
 	{
-		var spr:FlxSprite;
-		if (ClientPrefs.data.comboSpritePooling)
-		{
-			if (comboSpritePool == null) comboSpritePool = new FlxTypedGroup<FlxSprite>(ClientPrefs.data.comboSpritePoolSize);
-			spr = comboSpritePool.recycle(FlxSprite);
-		}
-		else
-		{
-			spr = new FlxSprite();
-		}
+		var spr:FlxSprite = new FlxSprite();
 		FlxTween.cancelTweensOf(spr);
 		// scale 是独立的 FlxPoint，cancelTweensOf(spr) 无法取消作用于它的补间，
 		// 必须单独取消，否则残留的 scale 补间会在复用后继续篡改新精灵的大小。
@@ -4914,22 +4917,16 @@ tempScore += '${lblScore}: ${songScore}';
 		return spr;
 	}
 
-	// 用完一个 rating/combo 精灵：先从 comboGroup 移除；再按“对象归属”决定回收方式——
-	//  - 属于对象池   → kill()，供后续 recycle 复用
-	//  - 非池(new 出来)→ destroy()，即时释放
-	// 以对象归属（而非当前开关状态）判断，保证歌曲中途切换开关也不会误销毁池对象或泄漏。
+	// 用完一个 rating/combo 精灵：先从 comboGroup 移除，再立即销毁释放。
+	// （已移除对象池归属判断，全部 new 出来的对象直接 destroy。）
 	function killComboSprite(spr:FlxSprite):Void
 	{
 		if (spr == null) return;
 		FlxTween.cancelTweensOf(spr);
-		// 同上：scale 补间需单独取消并复位，避免污染对象池中的下一个使用者。
 		FlxTween.cancelTweensOf(spr.scale);
 		spr.scale.set(1, 1);
 		removeComboSpr(spr);
-		if (comboSpritePool != null && comboSpritePool.members.indexOf(spr) != -1)
-			spr.kill();
-		else
-			spr.destroy();
+		spr.destroy();
 	}
 
 	// ===== Camellia 跳动风格（复刻自 VSCam 2.75）=====
@@ -5825,7 +5822,7 @@ tempScore += '${lblScore}: ${songScore}';
 			Conductor.songPosition = FlxG.sound.music.time + Conductor.offset;
 
 		var plrInputNotes:Array<Note> = notes.members.filter(function(n:Note):Bool {
-			if (n == null || n.isSustainNote || n.noteData != key) return false;
+			if (n == null || !n.exists || n.isSustainNote || n.noteData != key) return false;
 			if (strumsBlocked[n.noteData] || !isPlayerNote(n) || n.tooLate || n.wasGoodHit || n.blockHit) return false;
 			if (preciseHit)
 			{
@@ -6020,7 +6017,7 @@ tempScore += '${lblScore}: ${songScore}';
 		var target:Note = null;
 		for (n in notes)
 		{
-			if(n == null || !n.isSustainNote || !isPlayerNote(n)) continue;
+			if(n == null || !n.exists || !n.isSustainNote || !isPlayerNote(n)) continue;
 			if(n.noteData != key) continue;
 			if(n.wasGoodHit || n.tooLate || n.missed || n.ignoreNote || n.blockHit) continue;
 			if(n.parent == null || !n.parent.wasGoodHit) continue; // 头部必须已命中(长条正在进行中)
@@ -6044,7 +6041,7 @@ tempScore += '${lblScore}: ${songScore}';
 		var lastTail:Note = null;
 		for (n in notes)
 		{
-			if(n == null || !n.isSustainNote || !isPlayerNote(n)) continue;
+			if(n == null || !n.exists || !n.isSustainNote || !isPlayerNote(n)) continue;
 			if(n.noteData != key) continue;
 			if(n.parent == null || !n.parent.wasGoodHit || n.parent.missed) continue;
 			// 取该列当前活跃长条的最后一个尾音
@@ -6093,7 +6090,7 @@ tempScore += '${lblScore}: ${songScore}';
 		var activeCols:Int = 0;
 		for (n in notes)
 		{
-			if(n == null || !n.isSustainNote || !isPlayerNote(n)) continue;
+			if(n == null || !n.exists || !n.isSustainNote || !isPlayerNote(n)) continue;
 			if(n.tooLate || n.missed || n.ignoreNote) continue;
 			if(n.parent == null || !n.parent.wasGoodHit) continue; // 头部已命中(长条进行中)
 			if(n.noteData < 0 || n.noteData >= _countedBuffer.length || _countedBuffer[n.noteData]) continue;
@@ -6204,7 +6201,8 @@ tempScore += '${lblScore}: ${songScore}';
 
 			if (notes.length > 0) {
 				for (n in notes) { // I can't do a filter here, that's kinda awesome
-					var canHit:Bool = (n != null && !strumsBlocked[n.noteData] && n.canBeHit
+					if (n == null || !n.exists) continue; // 帧末批量模式下跳过本帧已销毁的“死音符”
+					var canHit:Bool = (!strumsBlocked[n.noteData] && n.canBeHit
 						&& isPlayerNote(n) && !n.tooLate && !n.wasGoodHit && !n.blockHit);
 
 					if (guitarHeroSustains)
@@ -6776,13 +6774,25 @@ tempScore += '${lblScore}: ${songScore}';
 	}
 
 	public function invalidateNote(note:Note):Void {
-		// 始终调用 kill() 使 exists=false，确保主循环末尾 `if(daNote.exists) i++` 正确推进索引，
-		// 避免 lowQuality + cpuControlled(botPlay) 下 exists 残留导致 splice 后跳过下一颗音符。
+		// 幂等防护：已杀(destroy 前 kill 置 exists=false)的音符直接返回，避免同一实例被重复进池/destroy。
+		// （从对象池复用的实例 exists 会重新为 true，属正常存活对象，不受此短路影响。）
+		if (!note.exists) return;
+		// 始终调用 kill() 使 exists=false：帧末批量 compact 依此剔除；legacy 即时移除路径下，
+		// 也依靠 exists=false 让主循环末尾不推进索引，避免 splice 左移后跳过下一颗音符。
 		note.kill();
-		notes.remove(note, true);
-		// 同时也从 normalNotes 和 holdNotes 中移除
-		normalNotes.remove(note, true);
-		holdNotes.remove(note, true);
+		if (ClientPrefs.data.batchCompactNotes)
+		{
+			// 帧末批量 compact 模式：销毁不 splice，仅标记 dead，在 update 末尾一次收缩三个数组。
+			// 把原先每颗销毁就 3 次 O(n) indexOf+splice（乐/MS/holdNotes 各一次）降为一帧一次的单遍紧凑。
+		}
+		else
+		{
+			// legacy/兼容模式：维持原“销毁即 splice”行为，notes.length 对脚本实时生效。
+			notes.remove(note, true);
+			// 同时也从 normalNotes 和 holdNotes 中移除
+			normalNotes.remove(note, true);
+			holdNotes.remove(note, true);
+		}
 		// 解除 spawnedNotes 强引用（与 OOM FIX 逻辑一致）：正常路径此前未置空，整曲跑完会持有
 		// 全部已 destroy 的 Note 对象（FlxPoint 等残骸），高密度谱下即数十~上百 MB 泄漏。
 		// 读取侧（生成循环）已做 null + animation 双重校验，置空安全。
@@ -6803,6 +6813,17 @@ tempScore += '${lblScore}: ${songScore}';
 		{
 			note.destroy();
 		}
+	}
+
+	// 单遍就地紧凑：保留 null 之外的存活(!exists=false)成员到数组前段，一次收缩完成。
+	// 就地写入、无新数组分配，也顺带填掉数组里的 null 空洞（如 OOM/过期即时结算路径留下的槽位）。
+	function compactNoteArray(arr:Array<Note>):Void {
+		var w:Int = 0;
+		for (r in 0...arr.length) {
+			var m:Note = arr[r];
+			if (m != null && m.exists) { arr[w] = m; w++; }
+		}
+		if (w < arr.length) arr.splice(w, arr.length - w);
 	}
 
 	/**
@@ -6904,13 +6925,6 @@ tempScore += '${lblScore}: ${songScore}';
 		{
 			keyViewer.destroy();
 			keyViewer = null;
-		}
-		if (comboSpritePool != null)
-		{
-			for (spr in comboSpritePool.members.copy())
-				removeComboSpr(spr);
-			comboSpritePool.destroy();
-			comboSpritePool = null;
 		}
 		// 清理评分贴图缓存引用（FlxGraphic 本身由 Paths.currentTrackedAssets 统一管理，这里只释放本实例的引用）
 		_ratingGfxCache = null;

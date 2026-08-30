@@ -53,8 +53,6 @@ import openfl.display.StageQuality;
 	public var framerate:Int = 60;
 	public var camZooms:Bool = true;
 	public var stageQuality:String = 'MEDIUM'; // 矢量/文本渲染质量(StageQuality)：LOW/MEDIUM/HIGH/BEST，移动端建议 MEDIUM 及以下
-	public var comboSpritePooling:Bool = true; // rating/combo/数字 精灵对象池：true=复用(省GC、减命中卡顿)，false=回退传统 new/destroy(最大兼容性)
-	public var comboSpritePoolSize:Int = 32; // 对象池容量上限（0=无限增长模式，>0=循环复用模式），推荐值16-64
 	public var loadingThreadCount:Int = 2; // 进入歌曲时资源加载的线程数（1=单线程，越大并行越高但更耗内存/可能触发OOM）
 	public var hideHud:Bool = false;
 	public var noteOffset:Int = 0;
@@ -83,9 +81,6 @@ import openfl.display.StageQuality;
 	public var autoResync:Bool = true;
 	// 提前剔除已错过音符的渲染：已错过且离开屏幕（或到达极晚阈值）的音符不再参与绘制，降低 SPAM 谱渲染负担。
 	public var hideMissedNotes:Bool = true;
-	// 低延迟模式：关闭自动重同步 + 强制开启已错过音符剔除，追求最低输入延迟与最稳帧率。
-	// 同时会强制开启「过期音符即时结算」与「关闭逐音符脚本」，构成一套完整的低负担组合。
-	public var lowLatency:Bool = false;
 
 	// ===== 高密度谱面（SPAM）性能优化 =====
 	// 每帧生成预算：单帧内最多新建多少个音符精灵，0 = 不限制（保持原行为）。
@@ -123,6 +118,13 @@ import openfl.display.StageQuality;
 	// ⚠ 开启后脚本回调里的 index 将读到"生成序号"而非"notes 当前数组位置"，若某 modchart 依赖后者请保持关闭。
 	// 默认关闭 = 沿用 indexOf 语义，与 Psych 原版回调行为完全一致，保证既有模组兼容性。
 	public var luaNoteIndexPerf:Bool = false;
+
+	// ===== 帧末批量 compact =====
+	// 开启后音符销毁不再即时 splice（改为标记 exists=false，在 update 末尾一次单遍紧凑 notes/normalNotes/holdNotes），
+	// 把 SPAM 高密度谱下每颗销毁 3 次 O(n) 左移降为一帧一次的 O(n)，是销毁路径的主要 CPU 优化。
+	// ⚠ 代价：脚本在“命中/错过后同一帧内”观察 notes.length 会看到比实际多一帧的延迟；若某 modchart 依赖
+	// 即时缩容，请关闭（关闭即回退原“销毁即 splice”行为，对脚本实时生效）。默认开启。
+	public var batchCompactNotes:Bool = true;
 
 	public var timeBarType:String = 'Time Left';
 	public var scoreZoom:Bool = true;

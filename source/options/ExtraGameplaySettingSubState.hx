@@ -284,16 +284,6 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 		};
 		addOption(option);
 
-		// ===== rating/combo 精灵对象池 =====
-		option = new Option(Language.get('combo_sprite_pool_size'),
-			Language.get("combo_sprite_pool_size_desc"),
-			'comboSpritePoolSize',
-			INT);
-		option.minValue = 0;
-		option.maxValue = 128;
-		option.changeValue = 8;
-		addOption(option);
-
 		// ===== 低延迟 / 性能模式 =====
 		option = new Option(Language.get('auto_song_resync'),
 			Language.get("auto_song_resync_desc"),

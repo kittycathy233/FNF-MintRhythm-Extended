@@ -8,21 +8,9 @@ class SpamChartSettingsSubState extends BaseOptionsMenu
 		rpcTitle = 'Spam Chart Settings Menu'; //for Discord Rich Presence
 
 		// ===== 高密度谱面（SPAM）性能优化 =====
-		var option:Option = new Option(Language.get('combo_sprite_pooling'),
-			Language.get("combo_sprite_pooling_desc"),
-			'comboSpritePooling',
-			BOOL);
-		addOption(option);
-
-		option = new Option(Language.get('hide_missed_notes_cull'),
+		var option:Option = new Option(Language.get('hide_missed_notes_cull'),
 			Language.get("hide_missed_notes_desc"),
 			'hideMissedNotes',
-			BOOL);
-		addOption(option);
-
-		option = new Option(Language.get('low_latency_mode'),
-			Language.get("low_latency_desc"),
-			'lowLatency',
 			BOOL);
 		addOption(option);
 
@@ -53,6 +41,12 @@ class SpamChartSettingsSubState extends BaseOptionsMenu
 		option = new Option(Language.get('lua_note_index_perf'),
 			Language.get("lua_note_index_perf_desc"),
 			'luaNoteIndexPerf',
+			BOOL);
+		addOption(option);
+
+		option = new Option(Language.get('batch_compact_notes'),
+			Language.get("batch_compact_notes_desc"),
+			'batchCompactNotes',
 			BOOL);
 		addOption(option);
 
