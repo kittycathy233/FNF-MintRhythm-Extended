@@ -16,6 +16,7 @@ import backend.MusicBeatState;
 import backend.ClientPrefs;
 import debug.FunkinDebugDisplay;
 import flixel.FlxSprite;
+import flixel.FlxSubState;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import objects.Alphabet;
@@ -77,6 +78,10 @@ class DebugDisplaySettingsState extends MusicBeatState
 
 	// 实时预览（直接挂到 stage 的 OpenFL Sprite）
 	var previewDisplay:FunkinDebugDisplay;
+	// 预览是否已过淡入转场允许显示（转场未结束前隐藏，避免盖住转场）
+	var _previewRevealed:Bool = false;
+	// 进场转场（CustomFadeTransition 子状态）关闭时的回调引用，用于转场结束后再显示预览
+	var _onSubStateClosed:(FlxSubState)->Void = null;
 
 	var options:Array<{name:String, desc:String, type:String}>;
 
@@ -202,6 +207,17 @@ class DebugDisplaySettingsState extends MusicBeatState
 		FlxG.stage.addChild(previewDisplay);
 		pinPreview();
 
+		// 预览挂在 stage 上层，会盖住 Flixel 的转场。进场时先隐藏预览，
+		// 等进场转场（作为子状态）关闭后（任意转场样式都走到这一步）再显示。
+		_previewRevealed = false;
+		_onSubStateClosed = function(subState:FlxSubState):Void {
+			if (!_previewRevealed) {
+				_previewRevealed = true;
+				refreshPreview();
+			}
+		}
+		subStateClosed.add(_onSubStateClosed);
+
 		// 本页临时隐藏全局 FPS 计数器（含 V-Slice 面板），退出时恢复。
 		// 用全局 forceHideFPS 开关而非直接改 fpsVar.visible，因为窗口缩放会调用
 		// updateFPSLayer()/updateFPSCounterVisibility() 强制重设可见性，直接隐藏会被覆盖。
@@ -219,6 +235,12 @@ class DebugDisplaySettingsState extends MusicBeatState
 
 	override function destroy()
 	{
+		// 移除进场转场回调，避免在销毁后仍被触发
+		if (_onSubStateClosed != null)
+		{
+			try { subStateClosed.remove(_onSubStateClosed); } catch (e:Dynamic) {}
+			_onSubStateClosed = null;
+		}
 		// 恢复 FPS 计数器可见性（按 showFPS 设置重新计算）
 		Main.forceHideFPS = false;
 		Main.updateFPSCounterVisibility();
@@ -236,7 +258,7 @@ class DebugDisplaySettingsState extends MusicBeatState
 		previewDisplay.mode = ClientPrefs.data.fpsDebugMode;
 		previewDisplay.applySettings();
 		// 取色器打开时临时隐藏预览，避免遮挡取色 UI
-		previewDisplay.visible = !onColorPicker && ClientPrefs.data.fpsStyle == "V-Slice" && ClientPrefs.data.fpsDebugMode != "Off";
+		previewDisplay.visible = _previewRevealed && !onColorPicker && ClientPrefs.data.fpsStyle == "V-Slice" && ClientPrefs.data.fpsDebugMode != "Off";
 	}
 
 	/**
@@ -578,6 +600,15 @@ class DebugDisplaySettingsState extends MusicBeatState
 			}
 			else
 			{
+				// 离场前先隐藏预览并解绑进场回调，避免盖住离场转场（转场是 Flixel 子层，
+				// 预览挂在 stage 上层）。否则离场转场结束后回调还会把预览重新显示出来。
+				_previewRevealed = false;
+				if (previewDisplay != null) previewDisplay.visible = false;
+				if (_onSubStateClosed != null)
+				{
+					try { subStateClosed.remove(_onSubStateClosed); } catch (e:Dynamic) {}
+					_onSubStateClosed = null;
+				}
 				FlxG.mouse.visible = false;
 				ClientPrefs.saveSettings();
 				if (Main.fpsVar != null) Main.fpsVar.applySettings();
