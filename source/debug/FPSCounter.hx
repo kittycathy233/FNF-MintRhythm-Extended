@@ -54,6 +54,9 @@ class FPSCounter extends Sprite
 	// 背景
 	private var bgSprite:Sprite;
 
+	// 原版 FunkinDebugDisplay 风格（"Debug" fpsStyle）独立面板
+	public var debugDisplay:FunkinDebugDisplay;
+
 	// 布局参数
 	private var lineHeight:Float = 18;
 
@@ -73,6 +76,11 @@ class FPSCounter extends Sprite
 		// 创建单个文本字段，显示所有信息
 		allInfoText = createTextField(ClientPrefs.data.fpsFontSize, ClientPrefs.data.fpsColor);
 		addChild(allInfoText);
+
+		// 创建原版 Debug 面板（默认隐藏，fpsStyle == "Debug" 时显示）
+		debugDisplay = new FunkinDebugDisplay(10, 10);
+		debugDisplay.visible = false;
+		addChild(debugDisplay);
 
 		#if !officialBuild
 		if (LimeSystem.platformName == LimeSystem.platformVersion || LimeSystem.platformVersion == null)
@@ -108,6 +116,19 @@ class FPSCounter extends Sprite
 
 	public dynamic function updateText():Void
 	{
+		// 原版 FunkinDebugDisplay 风格：完全交给独立面板渲染
+		if (ClientPrefs.data.fpsStyle == "V-Slice")
+		{
+			bgSprite.visible = false;
+			allInfoText.visible = false;
+			debugDisplay.visible = true;
+			return;
+		}
+		else if (debugDisplay != null)
+		{
+			debugDisplay.visible = false;
+		}
+
 		// Simple/Leather 模式：使用 _sans 字体，简洁格式（与 SimpleInfoDisplay 一致）
 		if (ClientPrefs.data.fpsStyle == "Simple")
 		{
@@ -349,12 +370,69 @@ class FPSCounter extends Sprite
 	{
 		updateText();
 		positionFPS(x, y);
+
+		// Debug 风格需要重建面板以吸收新增设定
+		if (ClientPrefs.data.fpsStyle == "V-Slice" && debugDisplay != null)
+		{
+			debugDisplay.mode = ClientPrefs.data.fpsDebugMode;
+			debugDisplay.applySettings();
+			updateDebugPosition();
+		}
+	}
+
+	// ============ 原版 FunkinDebugDisplay 风格 ============
+
+	/**
+	 * 独立开关+热键：在 Off / Simple / Advanced 之间循环当前 Debug 面板模式。
+	 * 仅当 fpsStyle 为 "Debug" 时生效。
+	 */
+	public function cycleDebugMode():Void
+	{
+		if (ClientPrefs.data.fpsStyle != "V-Slice") return;
+
+		var modes:Array<String> = ["Off", "Simple", "Advanced"];
+		var i:Int = modes.indexOf(ClientPrefs.data.fpsDebugMode);
+		if (i < 0) i = 0;
+		ClientPrefs.data.fpsDebugMode = modes[(i + 1) % modes.length];
+		ClientPrefs.saveSettings();
+		applySettings();
+	}
+
+	/**
+	 * 手动设置 Debug 面板模式（供设置界面使用）。
+	 */
+	public function setDebugMode(mode:String):Void
+	{
+		if (ClientPrefs.data.fpsDebugMode != mode)
+		{
+			ClientPrefs.data.fpsDebugMode = mode;
+			ClientPrefs.saveSettings();
+			applySettings();
+		}
+	}
+
+	function updateDebugPosition():Void
+	{
+		if (debugDisplay != null)
+		{
+			var scale:Float = 1;
+			debugDisplay.setScaleFactor(scale);
+			debugDisplay.reposition(ClientPrefs.data.fpsPosition, ClientPrefs.data.fpsSpacing);
+		}
 	}
 
 	private override function __enterFrame(deltaTime:Float):Void
 	{
 		if (!visible)
 			return;
+
+		// 原版 Debug(V-Slice) 风格：本类覆写了 __enterFrame 且不调用 super，
+		// OpenFL 不会把帧回调链式传到子面板，故这里显式驱动 debugDisplay 刷新。
+		if (ClientPrefs.data.fpsStyle == "V-Slice")
+		{
+			if (debugDisplay != null) debugDisplay.step(deltaTime);
+			return;
+		}
 
 		// 限制 Delay 更新频率为每 0.2 秒
 		if (Timer.stamp() - lastDelayUpdateTime > 0.2)
@@ -511,6 +589,14 @@ class FPSCounter extends Sprite
 		scaleX = scaleY = #if android (scale > 1 ? scale : 1) #else (scale < 1 ? scale : 1) #end;
 
 		var spacing = ClientPrefs.data.fpsSpacing;
+
+		// 原版 Debug 风格：面板按自身尺寸贴边
+		if (ClientPrefs.data.fpsStyle == "V-Slice")
+		{
+			updateDebugPosition();
+			return;
+		}
+
 		var isRight = ClientPrefs.data.fpsPosition.indexOf("RIGHT") != -1;
 		var isBottom = ClientPrefs.data.fpsPosition.indexOf("BOTTOM") != -1;
 

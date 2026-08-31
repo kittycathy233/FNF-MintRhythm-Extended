@@ -206,7 +206,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 			Language.get("fps_counter_style_desc"),
 			'fpsStyle',
 			STRING,
-			['Psych', 'Simple']);
+			['Psych', 'Simple', 'V-Slice']);
 		addOption(option);
 		option.onChange = onChangeFPSStyle;
 
@@ -234,6 +234,15 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 		option.onChange = function() {
 			MusicBeatState.switchState(new SimpleInfoDisplaySettingsState());
+		};
+
+		var option:Option = new Option(Language.get('debug_fps_settings'),
+			Language.get("debug_fps_settings_desc"),
+			'_debugSettings',
+			BUTTON);
+		addOption(option);
+		option.onChange = function() {
+			MusicBeatState.switchState(new DebugDisplaySettingsState());
 		};
 
 		//新版lime跟git库的不同，故临时禁用此项，之后也许会改

@@ -756,6 +756,12 @@ class Main extends Sprite
 			gameLogVar.toggleVisibility();
 		}
 
+		// 原版 Debug 显示面板的独立开关+模式循环热键（Off/Simple/Advanced）
+		if (event.keyCode == ClientPrefs.data.fpsDebugHotkey && fpsVar != null)
+		{
+			fpsVar.cycleDebugMode();
+		}
+
 		/*#if (cpp && windows && !mobile)
 			// 拦截 ESC 键，执行渐隐关闭
 			if (event.keyCode == Keyboard.ESCAPE)

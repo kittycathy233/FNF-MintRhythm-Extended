@@ -358,6 +358,34 @@ import openfl.display.StageQuality;
 	public var simpleInfoShowMem:Bool = true; // SimpleInfoDisplay 显示内存
 	public var simpleInfoShowVersion:Bool = false; // SimpleInfoDisplay 显示版本
 
+	// 原版 FunkinDebugDisplay 风格（"Debug" fpsStyle）设置
+	public var fpsDebugMode:String = "Simple"; // Debug 面板模式: "Off" / "Simple" / "Advanced"
+	public var fpsDebugHotkey:Int = FlxKey.F2; // 独立开关+循环模式的快捷键键码（openfl Keyboard keyCode）
+	public var fpsDebugFontSize:Int = 12; // Debug 面板文字字号
+	public var fpsDebugFont:String = "VCR"; // Debug 面板字体: "VCR" / "Quantico"
+	public var fpsDebugTextColor:FlxColor = 0xFFFFFFFF; // Debug 面板文字/折线颜色
+	public var fpsDebugBgEnabled:Bool = true; // 是否显示衬底面板
+	public var fpsDebugBgOuter:FlxColor = 0xFF3D3F41; // 面板外框色
+	public var fpsDebugBgInner:FlxColor = 0xFF2C2F30; // 面板内底色
+	public var fpsDebugBgOpacity:Float = 0.5; // 面板不透明度
+	public var fpsDebugPadding:Int = 3; // 面板边框内缩（INNER_RECT_DIFF）
+	public var fpsDebugPanelWidth:Int = 234; // Simple 面板内区宽度（Advanced 固定铺高）
+	public var fpsDebugUpdateDelay:Int = 100; // 更新间隔（毫秒，DC）
+	public var fpsDebugHistoryMax:Int = 100; // 折线历史采样长度
+	public var fpsDebugLineThickness:Float = 1; // 折线粗细
+	public var fpsDebugGraphSmooth:Bool = true; // 折线图是否启用曲线平滑（用二次贝塞尔圆滑，看起来不那么尖锐）
+	public var fpsDebugGraphHeight:Int = 25; // 每条折线图高度
+	public var fpsDebugGraphTextGap:Int = 8; // 折线图与上方文本的间距
+	public var fpsDebugAxisColor:FlxColor = 0xFFFFFFFF; // 坐标轴颜色
+	public var fpsDebugAxisAlpha:Float = 0.5; // 坐标轴透明度
+	public var fpsDebugAxisInset:Int = 4; // 图形相对坐标轴缩进
+	public var fpsDebugShowFPSGraph:Bool = true; // 显示 FPS 折线图（含实时值）
+	public var fpsDebugShowAvg:Bool = true; // FPS 折线显示平均值
+	public var fpsDebugShowLow:Bool = true; // FPS 折线显示 1% low
+	public var fpsDebugShowGCMem:Bool = true; // 显示 GC 内存折线图
+	public var fpsDebugShowTaskMem:Bool = true; // 显示任务内存折线图
+	public var fpsDebugShowPlatform:Bool = true; // Simple 模式 FPS 行是否附带平台信息
+
 	// KeyViewer 累计按键总数（keyViewerTotal）已移至 objects.KeyViewer 内部独立存档，
 	// 不再存放在 ClientPrefs 主设置里，以免主设置文件损坏时把它一起清零。
 	// KeyViewer 轨迹方向：'auto' 跟随 downscroll，'up' 强制上升，'down' 强制下落
