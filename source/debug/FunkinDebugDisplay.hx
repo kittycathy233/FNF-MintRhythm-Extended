@@ -325,12 +325,13 @@ class FunkinDebugDisplay extends Sprite
 		if (mode == "Advanced")
 		{
 			updateAdvancedDisplay();
+			resizeAdvancedBackground();
 		}
 		else if (mode == "Simple")
 		{
 			updateSimpleDisplay();
+			resizeBackgroundToFit();
 		}
-		resizeBackgroundToFit();
 	}
 
 	function updateSimpleDisplay():Void
@@ -424,14 +425,22 @@ class FunkinDebugDisplay extends Sprite
 		if (mode != "Advanced" || background == null) return;
 
 		var pad:Int = ClientPrefs.data.fpsDebugPadding;
-		var w:Float = ClientPrefs.data.fpsDebugPanelWidth + pad * 2;
 		var h:Float = pad * 2 + 1;
 
 		var graphs:Array<FunkinStatsGraph> = [fpsGraph, gcMemGraph, taskMemGraph];
+		var maxTextRight:Float = 0;
 		for (g in graphs)
 		{
-			if (g != null) h = Math.max(h, g.y + g.axisHeight + pad);
+			if (g == null) continue;
+			if (g.axisHeight > 0) h = Math.max(h, g.y + g.axisHeight + pad);
+			// 宽度跟随各张图最宽的文本自然右边界，背景至少包住已显示文本（面板宽度配置作为最小宽度下限）
+			if (g.textDisplay != null && g.textDisplay.textWidth > 0)
+			{
+				maxTextRight = Math.max(maxTextRight, g.x + g.textDisplay.x + g.textDisplay.textWidth);
+			}
 		}
+
+		var w:Float = Math.max(ClientPrefs.data.fpsDebugPanelWidth + pad * 2, maxTextRight + pad);
 
 		var outer:Int = (ClientPrefs.data.fpsDebugBgOuter:Int);
 		var inner:Int = (ClientPrefs.data.fpsDebugBgInner:Int);

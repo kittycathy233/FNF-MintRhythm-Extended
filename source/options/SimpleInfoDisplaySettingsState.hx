@@ -8,6 +8,7 @@ import flixel.tweens.FlxEase;
 import flixel.addons.display.shapes.FlxShapeCircle;
 import flixel.input.keyboard.FlxKey;
 import flixel.input.gamepad.FlxGamepadInputID;
+import flixel.input.touch.FlxTouch;
 import lime.system.Clipboard;
 import flixel.util.FlxGradient;
 import backend.ClientPrefs;
@@ -18,6 +19,16 @@ import backend.MusicBeatState;
 class SimpleInfoDisplaySettingsState extends MusicBeatState
 {
 	var curSelected:Int = 0;
+	var scrollOffset:Int = 0;
+	var scrollPx:Float = 0;
+	var rowGap:Float = 4;
+	var rowTops:Array<Float> = [];
+	var rowHeights:Array<Float> = [];
+	var listStartY:Float = 140;
+	var maxVisibleRows:Int = 10;
+	var listViewHeight:Float = 0;
+	var scrollIndicatorUp:FlxSprite;
+	var scrollIndicatorDown:FlxSprite;
 	var onColorPicker:Bool = false;
 	var currentColorType:String = "text";
 
@@ -57,6 +68,15 @@ class SimpleInfoDisplaySettingsState extends MusicBeatState
 
 	var controllerPointer:FlxSprite;
 	var _lastControllerMode:Bool = false;
+
+	// 快速滚动/鼠标滚轮/触屏拖拽（仿 BaseOptionsMenu）
+	var touchScrollActive:Bool = false; // 触屏拖拽进行中（拖拽/释放期间跳过阻尼滚动，避免抢位）
+	var _lastScrollSndT:Float = 0; // 滚动音效限频
+	#if mobile
+	var touchScrollTouchID:Int = -1;
+	var touchScrollStartY:Float = 0;
+	var touchScrollStartCurSel:Float = 0; // 拖拽起点选中位（浮点）
+	#end
 
 	var options:Array<{name:String, desc:String, type:String, min:Null<Dynamic>, max:Null<Dynamic>, change:Null<Dynamic>}>;
 
@@ -99,28 +119,63 @@ class SimpleInfoDisplaySettingsState extends MusicBeatState
 		optionTexts = [];
 		optionValues = [];
 		leftPanelElements = [];
-		
-		var startY:Float = 140;
-		var spacing:Float = 35;
+		rowTops = [];
+		rowHeights = [];
 
+		listStartY = 140;
+		listViewHeight = (FlxG.height - listBottomMargin()) - listStartY;
+		if (listViewHeight < 1) listViewHeight = 1;
+
+		var cursorY:Float = listStartY;
 		for (i in 0...options.length)
 		{
 			var opt = options[i];
 
-			var text:FlxText = new FlxText(50, startY + i * spacing, 350, opt.name, 20);
-			text.setFormat(fontPath, 20, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			var text:FlxText = new FlxText(50, cursorY, 350, opt.name, 22);
+			text.setFormat(fontPath, 22, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			text.alpha = (i == 0) ? 1 : 0.6;
 			add(text);
 			optionTexts.push(text);
 			leftPanelElements.push(text);
 
-			var value:FlxText = new FlxText(400, startY + i * spacing, 300, getCurrentValue(i), 18);
-			value.setFormat(fontPath, 18, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			var value:FlxText = new FlxText(400, cursorY, 300, getCurrentValue(i), 18);
+			value.setFormat(fontPath, 18, valueColorFor(i), LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			value.alpha = (i == 0) ? 1 : 0.6;
 			add(value);
 			optionValues.push(value);
 			leftPanelElements.push(value);
+
+			// 行高基于该行各自的实际高度，避免更换字体后行与行重叠
+			var rowHeight:Float = Math.max(text.height, value.height);
+			rowTops.push(cursorY);
+			rowHeights.push(rowHeight);
+			cursorY += rowHeight + rowGap;
 		}
+
+		// 计算一屏内能放多少行（按各自行高累加）
+		var acc:Float = 0;
+		maxVisibleRows = 0;
+		for (i in 0...rowHeights.length)
+		{
+			if (acc + rowHeights[i] + rowGap > listViewHeight) break;
+			acc += rowHeights[i] + rowGap;
+			maxVisibleRows++;
+		}
+		if (maxVisibleRows < 1) maxVisibleRows = 1;
+
+		// 上下越界提醒指示箭头
+		scrollIndicatorUp = makeScrollArrow(true);
+		scrollIndicatorDown = makeScrollArrow(false);
+		scrollIndicatorUp.x = 14;
+		scrollIndicatorUp.y = listStartY;
+		scrollIndicatorDown.x = 14;
+		scrollIndicatorDown.y = listStartY + listViewHeight - scrollIndicatorDown.height;
+		scrollIndicatorUp.visible = false;
+		scrollIndicatorDown.visible = false;
+		add(scrollIndicatorUp);
+		add(scrollIndicatorDown);
+
+		updateScrollPositions();
 
 		tipTxt = new FlxText(20, FlxG.height - 70, 0, "Press UP/DOWN to navigate, LEFT/RIGHT to adjust values, ENTER to edit color", 16);
 		tipTxt.setFormat(fontPath, 16, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -253,12 +308,24 @@ class SimpleInfoDisplaySettingsState extends MusicBeatState
 		{
 			case 0: return "#" + StringTools.hex(ClientPrefs.data.simpleInfoColor, 6);
 			case 1: return Std.string(ClientPrefs.data.simpleInfoFontSize);
-			case 2: return ClientPrefs.data.simpleInfoShowFPS ? "ON" : "OFF";
-			case 3: return ClientPrefs.data.simpleInfoShowMem ? "ON" : "OFF";
-			case 4: return ClientPrefs.data.simpleInfoShowVersion ? "ON" : "OFF";
+			case 2: return ClientPrefs.data.simpleInfoShowFPS ? Language.get('enabled') : Language.get('disabled');
+			case 3: return ClientPrefs.data.simpleInfoShowMem ? Language.get('enabled') : Language.get('disabled');
+			case 4: return ClientPrefs.data.simpleInfoShowVersion ? Language.get('enabled') : Language.get('disabled');
 			case 5: return ClientPrefs.data.fpsLayer;
 		}
 		return "";
+	}
+
+	private function valueColorFor(idx:Int):FlxColor
+	{
+		switch(idx)
+		{
+			case 0: return ClientPrefs.data.simpleInfoColor;
+			case 2: return ClientPrefs.data.simpleInfoShowFPS ? OptionsConfig.OPTION_ON_COLOR : OptionsConfig.OPTION_OFF_COLOR;
+			case 3: return ClientPrefs.data.simpleInfoShowMem ? OptionsConfig.OPTION_ON_COLOR : OptionsConfig.OPTION_OFF_COLOR;
+			case 4: return ClientPrefs.data.simpleInfoShowVersion ? OptionsConfig.OPTION_ON_COLOR : OptionsConfig.OPTION_OFF_COLOR;
+		}
+		return FlxColor.WHITE;
 	}
 
 	private function updatePreview():Void
@@ -435,19 +502,16 @@ class SimpleInfoDisplaySettingsState extends MusicBeatState
 
 	private function updateSettingsList(elapsed:Float):Void
 	{
+		// Shift 快速滚动（每次跳 4 项），与 BaseOptionsMenu/LanguageSubState 一致
+		var mult:Int = FlxG.keys.pressed.SHIFT ? 4 : 1;
+
 		if(controls.UI_UP_P)
 		{
-			curSelected--;
-			if(curSelected < 0) curSelected = options.length - 1;
-			updateSelection();
-			FlxG.sound.play(Paths.sound('scrollMenu'));
+			navigateSelection(-1 * mult);
 		}
 		else if(controls.UI_DOWN_P)
 		{
-			curSelected++;
-			if(curSelected >= options.length) curSelected = 0;
-			updateSelection();
-			FlxG.sound.play(Paths.sound('scrollMenu'));
+			navigateSelection(1 * mult);
 		}
 
 		if(controls.UI_LEFT_P || controls.UI_RIGHT_P)
@@ -465,6 +529,7 @@ class SimpleInfoDisplaySettingsState extends MusicBeatState
 			}
 
 			optionValues[curSelected].text = getCurrentValue(curSelected);
+			optionValues[curSelected].color = valueColorFor(curSelected);
 			updatePreview();
 			updateSimpleInfoDisplay();
 			FlxG.sound.play(Paths.sound('scrollMenu'));
@@ -481,6 +546,7 @@ class SimpleInfoDisplaySettingsState extends MusicBeatState
 			{
 				toggleBoolOption(curSelected);
 				optionValues[curSelected].text = getCurrentValue(curSelected);
+				optionValues[curSelected].color = valueColorFor(curSelected);
 				updatePreview();
 				updateSimpleInfoDisplay();
 				FlxG.sound.play(Paths.sound('scrollMenu'));
@@ -489,10 +555,107 @@ class SimpleInfoDisplaySettingsState extends MusicBeatState
 			{
 				cycleFPSLayer();
 				optionValues[curSelected].text = getCurrentValue(curSelected);
+				optionValues[curSelected].color = valueColorFor(curSelected);
 				FlxG.sound.play(Paths.sound('scrollMenu'));
 			}
 		}
 	}
+
+	/** 按 delta 改变选中项（回环），并保证选中行在可视区内；仿 BaseOptionsMenu.changeSelection */
+	private function navigateSelection(delta:Int):Void
+	{
+		curSelected = FlxMath.wrap(curSelected + delta, 0, options.length - 1);
+		updateSelection();
+		keepRowVisible();
+		var now:Float = FlxG.game.ticks / 1000.0;
+		if (now - _lastScrollSndT >= 0.04)
+		{
+			FlxG.sound.play(Paths.sound('scrollMenu'));
+			_lastScrollSndT = now;
+		}
+	}
+
+	/** 桌面端：鼠标点击选项行，选中对应行 */
+	private function handleMouseSelect():Void
+	{
+		for (i in 0...options.length)
+		{
+			var y:Float = rowTops[i] - scrollPx;
+			if (y + rowHeights[i] <= listStartY || y >= listStartY + listViewHeight) continue; // 只处理可见行
+			if (FlxG.mouse.x >= 40 && FlxG.mouse.x <= 700 &&
+				FlxG.mouse.y >= y && FlxG.mouse.y <= y + rowHeights[i])
+			{
+				if (curSelected != i)
+				{
+					curSelected = i;
+					updateSelection();
+					keepRowVisible();
+					FlxG.sound.play(Paths.sound('scrollMenu'));
+				}
+				break;
+			}
+		}
+	}
+
+#if mobile
+	/** 移动端：在选项显示范围内拖拽滚动，手指带动选中项，松手后由 keepRowVisible 收尾 */
+	private function handleTouchScroll():Void
+	{
+		if (!touchScrollActive)
+		{
+			for (t in FlxG.touches.list)
+			{
+				if (!t.justPressed) continue;
+				// 避开虚拟按键触摸板，避免冲突
+				if (touchPad != null && touchPadCam != null && t.overlaps(touchPad, touchPadCam)) continue;
+				// 仅在选项显示区域内（overlap 检测）触摸才启动滚动
+				if (t.x < 30 || t.x > 700 || t.y < listStartY || t.y > listStartY + listViewHeight) continue;
+				touchScrollActive = true;
+				touchScrollTouchID = t.ID;
+				touchScrollStartY = t.y;
+				touchScrollStartCurSel = curSelected;
+				break;
+			}
+			if (!touchScrollActive) return;
+		}
+
+		var active:FlxTouch = null;
+		for (t in FlxG.touches.list) if (t.ID == touchScrollTouchID) { active = t; break; }
+
+		if (active == null || active.justReleased || active.released)
+		{
+			// 松手：结束拖拽，停止抢占阻尼滚动
+			touchScrollActive = false;
+			touchScrollTouchID = -1;
+			return;
+		}
+
+		// 手指上滑（y 减小）→ 选中项增大（列表内容上移），以平均行距 1:1 映射
+		var dragPx:Float = touchScrollStartY - active.y;
+		var totalH:Float = (rowTops[rowTops.length - 1] + rowHeights[rowHeights.length - 1]) - rowTops[0];
+		var pitch:Float = FlxMath.max(1, totalH / options.length);
+		var targetSel:Float = touchScrollStartCurSel + dragPx / pitch;
+		if (targetSel < 0) targetSel = 0;
+		else if (targetSel > options.length - 1) targetSel = options.length - 1;
+		var newSel:Int = Math.round(targetSel);
+		if (newSel < 0) newSel = 0;
+		else if (newSel >= options.length) newSel = options.length - 1;
+
+		if (newSel != curSelected)
+		{
+			curSelected = newSel;
+			updateSelection();
+			keepRowVisible();
+			updateScrollPositions();
+			var now:Float = FlxG.game.ticks / 1000.0;
+			if (now - _lastScrollSndT >= 0.04)
+			{
+				FlxG.sound.play(Paths.sound('scrollMenu'));
+				_lastScrollSndT = now;
+			}
+		}
+	}
+#end
 
 	private function toggleBoolOption(index:Int):Void
 	{
@@ -531,6 +694,7 @@ class SimpleInfoDisplaySettingsState extends MusicBeatState
 		}
 		
 		optionValues[index].text = getCurrentValue(index);
+		optionValues[index].color = valueColorFor(index);
 		updatePreview();
 		updateSimpleInfoDisplay();
 	}
@@ -544,6 +708,62 @@ class SimpleInfoDisplaySettingsState extends MusicBeatState
 		}
 
 		tipTxt.text = options[curSelected].desc;
+	}
+
+	/** 根据 scrollPx 按各行的实际行高平滑重排 Y 坐标，并隐藏超出可视区的行 */
+	private function updateScrollPositions():Void
+	{
+		for (i in 0...optionTexts.length)
+		{
+			var y:Float = rowTops[i] - scrollPx;
+			optionTexts[i].y = y;
+			optionValues[i].y = y;
+			var visible:Bool = (y + rowHeights[i]) > listStartY && y < (listStartY + listViewHeight);
+			optionTexts[i].visible = visible;
+			optionValues[i].visible = visible;
+		}
+		scrollIndicatorUp.visible = scrollOffset > 0;
+		scrollIndicatorDown.visible = (scrollOffset + maxVisibleRows) < options.length;
+	}
+
+	/** 底部为虚拟按键预留的空间（移动端更大） */
+	private inline function listBottomMargin():Float
+	{
+		return #if mobile 235 #else 100 #end;
+	}
+
+	/** 绘制一个实心三角指示箭头 */
+	private function makeScrollArrow(pointsUp:Bool):FlxSprite
+	{
+		var w:Int = 14, h:Int = 9;
+		var s:FlxSprite = new FlxSprite().makeGraphic(w, h, FlxColor.TRANSPARENT, true);
+		var px:openfl.display.BitmapData = s.pixels;
+		var maxHalf:Int = Math.floor((w - 1) / 2);
+		for (row in 0...h)
+		{
+			var t:Int = pointsUp ? row : (h - 1 - row);
+			var half:Int = Math.floor(t * maxHalf / (h - 1));
+			if (half > maxHalf) half = maxHalf;
+			var cx:Int = Math.floor((w - 1) / 2);
+			for (dx in (-half)...(half + 1))
+			{
+				var x:Int = cx + dx;
+				if (x >= 0 && x < w) px.setPixel32(x, row, 0xFFFFFFFF);
+			}
+		}
+		s.alpha = 0.9;
+		return s;
+	}
+
+	/** 导航后滚动窗口，保证当前选中行始终可见 */
+	private function keepRowVisible():Void
+	{
+		if (curSelected < scrollOffset) scrollOffset = curSelected;
+		else if (curSelected >= scrollOffset + maxVisibleRows) scrollOffset = curSelected - maxVisibleRows + 1;
+		if (scrollOffset < 0) scrollOffset = 0;
+		var maxScroll:Int = options.length - maxVisibleRows;
+		if (maxScroll < 0) maxScroll = 0;
+		if (scrollOffset > maxScroll) scrollOffset = maxScroll;
 	}
 
 	private function pointerOverlaps(obj:Dynamic):Bool
@@ -590,6 +810,15 @@ class SimpleInfoDisplaySettingsState extends MusicBeatState
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);
+
+		// 列表滚动过渡：向目标偏移做阻尼逼近，实现丝滑滑动
+		var targetPx:Float = rowTops[scrollOffset] - listStartY;
+		if (!touchScrollActive && scrollPx != targetPx)
+		{
+			scrollPx += (targetPx - scrollPx) * FlxMath.bound(elapsed * 14, 0, 1);
+			if (Math.abs(targetPx - scrollPx) < 0.5) scrollPx = targetPx;
+			updateScrollPositions();
+		}
 
 		if(touchPad == null)
 		{
@@ -676,6 +905,21 @@ class SimpleInfoDisplaySettingsState extends MusicBeatState
 		}
 		else
 		{
+	#if !mobile
+			// 鼠标滚轮滚动（按住 Shift 快速滚动 ×4）
+			if (FlxG.mouse.wheel != 0)
+			{
+				var mult:Int = FlxG.keys.pressed.SHIFT ? 4 : 1;
+				navigateSelection((FlxG.mouse.wheel > 0 ? -1 : 1) * mult);
+			}
+			else if (FlxG.mouse.justPressed)
+			{
+				handleMouseSelect();
+			}
+	#end
+	#if mobile
+			handleTouchScroll();
+	#end
 			updateSettingsList(elapsed);
 		}
 	}
@@ -881,6 +1125,7 @@ class SimpleInfoDisplaySettingsState extends MusicBeatState
 		for (i in 0...optionValues.length)
 		{
 			optionValues[i].text = getCurrentValue(i);
+			optionValues[i].color = valueColorFor(i);
 		}
 	}
 }
