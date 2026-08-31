@@ -168,7 +168,7 @@ import openfl.display.StageQuality;
 		'practice' => false,
 		'botplay' => false,
 		'playOpponent' => false,
-		'kadehealth' => false,          // Kade 血量模型：强制开启后按 Kade 固定加减血规则
+		'kadehealth' => 'default',        // 血量模型：'default'=原生 Psych，'kade'=Kade 固定加减血规则，自定义模型可在此扩展
 	];
 
 	public var comboOffset:Array<Int> = [0, 0, 0, 0, 0, 0, 0, 0]; // [0,1]评级 [2,3]combo数字(combo字样共用) [4,5]额外的EX评级 [6,7]msTimeTxt(始终作为二次偏移)

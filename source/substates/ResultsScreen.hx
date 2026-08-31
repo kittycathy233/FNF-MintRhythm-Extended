@@ -454,7 +454,7 @@ class ResultsScreen extends FlxSubState
 						practice: ClientPrefs.getGameplaySetting('practice', false),
 						botplay: ClientPrefs.getGameplaySetting('botplay', false),
 						playOpponent: ClientPrefs.getGameplaySetting('playOpponent', false),
-						kadehealth: ClientPrefs.getGameplaySetting('kadehealth', false),
+						kadehealth: ClientPrefs.getGameplaySetting('kadehealth', 'default'),
 						breakComboOnBad: ClientPrefs.data.breakComboOnBad,
 						breakComboOnShit: ClientPrefs.data.breakComboOnShit,
 						accuracyMode: ClientPrefs.data.accuracyMode,

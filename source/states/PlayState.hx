@@ -6356,12 +6356,12 @@ tempScore += '${lblScore}: ${songScore}';
 		if (lastCombo > 0) comboJustBroke = true; // 仅在真正断连(此前有combo)时置位
 
 		// Kade 血量：miss 固定扣血 0.04 × healthLoss
-		if (ClientPrefs.getGameplaySetting('kadehealth', false))
+		if (ClientPrefs.getGameplaySetting('kadehealth', 'default') == 'kade')
 			health -= 0.04 * healthLoss;
 		else
 			health -= subtract * healthLoss;
 		// Kade 计分：长条(sustain) miss 额外再扣 0.075 × healthLoss（对齐 Kade tooLate 分支的额外惩罚）
-		if (ClientPrefs.getGameplaySetting('kadehealth', false) && note != null && note.isSustainNote)
+		if (ClientPrefs.getGameplaySetting('kadehealth', 'default') == 'kade' && note != null && note.isSustainNote)
 			health -= 0.075 * healthLoss;
 		songScore -= 10;
 		if(!endingSong) songMisses++;
@@ -6713,7 +6713,7 @@ tempScore += '${lblScore}: ${songScore}';
 			if (guitarHeroSustains && note.isSustainNote) gainHealth = false;
 			if (gainHealth) {
 				// Kade 血量模型：按固定加减血规则结算（sick/good 加血，bad/shit 扣血）
-				if (ClientPrefs.getGameplaySetting('kadehealth', false)) {
+				if (ClientPrefs.getGameplaySetting('kadehealth', 'default') == 'kade') {
 					switch (note.rating) {
 						case 'perfect' | 'sick': health += 0.1  * healthGain;
 						case 'good':            health += 0.04 * healthGain;
