@@ -65,6 +65,8 @@ class DebugDisplaySettingsState extends MusicBeatState
 	var alphabetHex:Alphabet;
 	var _storedColor:FlxColor;
 	var holdingOnObj:FlxSprite;
+	var bgSprite:FlxSprite;
+	var darkOverlay:FlxSprite;
 	var allowedTypeKeys:Map<FlxKey, String> = [
 		ZERO => '0', ONE => '1', TWO => '2', THREE => '3', FOUR => '4', FIVE => '5', SIX => '6', SEVEN => '7', EIGHT => '8', NINE => '9',
 		NUMPADZERO => '0', NUMPADONE => '1', NUMPADTWO => '2', NUMPADTHREE => '3', NUMPADFOUR => '4', NUMPADFIVE => '5', NUMPADSIX => '6',
@@ -115,13 +117,20 @@ class DebugDisplaySettingsState extends MusicBeatState
 			{name: Language.get("debug_reset_defaults_name"), desc: Language.get("debug_reset_defaults_desc"), type: "button"}
 		];
 
-		var bg:FlxSprite = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, 0xFF202020);
-		bg.screenCenter();
-		add(bg);
+		bgSprite = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
+		bgSprite.color = 0xFF0077AA;
+		bgSprite.screenCenter();
+		bgSprite.antialiasing = ClientPrefs.data.antialiasing;
+		add(bgSprite);
 
-		var grid:FlxBackdrop = new FlxBackdrop(CoolUtil.getCachedGrid(80, 80, 160, 160, true, 0x22FFFFFF, 0x0));
+		darkOverlay = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
+		darkOverlay.alpha = 0;
+		add(darkOverlay);
+
+		var grid:FlxBackdrop = new FlxBackdrop(CoolUtil.getCachedGrid(80, 80, 160, 160, true, 0x33FFFFFF, 0x0));
 		grid.velocity.set(40, 40);
-		grid.alpha = 0.4;
+		grid.alpha = 0;
+		FlxTween.tween(grid, {alpha: 1}, 0.5, {ease: FlxEase.quadOut});
 		add(grid);
 
 		var fontFile = Language.getGameFont();
@@ -926,6 +935,7 @@ class DebugDisplaySettingsState extends MusicBeatState
 					_storedColor = color;
 					updateColorPickerUI();
 					refreshPreview();
+					updateOptionValues();
 				}
 				hexTypeNum++;
 				changed = true;
@@ -963,6 +973,7 @@ class DebugDisplaySettingsState extends MusicBeatState
 					_storedColor = newColor;
 					updateColorPickerUI();
 					refreshPreview();
+					updateOptionValues();
 				}
 				else if (pointerOnHex()) { hexTypeNum = 0; hexTypeLine.visible = true; }
 				else holdingOnObj = null;
@@ -974,6 +985,7 @@ class DebugDisplaySettingsState extends MusicBeatState
 				{
 					holdingOnObj = null;
 					_storedColor = getColor();
+					updateOptionValues();
 				}
 				else if (moved || pressed)
 				{
@@ -992,6 +1004,7 @@ class DebugDisplaySettingsState extends MusicBeatState
 					}
 					updateColorPickerUI();
 					refreshPreview();
+					updateOptionValues();
 				}
 			}
 		}
@@ -1010,5 +1023,14 @@ class DebugDisplaySettingsState extends MusicBeatState
 		if (alphabetHex.letters.length == 0) return;
 		var letter = alphabetHex.letters[Std.int(Math.max(0, Math.min(hexTypeNum, alphabetHex.letters.length - 1)))];
 		hexTypeLine.x = letter.x - letter.offset.x + letter.width + 5;
+	}
+
+	private function updateOptionValues():Void
+	{
+		for (i in 0...optionValues.length)
+		{
+			optionValues[i].text = getCurrentValue(i);
+			optionValues[i].color = valueColorFor(i);
+		}
 	}
 }

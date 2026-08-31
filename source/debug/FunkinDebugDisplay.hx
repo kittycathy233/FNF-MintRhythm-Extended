@@ -30,6 +30,8 @@ class FunkinDebugDisplay extends Sprite
 	public static inline var DEFAULT_PANEL_HEIGHT:Int = 201;
 	/** 元素到边缘的间距 */
 	public static inline var OTHERS_OFFSET:Int = 8;
+	/** 底部和右侧的内边框间距（比 OTHERS_OFFSET 更大） */
+	public static inline var MARGIN_BR:Int = 14;
 
 	/** 当前模式（"Off" / "Simple" / "Advanced"） */
 	public var mode(default, set):String = "Simple";
@@ -398,8 +400,8 @@ class FunkinDebugDisplay extends Sprite
 		var contentW:Float = infoDisplay != null ? infoDisplay.textWidth : 1;
 		var contentH:Float = infoDisplay != null ? infoDisplay.textHeight : 1;
 		// 宽度跟随文字实际宽度自适应（保留配置的最小面板宽度下限），避免长文本（如带平台信息的 FPS 行）画出面板框
-		var w:Float = Math.max(ClientPrefs.data.fpsDebugPanelWidth + pad * 2, OTHERS_OFFSET + contentW + pad);
-		var h:Float = contentH + pad * 2;
+		var w:Float = Math.max(ClientPrefs.data.fpsDebugPanelWidth + pad * 2, OTHERS_OFFSET + contentW + MARGIN_BR);
+		var h:Float = OTHERS_OFFSET + contentH + MARGIN_BR;
 
 		var outer:Int = (ClientPrefs.data.fpsDebugBgOuter:Int);
 		var inner:Int = (ClientPrefs.data.fpsDebugBgInner:Int);
@@ -432,7 +434,7 @@ class FunkinDebugDisplay extends Sprite
 		for (g in graphs)
 		{
 			if (g == null) continue;
-			if (g.axisHeight > 0) h = Math.max(h, g.y + g.axisHeight + pad);
+			if (g.axisHeight > 0) h = Math.max(h, g.y + g.axisHeight + MARGIN_BR);
 			// 宽度跟随各张图最宽的文本自然右边界，背景至少包住已显示文本（面板宽度配置作为最小宽度下限）
 			if (g.textDisplay != null && g.textDisplay.textWidth > 0)
 			{
@@ -440,7 +442,7 @@ class FunkinDebugDisplay extends Sprite
 			}
 		}
 
-		var w:Float = Math.max(ClientPrefs.data.fpsDebugPanelWidth + pad * 2, maxTextRight + pad);
+		var w:Float = Math.max(ClientPrefs.data.fpsDebugPanelWidth + pad * 2, maxTextRight + MARGIN_BR);
 
 		var outer:Int = (ClientPrefs.data.fpsDebugBgOuter:Int);
 		var inner:Int = (ClientPrefs.data.fpsDebugBgInner:Int);
