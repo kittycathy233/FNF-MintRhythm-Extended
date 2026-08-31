@@ -2104,7 +2104,7 @@ isReplaying = false;
 		i = notes.length - 1;
 		while (i >= 0) {
 			var daNote:Note = notes.members[i];
-			if(daNote.strumTime - 350 < time)
+			if(daNote != null && daNote.strumTime - 350 < time)
 			{
 				daNote.active = false;
 				daNote.visible = false;
