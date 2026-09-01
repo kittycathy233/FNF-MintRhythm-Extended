@@ -129,11 +129,15 @@ class FlxTypedGroup<T:FlxBasic> extends FlxBasic
 	{
 		super.destroy();
 		
-		// 覆盖：销毁信号后必须把字段置空（库原实现丢弃了 destroy 的返回值，
+		// 覆盖：销毁信号后必须把字段置空（库原实现丢弃了 destroy() 的返回值且未置空字段，
 		// 使 _member... 仍指向 handlers 已为 null 的信号对象；销毁中嵌套移除成员时
 		// onMemberRemove 会对这个已销毁信号 dispatch，触发 FlxSignal.dispatch1 空引用）。
-		_memberAdded   = FlxDestroyUtil.destroy(_memberAdded);
-		_memberRemoved = FlxDestroyUtil.destroy(_memberRemoved);
+		// 注：不能用 FlxDestroyUtil.destroy(_member...) 赋值，抽象 FlxTypedSignal 不满足
+		// destroy<T:IFlxDestroyable>:T 的返回约束，故改为直接调用信号的 destroy() 再显式置空。
+		if (_memberAdded != null) _memberAdded.destroy();
+		_memberAdded = null;
+		if (_memberRemoved != null) _memberRemoved.destroy();
+		_memberRemoved = null;
 		
 		if (members != null)
 		{
