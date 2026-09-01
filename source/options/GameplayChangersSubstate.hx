@@ -11,6 +11,7 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 {
 	private var curSelected:Int = 0;
 	private var optionsArray:Array<Dynamic> = [];
+	private var antiMashOption:GameplayOption; // Leather 血量模型专属，其他模型下禁用
 
 	private var grpOptions:FlxTypedGroup<FlxText>;
 	private var checkboxGroup:FlxTypedGroup<CheckboxThingie>;
@@ -76,7 +77,10 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 		optionsArray.push(new GameplayOption('Practice Mode', 'practice', BOOL, false));
 		optionsArray.push(new GameplayOption('Botplay', 'botplay', BOOL, false));
 		optionsArray.push(new GameplayOption('Play Opponent', 'playOpponent', BOOL, false));
-		optionsArray.push(new GameplayOption('Health Model', 'kadehealth', STRING, 'default', ['default', 'kade']));
+		optionsArray.push(new GameplayOption('Health Model', 'healthmodel', STRING, 'default', ['default', 'kade', 'leather']));
+		antiMashOption = new GameplayOption('Anti Mash', 'antiMash', BOOL, false);
+		optionsArray.push(antiMashOption);
+		updateAntiMashState();
 	}
 
 	public function getOptionByVar(variable:String)
@@ -88,6 +92,20 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 				return opt;
 		}
 		return null;
+	}
+
+	// antiMash 仅当血量模型为 Leather 时可用，其余情况禁用（灰显、不可修改，并强制关掉该值）
+	function updateAntiMashState()
+	{
+		if (antiMashOption == null) return;
+		var healthModelOpt:GameplayOption = getOptionByVar('healthmodel');
+		var isLeather:Bool = (healthModelOpt != null && healthModelOpt.getValue() == 'leather');
+		antiMashOption.disabled = !isLeather;
+		if (!isLeather && antiMashOption.getValue() == true)
+		{
+			antiMashOption.setValue(false); // 非 Leather 时强制关掉，避免显示 Enabled 却已失效
+			updateTextFrom(antiMashOption);
+		}
 	}
 
 	public function new()
@@ -185,7 +203,7 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 			var usesCheckbox:Bool = (curOption.type == BOOL);
 			if(usesCheckbox)
 			{
-				if(controls.ACCEPT)
+				if(!curOption.disabled && controls.ACCEPT)
 				{
 					FlxG.sound.play(Paths.sound('scrollMenu'));
 					curOption.setValue((curOption.getValue() == true) ? false : true);
@@ -195,7 +213,7 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 			}
 			else
 			{
-				if(controls.UI_LEFT || controls.UI_RIGHT)
+				if(!curOption.disabled && (controls.UI_LEFT || controls.UI_RIGHT))
 				{
 					var pressed = (controls.UI_LEFT_P || controls.UI_RIGHT_P);
 					if(holdTime > 0.5 || pressed)
@@ -258,6 +276,8 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 											updateTextFrom(oOption);
 										}
 									}
+									else if (curOption.variable == 'healthmodel')
+										updateAntiMashState();
 									//trace(curOption.options[num]);
 
 								default:
@@ -319,6 +339,7 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 					leOption.change();
 				}
 				FlxG.sound.play(Paths.sound('cancelMenu'));
+				updateAntiMashState(); // 重置后血量模型可能回到非 Leather，需同步禁用状态
 				reloadCheckboxes();
 			}
 		}
@@ -348,6 +369,7 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 			item.x = FlxMath.lerp(targetX, item.x, lerp);
 
 			var targetAlpha:Float = (offset == 0) ? OptionsConfig.SUBMENU_SELECTED_ALPHA : OptionsConfig.SUBMENU_UNSELECTED_ALPHA;
+			if (optionsArray[item.ID] != null && optionsArray[item.ID].disabled) targetAlpha *= OptionsConfig.SUBMENU_DISABLED_ALPHA_MULT;
 			item.alpha = FlxMath.lerp(targetAlpha, item.alpha, lerp);
 
 			var targetScale:Float = (offset == 0) ? OptionsConfig.SUBMENU_SELECTED_SCALE : OptionsConfig.SUBMENU_NORMAL_SCALE;
@@ -419,6 +441,7 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 class GameplayOption
 {
 	public var child:FlxText;
+	public var disabled:Bool = false; // 是否禁用（禁用时不可修改并灰显）
 	public var text(get, set):String;
 	public var onChange:Void->Void = null; //Pressed enter (on Bool type options) or pressed/held left/right (on other types)
 	public var type:OptionType = BOOL;

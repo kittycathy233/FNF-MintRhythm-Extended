@@ -168,7 +168,8 @@ import openfl.display.StageQuality;
 		'practice' => false,
 		'botplay' => false,
 		'playOpponent' => false,
-		'kadehealth' => 'default',        // 血量模型：'default'=原生 Psych，'kade'=Kade 固定加减血规则，自定义模型可在此扩展
+		'healthmodel' => 'default',        // 血量模型：'default'=原生 Psych，'kade'=Kade 固定加减血规则，'leather'=Leather 判定加减血规则
+		'antiMash' => false,              // Leather 血量模型专属：开启时 shit 判定扣血，用于反连打
 	];
 
 	public var comboOffset:Array<Int> = [0, 0, 0, 0, 0, 0, 0, 0]; // [0,1]评级 [2,3]combo数字(combo字样共用) [4,5]额外的EX评级 [6,7]msTimeTxt(始终作为二次偏移)
@@ -291,7 +292,7 @@ import openfl.display.StageQuality;
 	public var cacheResourcesOnReload:Bool = true; // 重载曲目时缓存资源以加速加载
 	public var forceHoldAnimations:Bool = false; // 箭头命中时只播放一次动画，不依赖hold动画
 	public var timeBarStripes:Bool = false; // 时间条是否显示条纹
-	public var timeBarGradient:Bool = false; // 时间条是否使用渐变（对手色→玩家色，仅Psych样式）
+	public var timeBarGradient:Bool = false; // 时间条是否使用渐变（对手色→玩家色，支持Psych与Leather (Legacy)样式）
 	public var singleHoldNoteAnimation:Bool = true; // 按住长条音符时只播放一次confirm动画
 	public var autoResetStrumAnim:Bool = true; // 是否自动恢复箭头默认动画（普通按键和hold note）
 	public var ghostEffect:Bool = true; // 多押时角色的ghost残影效果
@@ -722,6 +723,16 @@ class ClientPrefs {
 			var savedMap:Map<String, Dynamic> = FlxG.save.data.gameplaySettings;
 			for (name => value in savedMap)
 				data.gameplaySettings.set(name, value);
+		}
+
+		// 兼容旧版设置：'kadehealth' 已更名为 'healthmodel'，迁移旧值并清除旧键
+		if (FlxG.save.data.gameplaySettings != null)
+		{
+			var legacyMap:Map<String, Dynamic> = FlxG.save.data.gameplaySettings;
+			if (legacyMap.exists('kadehealth') && !data.gameplaySettings.exists('healthmodel'))
+				data.gameplaySettings.set('healthmodel', legacyMap.get('kadehealth'));
+			data.gameplaySettings.remove('kadehealth');
+			legacyMap.remove('kadehealth');
 		}
 		
 		// flixel automatically saves your volume!

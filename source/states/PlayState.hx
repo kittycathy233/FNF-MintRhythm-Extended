@@ -695,7 +695,8 @@ class PlayState extends MusicBeatState
 			if (Reflect.hasField(replayGameplaySettings, 'practice')) ClientPrefs.data.gameplaySettings.set('practice', replayGameplaySettings.practice);
 			if (Reflect.hasField(replayGameplaySettings, 'botplay')) ClientPrefs.data.gameplaySettings.set('botplay', replayGameplaySettings.botplay);
 			if (Reflect.hasField(replayGameplaySettings, 'playOpponent')) ClientPrefs.data.gameplaySettings.set('playOpponent', replayGameplaySettings.playOpponent);
-			if (Reflect.hasField(replayGameplaySettings, 'kadehealth')) ClientPrefs.data.gameplaySettings.set('kadehealth', replayGameplaySettings.kadehealth);
+			if (Reflect.hasField(replayGameplaySettings, 'healthmodel')) ClientPrefs.data.gameplaySettings.set('healthmodel', replayGameplaySettings.healthmodel);
+			if (Reflect.hasField(replayGameplaySettings, 'antiMash')) ClientPrefs.data.gameplaySettings.set('antiMash', replayGameplaySettings.antiMash);
 			if (Reflect.hasField(replayGameplaySettings, 'breakComboOnBad')) ClientPrefs.data.breakComboOnBad = replayGameplaySettings.breakComboOnBad;
 			if (Reflect.hasField(replayGameplaySettings, 'breakComboOnShit')) ClientPrefs.data.breakComboOnShit = replayGameplaySettings.breakComboOnShit;
 			if (Reflect.hasField(replayGameplaySettings, 'accuracyMode')) ClientPrefs.data.accuracyMode = replayGameplaySettings.accuracyMode;
@@ -6356,12 +6357,12 @@ tempScore += '${lblScore}: ${songScore}';
 		if (lastCombo > 0) comboJustBroke = true; // 仅在真正断连(此前有combo)时置位
 
 		// Kade 血量：miss 固定扣血 0.04 × healthLoss
-		if (ClientPrefs.getGameplaySetting('kadehealth', 'default') == 'kade')
+		if (ClientPrefs.getGameplaySetting('healthmodel', 'default') == 'kade')
 			health -= 0.04 * healthLoss;
 		else
 			health -= subtract * healthLoss;
 		// Kade 计分：长条(sustain) miss 额外再扣 0.075 × healthLoss（对齐 Kade tooLate 分支的额外惩罚）
-		if (ClientPrefs.getGameplaySetting('kadehealth', 'default') == 'kade' && note != null && note.isSustainNote)
+		if (ClientPrefs.getGameplaySetting('healthmodel', 'default') == 'kade' && note != null && note.isSustainNote)
 			health -= 0.075 * healthLoss;
 		songScore -= 10;
 		if(!endingSong) songMisses++;
@@ -6712,19 +6713,30 @@ tempScore += '${lblScore}: ${songScore}';
 			var gainHealth:Bool = true; // prevent health gain, *if* sustains are treated as a singular note
 			if (guitarHeroSustains && note.isSustainNote) gainHealth = false;
 			if (gainHealth) {
-				// Kade 血量模型：按固定加减血规则结算（sick/good 加血，bad/shit 扣血）
-				if (ClientPrefs.getGameplaySetting('kadehealth', 'default') == 'kade') {
-					switch (note.rating) {
-						case 'perfect' | 'sick': health += 0.1  * healthGain;
-						case 'good':            health += 0.04 * healthGain;
-						case 'bad':             health -= 0.06 * healthLoss;
-						case 'shit':            health -= 0.2  * healthLoss;
-						default:                health += note.hitHealth * healthGain; // 长条/未知评级保持原加血
-					}
-				} else {
-					health += note.hitHealth * healthGain;
+			var healthModel:String = ClientPrefs.getGameplaySetting('healthmodel', 'default');
+			// Kade 血量模型：按固定加减血规则结算（sick/good 加血，bad/shit 扣血）
+			if (healthModel == 'kade') {
+				switch (note.rating) {
+					case 'perfect' | 'sick': health += 0.1  * healthGain;
+					case 'good':            health += 0.04 * healthGain;
+					case 'bad':             health -= 0.06 * healthLoss;
+					case 'shit':            health -= 0.2  * healthLoss;
+					default:                health += note.hitHealth * healthGain; // 长条/未知评级保持原加血
 				}
 			}
+			// Leather 血量模型：sick/perfect 加血，good/bad 小幅加血；shit 仅在 antiMash 开启时扣血（反连打）
+			else if (healthModel == 'leather') {
+				switch (note.rating) {
+					case 'perfect' | 'sick': health += 0.035 * healthGain;
+					case 'good':            health += 0.015 * healthGain;
+					case 'bad':             health += 0.005 * healthGain;
+					case 'shit':            if (ClientPrefs.getGameplaySetting('antiMash', false)) health -= 0.075 * healthLoss;
+					default:                health += note.hitHealth * healthGain; // 长条/未知评级保持原加血
+				}
+			} else {
+				health += note.hitHealth * healthGain;
+			}
+		}
 
 			// 断连逻辑：命中 bad/shit 评级时，按设置强制中断连击
 			if (note.rating == 'bad' && ClientPrefs.data.breakComboOnBad)
