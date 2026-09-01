@@ -959,7 +959,8 @@ class FPSCounterSettingsState extends MusicBeatState
 			touchPad.buttonA.visible = !onColorPicker;
 		}
 
-		if(touchPad != null && touchPad.buttonC != null && touchPad.buttonC.justPressed)
+		// 触摸板 C 键 或 键盘 R 键：重置当前选项 / 拾色器中重置当前颜色
+		if((touchPad != null && touchPad.buttonC != null && touchPad.buttonC.justPressed) || FlxG.keys.justPressed.R)
 		{
 			if(onColorPicker)
 			{

@@ -129,6 +129,10 @@ class FPSCounter extends Sprite
 			debugDisplay.visible = false;
 		}
 
+		// 切回 Psych / Simple 时，需把文本与背景重新显示（之前切到 V-Slice 时被隐藏）
+		allInfoText.visible = true;
+		bgSprite.visible = true;
+
 		// Simple/Leather 模式：使用 _sans 字体，简洁格式（与 SimpleInfoDisplay 一致）
 		if (ClientPrefs.data.fpsStyle == "Simple")
 		{
