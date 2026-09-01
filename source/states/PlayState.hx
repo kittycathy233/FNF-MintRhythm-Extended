@@ -4079,8 +4079,10 @@ tempScore += '${lblScore}: ${songScore}';
 		}
 		else if (ClientPrefs.data.timebarStyle == 'Leather (Legacy)')
 		{
-			// Leather (Legacy) 始终为青色，不更新
-			timeBar.setColors(FlxColor.CYAN, FlxColor.BLACK);
+			// 默认始终为青色，不更新
+			// 开启时间条渐变后，颜色交由渐变逻辑（applyGradient）处理，这里不再强制青色覆盖
+			if (!ClientPrefs.data.timeBarGradient)
+				timeBar.setColors(FlxColor.CYAN, FlxColor.BLACK);
 		}
 
 		if (generatedMusic)
