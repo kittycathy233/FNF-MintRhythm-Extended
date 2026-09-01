@@ -38,6 +38,9 @@ class Option
 	public var decimals:Int = 1;
 
 	public var displayFormat:String = '%v';
+	// STRING 选项可选值的本地化显示映射（key = 存储值, value = 显示文案）。
+	// 存储值保持不变，仅影响列表/下拉中的显示。
+	public var valueLocalizations:Map<String, String> = null;
 	public var description:String = '';
 	public var name:String = 'Unknown';
 	// 选项被禁用时的前提条件说明（如"需要 Kathy 评价下落风格"），选中禁用项时显示在描述框

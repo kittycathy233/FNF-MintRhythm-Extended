@@ -35,10 +35,10 @@ class MobileOptionsSubState extends BaseOptionsMenu
 
 	public function new()
 	{
-		title = 'Mobile Options';
+		title = Language.get('mobile_options');
 		rpcTitle = 'Mobile Options Menu'; // for Discord Rich Presence, fuck it
 
-		option = new Option('Extra Controls', Language.get("extra_controls_desc"),
+		option = new Option(Language.get('extra_controls'), Language.get("extra_controls_desc"),
 			'extraButtons', STRING, exControlTypes);
 		option.onChange = () ->
 		{
@@ -48,8 +48,8 @@ class MobileOptionsSubState extends BaseOptionsMenu
 		};
 		addOption(option);
 
-		option = new Option('Extra Key Bindings',
-			"Choose which specific key each extra button simulates", '_extraKeyBindings', BUTTON);
+		option = new Option(Language.get('extra_key_bindings'),
+			Language.get("extra_key_bindings_desc"), '_extraKeyBindings', BUTTON);
 		option.onChange = () ->
 		{
 			persistentUpdate = false;
@@ -57,7 +57,7 @@ class MobileOptionsSubState extends BaseOptionsMenu
 		};
 		addOption(option);
 
-		option = new Option('Mobile Controls Opacity',
+		option = new Option(Language.get('mobile_controls_opacity'),
 			Language.get("mobile_controls_opacity_desc"), 'controlsAlpha', PERCENT);
 		option.scrollSpeed = 1;
 		option.minValue = 0.001;
@@ -72,12 +72,12 @@ class MobileOptionsSubState extends BaseOptionsMenu
 		addOption(option);
 
 		#if mobile
-		option = new Option('Allow Phone Screensaver',
+		option = new Option(Language.get('allow_phone_screensaver'),
 			Language.get("allow_phone_screensaver_desc"), 'screensaver', BOOL);
 		option.onChange = () -> lime.system.System.allowScreenTimeout = curOption.getValue();
 		addOption(option);
 
-		option = new Option('Wide Screen Mode',
+		option = new Option(Language.get('wide_screen_mode'),
 			Language.get("wide_screen_mode_desc"),
 			'wideScreen', BOOL);
 		option.onChange = () -> FlxG.scaleMode = new MobileScaleMode();
@@ -86,18 +86,24 @@ class MobileOptionsSubState extends BaseOptionsMenu
 
 		if (MobileData.mode == 3)
 		{
-			option = new Option('Hitbox Design', Language.get("hitbox_design_desc"), 'hitboxType', STRING, hintOptions);
+			option = new Option(Language.get('hitbox_design'), Language.get("hitbox_design_desc"), 'hitboxType', STRING, hintOptions);
+			option.valueLocalizations = [
+				hintOptions[0] => Language.get('hitbox_design_val_no_gradient'),
+				hintOptions[1] => Language.get('hitbox_design_val_no_gradient_old'),
+				hintOptions[2] => Language.get('hitbox_design_val_gradient'),
+				hintOptions[3] => Language.get('hitbox_design_val_hidden')
+			];
 			addOption(option);
 
-			option = new Option('Hitbox Position', Language.get("hitbox_position_desc"),
+			option = new Option(Language.get('hitbox_position'), Language.get("hitbox_position_desc"),
 				'hitboxPos', BOOL);
 			addOption(option);
 
-			option = new Option('Hitbox Animation', Language.get("hitbox_animation_desc"),
+			option = new Option(Language.get('hitbox_animation'), Language.get("hitbox_animation_desc"),
 				'hitboxAnimation', BOOL);
 			addOption(option);
 
-			option = new Option('Hitbox Hide Idle', 'Hides the colored hitbox blocks while not being touched',
+			option = new Option(Language.get('hitbox_hide_idle'), Language.get("hitbox_hide_idle_desc"),
 				'hitboxHideIdle', BOOL);
 			option.onChange = () ->
 			{
@@ -107,7 +113,7 @@ class MobileOptionsSubState extends BaseOptionsMenu
 			addOption(option);
 		}
 
-		option = new Option('Dynamic Controls Color',
+		option = new Option(Language.get('dynamic_controls_color'),
 			Language.get("dynamic_controls_color_desc"), 'dynamicColors',
 			BOOL);
 		addOption(option);

@@ -515,7 +515,11 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		if(option.type == STRING) {
 			// 类似 noteskin 选择器：用箭头包住当前可选值，并着强调色，提示可左右切换
 			var val:Dynamic = option.getValue();
-			option.text = '${OptionsConfig.SUBMENU_STRING_ARROW.charAt(0)}$val${OptionsConfig.SUBMENU_STRING_ARROW.charAt(2)}';
+			// 若该选项配置了可选项本地化映射，则用显示文案替代原始存储值（存储值不变）
+			var show:String = Std.string(val);
+			if (option.valueLocalizations != null && option.valueLocalizations.exists(Std.string(val)))
+				show = option.valueLocalizations.get(Std.string(val));
+			option.text = '${OptionsConfig.SUBMENU_STRING_ARROW.charAt(0)}$show${OptionsConfig.SUBMENU_STRING_ARROW.charAt(2)}';
 			if (option.child != null) option.child.color = OptionsConfig.SUBMENU_STRING_COLOR;
 			return;
 		}

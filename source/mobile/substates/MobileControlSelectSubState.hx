@@ -110,13 +110,13 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		positionText.cameras = [ui];
 		add(positionText);
 
-		var exit = new UIButton(0, itemText.y - 25, LanguageBasic.getPhrase('mobileC_exitandsave', "Exit & Save"), () ->
+		var exit = new UIButton(0, itemText.y - 25, Language.get('key_bind_exit'), () ->
 		{
 			if (options[curOption].toLowerCase().contains('pad'))
 				control.touchPad.setExtrasDefaultPos();
 			if (options[curOption] == 'Pad-Extra')
 			{
-				var nuhuh = new FlxText(0, 0, FlxG.width / 2, LanguageBasic.getPhrase('pad-extra_save', 'Pad-Extra Is Just A Binding Option\nPlease Select A Different Option To Exit.'));
+				var nuhuh = new FlxText(0, 0, FlxG.width / 2, Language.get('pad_extra_save'));
 				nuhuh.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, FlxTextAlign.CENTER);
 				nuhuh.screenCenter();
 				nuhuh.cameras = [ui];
@@ -150,7 +150,7 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		exit.cameras = [ui];
 		add(exit);
 
-		reset = new UIButton(exit.x, exit.height + exit.y + 20, LanguageBasic.getPhrase('mobileC_reset', 'Reset'), () ->
+		reset = new UIButton(exit.x, exit.height + exit.y + 20, Language.get('key_bind_reset'), () ->
 		{
 			changeOption(0); // realods the current control mode ig?
 			FlxG.sound.play(Paths.sound('cancelMenu'));
@@ -175,7 +175,7 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		add(snapCheckbox);
 
 		// 添加复选框标签
-		snapLabel = new Alphabet(snapCheckbox.x + snapCheckbox.width + 20, centerY, 'Button Snap');
+		snapLabel = new Alphabet(snapCheckbox.x + snapCheckbox.width + 20, centerY, Language.get('button_snap'));
 		snapLabel.cameras = [ui];
 		snapLabel.y += snapCheckbox.height / 2 - snapLabel.height / 2;
 		snapLabel.isMenuItem = false;
@@ -337,10 +337,24 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 
 	function setOptionText()
 	{
-		itemText.text = options[curOption].replace('-', ' ');
+		itemText.text = localModeName(options[curOption]);
 		itemText.updateHitbox();
 		itemText.offset.set(0, 15);
 		FlxTween.tween(rightArrow, {x: itemText.x + itemText.width + 10}, 0.1, {ease: FlxEase.quintOut});
+	}
+
+	// 本地化触控模式名（存储值不变，仅显示翻译）
+	function localModeName(name:String):String
+	{
+		return switch (name)
+		{
+			case 'Pad-Right': Language.get('mobile_mode_pad_right');
+			case 'Pad-Left': Language.get('mobile_mode_pad_left');
+			case 'Pad-Custom': Language.get('mobile_mode_pad_custom');
+			case 'Pad-Extra': Language.get('mobile_mode_pad_extra');
+			case 'Hitbox': Language.get('mobile_mode_hitbox');
+			default: name.replace('-', ' ');
+		}
 	}
 
 	function updatePosText()
@@ -351,7 +365,7 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 			positionText.visible = positionTextBg.visible = true;
 			if (optionName == 'Pad-Custom')
 			{
-				positionText.text = '${LanguageBasic.getPhrase('mobileC_left', 'LEFT')} X: ${control.touchPad.buttonLeft.x} - Y: ${control.touchPad.buttonLeft.y}\n${LanguageBasic.getPhrase('mobileC_down', 'DOWN')} X: ${control.touchPad.buttonDown.x} - Y: ${control.touchPad.buttonDown.y}\n\n${LanguageBasic.getPhrase('mobileC_up', 'UP')} X: ${control.touchPad.buttonUp.x} - Y: ${control.touchPad.buttonUp.y}\n${LanguageBasic.getPhrase('mobileC_right', 'RIGHT')} X: ${control.touchPad.buttonRight.x} - Y: ${control.touchPad.buttonRight.y}';
+				positionText.text = '${Language.get('mobilec_left')} X: ${control.touchPad.buttonLeft.x} - Y: ${control.touchPad.buttonLeft.y}\n${Language.get('mobilec_down')} X: ${control.touchPad.buttonDown.x} - Y: ${control.touchPad.buttonDown.y}\n\n${Language.get('mobilec_up')} X: ${control.touchPad.buttonUp.x} - Y: ${control.touchPad.buttonUp.y}\n${Language.get('mobilec_right')} X: ${control.touchPad.buttonRight.x} - Y: ${control.touchPad.buttonRight.y}';
 			}
 			else
 			{

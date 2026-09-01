@@ -15,7 +15,7 @@ import mobile.backend.TouchUtil;
 
 class MobileExtraControl extends MusicBeatSubstate
 {
-	// 父级设置菜单，退出时需恢复其 persistentUpdate，否则父界面的按钮会失效
+	// 父级设置菜单，销毁时需恢复其为当前活动实例，否则父界面的触控导航会失效
 	var parentMenu:MusicBeatSubstate;
 
 	public function new(?parentMenu:MusicBeatSubstate = null)
@@ -70,7 +70,7 @@ class MobileExtraControl extends MusicBeatSubstate
 		add(bg);
 
 		// 标题
-		var title:FlxText = new FlxText(0, 24, FlxG.width, LanguageBasic.getPhrase('extra_bind_title', 'Extra Key Bindings'));
+		var title:FlxText = new FlxText(0, 24, FlxG.width, Language.get('extra_key_bindings'));
 		title.setFormat(Paths.font("vcr.ttf"), 38, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		title.borderSize = 2;
 		add(title);
@@ -91,7 +91,7 @@ class MobileExtraControl extends MusicBeatSubstate
 
 			var keyName:String = Reflect.field(ClientPrefs.data, 'extraKeyReturn' + (i + 1));
 			var label:FlxText = new FlxText(x, slotY, slotW);
-			label.text = 'KEY ' + (i + 1) + '\n' + keyName;
+			label.text = Language.get('extra_bind_slot') + ' ' + (i + 1) + '\n' + keyName;
 			label.setFormat(Paths.font("vcr.ttf"), i < extraEnabled ? 20 : 16, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 			label.borderSize = 2;
 			label.y += (slotH - label.height) / 2;
@@ -102,7 +102,7 @@ class MobileExtraControl extends MusicBeatSubstate
 		}
 
 		// 提示语
-		var hint:FlxText = new FlxText(0, slotY + slotH + 10, FlxG.width, LanguageBasic.getPhrase('extra_bind_hint', 'Select a key slot, then tap the key you want it to simulate.'));
+		var hint:FlxText = new FlxText(0, slotY + slotH + 10, FlxG.width, Language.get('extra_bind_hint'));
 		hint.setFormat(Paths.font("vcr.ttf"), 16, 0xFFCCCCCC, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		hint.borderSize = 1;
 		add(hint);
@@ -138,7 +138,7 @@ class MobileExtraControl extends MusicBeatSubstate
 		exitBt = new FlxSprite(FlxG.width - 210, gridBottom + 20).makeGraphic(190, 44, 0xFF0066FF);
 		exitBt.alpha = 0.85;
 		add(exitBt);
-		var exitText:FlxText = new FlxText(exitBt.x, exitBt.y, exitBt.width, LanguageBasic.getPhrase('key_bind_exit', 'Exit & Save'));
+		var exitText:FlxText = new FlxText(exitBt.x, exitBt.y, exitBt.width, Language.get('key_bind_exit'));
 		exitText.setFormat(Paths.font("vcr.ttf"), 24, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		exitText.borderSize = 2;
 		exitText.y += (44 - exitText.height) / 2;
@@ -148,7 +148,7 @@ class MobileExtraControl extends MusicBeatSubstate
 		resetBt = new FlxSprite(20, gridBottom + 20).makeGraphic(150, 44, 0xFFA60000);
 		resetBt.alpha = 0.85;
 		add(resetBt);
-		var resetText:FlxText = new FlxText(resetBt.x, resetBt.y, resetBt.width, LanguageBasic.getPhrase('key_bind_reset', 'Reset'));
+		var resetText:FlxText = new FlxText(resetBt.x, resetBt.y, resetBt.width, Language.get('key_bind_reset'));
 		resetText.setFormat(Paths.font("vcr.ttf"), 24, FlxColor.WHITE, FlxTextAlign.CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		resetText.borderSize = 2;
 		resetText.y += (44 - resetText.height) / 2;
@@ -187,7 +187,7 @@ class MobileExtraControl extends MusicBeatSubstate
 				{
 					Reflect.setProperty(ClientPrefs.data, 'extraKeyReturn' + (curSlot + 1), KEYS[i]);
 					ClientPrefs.saveSettings();
-					slotLabels[curSlot].text = 'KEY ' + (curSlot + 1) + '\n' + KEYS[i];
+					slotLabels[curSlot].text = Language.get('extra_bind_slot') + ' ' + (curSlot + 1) + '\n' + KEYS[i];
 					FlxG.sound.play(Paths.sound('confirmMenu'));
 				}
 				break;
@@ -197,8 +197,7 @@ class MobileExtraControl extends MusicBeatSubstate
 		if (justTapped(exitBt) || controls.BACK)
 		{
 			ClientPrefs.saveSettings();
-			if (parentMenu != null)
-				parentMenu.persistentUpdate = true;
+			// 激活实例（controls.isInSubstate / MusicBeatSubstate.instance）的恢复由本类 destroy() 处理
 			close();
 		}
 
@@ -207,10 +206,24 @@ class MobileExtraControl extends MusicBeatSubstate
 			for (i in 0...4)
 			{
 				Reflect.setProperty(ClientPrefs.data, 'extraKeyReturn' + (i + 1), Reflect.field(ClientPrefs.defaultData, 'extraKeyReturn' + (i + 1)));
-				slotLabels[i].text = 'KEY ' + (i + 1) + '\n' + Reflect.field(ClientPrefs.data, 'extraKeyReturn' + (i + 1));
+				slotLabels[i].text = Language.get('extra_bind_slot') + ' ' + (i + 1) + '\n' + Reflect.field(ClientPrefs.data, 'extraKeyReturn' + (i + 1));
 			}
 			ClientPrefs.saveSettings();
 			FlxG.sound.play(Paths.sound('cancelMenu'));
+		}
+	}
+
+	override function destroy()
+	{
+		super.destroy(); // MusicBeatSubstate.destroy 会把 controls.isInSubstate 置 false（顶层子状态关闭的语义）
+
+		// 本子状态嵌套于 MobileOptionsSubState 之上，关闭后父菜单仍是活动层。
+		// 若不清除残留，Controls 会把 requestedInstance 指向 OptionsState（其 touchPad 为空），
+		// 导致父菜单的移动端触控导航失效，界面出现“卡死”。这里把父菜单恢复为当前活动实例。
+		if (parentMenu != null)
+		{
+			controls.isInSubstate = true;
+			MusicBeatSubstate.instance = parentMenu;
 		}
 	}
 
