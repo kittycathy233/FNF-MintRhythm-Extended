@@ -6924,8 +6924,18 @@ tempScore += '${lblScore}: ${songScore}';
 			var aliveCount:Int = 0;
 			for (splash in grpNoteSplashes)
 				if (splash.alive) aliveCount++;
-			if (aliveCount >= ClientPrefs.data.splashLimit)
-				return; // 达到上限，跳过本次飞溅
+
+			if (aliveCount >= ClientPrefs.data.splashLimit) {
+				// 超限处理模式：仅当达到上限时才走这里
+				if (ClientPrefs.data.splashLimitMode == 'replace') {
+					// 'replace' 模式：销毁最早生成的那个存活飞溅，随后照常生成新飞溅
+					for (splash in grpNoteSplashes)
+						if (splash.alive) { splash.kill(); break; }
+				} else {
+					// 'skip' 模式（现状）：达到上限则忽略本次飞溅
+					return;
+				}
+			}
 		}
 
 		var splash:NoteSplash = grpNoteSplashes.recycle(NoteSplash);

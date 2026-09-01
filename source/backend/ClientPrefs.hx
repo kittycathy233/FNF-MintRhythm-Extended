@@ -48,6 +48,7 @@ import openfl.display.StageQuality;
 	public var splashAlpha:Float = 0.6;
 	public var splashLimitEnabled:Bool = true; // 是否启用飞溅数量限制
 	public var splashLimit:Int = 16; // 飞溅最大同时存在数量（默认16）
+	public var splashLimitMode:String = 'skip'; // 飞溅超限处理模式：'skip' = 达到上限则忽略本次（现状）；'replace' = 达到上限则销毁最早生成的那个飞溅再生成新飞溅
 	public var holdCoverLimitEnabled:Bool = true; // 是否启用 Hold Cover 数量限制
 	public var holdCoverLimit:Int = 10; // Hold Cover 最大同时显示数量（默认10）
 	public var lowQuality:Bool = false;

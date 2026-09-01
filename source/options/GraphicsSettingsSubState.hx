@@ -135,6 +135,19 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		option.displayFormat = '%v';
 		addOption(option);
 
+		// 飞溅超限处理模式：现状（达到上限则忽略）或 覆盖（销毁最早生成的那个再生成）
+		var option:Option = new Option(Language.get('splash_limit_mode'),
+			Language.get("splash_limit_mode_desc"),
+			'splashLimitMode',
+			STRING,
+			['skip', 'replace']);
+		option.valueLocalizations = [
+			'skip'    => Language.get('splash_limit_mode_skip'),
+			'replace' => Language.get('splash_limit_mode_replace')
+		];
+		option.defaultValue = 'skip';
+		addOption(option);
+
 		// Hold Cover 数量限制设置（与飞溅数量限制类似）
 		var option:Option = new Option(Language.get('hold_cover_limit'),
 			Language.get("hold_cover_limit_desc"),
