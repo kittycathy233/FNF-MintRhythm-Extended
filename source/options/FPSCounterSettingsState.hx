@@ -700,7 +700,7 @@ class FPSCounterSettingsState extends MusicBeatState
 				// 仅在选项显示区域内（overlap 检测）触摸才启动滚动
 				if (t.x < 30 || t.x > 700 || t.y < listStartY || t.y > listStartY + listViewHeight) continue;
 				touchScrollActive = true;
-				touchScrollTouchID = t.ID;
+				touchScrollTouchID = t.touchPointID;
 				touchScrollStartY = t.y;
 				touchScrollStartCurSel = curSelected;
 				break;
@@ -709,7 +709,7 @@ class FPSCounterSettingsState extends MusicBeatState
 		}
 
 		var active:FlxTouch = null;
-		for (t in FlxG.touches.list) if (t.ID == touchScrollTouchID) { active = t; break; }
+		for (t in FlxG.touches.list) if (t.touchPointID == touchScrollTouchID) { active = t; break; }
 
 		if (active == null || active.justReleased || active.released)
 		{
@@ -722,7 +722,7 @@ class FPSCounterSettingsState extends MusicBeatState
 		// 手指上滑（y 减小）→ 选中项增大（列表内容上移），以平均行距 1:1 映射
 		var dragPx:Float = touchScrollStartY - active.y;
 		var totalH:Float = (rowTops[rowTops.length - 1] + rowHeights[rowHeights.length - 1]) - rowTops[0];
-		var pitch:Float = FlxMath.max(1, totalH / options.length);
+		var pitch:Float = Math.max(1, totalH / options.length);
 		var targetSel:Float = touchScrollStartCurSel + dragPx / pitch;
 		if (targetSel < 0) targetSel = 0;
 		else if (targetSel > options.length - 1) targetSel = options.length - 1;
