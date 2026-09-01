@@ -6473,16 +6473,8 @@ tempScore += '${lblScore}: ${songScore}';
 				var canPlay:Bool = true;
 				if(note.isSustainNote)
 				{
-					if(ClientPrefs.data.forceHoldAnimations)
-					{
-						if(char.getAnimationName() == animToPlay) canPlay = false;
-					}
-					else
-					{
-						var holdAnim:String = animToPlay + '-hold';
-						if(char.animation.exists(holdAnim)) animToPlay = holdAnim;
-						if(char.getAnimationName() == holdAnim || char.getAnimationName() == holdAnim + '-loop') canPlay = false;
-					}
+					// 冻帧式（官方风格）：长条段不触发/切换角色唱动画，只续 holdTimer 保持头段姿态，避免多长条同按反复横跳
+					canPlay = false;
 				}
 
 				if(canPlay)
@@ -6605,16 +6597,8 @@ tempScore += '${lblScore}: ${songScore}';
 					var canPlay:Bool = true;
 					if(note.isSustainNote)
 					{
-						if(ClientPrefs.data.forceHoldAnimations)
-						{
-							if(char.getAnimationName() == animToPlay) canPlay = false;
-						}
-						else
-						{
-							var holdAnim:String = animToPlay + '-hold';
-							if(char.animation.exists(holdAnim)) animToPlay = holdAnim;
-							if(char.getAnimationName() == holdAnim || char.getAnimationName() == holdAnim + '-loop') canPlay = false;
-						}
+						// 冻帧式（官方风格）：长条段不触发/切换角色唱动画，只续 holdTimer 保持头段姿态，避免多长条同按反复横跳
+						canPlay = false;
 					}
 
 				if(canPlay)

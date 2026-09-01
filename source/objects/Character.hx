@@ -336,7 +336,10 @@ class Character extends FlxSprite
 		}
 
 		var name:String = getAnimationName();
-		if(isAnimationFinished() && hasAnimation('$name-loop') && !ClientPrefs.data.forceHoldAnimations)
+		// 冻帧式（官方风格）：sing 唱动画播完后，若有 "-hold" 变体则自动切到它（长条期间保持生动唱姿），否则沿用 -loop
+		if(isAnimationFinished() && name.startsWith('sing') && !name.endsWith('-hold') && hasAnimation(name + '-hold') && !ClientPrefs.data.forceHoldAnimations)
+			playAnim(name + '-hold');
+		else if(isAnimationFinished() && hasAnimation('$name-loop') && !ClientPrefs.data.forceHoldAnimations)
 			playAnim('$name-loop');
 
 		// Update ghost sprites
