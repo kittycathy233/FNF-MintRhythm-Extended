@@ -1099,8 +1099,8 @@ isReplaying = false;
 			timeTxt.x = timeBar.x;
 		}
 
-		// Psych样式下的渐变时间条：对手色→玩家色
-		if (ClientPrefs.data.timebarStyle == "Psych" && ClientPrefs.data.timeBarGradient && dad != null && boyfriend != null) {
+		// Psych 与 Leather (Legacy) 样式下的渐变时间条：对手色→玩家色
+		if ((ClientPrefs.data.timebarStyle == "Psych" || ClientPrefs.data.timebarStyle == "Leather (Legacy)") && ClientPrefs.data.timeBarGradient && dad != null && boyfriend != null) {
 			var dadColor:FlxColor = FlxColor.fromRGB(dad.healthColorArray[0], dad.healthColorArray[1], dad.healthColorArray[2]);
 			var bfColor:FlxColor = FlxColor.fromRGB(boyfriend.healthColorArray[0], boyfriend.healthColorArray[1], boyfriend.healthColorArray[2]);
 			timeBar.useGradient = true;
@@ -7078,7 +7078,7 @@ tempScore += '${lblScore}: ${songScore}';
 			}
 		}
 
-		if (ClientPrefs.data.timebarStyle == 'Psych' && ClientPrefs.data.timeBarGradient && timeBar != null && dad != null && boyfriend != null) {
+		if ((ClientPrefs.data.timebarStyle == 'Psych' || ClientPrefs.data.timebarStyle == 'Leather (Legacy)') && ClientPrefs.data.timeBarGradient && timeBar != null && dad != null && boyfriend != null) {
 			var dadColor:FlxColor = FlxColor.fromRGB(dad.healthColorArray[0], dad.healthColorArray[1], dad.healthColorArray[2]);
 			var bfColor:FlxColor = FlxColor.fromRGB(boyfriend.healthColorArray[0], boyfriend.healthColorArray[1], boyfriend.healthColorArray[2]);
 			timeBar.useGradient = true;
