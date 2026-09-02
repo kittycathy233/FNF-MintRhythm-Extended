@@ -2196,7 +2196,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 						if(selectedNotes.length == 1) onSelectNote();
 								forceDataUpdate = true;
 							}
-							else if(!holdingAlt && touchWorldY >= trackInfo.grid.y && touchWorldY < trackInfo.grid.y + trackInfo.grid.height) // Add note
+							else if(!holdingAlt && touchWorldY >= trackInfo.grid.y && touchWorldY < trackInfo.grid.y + trackInfo.grid.height + (trackInfo.nextGrid.visible ? trackInfo.nextGrid.height : 0)) // Add note（与预览一致，放行到下一小节区域）
 							{
 								// 触摸 Y（均匀像素）→ 步 → ramp 感知毫秒，放置与显示一致
 								var stepAtMouse:Float = (diffY / (GRID_SIZE * curZoom)) + cachedSectionRow[curSec];
@@ -2470,7 +2470,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 						if(selectedNotes.length == 1) onSelectNote();
 						forceDataUpdate = true;
 						}
-						else if(!holdingAlt && FlxG.mouse.y >= mouseTrackInfo.grid.y && FlxG.mouse.y < mouseTrackInfo.grid.y + mouseTrackInfo.grid.height) // Add note
+						else if(!holdingAlt && FlxG.mouse.y >= mouseTrackInfo.grid.y && FlxG.mouse.y < mouseTrackInfo.grid.y + mouseTrackInfo.grid.height + (mouseTrackInfo.nextGrid.visible ? mouseTrackInfo.nextGrid.height : 0)) // Add note（与预览一致，放行到下一小节区域）
 						{
 							if(dragCreateHoldNote)
 							{
