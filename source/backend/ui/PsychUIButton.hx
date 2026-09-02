@@ -127,10 +127,13 @@ class PsychUIButton extends FlxSpriteGroup
 		}
 		else if(!isClicked)
 		{
-			var style:UIStyleData = (touch.overlaps) ? hoverStyle : normalStyle;
-			bg.color = style.bgColor;
-			bg.alpha = style.bgAlpha;
-			text.color = style.textColor;
+			// 鼠标路径负责非触摸时的状态；触摸路径只在确实重合时才接管，避免每帧用 normalStyle 覆盖鼠标高亮导致闪烁
+			if(touch.overlaps)
+			{
+				bg.color = hoverStyle.bgColor;
+				bg.alpha = hoverStyle.bgAlpha;
+				text.color = hoverStyle.textColor;
+			}
 		}
 		#end
 
