@@ -13,7 +13,7 @@ class ExitConfirmationPrompt extends Prompt
 		{
 			FlxG.mouse.visible = false;
 			MusicBeatState.switchState(new states.editors.MasterEditorMenu());
-			FlxG.sound.playMusic(Paths.music('freakyMenu'));
+			FlxG.sound.playMusic(Paths.music(Paths.menuMusicName()));
 			if(finishCallback != null) finishCallback();
 		}, Language.get('stage_editor_prompt_yes'));
 	}

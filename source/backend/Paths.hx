@@ -272,6 +272,25 @@ inline public static function getSharedPath(file:String = '')
 	inline static public function music(key:String, ?modsAllowed:Bool = true):Sound
 		return returnSound('music/$key', modsAllowed);
 
+	// 返回主菜单音乐的文件名（不含扩展名）。ClientPrefs.data.daMenuMusic 为 'Default'（或 'None'）时
+	// 用标准 freakyMenu，保证与原生 Psych 行为一致；其它选项映射到 freakyMenu-<选项名>（兼容 JS 引擎的多种菜单曲约定）。
+	inline static public function menuMusicName():String
+	{
+		final musicName:String = ClientPrefs.data.daMenuMusic;
+		if (musicName == null || musicName == '' || musicName == 'Default' || musicName == 'None')
+			return 'freakyMenu';
+		// 'Dave & Bambi' -> 'freakyMenu-Dave'（与提供的 freakyMenu-Dave 音频一致，避免 formatToSongPath 生成 dave---bambi）
+		if (musicName == 'Dave & Bambi')
+			return 'freakyMenu-Dave';
+		// 'Dave & Bambi (Old)' -> 'freakyMenu-Dave_Legacy'
+		if (musicName == 'Dave & Bambi (Old)')
+			return 'freakyMenu-Dave_Legacy';
+		// 'Azusa Funk' -> 'freakyMenu-AzusaFunk'
+		if (musicName == 'Azusa Funk')
+			return 'freakyMenu-AzusaFunk';
+		return 'freakyMenu-' + formatToSongPath(musicName);
+	}
+
 inline static public function inst(song:String, ?specialInst:String = null, ?modsAllowed:Bool = true):Sound
 {
     var instKey:String = '${formatToSongPath(song)}/Inst';

@@ -262,6 +262,15 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 			['None', 'Tea Time', 'Breakfast', 'Breakfast (Pico)', "Romantic Smile"]);
 		addOption(option);
 		option.onChange = onChangePauseMusic;
+
+		// 主菜单音乐（兼容 JS 引擎多菜单曲）：'Default' 用标准 freakyMenu，其它映射 freakyMenu-<选项名>
+		var option:Option = new Option(Language.get('menu_music'),
+			Language.get("menumusic_desc"),
+			'daMenuMusic',
+			STRING,
+			['Default', 'Dave & Bambi', 'Dave & Bambi (Old)', 'Azusa Funk']);
+		addOption(option);
+		option.onChange = onChangeMenuMusic;
 		
 		#if CHECK_FOR_UPDATES
 		var option:Option = new Option(Language.get('check_for_updates'),
@@ -597,6 +606,14 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		changedMusic = true;
 	}
 
+	// 切换主菜单音乐：立即重播所选曲目以试听（无音轨文件时静默保留静音/原曲）
+	function onChangeMenuMusic()
+	{
+		if (FlxG.sound.music != null)
+			FlxG.sound.playMusic(Paths.music(Paths.menuMusicName()));
+		changedMusic = true;
+	}
+
 	function onChangeArrowColorMode()
 	{
 		Note.globalRgbShaders = [];
@@ -713,7 +730,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 
 	override function destroy()
 	{
-		if(changedMusic && !OptionsState.onPlayState) FlxG.sound.playMusic(Paths.music('freakyMenu'), 1, true);
+		if(changedMusic && !OptionsState.onPlayState) FlxG.sound.playMusic(Paths.music(Paths.menuMusicName()), 1, true);
 		Note.globalRgbShaders = [];
 		Note.globalColorSwapShaders = [];
 		super.destroy();

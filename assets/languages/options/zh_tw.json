@@ -553,6 +553,8 @@
     "debug_reset_defaults_action": "按下",
     "vsync": "垂直同步",
     "pause_music": "暫停音樂：",
+    "menu_music": "主選單音樂：",
+    "menumusic_desc": "選擇主選單/各介面播放的音樂。需將音訊檔放到 assets/music/ 下，命名為 freakyMenu-選項名（Default 使用標準 freakyMenu）。",
     "check_for_updates": "檢查更新",
     "discord_rich_presence": "Discord 富媒體狀態",
     "disable_networking": "停用網路連線",

@@ -458,7 +458,7 @@ class RatingOffsetState extends MusicBeatState
 			else
 				FlxG.sound.music.volume = 0;
 		}
-		else FlxG.sound.playMusic(Paths.music('freakyMenu'));
+		else FlxG.sound.playMusic(Paths.music(Paths.menuMusicName()));
 		FlxG.mouse.visible = false;
 	}
 

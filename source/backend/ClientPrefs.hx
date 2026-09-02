@@ -146,6 +146,8 @@ import openfl.display.StageQuality;
 	// 对象池大小：高密度谱连打时同时响起的打击音数量上限
 	public var hitSoundPoolSize:Int = 50;
 	public var pauseMusic:String = 'Tea Time';
+	// 主菜单音乐：'Default' 使用标准 freakyMenu；其它值对应 assets/music/freakyMenu-<选项名>.<SOUND_EXT>（文件需自备）
+	public var daMenuMusic:String = 'Default';
 	public var checkForUpdates:Bool = true;
 	public var disableNetworking:Bool = false; // 全局联网开关：true 时拦截所有联网行为
 	public var comboStacking:Bool = true;
