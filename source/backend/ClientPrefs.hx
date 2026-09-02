@@ -211,9 +211,9 @@ import openfl.display.StageQuality;
 	//杂七杂八的特性
 	public var fpsCounterSize:Int = 14;
 	public var rainbowfpscounter:Bool = false;
-	public var exgameversion:Bool = true;
+	public var exgameversion:Bool = false;
 	public var exratingDisplay:Bool = true;
-	public var showHaxelibs:Bool = true;
+	public var showHaxelibs:Bool = false;
 	public var rmPerfect:String = 'enable'; // 'enable'=正常(Perfect独立判定), 'remove'=完全移除Perfect, 'sickPlus'=Perfect变为Sick+状态(算Sick但可选显示Perfect贴图,给Perfect分数)
 	public var ratbounce:Bool = true;
 	public var scoretxtstyle:String = 'Kathy';
@@ -230,7 +230,7 @@ import openfl.display.StageQuality;
 	public var ratingsAlpha:Float = 1;
 	public var customFadeStyle:String = 'V-Slice';
 	public var blueArchiveLanguage:String = 'EN';
-	public var showRunningOS:Bool = true;
+	public var showRunningOS:Bool = false;
 	//NFE的特性
 	//public var CustomFadeSound:Bool = true;
 	//public var CustomFadeText:Bool = true;
@@ -328,10 +328,10 @@ import openfl.display.StageQuality;
 	public var fpsBgOpacity:Float = 0.5; // FPS计数器背景不透明度
 	public var fpsBgPadding:Int = 5; // FPS计数器背景内边距
 	public var fpsForceMB:Bool = false; // 是否强制显示MB而非GB
-	public var fpsShowPlatform:Bool = true; // 显示Platform信息
-	public var fpsShowOSVersion:Bool = true; // 显示OS版本
-	public var fpsShowResolution:Bool = true; // 显示分辨率
-	public var fpsShowRefreshRate:Bool = true; // 显示刷新率
+	public var fpsShowPlatform:Bool = false; // 显示Platform信息
+	public var fpsShowOSVersion:Bool = false; // 显示OS版本
+	public var fpsShowResolution:Bool = false; // 显示分辨率
+	public var fpsShowRefreshRate:Bool = false; // 显示刷新率
 
 	// Fake OS 伪装功能
 	public var fakeOSMode:Bool = false;
