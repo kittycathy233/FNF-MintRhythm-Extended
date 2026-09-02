@@ -402,6 +402,7 @@ class ChartingState extends MusicBeatState implements PsychUIEventHandler.PsychU
 	var selectionBox:FlxSprite;
 
 	var _shouldReset:Bool = true;
+	var _blockParentUpdate:Bool = false;
 	public function new(?shouldReset:Bool = true)
 	{
 		this._shouldReset = shouldReset;
@@ -2005,7 +2006,10 @@ if(_shouldReset) Conductor.songPosition = 0;
 			if(trackInfo != null)
 			{
 					var diffX:Float = touch.x - trackInfo.trackX;
-					var diffY:Float = touch.y - trackInfo.grid.y;
+					// 触屏 touch.y 是屏幕坐标，而 grid.y/note.chartY 是世界坐标（已含摄像头纵向滚动）。
+					// 不转成世界坐标比较，滚动后 diffY 与判定全都会偏移，导致白线附近点不出箭头。
+					var touchWorldY:Float = touch.y + FlxG.camera.scroll.y;
+					var diffY:Float = touchWorldY - trackInfo.grid.y;
 					if(!touchPad.buttonY.pressed)
 						diffY -= diffY % (GRID_SIZE / (curQuant/16));
 
@@ -2058,12 +2062,12 @@ if(_shouldReset) Conductor.songPosition = 0;
 						dummyArrow.x = gridLayout.startX + finalUIColumn * GRID_SIZE + spacingOffset;
 					}
 
-					if(touchPad.buttonY.pressed || touch.y >= trackInfo.grid.y || !trackInfo.prevGrid.visible)
+					if(touchPad.buttonY.pressed || touchWorldY >= trackInfo.grid.y || !trackInfo.prevGrid.visible)
 						dummyArrow.y = trackInfo.grid.y + diffY;
 					else
 					{
 						var t:Float = (diffY - (GRID_SIZE / (curQuant/16)));
-						if(touch.y >= trackInfo.grid.y) t *= curZoom;
+						if(touchWorldY >= trackInfo.grid.y) t *= curZoom;
 						dummyArrow.y = trackInfo.grid.y + t;
 					}
 
@@ -2142,7 +2146,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 						{
 							var closeNotes:Array<MetaNote> = curRenderedNotes.members.filter(function(note:MetaNote)
 							{
-								var chartY:Float = touch.y - note.chartY;
+								var chartY:Float = touchWorldY - note.chartY;
 								if(note.isEvent && noteData < 0)
 								{
 									var eventDiffX:Float = touch.x - trackInfo.trackX;
@@ -2192,7 +2196,7 @@ if(_shouldReset) Conductor.songPosition = 0;
 						if(selectedNotes.length == 1) onSelectNote();
 								forceDataUpdate = true;
 							}
-							else if(!holdingAlt && touch.y >= trackInfo.grid.y && touch.y < trackInfo.grid.y + trackInfo.grid.height) // Add note
+							else if(!holdingAlt && touchWorldY >= trackInfo.grid.y && touchWorldY < trackInfo.grid.y + trackInfo.grid.height) // Add note
 							{
 								// 触摸 Y（均匀像素）→ 步 → ramp 感知毫秒，放置与显示一致
 								var stepAtMouse:Float = (diffY / (GRID_SIZE * curZoom)) + cachedSectionRow[curSec];
@@ -8656,6 +8660,11 @@ function adaptNotesToNewTimes(oldTimes:Array<Float>)
 	override function openSubState(SubState:FlxSubState)
 	{
 		setSongPlaying(false);
+		if (Std.is(SubState, BasePrompt))
+		{
+			_blockParentUpdate = true;
+			persistentUpdate = false;
+		}
 		super.openSubState(SubState);
 		// 顶部 HaxeUI 菜单栏始终可见，不随子状态隐藏（用户要求顶栏不自动隐藏）
 		// if(haxeMenuBar != null) haxeMenuBar.visible = false;
@@ -8663,7 +8672,11 @@ function adaptNotesToNewTimes(oldTimes:Array<Float>)
 
 	override function closeSubState()
 	{
-		persistentUpdate = true; // 预览游玩结束，恢复制谱器主逻辑更新
+		if (_blockParentUpdate)
+		{
+			_blockParentUpdate = false;
+			persistentUpdate = true;
+		}
 		ClientPrefs.toggleVolumeKeys(true);
 		super.closeSubState();
 		upperBox.isMinimized = true;

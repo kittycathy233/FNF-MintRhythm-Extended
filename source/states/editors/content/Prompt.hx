@@ -4,6 +4,7 @@ import flixel.util.FlxDestroyUtil;
 import backend.Language;
 import backend.Paths;
 
+@:allow(states.editors.ChartingState)
 class ExitConfirmationPrompt extends Prompt
 {
 	public function new(?finishCallback:Void->Void)
@@ -18,6 +19,7 @@ class ExitConfirmationPrompt extends Prompt
 	}
 }
 
+@:allow(states.editors.ChartingState)
 class Prompt extends BasePrompt
 {
 	var yesFunction:Void->Void;
@@ -63,6 +65,7 @@ class Prompt extends BasePrompt
 	}
 }
 
+@:allow(states.editors.ChartingState)
 class BasePrompt extends MusicBeatSubstate
 {
 	var _sizeX:Float = 0;
