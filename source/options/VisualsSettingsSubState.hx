@@ -263,12 +263,13 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 		option.onChange = onChangePauseMusic;
 
-		// 主菜单音乐（兼容 JS 引擎多菜单曲）：'Default' 用标准 freakyMenu，其它映射 freakyMenu-<选项名>
+		// 主菜单音乐：'Default' 用标准 freakyMenu；其余由 freakyMenu-BPM.json 定义的三要素（显示名/音频文件/BPM）加自动扫描组成
+		var menuMusicOptions:Array<String> = Paths.availableMenuMusicNames();
 		var option:Option = new Option(Language.get('menu_music'),
 			Language.get("menumusic_desc"),
 			'daMenuMusic',
 			STRING,
-			['Default', 'Dave & Bambi', 'Dave & Bambi (Old)', 'Azusa Funk']);
+			menuMusicOptions);
 		addOption(option);
 		option.onChange = onChangeMenuMusic;
 		
@@ -610,7 +611,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 	function onChangeMenuMusic()
 	{
 		if (FlxG.sound.music != null)
-			FlxG.sound.playMusic(Paths.music(Paths.menuMusicName()));
+			FlxG.sound.playMusic(Paths.menuMusicAudio());
 		changedMusic = true;
 	}
 
@@ -730,7 +731,7 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 
 	override function destroy()
 	{
-		if(changedMusic && !OptionsState.onPlayState) FlxG.sound.playMusic(Paths.music(Paths.menuMusicName()), 1, true);
+		if(changedMusic && !OptionsState.onPlayState) FlxG.sound.playMusic(Paths.menuMusicAudio(), 1, true);
 		Note.globalRgbShaders = [];
 		Note.globalColorSwapShaders = [];
 		super.destroy();

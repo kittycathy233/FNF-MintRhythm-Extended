@@ -158,27 +158,20 @@ class TitleState extends MusicBeatState
 	{
 		persistentUpdate = true;
 		if (!initialized && FlxG.sound.music == null)
-			FlxG.sound.playMusic(Paths.music(Paths.menuMusicName()), 0);
+			FlxG.sound.playMusic(Paths.menuMusicAudio(), 0);
 
 		loadJsonData();
 		#if TITLE_SCREEN_EASTER_EGG easterEggData(); #end
-		// 根据所选主菜单音乐匹配 BPM（兼容 JS 引擎多菜单曲）；其余沿用 gfDanceTitle.json 的 BPM
-		switch (ClientPrefs.data.daMenuMusic)
+		// BPM 决定：选中命名菜单曲(非 Default) → 用该样式在 json 里的 bpm；
+		// 选中 Default(或空) → 优先 gfDanceTitle.json 的 bpm(保持原 Psych 行为)，缺省才回退菜单音乐默认 BPM。
+		// 默认曲目用 gfDanceTitle 时 hasTitleBPM 生效；命名为真时若非 Default 也强制用样式 bpm。
+		if (Paths.isDefaultMenuMusic()) // Psych 默认曲目
 		{
-			case 'Mashup' | 'VS Impostor' | 'VS Nonsense V2':
-				musicBPM = 102;
-			case 'Dave & Bambi':
-				musicBPM = 148;
-			case 'Dave & Bambi (Old)':
-				musicBPM = 150;
-			case 'Azusa Funk':
-				musicBPM = 180;
-			case 'DDTO+':
-				musicBPM = 120;
-			case 'Anniversary':
-				musicBPM = 115;
-			default: // 'Default' / 'Base Game' / 'None' / 自定义曲目沿用 gfDanceTitle.json 的 BPM
+			if (!hasTitleBPM)
+				musicBPM = Paths.menuMusicBPM(musicBPM); // 无 gfDanceTitle.json 时兜底
 		}
+		else // 命名曲目用自己的样式 bpm
+			musicBPM = Paths.menuMusicBPM(musicBPM);
 		Conductor.bpm = musicBPM;
 
 		logoBl = new FlxSprite(logoPosition.x, logoPosition.y);
@@ -275,6 +268,7 @@ class TitleState extends MusicBeatState
 	
 	var useIdle:Bool = false;
 	var musicBPM:Float = 102;
+	var hasTitleBPM:Bool = false;
 	var danceLeftFrames:Array<Int> = [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29];
 	var danceRightFrames:Array<Int> = [30, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
 
@@ -292,6 +286,7 @@ class TitleState extends MusicBeatState
 					logoPosition.set(titleJSON.titlex, titleJSON.titley);
 					enterPosition.set(titleJSON.startx, titleJSON.starty);
 					musicBPM = titleJSON.bpm;
+						hasTitleBPM = true;
 					
 					if(titleJSON.animation != null && titleJSON.animation.length > 0) animationName = titleJSON.animation;
 					if(titleJSON.dance_left != null && titleJSON.dance_left.length > 0) danceLeftFrames = titleJSON.dance_left;
@@ -570,7 +565,7 @@ class TitleState extends MusicBeatState
 			{
 				case 1:
 					//FlxG.sound.music.stop();
-					FlxG.sound.playMusic(Paths.music(Paths.menuMusicName()), 0);
+					FlxG.sound.playMusic(Paths.menuMusicAudio(), 0);
 					FlxG.sound.music.fadeIn(4, 0, 0.7);
 				case 2:
 					createCoolText(['Psych Engine by'], 40);
@@ -638,7 +633,7 @@ class TitleState extends MusicBeatState
 						FlxG.camera.flash(FlxColor.WHITE, 2);
 						skippedIntro = true;
 
-						FlxG.sound.playMusic(Paths.music(Paths.menuMusicName()), 0);
+						FlxG.sound.playMusic(Paths.menuMusicAudio(), 0);
 						FlxG.sound.music.fadeIn(4, 0, 0.7);
 						return;
 				}
@@ -660,7 +655,7 @@ class TitleState extends MusicBeatState
 					remove(credGroup);
 					FlxG.camera.flash(FlxColor.WHITE, 3);
 					sound.onComplete = function() {
-						FlxG.sound.playMusic(Paths.music(Paths.menuMusicName()), 0);
+						FlxG.sound.playMusic(Paths.menuMusicAudio(), 0);
 						FlxG.sound.music.fadeIn(4, 0, 0.7);
 						transitioning = false;
 						#if ACHIEVEMENTS_ALLOWED

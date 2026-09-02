@@ -1062,7 +1062,7 @@ class FreeplayState extends MusicBeatState
 				bpmDisplayTime = -1;
 				lastBPM = -1;
 
-				FlxG.sound.playMusic(Paths.music(Paths.menuMusicName()), 0);
+				FlxG.sound.playMusic(Paths.menuMusicAudio(), 0);
 				FlxTween.tween(FlxG.sound.music, {volume: 1}, 1);
 			}
 			else
@@ -2482,7 +2482,7 @@ class FreeplayState extends MusicBeatState
 
 		FlxG.autoPause = ClientPrefs.data.autoPause;
 		if (!FlxG.sound.music.playing && !stopMusicPlay)
-			FlxG.sound.playMusic(Paths.music(Paths.menuMusicName()));
+			FlxG.sound.playMusic(Paths.menuMusicAudio());
 
 		// 清理BPM提示
 		bpmText = null;

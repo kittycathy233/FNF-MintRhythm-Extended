@@ -1852,7 +1852,7 @@ class OldChartingState063 extends OldEditorState
 			if (FlxG.keys.justPressed.BACKSPACE || (_virtualpad != null && _virtualpad.buttonB.justPressed)) {
 				PlayState.chartingMode = false;
 				MusicBeatState.switchState(new MasterEditorMenu());
-				FlxG.sound.playMusic(Paths.music(Paths.menuMusicName()));
+				FlxG.sound.playMusic(Paths.menuMusicAudio());
 				FlxG.mouse.visible = false;
 				return;
 			}

@@ -568,7 +568,7 @@ class NoteOffsetState extends MusicBeatState
 				else
 					FlxG.sound.music.volume = 0;
 			}
-			else FlxG.sound.playMusic(Paths.music(Paths.menuMusicName()));
+			else FlxG.sound.playMusic(Paths.menuMusicAudio());
 			FlxG.mouse.visible = false;
 		}
 

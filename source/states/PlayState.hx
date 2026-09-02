@@ -4819,7 +4819,7 @@ tempScore += '${lblScore}: ${songScore}';
 				if (storyPlaylist.length <= 0)
 				{
 					Mods.loadTopMod();
-					FlxG.sound.playMusic(Paths.music(Paths.menuMusicName()));
+					FlxG.sound.playMusic(Paths.menuMusicAudio());
 					#if DISCORD_ALLOWED DiscordClient.resetClientID(); #end
 
 					canResync = false;
@@ -4863,7 +4863,7 @@ tempScore += '${lblScore}: ${songScore}';
 
 				canResync = false;
 				MusicBeatState.switchState(new FreeplayState());
-				FlxG.sound.playMusic(Paths.music(Paths.menuMusicName()));
+				FlxG.sound.playMusic(Paths.menuMusicAudio());
 				changedDifficulty = false;*/
 			}
 			transitioning = true;

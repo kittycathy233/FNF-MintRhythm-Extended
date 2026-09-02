@@ -320,7 +320,7 @@ class ResultsScreen extends FlxSubState
 		PlayState.instance.canResync = false;
 		PlayState.changedDifficulty = false;
 		Mods.loadTopMod();
-		FlxG.sound.playMusic(Paths.music(Paths.menuMusicName()));
+		FlxG.sound.playMusic(Paths.menuMusicAudio());
 		MusicBeatState.switchState(new FreeplayState());
 		close(); // 关闭substate
 	}
@@ -596,7 +596,7 @@ class ResultsScreen extends FlxSubState
 
 				if (PlayState.isStoryMode)
 				{
-					FlxG.sound.playMusic(Paths.music(Paths.menuMusicName()));
+					FlxG.sound.playMusic(Paths.menuMusicAudio());
 					Conductor.changeBPM(102);
 					FlxG.switchState(new MainMenuState());
 				}

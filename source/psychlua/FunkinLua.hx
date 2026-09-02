@@ -792,7 +792,7 @@ class FunkinLua {
 
 			#if DISCORD_ALLOWED DiscordClient.resetClientID(); #end
 
-			FlxG.sound.playMusic(Paths.music(Paths.menuMusicName()));
+			FlxG.sound.playMusic(Paths.menuMusicAudio());
 			PlayState.changedDifficulty = false;
 			PlayState.chartingMode = false;
 			game.transitioning = true;

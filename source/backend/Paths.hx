@@ -23,6 +23,9 @@ import haxe.Json;
 import backend.Mods;
 #end
 
+// 主菜单音乐样式：key=唯一标识(音频文件后缀)，display=设置里显示的选项名，audio=实际播放的文件(不含扩展)，bpm=对应 BPM(<=0 表示未指定)
+typedef MenuMusicStyle = { key:String, display:String, audio:String, bpm:Float }
+
 @:access(openfl.display.BitmapData)
 class Paths
 {
@@ -272,24 +275,212 @@ inline public static function getSharedPath(file:String = '')
 	inline static public function music(key:String, ?modsAllowed:Bool = true):Sound
 		return returnSound('music/$key', modsAllowed);
 
-	// 返回主菜单音乐的文件名（不含扩展名）。ClientPrefs.data.daMenuMusic 为 'Default'（或 'None'）时
-	// 用标准 freakyMenu，保证与原生 Psych 行为一致；其它选项映射到 freakyMenu-<选项名>（兼容 JS 引擎的多种菜单曲约定）。
+	// ===== 主菜单音乐「样式」系统 =====
+	// 每个样式含三要素：display(设置里显示的选项名)、audio(实际播放的文件, 不含扩展)、bpm(对应 BPM, <=0 表示未指定走默认)。
+	// 数据来源：assets 与各 mod 的 music 目录下 freakyMenu-* 音频自动发现 + freakyMenu-BPM.json 覆盖 display/audio/bpm。
+	// 设置里保存 daMenuMusic = display 名；'Default'/'None' 使用标准 freakyMenu，保证原生 Psych 行为一致。
+
 	inline static public function menuMusicName():String
+		return resolveMenuMusicStyle(ClientPrefs.data.daMenuMusic).audio;
+
+	// 设置里显示的菜单音乐选项名列表（'Default' 在最前）
+	static public function availableMenuMusicNames():Array<String>
 	{
-		final musicName:String = ClientPrefs.data.daMenuMusic;
-		if (musicName == null || musicName == '' || musicName == 'Default' || musicName == 'None')
-			return 'freakyMenu';
-		// 'Dave & Bambi' -> 'freakyMenu-Dave'（与提供的 freakyMenu-Dave 音频一致，避免 formatToSongPath 生成 dave---bambi）
-		if (musicName == 'Dave & Bambi')
-			return 'freakyMenu-Dave';
-		// 'Dave & Bambi (Old)' -> 'freakyMenu-Dave_Legacy'
-		if (musicName == 'Dave & Bambi (Old)')
-			return 'freakyMenu-Dave_Legacy';
-		// 'Azusa Funk' -> 'freakyMenu-AzusaFunk'
-		if (musicName == 'Azusa Funk')
-			return 'freakyMenu-AzusaFunk';
-		return 'freakyMenu-' + formatToSongPath(musicName);
+		loadMenuMusicStyles();
+		final out:Array<String> = ['Default'];
+		for (style in cachedMenuMusicStyles)
+			if (!out.contains(style.display))
+				out.push(style.display);
+		return out;
 	}
+
+	// 返回实际要播放的主菜单音乐：目标曲目存在则播，否则回退默认 freakyMenu
+	static public function menuMusicAudio():Sound
+	{
+		var name:String = menuMusicName();
+		#if sys
+		if (FileSystem.exists(getPath('music/$name', SOUND) + '.$SOUND_EXT'))
+			return returnSound('music/$name');
+		#else
+		if (OpenFlAssets.exists('music/$name.$SOUND_EXT', SOUND))
+			return returnSound('music/$name');
+		#end
+		return returnSound('music/freakyMenu'); // 找不到则退回默认
+	}
+
+	// 返回当前所选菜单音乐样式的 BPM；未指定(<=0)时返回默认 BPM（调用方传入 gfDanceTitle 等兜底）
+	static public function menuMusicBPM(?defaultBPM:Float = 102):Float
+	{
+		final bpm:Float = resolveMenuMusicStyle(ClientPrefs.data.daMenuMusic).bpm;
+		return (bpm > 0) ? bpm : defaultBPM;
+	}
+
+	// ---------- 内部实现 ----------
+
+	static var cachedMenuMusicNames:Array<String> = null;
+	static var cachedMenuMusicStyles:Array<MenuMusicStyle> = null;
+	static var cachedStyleByDisplay:Map<String, MenuMusicStyle> = null;
+	static var cachedStyleByKey:Map<String, MenuMusicStyle> = null;
+
+	static function defaultMenuMusicStyle():MenuMusicStyle
+		return {key: 'Default', display: 'Default', audio: 'freakyMenu', bpm: -1};
+
+	inline static public function isDefaultMenuMusic():Bool
+	{
+		final v:String = ClientPrefs.data.daMenuMusic;
+		return v == null || v == '' || v == 'Default' || v == 'None';
+	}
+
+	static function resolveMenuMusicStyle(value:String):MenuMusicStyle
+	{
+		loadMenuMusicStyles();
+		if (value == null || value == '' || value == 'Default' || value == 'None')
+			return defaultMenuMusicStyle();
+		var style:MenuMusicStyle = null;
+		if (cachedStyleByDisplay != null && cachedStyleByDisplay.exists(value))
+			style = cachedStyleByDisplay.get(value);
+		if (style == null && cachedStyleByKey != null && cachedStyleByKey.exists(value))
+			style = cachedStyleByKey.get(value);
+		if (style == null) // 兼容旧存档：直接存了音频文件后缀（如 'Dave'）
+			for (s in cachedMenuMusicStyles)
+				if (s.key == value || s.audio == 'freakyMenu-' + value)
+					return s;
+		if (style == null) style = defaultMenuMusicStyle();
+		return style;
+	}
+
+	static function addMenuMusicStyle(style:MenuMusicStyle)
+	{
+		cachedMenuMusicStyles.push(style);
+		cachedStyleByKey.set(style.key, style);
+		cachedStyleByDisplay.set(style.display, style);
+	}
+
+	static function loadMenuMusicStyles()
+	{
+		if (cachedMenuMusicStyles != null) return;
+		cachedMenuMusicStyles = [];
+		cachedStyleByKey = new Map();
+		cachedStyleByDisplay = new Map();
+		#if sys
+		// 1. json 覆盖表（按 audio 文件后缀索引，mods 后到者覆盖）
+		final overrides:Array<MenuMusicStyle> = [];
+		collectMenuMusicBPMFiles(overrides);
+		final byAudio:Map<String, MenuMusicStyle> = new Map();
+		for (o in overrides)
+			byAudio.set(o.audio, o);
+
+		// 2. 自动发现音频文件，套用覆盖（无覆盖则按文件后缀生成默认样式）
+		cachedMenuMusicNames = [];
+		scanMenuMusicFolders();
+		for (handle in cachedMenuMusicNames)
+		{
+			var ov:MenuMusicStyle = byAudio.get('freakyMenu-' + handle);
+			if (ov == null) ov = byAudio.get(handle);
+			registerMenuMusicStyle(handle, ov);
+		}
+		#end
+	}
+
+	#if sys
+	static function registerMenuMusicStyle(handle:String, ovr:MenuMusicStyle)
+	{
+		final style:MenuMusicStyle = {
+			key: handle,
+			display: (ovr != null && ovr.display.length > 0) ? ovr.display : handle,
+			audio: (ovr != null && ovr.audio.length > 0) ? ovr.audio : 'freakyMenu-' + handle,
+			bpm: (ovr != null && ovr.bpm > 0) ? ovr.bpm : -1
+		};
+		addMenuMusicStyle(style);
+	}
+
+	// 读取 assets 与各 mod 的 freakyMenu-BPM.json，合并成有序覆盖列表
+	static function collectMenuMusicBPMFiles(out:Array<MenuMusicStyle>)
+	{
+		parseMenuMusicBPMJson(menuMusicBase() + 'assets/shared/music/freakyMenu-BPM.json', out);
+		#if MODS_ALLOWED
+		parseMenuMusicBPMJson(menuMusicBase() + 'mods/music/freakyMenu-BPM.json', out);
+		var modsDir:String = menuMusicBase() + 'mods';
+		if (FileSystem.exists(modsDir) && FileSystem.isDirectory(modsDir))
+			for (modFolder in FileSystem.readDirectory(modsDir))
+				parseMenuMusicBPMJson(modsDir + '/' + modFolder + '/music/freakyMenu-BPM.json', out);
+		#end
+	}
+
+	// JSON 格式：{ "key": { "display":?, "audio":?, "bpm":? } } 或简写 { "key": bpm }；# 开头的键视为注释
+	static function parseMenuMusicBPMJson(path:String, out:Array<MenuMusicStyle>)
+	{
+		if (!FileSystem.exists(path)) return;
+		try
+		{
+			final data:Dynamic = haxe.Json.parse(sys.io.File.getContent(path));
+			for (key in Reflect.fields(data))
+			{
+				if (key.charAt(0) == '#') continue;
+				final v:Dynamic = Reflect.field(data, key);
+				var style:MenuMusicStyle = {key: key, display: key, audio: 'freakyMenu-' + key, bpm: -1};
+				if (Std.isOfType(v, Float) || Std.isOfType(v, Int)) // 简写 { "key": bpm }
+					style.bpm = v;
+				else if (Std.isOfType(v, String))
+					style.bpm = Std.parseFloat(Std.string(v));
+				else if (v != null) // 对象形式 { display?, audio?, bpm? }
+				{
+					if (Reflect.hasField(v, 'display')) style.display = Std.string(Reflect.field(v, 'display'));
+					if (Reflect.hasField(v, 'audio')) style.audio = Std.string(Reflect.field(v, 'audio'));
+					if (Reflect.hasField(v, 'bpm')) style.bpm = Std.parseFloat(Std.string(Reflect.field(v, 'bpm')));
+				}
+				if (style.display.length == 0) style.display = key;
+				if (style.audio.length == 0) style.audio = 'freakyMenu-' + key;
+				out.push(style); // 后加载的（mods）会覆盖同名 audio
+			}
+		}
+		catch(e:haxe.Exception) {}
+	}
+
+	inline static function menuMusicBase()
+		return #if android StorageUtil.getExternalStorageDirectory() #else Sys.getCwd() #end;
+
+	static function scanMenuMusicFolders()
+	{
+		final dirs:Array<String> = [menuMusicBase() + 'assets/shared/music', menuMusicBase() + 'mods/music'];
+		#if MODS_ALLOWED
+		var modsDir:String = menuMusicBase() + 'mods';
+		if (FileSystem.exists(modsDir) && FileSystem.isDirectory(modsDir))
+			for (modFolder in FileSystem.readDirectory(modsDir))
+				dirs.push(modsDir + '/' + modFolder + '/music');
+		#end
+
+		for (dir in dirs)
+		{
+			if (!FileSystem.exists(dir) || !FileSystem.isDirectory(dir)) continue;
+			for (entry in FileSystem.readDirectory(dir))
+			{
+				if (entry.indexOf('freakyMenu-') != 0) continue;
+				if (!isMenuMusicAudioEntry(entry)) continue; // 只识别音频，忽略 BPM.json 等
+				final handle:String = menuMusicFileBaseName(entry);
+				if (handle.length > 0 && !cachedMenuMusicNames.contains(handle))
+					cachedMenuMusicNames.push(handle);
+			}
+		}
+		cachedMenuMusicNames.sort(Reflect.compare);
+	}
+
+	// 是否为有效的菜单音乐音频（排除 .json/.txt/.ini 等）
+	static inline function isMenuMusicAudioEntry(entry:String):Bool
+	{
+		final lower:String = entry.toLowerCase();
+		return StringTools.endsWith(lower, '.ogg') || StringTools.endsWith(lower, '.mp3') || StringTools.endsWith(lower, '.wav');
+	}
+
+	// "freakyMenu-<名字>.ogg" -> "<名字>"
+	static inline function menuMusicFileBaseName(entry:String):String
+	{
+		var name:String = entry.substr('freakyMenu-'.length);
+		final dot:Int = name.lastIndexOf('.');
+		if (dot > 0) name = name.substr(0, dot);
+		return name;
+	}
+	#end
 
 inline static public function inst(song:String, ?specialInst:String = null, ?modsAllowed:Bool = true):Sound
 {
