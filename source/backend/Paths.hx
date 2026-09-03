@@ -397,10 +397,10 @@ inline public static function getSharedPath(file:String = '')
 	// 读取 assets 与各 mod 的 freakyMenu-BPM.json，合并成有序覆盖列表
 	static function collectMenuMusicBPMFiles(out:Array<MenuMusicStyle>)
 	{
-		parseMenuMusicBPMJson(menuMusicBase() + 'assets/shared/music/freakyMenu-BPM.json', out);
+		parseMenuMusicBPMJson(menuMusicAssetsBase() + 'assets/shared/music/freakyMenu-BPM.json', out);
 		#if MODS_ALLOWED
-		parseMenuMusicBPMJson(menuMusicBase() + 'mods/music/freakyMenu-BPM.json', out);
-		var modsDir:String = menuMusicBase() + 'mods';
+		parseMenuMusicBPMJson(menuMusicModsBase() + 'mods/music/freakyMenu-BPM.json', out);
+		var modsDir:String = menuMusicModsBase() + 'mods';
 		if (FileSystem.exists(modsDir) && FileSystem.isDirectory(modsDir))
 			for (modFolder in FileSystem.readDirectory(modsDir))
 				parseMenuMusicBPMJson(modsDir + '/' + modFolder + '/music/freakyMenu-BPM.json', out);
@@ -437,14 +437,20 @@ inline public static function getSharedPath(file:String = '')
 		catch(e:haxe.Exception) {}
 	}
 
-	inline static function menuMusicBase()
+	// assets/shared 的实际根：与 getFolderPath 相对路径基准一致。
+	// Android 上包内 assets 被 CopyState 用相对路径复制到应用私有目录(cwd)，故此处统一用 Sys.getCwd()。
+	inline static function menuMusicAssetsBase():String
+		return Sys.getCwd();
+
+	// mods 根：Android 上 mods 被复制到外部存储，桌面则在工作目录。
+	inline static function menuMusicModsBase():String
 		return #if android StorageUtil.getExternalStorageDirectory() #else Sys.getCwd() #end;
 
 	static function scanMenuMusicFolders()
 	{
-		final dirs:Array<String> = [menuMusicBase() + 'assets/shared/music', menuMusicBase() + 'mods/music'];
+		final dirs:Array<String> = [menuMusicAssetsBase() + 'assets/shared/music', menuMusicModsBase() + 'mods/music'];
 		#if MODS_ALLOWED
-		var modsDir:String = menuMusicBase() + 'mods';
+		var modsDir:String = menuMusicModsBase() + 'mods';
 		if (FileSystem.exists(modsDir) && FileSystem.isDirectory(modsDir))
 			for (modFolder in FileSystem.readDirectory(modsDir))
 				dirs.push(modsDir + '/' + modFolder + '/music');
