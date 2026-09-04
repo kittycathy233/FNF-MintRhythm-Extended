@@ -532,11 +532,27 @@ class BaseOptionsMenu extends MusicBeatSubstate
 	}
 	
 #if mobile
+	// 手指是否落在"任一屏幕控件"上：设置导航 touchPad 或玩法触屏控件 mobileControls。
+	// 若是，则不把该触摸识别为列表拖拽，避免按虚拟键时背景选项跟着拖动、互相抢输入。
+	private function isTouchOnUIControls(t:FlxTouch):Bool
+	{
+		if (touchPad != null && touchPadCam != null && t.overlaps(touchPad, touchPadCam))
+			return true;
+
+		if (mobileControls != null && mobileControls.instance != null)
+		{
+			var cam = (mobileControlsCam != null) ? mobileControlsCam : touchPadCam;
+			if (cam != null && t.overlaps(mobileControls.instance, cam))
+				return true;
+		}
+		return false;
+	}
+
 	private function handleTouchScroll():Void {
 		if (!touchScrollActive) {
-			// 仅在“列表区域”的非触摸板触摸按下时开始滚动，避免与方向键触摸板冲突
+			// 仅在"列表区域"的非控件触摸按下时开始滚动，避免与虚拟按键冲突
 			for (t in FlxG.touches.list) {
-				if (t.justPressed && !(touchPad != null && touchPadCam != null && t.overlaps(touchPad, touchPadCam))) {
+				if (t.justPressed && !isTouchOnUIControls(t)) {
 					touchScrollActive = true;
 					touchScrollTouch = t;
 					touchScrollStartY = t.y;
