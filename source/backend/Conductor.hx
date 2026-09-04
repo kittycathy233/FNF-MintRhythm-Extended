@@ -33,6 +33,10 @@ class Conductor
 
 	public static function judgeNote(arr:Array<Rating>, diff:Float=0):Rating
 	{
+		// Psych 0.4.2 复刻：判定窗口按 safeZoneOffset 比例分档 + 可选 +8ms 偏置
+		if (ClientPrefs.data.judgeMode == 'psych042')
+			return judgeNotePsych042(arr, diff);
+
 		var data:Array<Rating> = arr;
 
 		var absDiff:Float = Math.abs(diff);
@@ -64,6 +68,38 @@ class Conductor
 			}
 		}
 		return data[data.length - 1];
+	}
+
+	/**
+	 * Psych 0.4.2 复刻判定（judgeMode == 'psych042'）
+	 * - Perfect 作为额外最高级叠加在 0.4.2 四级制之上（沿用 perfectWindow，遵循 rmPerfect）
+	 * - 其余按 safeZoneOffset 比例分档（0.4.2 原版 popUpScore）：
+	 *   diff > 0.75*safeZone → shit, >0.5 → bad, >0.25 → good, 否则 sick
+	 * - 可选 +8ms 偏置（p042Bias8），复刻 0.4.2 的 `Math.abs(strumTime - songPosition + 8)`
+	 */
+	static function judgeNotePsych042(arr:Array<Rating>, diff:Float):Rating
+	{
+		var biased:Float = diff + (ClientPrefs.data.p042Bias8 ? 8 : 0);
+		var absDiff:Float = Math.abs(biased);
+		var base:Float = safeZoneOffset; // 比例基准：沿用当前 safeZoneOffset(=shitWindow)，与 0.4.2 的 safeFrames 语义一致
+
+		// Perfect 作为额外最高级（用户选择保留）
+		if (absDiff <= ClientPrefs.data.perfectWindow)
+			return findRating(arr, 'perfect');
+
+		// 0.4.2 四级比例分档
+		var rname:String = 'sick';
+		if (absDiff > base * 0.75) rname = 'shit';
+		else if (absDiff > base * 0.50) rname = 'bad';
+		else if (absDiff > base * 0.25) rname = 'good';
+		return findRating(arr, rname);
+	}
+
+	// 按名称在 arr 中取评级；找不到则回退到最高档（arr[0]），保证返回不为 null
+	static function findRating(arr:Array<Rating>, name:String):Rating
+	{
+		for (r in arr) if (r.name == name) return r;
+		return arr[0];
 	}
 
 	// 返回缺省事件（无 BPM 映射时），rampSteps=0 表示恒定 BPM

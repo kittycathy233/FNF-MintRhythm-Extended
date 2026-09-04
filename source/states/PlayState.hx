@@ -618,6 +618,8 @@ class PlayState extends MusicBeatState
 				// 保存原始判定设置
 				originalJudgmentSettings = {
 					rmPerfect: ClientPrefs.data.rmPerfect,
+					judgeMode: ClientPrefs.data.judgeMode,
+					p042Bias8: ClientPrefs.data.p042Bias8,
 					perfectWindow: ClientPrefs.data.perfectWindow,
 					sickWindow: ClientPrefs.data.sickWindow,
 					goodWindow: ClientPrefs.data.goodWindow,
@@ -629,6 +631,8 @@ class PlayState extends MusicBeatState
 				};
 				
 				// 覆盖 ClientPrefs.data 中的判定相关字段
+				if (Reflect.hasField(replayJudgmentSettings, 'judgeMode')) ClientPrefs.data.judgeMode = replayJudgmentSettings.judgeMode;
+				if (Reflect.hasField(replayJudgmentSettings, 'p042Bias8')) ClientPrefs.data.p042Bias8 = replayJudgmentSettings.p042Bias8;
 				if (Reflect.hasField(replayJudgmentSettings, 'rmPerfect')) ClientPrefs.data.rmPerfect = replayJudgmentSettings.rmPerfect;
 				if (Reflect.hasField(replayJudgmentSettings, 'perfectWindow')) ClientPrefs.data.perfectWindow = replayJudgmentSettings.perfectWindow;
 				if (Reflect.hasField(replayJudgmentSettings, 'sickWindow')) ClientPrefs.data.sickWindow = replayJudgmentSettings.sickWindow;
@@ -5880,8 +5884,10 @@ tempScore += '${lblScore}: ${songScore}';
 			if (preciseHit)
 			{
 				var timeUntilHit:Float = n.strumTime - Conductor.songPosition;
-				var earlyWindow:Float = Conductor.safeZoneOffset * n.earlyHitMult;
-				var lateWindow:Float = Conductor.safeZoneOffset * n.lateHitMult;
+				// psych042：命中窗口对称(=safeZoneOffset)，忽略非对称倍率
+				var p042:Bool = ClientPrefs.data.judgeMode == 'psych042';
+				var earlyWindow:Float = Conductor.safeZoneOffset * (p042 ? 1 : n.earlyHitMult);
+				var lateWindow:Float = Conductor.safeZoneOffset * (p042 ? 1 : n.lateHitMult);
 				return (timeUntilHit > -lateWindow && timeUntilHit < earlyWindow);
 			}
 			return n.canBeHit;
@@ -5932,7 +5938,8 @@ tempScore += '${lblScore}: ${songScore}';
 
 				if (doubleNote.noteData == funnyNote.noteData) {
 					// if the note has a 0ms distance (is on top of the current note), kill it
-					if (Math.abs(doubleNote.strumTime - funnyNote.strumTime) < 1.0)
+					// psych042 复刻 0.4.2：双键合并阈值从 1ms 放宽到 10ms
+					if (Math.abs(doubleNote.strumTime - funnyNote.strumTime) < (ClientPrefs.data.judgeMode == 'psych042' ? 10.0 : 1.0))
 						invalidateNote(doubleNote);
 					// 仅在两者优先级相同时才按时间替换，避免用低优先级音符（如危险箭头 Hurt Note）
 					// 顶替掉已由排序选出的普通箭头，从而导致普通箭头与危险箭头相邻时误命中危险箭头
@@ -7044,6 +7051,8 @@ tempScore += '${lblScore}: ${songScore}';
 		
 		// 恢复原始判定设置
 		if (originalJudgmentSettings != null) {
+			if (Reflect.hasField(originalJudgmentSettings, 'judgeMode')) ClientPrefs.data.judgeMode = originalJudgmentSettings.judgeMode;
+			if (Reflect.hasField(originalJudgmentSettings, 'p042Bias8')) ClientPrefs.data.p042Bias8 = originalJudgmentSettings.p042Bias8;
 			if (Reflect.hasField(originalJudgmentSettings, 'rmPerfect')) ClientPrefs.data.rmPerfect = originalJudgmentSettings.rmPerfect;
 			if (Reflect.hasField(originalJudgmentSettings, 'perfectWindow')) ClientPrefs.data.perfectWindow = originalJudgmentSettings.perfectWindow;
 			if (Reflect.hasField(originalJudgmentSettings, 'sickWindow')) ClientPrefs.data.sickWindow = originalJudgmentSettings.sickWindow;

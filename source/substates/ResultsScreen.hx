@@ -419,6 +419,8 @@ class ResultsScreen extends FlxSubState
 					difficulty: Difficulty.getString(PlayState.storyDifficulty, false),
 					judgmentSettings: {
 						rmPerfect: ClientPrefs.data.rmPerfect,
+						judgeMode: ClientPrefs.data.judgeMode,
+						p042Bias8: ClientPrefs.data.p042Bias8,
 						perfectWindow: ClientPrefs.data.perfectWindow,
 						sickWindow: ClientPrefs.data.sickWindow,
 						goodWindow: ClientPrefs.data.goodWindow,

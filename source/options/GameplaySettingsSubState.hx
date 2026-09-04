@@ -314,6 +314,23 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 			['Leather', 'Psych / Kade', 'Funkin\'', 'Custom']);
 		hitWindowPresetOption.onChange = onChangeHitWindowPreset;
 		addOption(hitWindowPresetOption);
+		hitWindowPresetDropdown = hitWindowPresetOption;
+
+		// Psych 0.4.2 判定复刻总开关
+		var judgeModeOption:Option = new Option(Language.get('judge_mode'),
+			Language.get("judge_mode_desc", ["选择判定系统：Modern 为现行 Psych 毫秒窗口；Psych 0.4.2 复刻按 safeZoneOffset 比例分档 + 可选 +8ms 偏置"]),
+			'judgeMode',
+			STRING,
+			['modern', 'psych042']);
+		judgeModeOption.onChange = onChangeJudgeMode;
+		addOption(judgeModeOption);
+
+		var p042Bias8Option:Option = new Option(Language.get('p042_bias8'),
+			Language.get("p042_bias8_desc", ["仅 Psych 0.4.2 模式生效：复刻 0.4.2 popUpScore 的 +8ms 偏置（整体向晚判方向偏移 8ms）"]),
+			'p042Bias8',
+			BOOL);
+		addOption(p042Bias8Option);
+		p042Bias8Toggle = p042Bias8Option;
 
 		var perfectWindowOption:Option = new Option(Language.get('perfect_hit_window'),
 			Language.get("perfectwindow_desc"),
@@ -443,6 +460,8 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 	var presetDependentOptions:Array<Option> = null;
 	var breakComboBadOption:Option = null;  // 命中 Bad 断连
 	var breakComboShitOption:Option = null; // 命中 Shit 断连
+	var hitWindowPresetDropdown:Option = null; // 判定窗口预设下拉（p042 下禁用）
+	var p042Bias8Toggle:Option = null;        // +8ms 偏置开关（仅 modern 下禁用）
 
 	// 依赖规则：Shit 断连不启用时，Bad 断连无法启用；
 	// 反之若 Bad 断连被关闭，则两者必须同时禁用。
@@ -575,14 +594,27 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 		refreshPresetDisabledState();
 	}
 
+	function onChangeJudgeMode()
+	{
+		refreshPresetDisabledState();
+	}
+
 	// 根据预设切换: 非 Custom 状态下窗口滑块不可修改，Custom 状态下才解锁
+	// Psych 0.4.2 模式：sick/good/bad/shit 走比例分档(不可调)，预设下拉禁用，Perfect(第0项)仍可编辑
 	function refreshPresetDisabledState()
 	{
 		var isCustom:Bool = ClientPrefs.data.hitWindowPreset == 'Custom';
-		for (opt in presetDependentOptions)
+		var isP042:Bool = ClientPrefs.data.judgeMode == 'psych042';
+		for (i in 0...presetDependentOptions.length)
 		{
-			opt.disabled = !isCustom;
+			var opt:Option = presetDependentOptions[i];
+			if (isP042)
+				opt.disabled = (i != 0); // 0=perfect 保留，1..4= sick/good/bad/shit 禁用
+			else
+				opt.disabled = !isCustom;
 		}
+		if (hitWindowPresetDropdown != null) hitWindowPresetDropdown.disabled = isP042; // p042 下 ms 预设无效
+		if (p042Bias8Toggle != null) p042Bias8Toggle.disabled = !isP042; // +8ms 仅在 p042 生效
 
 		// 刷新视觉效果（改变 changeSelection 中的淡化逻辑依赖 curSelected）
 		changeSelection(0);

@@ -988,8 +988,10 @@ class Note extends FlxSprite
 	{
 		super.update(elapsed);
 
-		var earlyWindow:Float = Conductor.safeZoneOffset * earlyHitMult;
-		var lateWindow:Float = Conductor.safeZoneOffset * lateHitMult;
+		// psych042 模式复刻 0.4.2：命中窗口前后对称(=safeZoneOffset)，忽略早/晚非对称倍率
+		var p042:Bool = ClientPrefs.data.judgeMode == 'psych042';
+		var earlyWindow:Float = Conductor.safeZoneOffset * (p042 ? 1 : earlyHitMult);
+		var lateWindow:Float = Conductor.safeZoneOffset * (p042 ? 1 : lateHitMult);
 		var timeUntilHit:Float = (strumTime - Conductor.songPosition);
 
 		// playOpponent：自动命中逻辑绑定到真正的 CPU 控制侧，而非死板的 !mustPress
