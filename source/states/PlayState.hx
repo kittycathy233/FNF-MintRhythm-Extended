@@ -4619,9 +4619,15 @@ tempScore += '${lblScore}: ${songScore}';
 		mobilePauseBtn.cameras = [mobileControlsCam];
 		mobilePauseBtn.onDown.callback = () ->
 		{
-			mobilePauseBtn.visible = false;
 			if (startedCountdown && !paused && canPause)
-				openPauseMenu();
+			{
+				var ret:Dynamic = callOnScripts('onPause', null, true);
+				if(ret != LuaUtils.Function_Stop)
+				{
+					mobilePauseBtn.visible = false;
+					openPauseMenu();
+				}
+			}
 		};
 
 		mobilePauseBtn.alpha = 0.4;
@@ -6216,6 +6222,8 @@ tempScore += '${lblScore}: ${songScore}';
 	{
 		if (button.IDs.filter(id -> id.toString().startsWith("EXTRA")).length > 0)
 			return; // 非音符的 EXTRA 按钮（如暂停）不触发音符
+		if (button.tag == 'P')
+			return; // P 暂停按钮不触发音符
 
 		var buttonCode:Int = (button.IDs[0].toString().startsWith('NOTE')) ? button.IDs[0] : button.IDs[1];
 		// 多键额外音符 NOTE_4..NOTE_8 -> 音符索引 4..8
@@ -6231,6 +6239,8 @@ tempScore += '${lblScore}: ${songScore}';
 	{
 		if (button.IDs.filter(id -> id.toString().startsWith("EXTRA")).length > 0)
 			return;
+		if (button.tag == 'P')
+			return; // P 暂停按钮不触发音符
 
 		var buttonCode:Int = (button.IDs[0].toString().startsWith('NOTE')) ? button.IDs[0] : button.IDs[1];
 		// 多键额外音符 NOTE_4..NOTE_8 -> 音符索引 4..8
