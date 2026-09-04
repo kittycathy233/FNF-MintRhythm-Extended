@@ -728,20 +728,29 @@ inline static public function inst(song:String, ?specialInst:String = null, ?mod
 		return parentFrames;
 	}
 
-	inline static public function getSparrowAtlas(key:String, ?parentFolder:String = null, ?allowGPU:Bool = true):FlxAtlasFrames
+	static public function getSparrowAtlas(key:String, ?parentFolder:String = null, ?allowGPU:Bool = true):FlxAtlasFrames
 	{
 		if(key.contains('psychic')) trace(key, parentFolder, allowGPU);
-		var imageLoaded:FlxGraphic = image(key, parentFolder, allowGPU);
+		// 读取 Sparrow XML 内容（经 OpenFlAssets 读取打包资源，兼容 Android），
+		// 不再把 getPath 的路径字符串丢给 fromSparrow 当内联 XML 解析，避免设备上解析为 null。
+		// 同时借用 getTextFromFile 的 mod 搜索逻辑，与原先 FileSystem.exists(modsXml(key)) 等价。
+		var xml:String = null;
 		#if MODS_ALLOWED
-		var xmlExists:Bool = false;
-
-		var xml:String = modsXml(key);
-		if(FileSystem.exists(xml)) xmlExists = true;
-
-		return FlxAtlasFrames.fromSparrow(imageLoaded, (xmlExists ? File.getContent(xml) : getPath(LanguageBasic.getFileTranslation('images/$key') + '.xml', TEXT, parentFolder)));
-		#else
-		return FlxAtlasFrames.fromSparrow(imageLoaded, getPath(LanguageBasic.getFileTranslation('images/$key') + '.xml', TEXT, parentFolder));
+		try
+		{
+			var xmlFile:String = modsXml(key);
+			if(FileSystem.exists(xmlFile)) xml = File.getContent(xmlFile);
+		}
+		catch (e:Dynamic) { xml = null; }
 		#end
+		if (xml == null)
+			xml = getTextFromFile(LanguageBasic.getFileTranslation('images/$key') + '.xml');
+		// XML 缺失/为空/不可解析时返回 null，交由调用方（如 NoteSplash.loadSplash）走默认回退，
+		// 避免 fromSparrow 对空根节点解引用抛 “Null Object Reference”。
+		if (xml == null || StringTools.trim(xml).length < 1)
+			return null;
+		var imageLoaded:FlxGraphic = image(key, parentFolder, allowGPU);
+		return FlxAtlasFrames.fromSparrow(imageLoaded, xml);
 	}
 
 	inline static public function getPackerAtlas(key:String, ?parentFolder:String = null, ?allowGPU:Bool = true):FlxAtlasFrames

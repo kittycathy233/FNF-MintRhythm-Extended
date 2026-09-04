@@ -100,6 +100,11 @@ class NoteSplash extends FlxSprite
 				frames = Paths.getSparrowAtlas(texture);
 			}
 		}
+		// 连默认飞溅贴图都解析不出时（资源损坏/缺失），不再继续解析动画配置，
+		// 直接退出避免对空 frames 解引用崩溃。该飞溅会因 animation.curAnim 为空
+		// 而被 update() 里的 buggedKillTime 自动清理，不影响游戏运行。
+		if (frames == null)
+			return;
 
 		var path:String = 'images/$texture';
 		if (configs.exists(path))

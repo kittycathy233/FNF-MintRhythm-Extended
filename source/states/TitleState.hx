@@ -211,8 +211,12 @@ class TitleState extends MusicBeatState
 		titleText.frames = Paths.getSparrowAtlas('titleEnter');
 		@:privateAccess
 		{
-			titleText.animation.findByPrefix(animFrames, "ENTER IDLE");
-			titleText.animation.findByPrefix(animFrames, "ENTER FREEZE");
+			// titleEnter 图集缺失时 frames 为 null，直接调用 findByPrefix 会因 _sprite.frames 为空而崩溃，故先判空
+			if (titleText.frames != null)
+			{
+				titleText.animation.findByPrefix(animFrames, "ENTER IDLE");
+				titleText.animation.findByPrefix(animFrames, "ENTER FREEZE");
+			}
 		}
 		
 		if (newTitle = animFrames.length > 0)
