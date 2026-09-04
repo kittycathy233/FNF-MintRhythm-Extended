@@ -4222,6 +4222,14 @@ tempScore += '${lblScore}: ${songScore}';
 	var _cachedIconSpeedMult:Float = 9; // 缓存 speedMultiplier，仅在 iconbopstyle 改变时更新，避免每帧字符串比较
 	var _lastIconBopStyle:String = null; // 记录上次检查的 iconbopstyle，用于检测变更
 
+	// Dave (JS) 归一化用峰值尺寸：beat 时记录放大后的目标像素尺寸，
+	// 归一化回弹时由「基准 frame 尺寸 + 峰值差值 × 实时进度」直接推算，
+	// 避免逐帧对当前 width 做乘法累积(那会随刷新率变化)，从而让回弹与帧率无关
+	var daveJSPeakW1:Int = 0;
+	var daveJSPeakH1:Int = 0;
+	var daveJSPeakW2:Int = 0;
+	var daveJSPeakH2:Int = 0;
+
 	// V-Slice(New) 复刻 funkin 跳动用的线性补间引用，用于在连续 beat 时取消旧的补间
 	var vsliceBopTweenP1:FlxTween = null;
 	var vsliceBopTweenP2:FlxTween = null;
@@ -4270,8 +4278,9 @@ tempScore += '${lblScore}: ${songScore}';
         }
     }
 
-    // 统一递减：Squash 和 Dave 都需要此计时器，提到 if/else 外避免重复
-    iconSizeResetTime = Math.max(0, iconSizeResetTime - elapsed * playbackRate);
+    // 统一递减：仅 Squash 使用此计时器；Dave (JS) 用 JS 原版的 0.8s quartIn 复位计时（elapsed / playbackRate），另行处理
+    if (ClientPrefs.data.iconbopstyle == "Squash")
+        iconSizeResetTime = Math.max(0, iconSizeResetTime - elapsed * playbackRate);
 
     // 压扁风格(Squash)：beat 上双方 icon 被压扁（一方变矮胖、一方变高瘦），
     // 并随血量/输赢状态表现不同，随后在 0.8 秒内平滑过渡回正常大小（参考 JSE 的 Dave and Bambi）。
@@ -4284,13 +4293,24 @@ tempScore += '${lblScore}: ${songScore}';
         iconP2.scale.x = FlxMath.lerp(1, iconP2.scale.x, iconLerp);
         iconP2.scale.y = FlxMath.lerp(1, iconP2.scale.y, iconLerp);
     }
-    else if (ClientPrefs.data.iconbopstyle == "Dave") {
-        var iconLerp:Float = FlxMath.bound(iconSizeResetTime / ICON_SQUASH_TIME, 0, 1);
-        iconLerp = iconLerp * iconLerp * iconLerp * iconLerp; // 等价于 FlxEase.quartIn
-        iconP1.setGraphicSize(Std.int(FlxMath.lerp(iconP1.frameWidth, iconP1.width, iconLerp)),
-                              Std.int(FlxMath.lerp(iconP1.frameHeight, iconP1.height, iconLerp)));
-        iconP2.setGraphicSize(Std.int(FlxMath.lerp(iconP2.frameWidth, iconP2.width, iconLerp)),
-                              Std.int(FlxMath.lerp(iconP2.frameHeight, iconP2.height, iconLerp)));
+    else if (ClientPrefs.data.iconbopstyle == "Dave (JS)") {
+        // JS 引擎 Dave and Bambi 复刻：0.8s 复位计时 + quartIn 衰减，配合 elapsed / playbackRate（专利手感）
+        iconSizeResetTime = Math.max(0, iconSizeResetTime - elapsed / playbackRate);
+        var iconLerp:Float = FlxEase.quartIn(FlxMath.bound(iconSizeResetTime / 0.8, 0, 1));
+        if (ClientPrefs.data.iconbopNormalize) {
+            // 归一化：由「基准 frame 尺寸 + 峰值差值 × 实时进度」直接推算，不做逐帧累积 →
+            // 任意刷新率/倍速下回弹表现一致（高刷屏不再更快）
+            iconP1.setGraphicSize(Std.int(iconP1.frameWidth + (daveJSPeakW1 - iconP1.frameWidth) * iconLerp),
+                                  Std.int(iconP1.frameHeight + (daveJSPeakH1 - iconP1.frameHeight) * iconLerp));
+            iconP2.setGraphicSize(Std.int(iconP2.frameWidth + (daveJSPeakW2 - iconP2.frameWidth) * iconLerp),
+                                  Std.int(iconP2.frameHeight + (daveJSPeakH2 - iconP2.frameHeight) * iconLerp));
+        } else {
+            // 旧版：对当前 width 逐帧乘法累积（低帧率手感和高帧率有差异）
+            iconP1.setGraphicSize(Std.int(FlxMath.lerp(iconP1.frameWidth, iconP1.width, iconLerp)),
+                                  Std.int(FlxMath.lerp(iconP1.frameHeight, iconP1.height, iconLerp)));
+            iconP2.setGraphicSize(Std.int(FlxMath.lerp(iconP2.frameWidth, iconP2.width, iconLerp)),
+                                  Std.int(FlxMath.lerp(iconP2.frameHeight, iconP2.height, iconLerp)));
+        }
     }
     // Kathy 专属缩放逻辑
     else if (ClientPrefs.data.iconbopstyle == "Kathy") {
@@ -4312,6 +4332,16 @@ tempScore += '${lblScore}: ${songScore}';
     {
         // funkin 复刻：回弹完全由 beat 时启动的 linear 补间驱动，这里不再做指数衰减
     }
+    else if (ClientPrefs.data.iconbopstyle == "Psych (Legacy)")
+    {
+        // PsychEngine 0.4.2 忠实复刻：每帧按 (1 - elapsed*30) 向基础尺寸衰减，
+        // 用 setGraphicSize 重绘像素（非 scale），收敛速率为 30/s。基础尺寸取 frame 原始尺寸，兼容任意贴图大小。
+        var factor:Float = FlxMath.bound(1 - elapsed * 30 * playbackRate, 0, 1);
+        iconP1.setGraphicSize(Std.int(FlxMath.lerp(iconP1.frameWidth, iconP1.width, factor)),
+                              Std.int(FlxMath.lerp(iconP1.frameHeight, iconP1.height, factor)));
+        iconP2.setGraphicSize(Std.int(FlxMath.lerp(iconP2.frameWidth, iconP2.width, factor)),
+                              Std.int(FlxMath.lerp(iconP2.frameHeight, iconP2.height, factor)));
+    }
     else
     {
 			// 使用缓存的 speedMultiplier，仅在 style 变更时由同步逻辑更新
@@ -4320,7 +4350,7 @@ tempScore += '${lblScore}: ${songScore}';
 			// 定义缩放上限
 			final ICON_BOUND:Float = 1.2; // 1 + 0.2
 
-			if (["VSlice(New)", "VSlice(Old)", "Dave", "Codename", "Leather"].contains(ClientPrefs.data.iconbopstyle))
+			if (["VSlice(New)", "VSlice(Old)", "Dave (JS)", "Codename", "Leather"].contains(ClientPrefs.data.iconbopstyle))
 			{
 				var rate:Float;
 				var targetScale:Float;
@@ -4422,13 +4452,33 @@ tempScore += '${lblScore}: ${songScore}';
         		iconP2.y = iconP2InitialY + (iconP2.scale.y - 1) * 70;
 				}
 			}
-			else if (ClientPrefs.data.iconbopstyle == "Dave") {
-				// 顶部对齐：固定上边缘，向下生长；兼容任意贴图尺寸（不再硬编码 150）
-				iconP1.offset.y = 0;
-				iconP2.offset.y = 0;
-				iconP1.y = healthBar.y - iconP1.frameHeight / 2;
-				iconP2.y = healthBar.y - iconP2.frameHeight / 2;
-			}
+			else if (ClientPrefs.data.iconbopstyle == "Dave (JS)") {
+					// 左上角缩放原点：归零 origin/offset 解除 flixel 居中缩放，y 钉上边缘、x 钉外缘
+					iconP1.origin.set(0, 0);  iconP2.origin.set(0, 0);
+					iconP1.offset.set(0, 0);  iconP2.offset.set(0, 0);
+					iconP1.y = iconP1InitialY;
+					iconP2.y = iconP2InitialY;
+					iconP1.x = healthBar.barCenter - iconOffset;
+					iconP2.x = healthBar.barCenter + (iconP2.frameHeight / 2) - iconOffset * 2 - iconP2.width;
+				}
+				else if (ClientPrefs.data.iconbopstyle == "Psych (Legacy)") {
+					// 0.4.2 左上角缩放原点：
+					// flixel 的 scale 默认绕 origin(=中心)缩放，updateHitbox() 又会把 origin 重置回中心、
+					// 并把 offset 设为居中补偿 → 所以默认就是"居中缩放"。
+					// 因此这里必须显式把 origin(x2 offset) 归零，让缩放锚定到左上角；
+					// 再钉住上边缘(y)与外缘(x)，放大只向外缘方向扩张，绝不居中。
+					iconP1.origin.set(0, 0);  iconP2.origin.set(0, 0);
+					iconP1.offset.set(0, 0);  iconP2.offset.set(0, 0);
+
+					// 上边缘固定：y 钉在创建时的初始安装位置，放大只向下生长
+					iconP1.y = iconP1InitialY;
+					iconP2.y = iconP2InitialY;
+
+					// 外缘固定（向外扩张，避免居中缩放）：
+					// P1 锚左缘(左上角)向右长；P2 锚右缘向左长，静止时保持在血条各自原位置
+					iconP1.x = healthBar.barCenter - iconOffset;
+					iconP2.x = healthBar.barCenter + (iconP2.frameHeight / 2) - iconOffset * 2 - iconP2.width;
+				}
 		}
 
 		updateLaneCovers();
@@ -7148,7 +7198,12 @@ tempScore += '${lblScore}: ${songScore}';
 						iconP1.scale.set(1.1, 1.1);
 						iconP2.scale.set(1.1, 1.1);
 
-                case "Dave":
+					case "Psych (Legacy)":
+						// PsychEngine 0.4.2 忠实复刻：beat 时把图标整体放大 30px（仅给宽，高度按原比例自动缩放）
+						iconP1.setGraphicSize(Std.int(iconP1.width + 30));
+						iconP2.setGraphicSize(Std.int(iconP2.width + 30));
+
+                case "Dave (JS)":
                     var funny:Float = FlxMath.bound(healthBar.percent / 50, 0.1, 1.9);
                     if (playOpponent)
                     {
@@ -7160,7 +7215,12 @@ tempScore += '${lblScore}: ${songScore}';
                         iconP1.setGraphicSize(Std.int(iconP1.width + (50 * (funny + 0.1))), Std.int(iconP1.height - (25 * funny)));
                         iconP2.setGraphicSize(Std.int(iconP2.width + (50 * ((2 - funny) + 0.1))), Std.int(iconP2.height - (25 * ((2 - funny) + 0.1))));
                     }
-                    iconSizeResetTime = ICON_SQUASH_TIME;
+                    // 记录本次 beat 放大后的峰值像素尺寸，供归一化回弹直接推算（避免逐帧累积受帧率影响）
+                    daveJSPeakW1 = Std.int(iconP1.width);
+                    daveJSPeakH1 = Std.int(iconP1.height);
+                    daveJSPeakW2 = Std.int(iconP2.width);
+                    daveJSPeakH2 = Std.int(iconP2.height);
+                    iconSizeResetTime = 0.8; // JS 引擎 Dave and Bambi 原版复位时长
                 case "Squash":
                     // 压扁风格：beat 上双方 icon 被压扁，随血量/输赢状态表现不同，恢复在 updateIconsScale 中处理
                     var pct:Float = healthBar.percent;
@@ -7274,7 +7334,7 @@ tempScore += '${lblScore}: ${songScore}';
                 	iconP1.scale.set(1.1, 1.1);
                 	iconP2.scale.set(1.1, 1.1);
                 
-            	case "Dave": 
+            	case "Dave (JS)": 
                     var funny:Float = FlxMath.bound(healthBar.percent / 50, 0.1, 1.9);
                     if (playOpponent)
                     {
@@ -7286,7 +7346,12 @@ tempScore += '${lblScore}: ${songScore}';
                         iconP1.setGraphicSize(Std.int(iconP1.width + (50 * (funny + 0.1))), Std.int(iconP1.height - (25 * funny)));
                         iconP2.setGraphicSize(Std.int(iconP2.width + (50 * ((2 - funny) + 0.1))), Std.int(iconP2.height - (25 * ((2 - funny) + 0.1))));
                     }
-                    iconSizeResetTime = ICON_SQUASH_TIME;
+                    // 记录本次 beat 放大后的峰值像素尺寸，供归一化回弹直接推算（避免逐帧累积受帧率影响）
+                    daveJSPeakW1 = Std.int(iconP1.width);
+                    daveJSPeakH1 = Std.int(iconP1.height);
+                    daveJSPeakW2 = Std.int(iconP2.width);
+                    daveJSPeakH2 = Std.int(iconP2.height);
+                    iconSizeResetTime = 0.8; // JS 引擎 Dave and Bambi 原版复位时长
             	case "Squash":
                     var pct:Float = healthBar.percent;
                     var playerWin:Bool = (ClientPrefs.data.threeIcons && pct > 80);
