@@ -41,6 +41,8 @@
     "wintitle_difficulty": "游玩时，在曲目名称旁边同时显示当前难度。",
     "arrow_colormode_desc": "RGB = 新调色板颜色\nHSV = 旧版Psych v0.6.3色相/饱和度/亮度偏移",
     "low_quality_desc": "启用后会禁用部分背景细节，减少加载时间并提升性能\n注意：部分模组可能没有针对此设置进行相应优化",
+    "asset_error_overlay": "显示资源加载失败提示",
+    "asset_error_overlay_desc": "开启后，当某个图片资源加载失败时，会在该资源本该出现的位置就地显示「L 形角标 + 缺失路径」标记，而不是被静默跳过",
     "antialiasing_desc": "禁用后关闭抗锯齿功能\n略微提升性能，但会导致画面锐利",
     "shaders_desc": "禁用后关闭着色器效果\n部分视觉效果可能会受影响",
     "gpu_caching_desc": "启用后允许GPU缓存纹理，可减少内存占用\n低配置显卡不建议启用此项",

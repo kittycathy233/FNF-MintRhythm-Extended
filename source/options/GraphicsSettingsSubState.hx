@@ -66,6 +66,13 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		// 图片资源加载失败时，就地显示「红色十字 + 失败路径」占位标记
+		var option:Option = new Option(Language.get('asset_error_overlay'),
+			Language.get("asset_error_overlay_desc"),
+			'assetErrorOverlay',
+			BOOL);
+		addOption(option);
+
 		var option:Option = new Option(Language.get('optimized_note_loading'),
 			Language.get("optimized_note_loading_desc"),
 			'useOptimizedNoteLoading',

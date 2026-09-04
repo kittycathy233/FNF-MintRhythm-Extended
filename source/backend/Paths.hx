@@ -598,6 +598,12 @@ inline static public function inst(song:String, ?specialInst:String = null, ?mod
 			if (bitmap == null)
 			{
 				trace('Bitmap not found: $file | key: $key');
+				// 开启“资源加载失败提示”时，就地返回一张占位贴图，让缺失资源在原本的位置可见。
+				// 传原始请求 key（如 images/xxx）而非回退解析到的 shared 路径，路径行才能显示成简洁的 mod 风格；
+				// 关闭（默认）时仍返回 null，保持原逻辑不变。
+				var placeholder:FlxGraphic = AssetErrorOverlay.makePlaceholder(key);
+				if (placeholder != null)
+					return placeholder;
 				return null;
 			}
 			if (cacheKey == null) actualCacheKey = generateCacheKey(file);

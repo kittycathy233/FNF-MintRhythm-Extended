@@ -37,6 +37,8 @@ import openfl.display.StageQuality;
 	public var laneCoverAlphaP2:Float = 0.0; // 对手轨道阴影覆盖层透明度（0=关闭，1=最暗）
 	public var laneCoverByStrumAlpha:Bool = false; // 覆盖层透明度是否基于箭头当前 alpha 叠加（乘算）
 	public var showFPS:Bool = true;
+	// 图片资源加载失败时，在屏幕角落显示「红色警告三角 + flixel默认图标 + 失败资源路径」的提示卡
+	public var assetErrorOverlay:Bool = true;
 	public var flashing:Bool = true;
 	public var autoPause:Bool = false;
 	public var gcOnResume:Bool = true;

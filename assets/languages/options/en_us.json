@@ -41,6 +41,8 @@
     "scoretextlanguage_desc": "Language shown for the score text (scoreTxt). Auto means follow the game language.",
     "arrow_colormode_desc": "RGB = New palette colors\nHSV = Legacy Psych v0.6.3 hue/saturation/value offset",
     "low_quality_desc": "When enabled, disables some background details to reduce load time and improve performance\nNote: Some mods may not be optimized for this setting",
+    "asset_error_overlay": "Show Asset Load Errors",
+    "asset_error_overlay_desc": "When enabled, any image that fails to load will show an in-place L-corner marker (with the missing path) exactly where that asset should appear, instead of being silently skipped",
     "antialiasing_desc": "When disabled, turns off anti-aliasing\nSlightly improves performance, but makes the image sharper",
     "shaders_desc": "When disabled, turns off shader effects\nSome visual effects may be affected",
     "gpu_caching_desc": "When enabled, allows GPU texture caching, reducing memory usage\nNot recommended for low-end GPUs",
