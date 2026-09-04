@@ -1270,6 +1270,17 @@ isReplaying = false;
 			scoreTxt.borderSize = 1.25;
 			scoreTxt.visible = !ClientPrefs.data.hideHud;
 		}
+		else if (ClientPrefs.data.scoretxtstyle == 'Psych (Old)')	
+		{
+			// PsychEngine 0.4.2 原版：y = healthBarBG.y + 36（healthBarBG.y = healthBar.y - 4）
+			// 字号 20、边框 1.25、居中，位置 healthBar.y + 32
+			scoreTxt = new FlxText(0, healthBar.y + 32, FlxG.width, "", 20);
+			scoreTxt.screenCenter(X);
+			scoreTxt.scrollFactor.set();
+			scoreTxt.setFormat(Paths.font("vcr.ttf"), 20, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			scoreTxt.borderSize = 1.25;
+			scoreTxt.visible = !ClientPrefs.data.hideHud;
+		}
 		else 
 		{
 		scoreTxt = new FlxText(0, healthBar.y + 40, FlxG.width, "", 20);
@@ -2229,8 +2240,21 @@ tempScore += '${lblScore}: ${songScore}';
                     tempScore = '';
                 }
             }
-            else
-                tempScore = '${lblScore}: ${songScore} | ${lblMisses}: ${songMisses} | ${lblRating}: ${str}';
+            else if (ClientPrefs.data.scoretxtstyle == 'Psych (Old)')
+			{
+				// PsychEngine 0.4.2 原版格式：Score: X | Misses: Y | Rating: R (P%)
+				if (!cpuControlled || ClientPrefs.data.botplayScore)
+				{
+					if (ratingName == '?')
+						tempScore = '${lblScore}: ${songScore} | ${lblMisses}: ${songMisses} | ${lblRating}: ${ratingNameDisp}';
+					else
+						tempScore = '${lblScore}: ${songScore} | ${lblMisses}: ${songMisses} | ${lblRating}: ${ratingNameDisp} (${Std.int(ratingPercent * 100)}%)';
+				}
+				else
+					tempScore = '';
+			}
+			else
+				tempScore = '${lblScore}: ${songScore} | ${lblMisses}: ${songMisses} | ${lblRating}: ${str}';
         }
         else {
             // instakill 模式：根据不同样式显示不同格式
@@ -2238,6 +2262,10 @@ tempScore += '${lblScore}: ${songScore}';
                 var leatherAcc:Float = totalPlayed != 0 ? CoolUtil.floorDecimal(ratingPercent * 100, 2) : 100.0;
                 var leatherRank:String = getLeatherRank(leatherAcc);
                 tempScore = '<  ${lblScore}: ${songScore} ~ ${leatherRank}  >';
+            } else if (ClientPrefs.data.scoretxtstyle == 'Psych (Old)') {
+                tempScore = ratingName == '?'
+                    ? '${lblScore}: ${songScore} | ${lblRating}: ${ratingNameDisp}'
+                    : '${lblScore}: ${songScore} | ${lblRating}: ${ratingNameDisp} (${Std.int(ratingPercent * 100)}%)';
             } else {
                 tempScore = '${lblScore}: ${songScore} | ${lblRating}: ${str}';
             }

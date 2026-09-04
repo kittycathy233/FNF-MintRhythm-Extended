@@ -407,7 +407,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			Language.get("scoretxt_style_desc"),
 			'scoretxtstyle',
 			STRING,
-			['Psych', 'OS', 'Kathy', 'Kade', 'V-Slice', 'Leather']);
+			['Psych', 'Psych (Old)', 'OS', 'Kathy', 'Kade', 'V-Slice', 'Leather']);
 		addOption(option);
 
 		option = new Option(Language.get('loading_style'),
