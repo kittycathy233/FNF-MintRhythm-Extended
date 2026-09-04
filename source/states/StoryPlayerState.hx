@@ -617,6 +617,8 @@ class StoryPlayerState extends MusicBeatState
 			var bd:BitmapData = BitmapData.fromFile(path);
 			if (bd != null)
 				return FlxGraphic.fromBitmapData(bd);
+			// 文件存在但解码失败：不直接返回 null，改用 Paths.image 走“资源缺失提示”，
+			// 使 AssetErrorOverlay 的占位标记能够生效，而不是退化为 flixel 默认图。
 		}
 		#end
 		try

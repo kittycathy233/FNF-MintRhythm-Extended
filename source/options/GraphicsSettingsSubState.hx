@@ -1,8 +1,8 @@
 package options;
-
 import objects.Character;
 import flixel.util.FlxColor;
 import flixel.text.FlxText;
+import backend.AssetErrorOverlay;
 
 class GraphicsSettingsSubState extends BaseOptionsMenu
 {
@@ -66,11 +66,16 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
-		// 图片资源加载失败时，就地显示「红色十字 + 失败路径」占位标记
+		// 图片资源加载失败时，就地显示「L 形角标 + 缺失路径」占位标记
 		var option:Option = new Option(Language.get('asset_error_overlay'),
 			Language.get("asset_error_overlay_desc"),
 			'assetErrorOverlay',
 			BOOL);
+		option.onChange = function()
+		{
+			// 即时生效：清掉占位图缓存，后续对缺失资源的请求按新开关立即重建。
+			AssetErrorOverlay.clearCache();
+		}
 		addOption(option);
 
 		var option:Option = new Option(Language.get('optimized_note_loading'),

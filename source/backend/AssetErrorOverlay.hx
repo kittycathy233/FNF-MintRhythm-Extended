@@ -35,7 +35,14 @@ class AssetErrorOverlay
 			return null;
 
 		if (cache.exists(path))
-			return cache.get(path);
+		{
+			var old:FlxGraphic = cache.get(path);
+			// 兜底：旧 graphic 若已被 flixel 的 clearUnused 销毁，则丢弃重建，
+			// 避免返回销毁图导致调用方回退成“仅 flixel 默认贴图”。
+			if (old != null && old.bitmap != null)
+				return old;
+			cache.remove(path);
+		}
 
 		var bd:BitmapData = null;
 		try
@@ -47,13 +54,58 @@ class AssetErrorOverlay
 			bd = null;
 		}
 
+		// 健壮性：只要开关开启，就绝不静默退化回 flixel 默认图。
+		// 文本绘制失败等极端情况也退回一张“底 + L 角标”的纯标记，而不是 null。
+		if (bd == null)
+		{
+			try
+			{
+				bd = buildFallbackBitmap();
+			}
+			catch (e:Dynamic)
+			{
+				bd = null;
+			}
+		}
 		if (bd == null)
 			return null;
 
 		var key:String = 'assetErrorOverlay://' + path;
 		var gfx:FlxGraphic = FlxGraphic.fromBitmapData(bd, true, key);
+		// 保护位图：状态/界面销毁时不被 clearUnused 回收，重进界面仍能拿到完整贴图。
+		gfx.persist = true;
+		gfx.destroyOnNoUse = false;
 		cache.set(path, gfx);
 		return gfx;
+	}
+
+	/** 清除占位图缓存。切换开关或希望立即生效时可调用，令后续请求重新构建。 */
+	public static function clearCache():Void
+	{
+		cache.clear();
+	}
+
+	/** 兜底：仅“半透明底 + 白 L 角标”，不依赖 logo/文本绘制，保证缺失时总能给出可见标记。 */
+	static function buildFallbackBitmap():BitmapData
+	{
+		var w:Int = 40;
+		var h:Int = 40;
+		var arm:Int = 20;
+		var root:Sprite = new Sprite();
+		root.graphics.beginFill(0x000000, 0.45);
+		root.graphics.drawRect(0, 0, w, h);
+		root.graphics.endFill();
+		var lspr:Sprite = new Sprite();
+		lspr.graphics.lineStyle(2, 0xFFFFFF);
+		lspr.graphics.moveTo(0, 0);
+		lspr.graphics.lineTo(0, arm);
+		lspr.graphics.moveTo(0, 0);
+		lspr.graphics.lineTo(arm, 0);
+		lineStyleReset(lspr);
+		root.addChild(lspr);
+		var bd:BitmapData = new BitmapData(w, h, true, 0x00000000);
+		bd.draw(root);
+		return bd;
 	}
 
 	/**
