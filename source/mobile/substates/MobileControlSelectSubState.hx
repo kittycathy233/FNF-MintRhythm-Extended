@@ -50,6 +50,10 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 	var snapCheckbox:CheckboxThingie;
 	var snapLabel:Alphabet;
 
+	// Hitbox 预览：进入时“渐显→保持→0.4s 后渐隐”的指示效果
+	var hitboxTweenList:Map<TouchButton, Array<FlxTween>> = new Map();
+	var hitboxWrappedButtons:Map<TouchButton, Bool> = new Map();
+
 	public function new()
 	{
 		super();
@@ -293,13 +297,16 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		if (members.contains(control))
 			remove(control);
 		control = new MobileControls(type, extraMode);
-		add(control);
+		// 让控制层插在变暗背景之后、所有 UI（箭头/退出/复位/吸附复选框）之前，
+		// 保证虚拟键/Hitbox 不会覆盖到顶部的 UI 层。
+		insert(1, control);
 		control.cameras = [ui];
 	}
 
 	function changeOption(change:Int)
 	{
 		FlxG.sound.play(Paths.sound('scrollMenu'));
+		clearHitboxIndication();
 		curOption += change;
 
 		if (curOption < 0)
@@ -309,11 +316,17 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 
 		switch (options[curOption])
 		{
-			case 'Pad-Right' | 'Pad-Left' | 'Hitbox':
+			case 'Pad-Right' | 'Pad-Left':
 				reset.visible = false;
 				snapCheckbox.visible = false;
 				snapLabel.visible = false;
 				changeControls();
+			case 'Hitbox':
+				reset.visible = false;
+				snapCheckbox.visible = false;
+				snapLabel.visible = false;
+				changeControls();
+				indicateHitboxPreview();
 			case 'Pad-Custom':
 				reset.visible = true;
 				snapCheckbox.visible = true;
@@ -341,6 +354,89 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		itemText.updateHitbox();
 		itemText.offset.set(0, 15);
 		FlxTween.tween(rightArrow, {x: itemText.x + itemText.width + 10}, 0.1, {ease: FlxEase.quintOut});
+	}
+
+	// Hitbox 预览指示：读取设置里的移动端按键不透明度，进入时“渐显→保持 0.4s→渐隐”。
+	// 期间单个块可被触摸逻辑打断（触摸后交给 hitbox 自身的高亮/状态逻辑处理）。
+	function indicateHitboxPreview():Void
+	{
+		if (control == null || control.hitbox == null)
+			return;
+
+		var target:Float = ClientPrefs.data.controlsAlpha;
+		var hideIdle:Bool = ClientPrefs.data.hitboxHideIdle;
+		var idleA:Float = hideIdle ? 0 : 0.00001;
+		// 底部条条与“HitBox 隐藏待机”绑定：禁用时始终不显示，启用时随 hitbox 一起渐显并兼容触摸（触摸细节交给 hitbox 自身逻辑）
+		var labelVisible:Bool = hideIdle;
+
+		control.hitbox.forEachAlive((button:TouchButton) ->
+		{
+			if (button == null)
+				return;
+			cancelHitboxIndicate(button);
+
+			button.alpha = idleA;
+			var tweens:Array<FlxTween> = [];
+			// 渐显到设置的不透明度
+			tweens.push(FlxTween.tween(button, {alpha: target}, 0.2, {ease: FlxEase.quadOut}));
+			// 保持 0.4s 后渐隐回隐藏状态
+			tweens.push(FlxTween.tween(button, {alpha: idleA}, 0.3, {ease: FlxEase.quadIn, startDelay: 0.4}));
+
+			if (button.label != null)
+			{
+				if (labelVisible)
+				{
+					button.label.alpha = 0;
+					tweens.push(FlxTween.tween(button.label, {alpha: target}, 0.2, {ease: FlxEase.quadOut}));
+					tweens.push(FlxTween.tween(button.label, {alpha: 0}, 0.3, {ease: FlxEase.quadIn, startDelay: 0.4}));
+				}
+				else
+					button.label.alpha = 0; // 禁用隐藏待机时，条条始终不显示
+			}
+
+			hitboxTweenList.set(button, tweens);
+			wrapHitboxInterrupt(button);
+		});
+	}
+
+	function cancelHitboxIndicate(button:TouchButton):Void
+	{
+		if (button == null || !hitboxTweenList.exists(button))
+			return;
+		var tweens:Array<FlxTween> = hitboxTweenList.get(button);
+		for (tween in tweens)
+			if (tween != null && tween.active)
+				tween.cancel();
+		hitboxTweenList.remove(button);
+	}
+
+	function clearHitboxIndication():Void
+	{
+		var buttons:Array<TouchButton> = [for (b in hitboxTweenList.keys()) b];
+		for (b in buttons)
+			cancelHitboxIndicate(b);
+		hitboxWrappedButtons.clear();
+	}
+
+	function wrapHitboxInterrupt(button:TouchButton):Void
+	{
+		if (button == null || hitboxWrappedButtons.exists(button))
+			return;
+		hitboxWrappedButtons.set(button, true);
+		var orig:Void->Void = button.onDown.callback;
+		button.onDown.callback = function()
+		{
+			// 触摸打断指示渐隐，交给 hitbox 自身的高亮逻辑处理
+			cancelHitboxIndicate(button);
+			if (orig != null)
+				orig();
+		};
+	}
+
+	override function destroy():Void
+	{
+		clearHitboxIndication();
+		super.destroy();
 	}
 
 	// 本地化触控模式名（存储值不变，仅显示翻译）
