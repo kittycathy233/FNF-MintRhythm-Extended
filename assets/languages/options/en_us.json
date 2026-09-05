@@ -357,7 +357,7 @@
     "allow_phone_screensaver_desc": "If checked, the phone will sleep after going inactive for a few seconds (time depends on your phone's options).",
     "wide_screen_mode_desc": "If checked, the game will stretch to fill your whole screen. WARNING: can result in bad visuals and break some mods that resize the game/cameras.",
     "hitbox_design_desc": "Choose how your hitbox should look like.",
-    "hitbox_position_desc": "If checked, the hitbox will be put at the bottom of the screen, otherwise stays at the top.",
+    "hitbox_position_desc": "If checked, the hitbox will be put at the top of the screen and the extra buttons at the bottom, otherwise the opposite. \n(Only takes effect when extra buttons are enabled)",
     "hitbox_animation_desc": "If checked, hitbox buttons will have animation when pressed/released.",
     "dynamic_controls_color_desc": "If checked, the mobile controls color is set to the notes color in your settings (effect during gameplay only).",
     "rating_fall_style_desc": "Modify the fall animation of rating sprites",

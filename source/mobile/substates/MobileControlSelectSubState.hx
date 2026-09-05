@@ -314,7 +314,8 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 				reset.visible = false;
 				snapCheckbox.visible = false;
 				snapLabel.visible = false;
-				changeControls();
+				// 传 true 保留额外键：否则 extraAction 被清零，Hitbox 顶部额外键区块不会创建
+				changeControls(curOption, true);
 				indicateHitboxPreview();
 			case 'Pad-Custom':
 				reset.visible = true;
@@ -417,30 +418,17 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 
 		var target:Float = ClientPrefs.data.controlsAlpha;
 		var hideIdle:Bool = ClientPrefs.data.hitboxHideIdle;
+		// 大块块：渐隐后回到近隐，触摸时才高亮（保持原有渐显→渐隐手感）
 		var idleA:Float = hideIdle ? 0 : 0.00001;
-		// 底部条条与“HitBox 隐藏待机”绑定：禁用时始终不显示，启用时随 hitbox 一起渐显并兼容触摸（触摸细节交给 hitbox 自身逻辑）
-		var labelVisible:Bool = hideIdle;
+		// 条条（lane）：隐藏待机关闭时驻留可见，作为“触控前”的可见标示；开启时始终隐藏
+		var labelIdleA:Float = hideIdle ? 0 : target;
+		var labelVisible:Bool = !hideIdle;
 
-		// 额外键区块在预览中稳定显示，方便查看额外按键数量与位置，不做“渐显→渐隐”
-		var extras:Array<TouchButton> = [
-			control.hitbox.buttonExtra,
-			control.hitbox.buttonExtra2,
-			control.hitbox.buttonExtra3,
-			control.hitbox.buttonExtra4
-		];
-
+		// 额外键区块与其余 hitbox 块一致，同样参与“渐显→保持→渐隐”，便于查看数量与位置
 		control.hitbox.forEachAlive((button:TouchButton) ->
 		{
 			if (button == null)
 				return;
-
-			if (extras.contains(button))
-			{
-				button.alpha = target;
-				if (button.label != null)
-					button.label.alpha = labelVisible ? target : 0;
-				return;
-			}
 
 			cancelHitboxIndicate(button);
 
@@ -457,7 +445,7 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 				{
 					button.label.alpha = 0;
 					tweens.push(FlxTween.tween(button.label, {alpha: target}, 0.2, {ease: FlxEase.quadOut}));
-					tweens.push(FlxTween.tween(button.label, {alpha: 0}, 0.3, {ease: FlxEase.quadIn, startDelay: 0.4}));
+					tweens.push(FlxTween.tween(button.label, {alpha: labelIdleA}, 0.3, {ease: FlxEase.quadIn, startDelay: 0.4}));
 				}
 				else
 					button.label.alpha = 0; // 禁用隐藏待机时，条条始终不显示

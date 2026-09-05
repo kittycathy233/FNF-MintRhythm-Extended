@@ -344,7 +344,7 @@
     "allow_phone_screensaver_desc": "若勾選，手機在閒置數秒後會進入休眠（時間取決於你的手機設定）。",
     "wide_screen_mode_desc": "若勾選，遊戲將拉伸以填滿整個螢幕。（警告：可能導致畫面變形並破壞部分會縮放遊戲/攝影機的模組）",
     "hitbox_design_desc": "選擇你的 Hitbox 外觀樣式。",
-    "hitbox_position_desc": "若勾選，Hitbox 將置於螢幕底部，否則停留在頂部。",
+    "hitbox_position_desc": "若勾選，Hitbox 將置於螢幕頂部、額外按鍵置於底部，否則相反。\n（僅在啟用額外按鍵時生效）",
     "hitbox_animation_desc": "若勾選，Hitbox 按鈕在按下/鬆開時會有動畫。",
     "dynamic_controls_color_desc": "若勾選，移動端控制按鈕的顏色將設為你在設定中的音符顏色（僅在遊戲內生效）。",
     "rating_fall_style_desc": "修改 評級精靈 的下落動畫效果",

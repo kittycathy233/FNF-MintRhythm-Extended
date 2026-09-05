@@ -362,7 +362,7 @@
     "allow_phone_screensaver_desc": "若勾选，手机在闲置数秒后会进入休眠（时间取决于你的手机设置）。",
     "wide_screen_mode_desc": "若勾选，游戏将拉伸以填满整个屏幕。（警告：可能导致画面变形并破坏部分会缩放游戏/摄像机的模组）",
     "hitbox_design_desc": "选择你的 Hitbox 外观样式。",
-    "hitbox_position_desc": "若勾选，Hitbox 将置于屏幕底部，否则停留在顶部。",
+    "hitbox_position_desc": "若勾选，Hitbox 将置于屏幕顶部、额外按键置于底部，否则相反。\n（仅在启用额外按键时生效）",
     "hitbox_animation_desc": "若勾选，Hitbox 按钮在按下/松开时会有动画。",
     "dynamic_controls_color_desc": "若勾选，移动端控制按钮的颜色将设为你在设置中的音符颜色（仅在游戏内生效）。",
     "requirement_prefix": "需要: ",
