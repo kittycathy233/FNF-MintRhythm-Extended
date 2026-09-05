@@ -4631,7 +4631,7 @@ tempScore += '${lblScore}: ${songScore}';
 		};
 
 		mobilePauseBtn.alpha = 0.4;
-		add(mobilePauseBtn);
+		mobileControls.instance.insert(0, mobilePauseBtn);
 		mobilePauseBtn.visible = controls.mobileC;
 	}
 
