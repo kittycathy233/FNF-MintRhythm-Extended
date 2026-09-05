@@ -279,8 +279,15 @@ class TouchPad extends MobileInputManager implements IMobileControls
 				if (MobileData.save.data.extraData.length <= i)
 					setExtrasDefaultPos();
 				var point = MobileData.save.data.extraData[i];
-				button.x = point.x;
-				button.y = point.y;
+				// 无效/越界/原点位置视为历史脏数据：保留 createButton 生成的默认（底部）位置，
+				// 避免额外键被历史错误值钉在左上角
+				if (point != null && (point.x != 0 || point.y != 0)
+					&& point.x >= 0 && point.x < FlxG.width
+					&& point.y >= 0 && point.y < FlxG.height)
+				{
+					button.x = point.x;
+					button.y = point.y;
+				}
 			}
 		}
 	}

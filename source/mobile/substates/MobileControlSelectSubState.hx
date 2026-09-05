@@ -319,8 +319,9 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 				changeControls(0, true);
 				control.touchPad.forEachAlive((button:TouchButton) ->
 				{
-					var ignore = ['G', 'S'];
-					if (!ignore.contains(button.tag.toUpperCase()))
+					// 预览只展示 S/G/T/P 四个额外键，隐藏方向键（方向键 tag 为 UP/LEFT/RIGHT/DOWN）
+					var hideTags = ['UP', 'LEFT', 'RIGHT', 'DOWN'];
+					if (hideTags.contains(button.tag.toUpperCase()))
 						button.visible = button.active = false;
 				});
 		}
@@ -411,10 +412,27 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		// 底部条条与“HitBox 隐藏待机”绑定：禁用时始终不显示，启用时随 hitbox 一起渐显并兼容触摸（触摸细节交给 hitbox 自身逻辑）
 		var labelVisible:Bool = hideIdle;
 
+		// 额外键区块在预览中稳定显示，方便查看额外按键数量与位置，不做“渐显→渐隐”
+		var extras:Array<TouchButton> = [
+			control.hitbox.buttonExtra,
+			control.hitbox.buttonExtra2,
+			control.hitbox.buttonExtra3,
+			control.hitbox.buttonExtra4
+		];
+
 		control.hitbox.forEachAlive((button:TouchButton) ->
 		{
 			if (button == null)
 				return;
+
+			if (extras.contains(button))
+			{
+				button.alpha = target;
+				if (button.label != null)
+					button.label.alpha = labelVisible ? target : 0;
+				return;
+			}
+
 			cancelHitboxIndicate(button);
 
 			button.alpha = idleA;
