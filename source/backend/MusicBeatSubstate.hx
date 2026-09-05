@@ -69,6 +69,8 @@ class MusicBeatSubstate extends FlxSubState
 				mobileControls = MobileData.getTouchPadCustom(new TouchPad('RIGHT_FULL', 'NONE', extraMode));
 			case 3: // HITBOX
 				mobileControls = new Hitbox(extraMode);
+			case 4: // DOUBLE (左+右双 Pad)
+				mobileControls = new TouchPad('DOUBLE', 'NONE', extraMode);
 		}
 
 		mobileControls.instance = MobileData.setButtonsColors(mobileControls.instance);

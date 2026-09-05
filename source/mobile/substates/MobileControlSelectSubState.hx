@@ -31,11 +31,11 @@ import objects.CheckboxThingie;
 
 class MobileControlSelectSubState extends MusicBeatSubstate
 {
-	var options:Array<String> = ['Pad-Right', 'Pad-Left', 'Pad-Custom', 'Hitbox'];
+	var options:Array<String> = ['Pad-Right', 'Pad-Left', 'Pad-Custom', 'Hitbox', 'Pad-Both'];
 	var control:MobileControls;
 	var leftArrow:FlxSprite;
 	var rightArrow:FlxSprite;
-	var itemText:Alphabet;
+	var itemText:FlxText;
 	var positionText:FlxText;
 	var positionTextBg:FlxSprite;
 	var bg:FlxSprite;
@@ -48,7 +48,7 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 
 	// 按钮吸附复选框
 	var snapCheckbox:CheckboxThingie;
-	var snapLabel:Alphabet;
+	var snapLabel:FlxText;
 
 	// Hitbox 预览：进入时“渐显→保持→0.4s 后渐隐”的指示效果
 	var hitboxTweenList:Map<TouchButton, Array<FlxTween>> = new Map();
@@ -80,8 +80,8 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		ui.alpha = 0;
 		FlxG.cameras.add(ui, false);
 
-		itemText = new Alphabet(0, 60, '');
-		itemText.alignment = LEFT;
+		itemText = new FlxText(0, 60, 0, '', 42);
+		itemText.setFormat(Paths.font(Language.get('uitab_font')), 42, FlxColor.WHITE, FlxTextAlign.LEFT);
 		itemText.cameras = [ui];
 		add(itemText);
 
@@ -114,59 +114,39 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		positionText.cameras = [ui];
 		add(positionText);
 
-		var exit = new UIButton(0, itemText.y - 25, Language.get('key_bind_exit'), () ->
+		var saveBtn = createTopRightButton(itemText.y - 25, Language.get('key_bind_save'), FlxColor.LIME, () ->
 		{
+			// 保存当前选中的模式与自定义位置，但不退出
 			if (options[curOption].toLowerCase().contains('pad'))
 				control.touchPad.setExtrasDefaultPos();
 			if (options[curOption] == 'Pad-Extra')
 			{
-				var nuhuh = new FlxText(0, 0, FlxG.width / 2, Language.get('pad_extra_save'));
-				nuhuh.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, FlxTextAlign.CENTER);
-				nuhuh.screenCenter();
-				nuhuh.cameras = [ui];
-				add(nuhuh);
-				FlxTween.tween(nuhuh, {alpha: 0}, 3.4, {
-					ease: FlxEase.circOut,
-					onComplete: (twn:FlxTween) ->
-					{
-						nuhuh.destroy();
-						remove(nuhuh);
-					}
-				});
+				showToast(Language.get('pad_extra_save'));
 				return;
 			}
 			MobileData.mode = curOption;
 			if (options[curOption] == 'Pad-Custom')
 				MobileData.setTouchPadCustom(control.touchPad);
+			FlxG.sound.play(Paths.sound('confirmMenu'));
+			showToast(Language.get('mobile_controls_saved'));
+		});
+		add(saveBtn);
+
+		// 直接关闭，不保存
+		var exitBtn = createTopRightButton(saveBtn.y + saveBtn.height + 20, Language.get('mobile_btn_exit'), FlxColor.ORANGE, () ->
+		{
 			controls.isInSubstate = FlxG.mouse.visible = false;
 			FlxG.sound.play(Paths.sound('cancelMenu'));
 			MobileData.forcedMode = null;
 			close();
 		});
-		exit.color = FlxColor.LIME;
-		exit.setGraphicSize(Std.int(exit.width) * 3);
-		exit.updateHitbox();
-		exit.x = FlxG.width - exit.width - 70;
-		exit.label.setFormat(Paths.font('vcr.ttf'), 28, FlxColor.WHITE, FlxTextAlign.CENTER);
-		exit.label.fieldWidth = exit.width;
-		exit.label.x = ((exit.width - exit.label.width) / 2) + exit.x;
-		exit.label.offset.y = -10; // WHY THE FUCK I CAN'T CHANGE THE LABEL Y
-		exit.cameras = [ui];
-		add(exit);
+		add(exitBtn);
 
-		reset = new UIButton(exit.x, exit.height + exit.y + 20, Language.get('key_bind_reset'), () ->
+		reset = createTopRightButton(exitBtn.y + exitBtn.height + 20, Language.get('key_bind_reset'), FlxColor.RED, () ->
 		{
-			changeOption(0); // realods the current control mode ig?
+			resetToDefaultLayout();
 			FlxG.sound.play(Paths.sound('cancelMenu'));
 		});
-		reset.color = FlxColor.RED;
-		reset.setGraphicSize(Std.int(reset.width) * 3);
-		reset.updateHitbox();
-		reset.label.setFormat(Paths.font('vcr.ttf'), 28, FlxColor.WHITE, FlxTextAlign.CENTER);
-		reset.label.fieldWidth = reset.width;
-		reset.label.x = ((reset.width - reset.label.width) / 2) + reset.x;
-		reset.label.offset.y = -10;
-		reset.cameras = [ui];
 		add(reset);
 
 		// 添加按钮吸附复选框（在屏幕左侧垂直居中附近）
@@ -179,10 +159,10 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		add(snapCheckbox);
 
 		// 添加复选框标签
-		snapLabel = new Alphabet(snapCheckbox.x + snapCheckbox.width + 20, centerY, Language.get('button_snap'));
+		snapLabel = new FlxText(snapCheckbox.x + snapCheckbox.width + 20, centerY, 0, Language.get('button_snap'), 40);
+		snapLabel.setFormat(Paths.font(Language.get('uitab_font')), 40, FlxColor.WHITE);
 		snapLabel.cameras = [ui];
 		snapLabel.y += snapCheckbox.height / 2 - snapLabel.height / 2;
-		snapLabel.isMenuItem = false;
 		snapLabel.visible = false; // 默认隐藏
 		add(snapLabel);
 
@@ -316,7 +296,7 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 
 		switch (options[curOption])
 		{
-			case 'Pad-Right' | 'Pad-Left':
+			case 'Pad-Right' | 'Pad-Left' | 'Pad-Both':
 				reset.visible = false;
 				snapCheckbox.visible = false;
 				snapLabel.visible = false;
@@ -348,12 +328,74 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		setOptionText();
 	}
 
+	// 将当前可定制 Pad 的按钮位置清回默认布局（丢弃上次保存的自定义位置）
+	function resetToDefaultLayout():Void
+	{
+		if (options[curOption] == 'Pad-Custom')
+		{
+			MobileData.save.data.buttons = null;
+			MobileData.save.flush();
+		}
+		else if (options[curOption] == 'Pad-Extra')
+		{
+			MobileData.save.data.extraData = null;
+			MobileData.save.flush();
+		}
+		changeOption(0); // 重建当前 pad，恢复默认布局
+	}
+
+	// 生成一个右上角样式统一的按钮
+	function createTopRightButton(y:Float, label:String, color:FlxColor, onClick:Void->Void):UIButton
+	{
+		var btn = new UIButton(0, y, label, onClick);
+		btn.color = color;
+		btn.setGraphicSize(Std.int(btn.width) * 3);
+		btn.updateHitbox();
+		btn.x = FlxG.width - btn.width - 70;
+		btn.label.setFormat(Paths.font(Language.get('uitab_font')), 36, FlxColor.WHITE, FlxTextAlign.CENTER);
+		btn.label.fieldWidth = btn.width;
+		btn.label.x = ((btn.width - btn.label.width) / 2) + btn.x;
+		btn.label.offset.y = -10;
+		btn.cameras = [ui];
+		return btn;
+	}
+
+	// 在屏幕中央弹出一条短暂存盘/提示信息
+	function showToast(text:String):Void
+	{
+		var toast = new FlxText(0, 0, FlxG.width / 2, text);
+		toast.setFormat(Paths.font(Language.get('uitab_font')), 32, FlxColor.WHITE, FlxTextAlign.CENTER);
+		toast.cameras = [ui];
+		toast.screenCenter();
+		add(toast);
+		FlxTween.tween(toast, {alpha: 0}, 3.4, {
+			ease: FlxEase.circOut,
+			onComplete: (twn:FlxTween) ->
+			{
+				toast.destroy();
+				remove(toast);
+			}
+		});
+	}
+
+	// 将标题行（左箭头 + 模式名 + 右箭头）整体水平居中
+	function centerTitle():Void
+	{
+		itemText.updateHitbox();
+		var arrowW:Float = rightArrow.width;
+		var gapL:Float = 60; // leftArrow 到 itemText 的左间距
+		var gapR:Float = 10; // itemText 到 rightArrow 的右间距
+		var groupW:Float = itemText.width + arrowW + gapL + gapR;
+		var leftmost:Float = (FlxG.width - groupW) / 2;
+		itemText.x = leftmost + gapL;
+		leftArrow.x = itemText.x - gapL;
+		rightArrow.x = itemText.x + itemText.width + gapR;
+	}
+
 	function setOptionText()
 	{
 		itemText.text = localModeName(options[curOption]);
-		itemText.updateHitbox();
-		itemText.offset.set(0, 15);
-		FlxTween.tween(rightArrow, {x: itemText.x + itemText.width + 10}, 0.1, {ease: FlxEase.quintOut});
+		centerTitle();
 	}
 
 	// Hitbox 预览指示：读取设置里的移动端按键不透明度，进入时“渐显→保持 0.4s→渐隐”。
@@ -448,6 +490,7 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 			case 'Pad-Left': Language.get('mobile_mode_pad_left');
 			case 'Pad-Custom': Language.get('mobile_mode_pad_custom');
 			case 'Pad-Extra': Language.get('mobile_mode_pad_extra');
+			case 'Pad-Both': Language.get('mobile_mode_pad_both');
 			case 'Hitbox': Language.get('mobile_mode_hitbox');
 			default: name.replace('-', ' ');
 		}

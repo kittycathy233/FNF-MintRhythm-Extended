@@ -27,6 +27,7 @@ import haxe.Json;
 import haxe.io.Path;
 import openfl.utils.Assets;
 import flixel.util.FlxSave;
+import mobile.objects.TouchPad;
 
 /**
  * ...
@@ -125,6 +126,25 @@ class MobileData
 			button.color = data.arrowRGB[i][0];
 			button.label.color = data.arrowRGB[i][0];
 			button.label.updateColorTransform();
+		}
+
+		// 双 Pad（左+右）模式的左簇按钮，与应用右簇一致的动态箭头颜色
+		// 仅 TouchPad 拥有 buttonLeft2 等第二套按键，Hitbox 不具备；且仅在 DPad JSON
+		// 实际渲染了这些按钮时 label 才非空（其它模式不会 render 第二套），需跳过未创建的按钮
+		if (Std.isOfType(buttonsInstance, TouchPad))
+		{
+			for (i => button in [
+				buttonsInstance.buttonLeft2,
+				buttonsInstance.buttonDown2,
+				buttonsInstance.buttonUp2,
+				buttonsInstance.buttonRight2])
+			{
+				if (button == null || button.label == null)
+					continue;
+				button.color = data.arrowRGB[i][0];
+				button.label.color = data.arrowRGB[i][0];
+				button.label.updateColorTransform();
+			}
 		}
 
 		return buttonsInstance;

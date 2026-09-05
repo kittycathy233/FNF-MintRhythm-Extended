@@ -277,6 +277,71 @@ class Hitbox extends MobileInputManager implements IMobileControls
 		return hint;
 	}
 
+	/**
+	 * 设置界面专用：进入时按钮立即以 controlsAlpha 可见，0.6s 后渐隐回 idle 状态。
+	 * 期间触摸仍可正常触发 onDown/onUp 打断渐隐循环（每次打断会重新计时）。
+	 * hitboxHideIdle 为 true 时（游戏内禁用），直接进入 idle 而不显示。
+	 */
+	public function startFadeOut()
+	{
+		if (!ClientPrefs.data.hitboxAnimation)
+			return;
+		// hitboxHideIdle=true 时游戏内完全禁用，设置界面也应保持隐藏
+		if (ClientPrefs.data.hitboxHideIdle)
+		{
+			for (fieldName in Reflect.fields(this))
+			{
+				var button = Reflect.field(this, fieldName);
+				if (Std.isOfType(button, TouchButton))
+				{
+					var btn:TouchButton = cast button;
+					btn.alpha = 0;
+					if (btn.label != null)
+						btn.label.alpha = 0;
+					_animatingButtons.set(btn, false);
+				}
+			}
+			return;
+		}
+		var hideAlpha:Float = 0.00001;
+		for (fieldName in Reflect.fields(this))
+		{
+			var button = Reflect.field(this, fieldName);
+			if (Std.isOfType(button, TouchButton))
+			{
+				var btn:TouchButton = cast button;
+				// 立即以 controlsAlpha 可见，再开始计时
+				btn.alpha = ClientPrefs.data.controlsAlpha;
+				if (btn.label != null)
+					btn.label.alpha = ClientPrefs.data.controlsAlpha;
+				_animatingButtons.set(btn, true);
+				_targetAlphas.set(btn, hideAlpha);
+				_targetLabelAlphas.set(btn, ClientPrefs.data.controlsAlpha);
+			}
+		}
+		// 0.6s 后真正开始渐隐（用 tween 延迟，不阻塞调用栈）
+		FlxTween.tween(this, {}, 0.6, {
+			ease: FlxEase.linear,
+			onComplete: (twn:FlxTween) ->
+			{
+				for (fieldName in Reflect.fields(this))
+				{
+					var button = Reflect.field(this, fieldName);
+					if (Std.isOfType(button, TouchButton))
+					{
+						var btn:TouchButton = cast button;
+						if (_animatingButtons.exists(btn) && _animatingButtons.get(btn))
+						{
+							_animatingButtons.set(btn, true);
+							_targetAlphas.set(btn, hideAlpha);
+							_targetLabelAlphas.set(btn, hideAlpha);
+						}
+					}
+				}
+			}
+		});
+	}
+
 	function createHintGraphic(Width:Int, Height:Int, ?isLane:Bool = false):FlxGraphic
 	{
 		var shape:Shape = new Shape();

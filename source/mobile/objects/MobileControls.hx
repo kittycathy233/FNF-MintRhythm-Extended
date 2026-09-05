@@ -47,6 +47,8 @@ class MobileControls extends FlxTypedSpriteGroup<MobileInputManager>
 				initControler(2, extra);
 			case 3: // HITBOX
 				initControler(3, extra);
+			case 4: // DOUBLE (左+右双 Pad)
+				initControler(4, extra);
 		}
 		alpha = ClientPrefs.data.controlsAlpha;
 	}
@@ -74,6 +76,10 @@ class MobileControls extends FlxTypedSpriteGroup<MobileInputManager>
 				hitbox = new Hitbox(extraAction);
 				hitbox = MobileData.setButtonsColors(hitbox);
 				add(hitbox);
+			case 4: // DOUBLE (左+右双 Pad)
+				touchPad = new TouchPad('DOUBLE', 'NONE', extraAction);
+				touchPad = MobileData.setButtonsColors(touchPad);
+				add(touchPad);
 		}
 	}
 

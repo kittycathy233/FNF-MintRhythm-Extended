@@ -260,6 +260,8 @@ class MobileFunctions
 				return 'custom';
 			case 3:
 				return 'hitbox';
+			case 4:
+				return 'double';
 			default:
 				return 'none';
 		}
