@@ -903,5 +903,11 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		controls.isInSubstate = false;
 		removeTouchPad();
 		addTouchPad('LEFT_FULL', 'A_B_C');
+		addTouchPadCamera(); // removeTouchPad 已销毁 touchPadCam，这里必须重建，否则 isTouchOnUIControls 失效、虚拟键会被当成列表拖拽吞掉
+#if mobile
+		// 重置触屏拖拽滚动状态，避免从子状态返回后残留的手指/选中污染虚拟键输入
+		touchScrollActive = false;
+		touchScrollTouch = null;
+#end
 	}
 }

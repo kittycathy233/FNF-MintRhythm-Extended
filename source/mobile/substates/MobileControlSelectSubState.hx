@@ -43,6 +43,7 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 	var curOption:Int = MobileData.mode;
 	var buttonBinded:Bool = false;
 	var bindButton:TouchButton;
+	var boundTouch:FlxTouch; // 正在拖拽虚拟键的那根手指
 	var reset:UIButton;
 	var tweenieShit:Float = 0;
 
@@ -200,21 +201,25 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 		{
 			if (buttonBinded)
 			{
-				// 触摸释放、按钮丢失或触摸点丢失时，结束拖拽
-				if (TouchUtil.justReleased || bindButton == null || TouchUtil.touch == null)
+				// 只有真正拖拽的那根手指抬起/丢失，或被拖动的按钮销毁时，才结束拖拽
+				if (bindButton == null || boundTouch == null || !boundTouch.pressed)
 				{
 					bindButton = null;
 					buttonBinded = false;
+					boundTouch = null;
 				}
 				else
-					moveButton(TouchUtil.touch, bindButton);
+					moveButton(boundTouch, bindButton);
 			}
 			else if (control.touchPad != null)
 			{
 				control.touchPad.forEachAlive((button:TouchButton) ->
 				{
 					if (button != null && button.justPressed && TouchUtil.touch != null)
-						moveButton(TouchUtil.touch, button);
+					{
+						boundTouch = TouchUtil.touch; // 记录真正按下该键的那根手指
+						moveButton(boundTouch, button);
+					}
 				});
 			}
 			// 只有在启用了按钮吸附时才执行吸附逻辑
@@ -285,6 +290,10 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 
 	function changeOption(change:Int)
 	{
+		// 切换选项时结束进行中的拖拽，避免拖拽继续引用已被销毁的旧按钮
+		bindButton = null;
+		buttonBinded = false;
+		boundTouch = null;
 		FlxG.sound.play(Paths.sound('scrollMenu'));
 		clearHitboxIndication();
 		curOption += change;
@@ -496,6 +505,9 @@ class MobileControlSelectSubState extends MusicBeatSubstate
 	override function destroy():Void
 	{
 		clearHitboxIndication();
+		bindButton = null;
+		buttonBinded = false;
+		boundTouch = null;
 		super.destroy();
 	}
 
