@@ -311,7 +311,7 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 			Language.get("hitwindowpreset_desc"),
 			'hitWindowPreset',
 			STRING,
-			['Leather', 'Psych / Kade', 'Funkin\'', 'Custom']);
+			['Leather', 'Psych / Kade', 'Funkin\'', 'Forever', 'Custom']);
 		hitWindowPresetOption.onChange = onChangeHitWindowPreset;
 		addOption(hitWindowPresetOption);
 
@@ -548,7 +548,8 @@ class GameplaySettingsSubState extends BaseOptionsMenu
 	static var hitWindowPresets:Map<String, { perfectWindow:Float, sickWindow:Float, goodWindow:Float, badWindow:Float, shitWindow:Float }> = [
 		'Leather'      => { perfectWindow: 25.00, sickWindow: 50.00, goodWindow: 70.00,  badWindow: 100.00, shitWindow: 130.00 },
 		'Psych / Kade' => { perfectWindow: 23.00, sickWindow: 45.00, goodWindow: 90.00,  badWindow: 135.00, shitWindow: 180.00 },
-		'Funkin\''        => { perfectWindow: 16.00, sickWindow: 33.00, goodWindow: 124.00, badWindow: 149.00, shitWindow: 180.00 }
+		'Funkin\''        => { perfectWindow: 16.00, sickWindow: 33.00, goodWindow: 124.00, badWindow: 149.00, shitWindow: 180.00 },
+		'Forever'        => { perfectWindow: 14.78,  sickWindow: 33.33, goodWindow: 91.67,  badWindow: 133.33, shitWindow: 166.67 }
 	];
 
 	function onChangeHitWindowPreset()

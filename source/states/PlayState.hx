@@ -407,6 +407,7 @@ class PlayState extends MusicBeatState
 	var holdScoreRemainder:Float = 0; // 特性3: 分数小数累加器(songScore为Int,避免每帧取整丢失)
 	public static inline var HOLD_SCORE_BONUS_PER_SECOND:Float = 250.0; // 特性3: 每秒加分(参考原版Funkin Constants.SCORE_HOLD_BONUS_PER_SECOND)
 	public var instakillOnMiss:Bool = false;
+	public var foreverMissPunish:Float = 0.0; // Forever 血量模型：连续 miss 递增惩罚累计器
 	public var cpuControlled:Bool = false;
 	public var practiceMode:Bool = false;
 	public var pressMissDamage:Float = 0.05;
@@ -6441,11 +6442,18 @@ tempScore += '${lblScore}: ${songScore}';
 		combo = 0;
 		if (lastCombo > 0) comboJustBroke = true; // 仅在真正断连(此前有combo)时置位
 
-		// Kade 血量：miss 固定扣血 0.04 × healthLoss
-		if (ClientPrefs.getGameplaySetting('healthmodel', 'default') == 'kade')
-			health -= 0.04 * healthLoss;
-		else
-			health -= subtract * healthLoss;
+			// Kade 血量：miss 固定扣血 0.04 × healthLoss
+			if (ClientPrefs.getGameplaySetting('healthmodel', 'default') == 'kade')
+				health -= 0.04 * healthLoss;
+			// Forever 血量：连续 miss 递增惩罚，从 0.035 开始每次 +0.075
+			else if (ClientPrefs.getGameplaySetting('healthmodel', 'default') == 'forever')
+			{
+				if (foreverMissPunish <= 0.01) foreverMissPunish = 1.0;
+				health -= 0.035 * foreverMissPunish * healthLoss;
+				foreverMissPunish += 0.075;
+			}
+			else
+				health -= subtract * healthLoss;
 		// Kade 计分：长条(sustain) miss 额外再扣 0.075 × healthLoss（对齐 Kade tooLate 分支的额外惩罚）
 		if (ClientPrefs.getGameplaySetting('healthmodel', 'default') == 'kade' && note != null && note.isSustainNote)
 			health -= 0.075 * healthLoss;
@@ -6802,6 +6810,11 @@ tempScore += '${lblScore}: ${songScore}';
 					case 'shit':            if (ClientPrefs.getGameplaySetting('antiMash', false)) health -= 0.075 * healthLoss;
 					default:                health += note.hitHealth * healthGain; // 长条/未知评级保持原加血
 				}
+			}
+			// Forever 血量模型：任意命中固定加血 0.035，不区分评级；命中后重置连续 miss 惩罚
+			else if (healthModel == 'forever') {
+				health += 0.035 * healthGain;
+				foreverMissPunish = 0.0;
 			} else {
 				health += note.hitHealth * healthGain;
 			}

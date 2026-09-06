@@ -77,7 +77,7 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 		optionsArray.push(new GameplayOption('Practice Mode', 'practice', BOOL, false));
 		optionsArray.push(new GameplayOption('Botplay', 'botplay', BOOL, false));
 		optionsArray.push(new GameplayOption('Play Opponent', 'playOpponent', BOOL, false));
-		optionsArray.push(new GameplayOption('Health Model', 'healthmodel', STRING, 'default', ['default', 'kade', 'leather']));
+		optionsArray.push(new GameplayOption('Health Model', 'healthmodel', STRING, 'default', ['default', 'kade', 'leather', 'forever']));
 		antiMashOption = new GameplayOption('Anti Mash', 'antiMash', BOOL, false);
 		optionsArray.push(antiMashOption);
 		updateAntiMashState();
