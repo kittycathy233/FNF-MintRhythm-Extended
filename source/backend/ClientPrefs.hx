@@ -150,6 +150,8 @@ import openfl.display.StageQuality;
 	public var pauseMusic:String = 'Tea Time';
 	// 主菜单音乐：'Default' 使用标准 freakyMenu；其它值对应 assets/music/freakyMenu-<选项名>.<SOUND_EXT>（文件需自备）
 	public var daMenuMusic:String = 'Default';
+	// 画面每拍缩放特效（标题界面 3%，主界面 1.5%）：true=开启，false=关闭
+	public var beatScale:Bool = true;
 	public var checkForUpdates:Bool = true;
 	public var disableNetworking:Bool = false; // 全局联网开关：true 时拦截所有联网行为
 	public var comboStacking:Bool = true;

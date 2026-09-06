@@ -563,6 +563,8 @@
     "pause_music": "暂停音乐：",
     "menu_music": "主菜单音乐：",
     "menumusic_desc": "选择主菜单/各个界面播放的音乐。需要将音频文件放到 assets/music/ 下，命名为 freakyMenu-选项名（Default 使用标准 freakyMenu）。",
+    "beat_scale": "画面每拍缩放：",
+    "beat_scale_desc": "开启后，标题画面（3%）和主界面（1.5%）会跟随节奏跳动并平滑回弹。",
     "check_for_updates": "检查更新",
     "discord_rich_presence": "Discord 富媒体状态",
     "disable_networking": "禁用网络连接",

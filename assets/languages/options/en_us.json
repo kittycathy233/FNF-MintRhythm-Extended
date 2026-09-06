@@ -558,6 +558,8 @@
     "pause_music": "Pause Music:",
     "menu_music": "Menu Music:",
     "menumusic_desc": "Which music plays in menus and other screens. Drop audio in assets/music/ named freakyMenu-<option> (Default uses the standard freakyMenu).",
+    "beat_scale": "Beat Scale:",
+    "beat_scale_desc": "When enabled, the title screen and main menu bounce with the beat (title: 3%, menu: 1.5%).",
     "check_for_updates": "Check for Updates",
     "discord_rich_presence": "Discord Rich Presence",
     "disable_networking": "Disable Networking",

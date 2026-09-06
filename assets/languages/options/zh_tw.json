@@ -557,6 +557,8 @@
     "pause_music": "暫停音樂：",
     "menu_music": "主選單音樂：",
     "menumusic_desc": "選擇主選單/各介面播放的音樂。需將音訊檔放到 assets/music/ 下，命名為 freakyMenu-選項名（Default 使用標準 freakyMenu）。",
+    "beat_scale": "畫面每拍縮放：",
+    "beat_scale_desc": "開啟後，標題畫面（3%）和主選單（1.5%）會跟隨節奏跳動並平滑回彈。",
     "check_for_updates": "檢查更新",
     "discord_rich_presence": "Discord 富媒體狀態",
     "disable_networking": "停用網路連線",

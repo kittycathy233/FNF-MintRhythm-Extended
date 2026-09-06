@@ -377,6 +377,13 @@ class TitleState extends MusicBeatState
 	{
 		if (FlxG.sound.music != null)
 			Conductor.songPosition = FlxG.sound.music.time;
+
+		// 标题整幅画面每拍缩放：峰值后每帧平滑回落到 1（指数衰减，速度固定）；转场期间跳过，避免与确认缩放冲突
+		if (!transitioning && ClientPrefs.data.beatScale && FlxG.camera.zoom > 1)
+		{
+			var lerp:Float = Math.exp(-elapsed * 8);
+			FlxG.camera.zoom = FlxMath.lerp(1, FlxG.camera.zoom, lerp);
+		}
 		// FlxG.watch.addQuick('amp', FlxG.sound.music.amplitude);
 
 		var pressedEnter:Bool = FlxG.keys.justPressed.ENTER || controls.ACCEPT || TouchUtil.justPressed;
@@ -432,6 +439,10 @@ class TitleState extends MusicBeatState
 
 				new FlxTimer().start(1, function(tmr:FlxTimer)
 				{
+					// 切换时才触发放大转场（不再与白闪同时），主界面从此值缓回 1
+					MainMenuState.inputZoom = 1.3;
+					FlxTween.cancelTweensOf(FlxG.camera);
+					FlxTween.tween(FlxG.camera, {zoom: 1.3}, 0.6, {ease: FlxEase.sineOut});
 					MusicBeatState.switchState(new MainMenuState());
 					closedState = true;
 				});
@@ -549,6 +560,10 @@ class TitleState extends MusicBeatState
 		if(logoBl != null)
 			logoBl.animation.play('bump', true);
 
+		// 每拍缩放特效（整幅画面）：开启时相机放大到峰值，再在 update 里平滑回弹到 1
+		if(!transitioning && ClientPrefs.data.beatScale)
+			FlxG.camera.zoom = 1.03;
+
 		if(gfDance != null)
 		{
 			danceLeft = !danceLeft;
@@ -571,11 +586,14 @@ class TitleState extends MusicBeatState
 					//FlxG.sound.music.stop();
 					FlxG.sound.playMusic(Paths.menuMusicAudio(), 0);
 					FlxG.sound.music.fadeIn(4, 0, 0.7);
+					createCoolText(['Psych Engine by'], -40);
 				case 2:
-					createCoolText(['Psych Engine by'], 40);
+					addMoreText('Shadow Mario', -40);
+					addMoreText('Riveren', -40);
+				case 3:
+					addMoreText('Kathy Engine Modified by', 40);
 				case 4:
-					addMoreText('Shadow Mario', 40);
-					addMoreText('Riveren', 40);
+					addMoreText('Kitty Cathy', 40);
 				case 5:
 					deleteCoolText();
 				case 6:
@@ -597,7 +615,7 @@ class TitleState extends MusicBeatState
 				case 15:
 					addMoreText('Night');
 				case 16:
-					addMoreText('Funkin'); // credTextShit.text += '\nFunkin';
+					addMoreText('Funkin\''); // credTextShit.text += '\nFunkin';
 
 				case 17:
 					skipIntro();

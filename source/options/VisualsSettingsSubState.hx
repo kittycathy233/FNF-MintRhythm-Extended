@@ -165,6 +165,13 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 			BOOL);
 		addOption(option);
 
+		// 画面每拍缩放特效（标题界面 3%，主界面 1.5%）
+		var option:Option = new Option(Language.get('beat_scale'),
+			Language.get("beat_scale_desc"),
+			'beatScale',
+			BOOL);
+		addOption(option);
+
 		var option:Option = new Option(Language.get('camera_zooms'),
 			Language.get("camerazooms_desc"),
 			'camZooms',
@@ -272,6 +279,13 @@ class VisualsSettingsSubState extends BaseOptionsMenu
 			menuMusicOptions);
 		addOption(option);
 		option.onChange = onChangeMenuMusic;
+
+		// 画面每拍缩放特效（标题界面 3%，主界面 1.5%）
+		var option:Option = new Option(Language.get('beat_scale'),
+			Language.get("beat_scale_desc"),
+			'beatScale',
+			BOOL);
+		addOption(option);
 		
 		#if CHECK_FOR_UPDATES
 		var option:Option = new Option(Language.get('check_for_updates'),

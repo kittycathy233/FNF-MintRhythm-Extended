@@ -1,6 +1,7 @@
 package states;
 
 import flixel.FlxObject;
+import flixel.FlxState;
 import flixel.effects.FlxFlicker;
 import flixel.ui.FlxButton;
 import flixel.input.touch.FlxTouch;
@@ -62,9 +63,28 @@ class MainMenuState extends MusicBeatState
 	var selectedSomethin:Bool = false;
 	var timeNotMoving:Float = 0;
 
+	// 从标题界面带入的初始缩放（切换那一刻由 TitleState 置为 1.3）；主界面创建后从该值缓回 1，实现放大转场
+	public static var inputZoom:Float = 1;
+	private var menuBeatTransitioning:Bool = false; // 是否在执行确认转场中（用于屏蔽每拍缩放）
+
 	override function create()
 	{
 		super.create();
+
+		// 重置 Conductor：从 PlayState/FreeplayState 退出时它们只切音乐不改 BPM，
+		// Conductor 还残留着歌曲的 BPM，导致 beatHit 的 step 计算完全错乱
+		// （每拍缩放失效）。必须在这里设回菜单音乐的正确 BPM，让 updateCurStep
+		// 每帧能算出正确的 curStep。
+		Conductor.bpm = Paths.menuMusicBPM();
+
+		// 延续标题的放大转场：切到主界面后相机被重建（缩放归 1），这里用带来的值恢复再缓回
+		if (inputZoom > 1)
+		{
+			FlxG.camera.zoom = inputZoom;
+			FlxTween.cancelTweensOf(FlxG.camera);
+			FlxTween.tween(FlxG.camera, {zoom: 1}, 0.4, {ease: FlxEase.sineOut});
+		}
+		inputZoom = 1;
 
 		#if MODS_ALLOWED
 		Mods.pushGlobalMods();
@@ -370,6 +390,9 @@ class MainMenuState extends MusicBeatState
 
 	override function update(elapsed:Float)
 	{
+		if (FlxG.sound.music != null)
+			Conductor.songPosition = FlxG.sound.music.time;
+
 		if (FlxG.sound.music.volume < 0.8)
 			FlxG.sound.music.volume = Math.min(FlxG.sound.music.volume + 0.5 * elapsed, 0.8);
 
@@ -394,7 +417,7 @@ class MainMenuState extends MusicBeatState
 				selectedSomethin = true;
 				FlxG.mouse.visible = false;
 				FlxG.sound.play(Paths.sound('cancelMenu'));
-				MusicBeatState.switchState(new TitleState());
+				transitionWithZoom(new TitleState());
 			}
 
 		var acceptTriggered:Bool = controls.ACCEPT;
@@ -447,29 +470,29 @@ class MainMenuState extends MusicBeatState
 					switch (option)
 					{
 						case 'story_mode':
-							MusicBeatState.switchState(new StoryMenuState());
+							transitionWithZoom(new StoryMenuState());
 						case 'freeplay':
-							MusicBeatState.switchState(new FreeplayState());
+							transitionWithZoom(new FreeplayState());
 
 						#if MODS_ALLOWED
 						case 'mods':
-							MusicBeatState.switchState(new ModsMenuState());
+							transitionWithZoom(new ModsMenuState());
 						#end
 
 						#if ACHIEVEMENTS_ALLOWED
 						case 'achievements':
-							MusicBeatState.switchState(new AchievementsMenuState());
+							transitionWithZoom(new AchievementsMenuState());
 						#end
 
 					case 'credits':
-						MusicBeatState.switchState(new CreditsState());
+						transitionWithZoom(new CreditsState());
 
 					case 'toolbox':
 						// LeatherEngine-style tools hub: aggregate of editors
 						// (chart / character / stage / week / dialogue ...)
 						// 仅在开发者模式下允许进入
 						if (ClientPrefs.data.developer)
-							MusicBeatState.switchState(new MasterEditorMenu());
+							transitionWithZoom(new MasterEditorMenu());
 						else
 						{
 							selectedSomethin = false;
@@ -477,7 +500,7 @@ class MainMenuState extends MusicBeatState
 						}
 
 					case 'options':
-							MusicBeatState.switchState(new OptionsState());
+							transitionWithZoom(new OptionsState());
 							OptionsState.onPlayState = false;
 							if (PlayState.SONG != null)
 							{
@@ -516,12 +539,49 @@ class MainMenuState extends MusicBeatState
 				{
 					selectedSomethin = true;
 					FlxG.mouse.visible = false;
-					MusicBeatState.switchState(new MasterEditorMenu());
+					transitionWithZoom(new MasterEditorMenu());
 				}
 			}
 		}
 
+		// 主界面每拍缩放衰减：峰值后每帧指数平滑回落到 1（与标题界面逻辑一致）
+		if (!menuBeatTransitioning && ClientPrefs.data.beatScale && FlxG.camera.zoom > 1)
+		{
+			var lerp:Float = Math.exp(-elapsed * 8);
+			FlxG.camera.zoom = FlxMath.lerp(1, FlxG.camera.zoom, lerp);
+		}
+
 		super.update(elapsed);
+	}
+
+	override function beatHit()
+	{
+		super.beatHit();
+		// 每拍缩放特效（整幅画面）：开启时相机放大到峰值，再在 update 里平滑回弹到 1（峰值 1.5%，是标题界面的二分之一）
+		// 必须先 cancel 任何进行中的 tween，再直接设值，否则 tween 会在下一帧覆盖掉本次 beat 的效果
+		if (!menuBeatTransitioning && ClientPrefs.data.beatScale)
+		{
+			FlxTween.cancelTweensOf(FlxG.camera);
+			FlxG.camera.zoom = 1.015;
+		}
+	}
+
+	/**
+	 * 以 1.3 倍缩放的 tween 效果切换到指定 State，模拟确认推近转场。
+	 * 兼容所有主菜单样式（legacy + modern）。
+	 */
+	function transitionWithZoom(state:FlxState)
+	{
+		if (!ClientPrefs.data.beatScale)
+		{
+			MusicBeatState.switchState(state);
+			return;
+		}
+		menuBeatTransitioning = true;
+		FlxTween.cancelTweensOf(FlxG.camera);
+		// tween 与 state switch 同时启动：0.6s 的放大动画播完即进入新界面，视觉上同步
+		FlxTween.tween(FlxG.camera, {zoom: 1.3}, 0.6, {ease: FlxEase.sineOut});
+		MusicBeatState.switchState(state);
 	}
 
 	#if desktop
