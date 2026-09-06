@@ -394,7 +394,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			Language.get("iconbop_style_desc"),
 			'iconbopstyle',
 			STRING,
-			['Psych', 'Psych (Legacy)', 'OS', 'Kathy', 'Leather', 'SB', 'Vanilla', 'VSlice(New)', 'VSlice(Old)', 'Codename', 'Dave', 'Squash', 'NovaFlare', 'NONE']);
+			['Psych', 'Psych (Legacy)', 'OS', 'Kathy', 'Leather', 'SB', 'Vanilla', 'VSlice(New)', 'VSlice(Old)', 'Codename', 'Dave', 'Squash', 'NovaFlare', 'Forever', 'NONE']);
 		addOption(option);
 
 		option = new Option(Language.get('iconbop_normalize'),
@@ -407,7 +407,7 @@ class ExtraGameplaySettingSubState extends BaseOptionsMenu
 			Language.get("scoretxt_style_desc"),
 			'scoretxtstyle',
 			STRING,
-			['Psych', 'Psych (Old)', 'OS', 'Kathy', 'Kade', 'V-Slice', 'Leather']);
+			['Psych', 'Psych (Old)', 'OS', 'Kathy', 'Kade', 'V-Slice', 'Leather', 'Forever']);
 		addOption(option);
 
 		option = new Option(Language.get('loading_style'),

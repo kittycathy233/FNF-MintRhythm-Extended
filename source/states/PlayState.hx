@@ -1272,16 +1272,26 @@ isReplaying = false;
 			scoreTxt.visible = !ClientPrefs.data.hideHud;
 		}
 		else if (ClientPrefs.data.scoretxtstyle == 'Psych (Old)')	
-		{
-			// PsychEngine 0.4.2 原版：y = healthBarBG.y + 36（healthBarBG.y = healthBar.y - 4）
-			// 字号 20、边框 1.25、居中，位置 healthBar.y + 32
-			scoreTxt = new FlxText(0, healthBar.y + 32, FlxG.width, "", 20);
-			scoreTxt.screenCenter(X);
-			scoreTxt.scrollFactor.set();
-			scoreTxt.setFormat(Paths.font("vcr.ttf"), 20, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-			scoreTxt.borderSize = 1.25;
-			scoreTxt.visible = !ClientPrefs.data.hideHud;
-		}
+			{
+				// PsychEngine 0.4.2 原版：y = healthBarBG.y + 36（healthBarBG.y = healthBar.y - 4）
+				// 字号 20、边框 1.25、居中，位置 healthBar.y + 32
+				scoreTxt = new FlxText(0, healthBar.y + 32, FlxG.width, "", 20);
+				scoreTxt.screenCenter(X);
+				scoreTxt.scrollFactor.set();
+				scoreTxt.setFormat(Paths.font("vcr.ttf"), 20, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+				scoreTxt.borderSize = 1.25;
+				scoreTxt.visible = !ClientPrefs.data.hideHud;
+			}
+			else if (ClientPrefs.data.scoretxtstyle == 'Forever')
+			{
+				// Forever Engine 原版：healthBar 下方居中，字号 18，边框 1.5
+				scoreTxt = new FlxText(0, healthBar.y + 40, FlxG.width, "", 18);
+				scoreTxt.screenCenter(X);
+				scoreTxt.scrollFactor.set();
+				scoreTxt.setFormat(Paths.font("vcr.ttf"), 18, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+				scoreTxt.borderSize = 1.5;
+				scoreTxt.visible = !ClientPrefs.data.hideHud;
+			}
 		else 
 		{
 		scoreTxt = new FlxText(0, healthBar.y + 40, FlxG.width, "", 20);
@@ -2242,18 +2252,33 @@ tempScore += '${lblScore}: ${songScore}';
                 }
             }
             else if (ClientPrefs.data.scoretxtstyle == 'Psych (Old)')
-			{
-				// PsychEngine 0.4.2 原版格式：Score: X | Misses: Y | Rating: R (P%)
-				if (!cpuControlled || ClientPrefs.data.botplayScore)
 				{
-					if (ratingName == '?')
-						tempScore = '${lblScore}: ${songScore} | ${lblMisses}: ${songMisses} | ${lblRating}: ${ratingNameDisp}';
+					// PsychEngine 0.4.2 原版格式：Score: X | Misses: Y | Rating: R (P%)
+					if (!cpuControlled || ClientPrefs.data.botplayScore)
+					{
+						if (ratingName == '?')
+							tempScore = '${lblScore}: ${songScore} | ${lblMisses}: ${songMisses} | ${lblRating}: ${ratingNameDisp}';
+						else
+							tempScore = '${lblScore}: ${songScore} | ${lblMisses}: ${songMisses} | ${lblRating}: ${ratingNameDisp} (${Std.int(ratingPercent * 100)}%)';
+					}
 					else
-						tempScore = '${lblScore}: ${songScore} | ${lblMisses}: ${songMisses} | ${lblRating}: ${ratingNameDisp} (${Std.int(ratingPercent * 100)}%)';
+						tempScore = '';
 				}
-				else
-					tempScore = '';
-			}
+				else if (ClientPrefs.data.scoretxtstyle == 'Forever')
+				{
+					// Forever Engine 格式：< Score: X • Accuracy: X% • Combo Breaks: X • Rank: X >
+					if (!cpuControlled || ClientPrefs.data.botplayScore)
+					{
+						var foreverAcc:Float = totalPlayed != 0 ? CoolUtil.floorDecimal(ratingPercent * 100, 2) : 100.0;
+						var foreverRank:String = getForeverRank(foreverAcc);
+						if (!instakillOnMiss)
+							tempScore = '<  ${lblScore}: ${songScore}  ${lblAccuracy}: ${foreverAcc}%  ${lblComboBreaks}: ${songMisses}  ${lblRating}: ${foreverRank}  >';
+						else
+							tempScore = '<  ${lblScore}: ${songScore}  ${lblAccuracy}: ${foreverAcc}%  ${lblRating}: ${foreverRank}  >';
+					}
+					else
+						tempScore = '';
+				}
 			else
 				tempScore = '${lblScore}: ${songScore} | ${lblMisses}: ${songMisses} | ${lblRating}: ${str}';
         }
@@ -2267,12 +2292,30 @@ tempScore += '${lblScore}: ${songScore}';
                 tempScore = ratingName == '?'
                     ? '${lblScore}: ${songScore} | ${lblRating}: ${ratingNameDisp}'
                     : '${lblScore}: ${songScore} | ${lblRating}: ${ratingNameDisp} (${Std.int(ratingPercent * 100)}%)';
-            } else {
-                tempScore = '${lblScore}: ${songScore} | ${lblRating}: ${str}';
+			} else if (ClientPrefs.data.scoretxtstyle == 'Forever') {
+				var foreverAcc:Float = totalPlayed != 0 ? CoolUtil.floorDecimal(ratingPercent * 100, 2) : 100.0;
+				var foreverRank:String = getForeverRank(foreverAcc);
+				tempScore = '<  ${lblScore}: ${songScore}  ${lblAccuracy}: ${foreverAcc}%  ${lblRating}: ${foreverRank}  >';
+			} else {
+				tempScore = '${lblScore}: ${songScore} | ${lblRating}: ${str}';
             }
         }
         scoreTxt.text = tempScore;
     }
+
+	// 获取 Forever 排名（基于 accuracy 百分比）
+	public function getForeverRank(accuracyPct:Float):String
+	{
+		if (accuracyPct >= 100) return 'S+';
+		if (accuracyPct >= 95)  return 'S';
+		if (accuracyPct >= 90)  return 'A';
+		if (accuracyPct >= 85)  return 'B';
+		if (accuracyPct >= 80)  return 'C';
+		if (accuracyPct >= 75)  return 'D';
+		if (accuracyPct >= 70)  return 'E';
+		if (accuracyPct >= 65)  return 'F';
+		return 'F';
+	}
 
 	public dynamic function fullComboFunction()
 	{
@@ -2286,8 +2329,9 @@ tempScore += '${lblScore}: ${songScore}';
 		//ratingFC = "";
 		ratingFC = /*ClientPrefs.data.scoretxtstyle == 'Psych' ? "?" : */"?";
 		if(ClientPrefs.data.scoretxtstyle == 'Kathy') ratingFC = "IDK";
-		if(ClientPrefs.data.scoretxtstyle == 'Kade') ratingFC = "PFC";
-		if(ClientPrefs.data.scoretxtstyle == 'OS') ratingFC = "PFC";
+			if(ClientPrefs.data.scoretxtstyle == 'Kade') ratingFC = "PFC";
+			if(ClientPrefs.data.scoretxtstyle == 'OS') ratingFC = "PFC";
+			if(ClientPrefs.data.scoretxtstyle == 'Forever') ratingFC = "S+";
 		if(songMisses == 0)
 		{
 			if (bads > 0 || shits > 0) ratingFC = 'FC';
@@ -4293,7 +4337,6 @@ tempScore += '${lblScore}: ${songScore}';
             case "Leather": 6;
             case "SB": 20;
             case "VSlice(New)": 14;
-            case "VSlice(Old)": 36;
             case "NovaFlare": 22;
             default: 9;
         }
@@ -4356,6 +4399,14 @@ tempScore += '${lblScore}: ${songScore}';
     {
         // funkin 复刻：回弹完全由 beat 时启动的 linear 补间驱动，这里不再做指数衰减
     }
+    else if (ClientPrefs.data.iconbopstyle == "VSlice(Old)")
+    {
+        // 原版 Funkin 0.2.7.1 复刻：每帧按 lerp(150, width, 0.50) 向基础尺寸衰减，
+        // 等效于 30/s 收敛速率，仅传宽度参数，高度自动等比缩放
+        var factor:Float = FlxMath.bound(1 - elapsed * 30 * playbackRate, 0, 1);
+        iconP1.setGraphicSize(Std.int(FlxMath.lerp(iconP1.frameWidth, iconP1.width, factor)));
+        iconP2.setGraphicSize(Std.int(FlxMath.lerp(iconP2.frameWidth, iconP2.width, factor)));
+    }
     else if (ClientPrefs.data.iconbopstyle == "Psych (Legacy)")
     {
         // PsychEngine 0.4.2 忠实复刻：每帧按 (1 - elapsed*30) 向基础尺寸衰减，
@@ -4366,6 +4417,17 @@ tempScore += '${lblScore}: ${songScore}';
         iconP2.setGraphicSize(Std.int(FlxMath.lerp(iconP2.frameWidth, iconP2.width, factor)),
                               Std.int(FlxMath.lerp(iconP2.frameHeight, iconP2.height, factor)));
     }
+    else if (ClientPrefs.data.iconbopstyle == "Forever")
+    {
+        // Forever Engine 复刻：beat 时图标放大到 1.15x，用指数衰减 lerp 平滑缩回，
+        // 衰减系数 5.0（与原版 Forever Engine 的 Math.exp(5.0 * elapsed) 一致），
+        // 带 playbackRate 支持变速播放。
+        var foreverFactor:Float = 1 - Math.exp(-5.0 * elapsed * playbackRate);
+        iconP1.scale.x = FlxMath.lerp(iconP1.scale.x, 1.0, foreverFactor);
+        iconP1.scale.y = FlxMath.lerp(iconP1.scale.y, 1.0, foreverFactor);
+        iconP2.scale.x = FlxMath.lerp(iconP2.scale.x, 1.0, foreverFactor);
+        iconP2.scale.y = FlxMath.lerp(iconP2.scale.y, 1.0, foreverFactor);
+    }
     else
     {
 			// 使用缓存的 speedMultiplier，仅在 style 变更时由同步逻辑更新
@@ -4374,7 +4436,7 @@ tempScore += '${lblScore}: ${songScore}';
 			// 定义缩放上限
 			final ICON_BOUND:Float = 1.2; // 1 + 0.2
 
-			if (["VSlice(New)", "VSlice(Old)", "Codename", "Leather"].contains(ClientPrefs.data.iconbopstyle))
+			if (["VSlice(New)", "Codename", "Leather"].contains(ClientPrefs.data.iconbopstyle))
 			{
 				var rate:Float;
 				var targetScale:Float;
@@ -4459,10 +4521,19 @@ tempScore += '${lblScore}: ${songScore}';
 			}
 			/*iconP1.y = iconP1InitialY;
 			iconP2.y = iconP2InitialY;*/
-			if (ClientPrefs.data.iconbopstyle == "Kade" || ClientPrefs.data.iconbopstyle == "VSlice(Old)") {
-        		iconP1.y = iconP1InitialY + (iconP1.scale.y - 1) * 80;
-        		iconP2.y = iconP2InitialY + (iconP2.scale.y - 1) * 80;
-    		}
+			if (ClientPrefs.data.iconbopstyle == "Kade") {
+	        		iconP1.y = iconP1InitialY + (iconP1.scale.y - 1) * 80;
+	        		iconP2.y = iconP2InitialY + (iconP2.scale.y - 1) * 80;
+	    		}
+				else if (ClientPrefs.data.iconbopstyle == "VSlice(Old)") {
+					// 左上角缩放原点 + 原版 Funkin 复刻
+					iconP1.origin.set(0, 0);  iconP2.origin.set(0, 0);
+					iconP1.offset.set(0, 0);  iconP2.offset.set(0, 0);
+					iconP1.y = iconP1InitialY;
+					iconP2.y = iconP2InitialY;
+					iconP1.x = healthBar.barCenter - iconOffset;
+					iconP2.x = healthBar.barCenter + (iconP2.frameHeight / 2) - iconOffset * 2 - iconP2.width;
+				}
 			else if (ClientPrefs.data.iconbopstyle == "Leather") {
         		iconP1.y = iconP1InitialY + (iconP1.scale.y - 1) * 60;
         		iconP2.y = iconP2InitialY + (iconP2.scale.y - 1) * 60;
@@ -4502,8 +4573,17 @@ tempScore += '${lblScore}: ${songScore}';
 					// P1 锚左缘(左上角)向右长；P2 锚右缘向左长，静止时保持在血条各自原位置
 					iconP1.x = healthBar.barCenter - iconOffset;
 					iconP2.x = healthBar.barCenter + (iconP2.frameHeight / 2) - iconOffset * 2 - iconP2.width;
-				}
-		}
+					}
+				else if (ClientPrefs.data.iconbopstyle == "Forever") {
+						// Forever Engine 复刻：左上角缩放原点，与 Psych (Legacy) 同理
+						iconP1.origin.set(0, 0);  iconP2.origin.set(0, 0);
+						iconP1.offset.set(0, 0);  iconP2.offset.set(0, 0);
+						iconP1.y = iconP1InitialY;
+						iconP2.y = iconP2InitialY;
+						iconP1.x = healthBar.barCenter - iconOffset;
+						iconP2.x = healthBar.barCenter + (iconP2.frameHeight / 2) - iconOffset * 2 - iconP2.width;
+					}
+			}
 
 		updateLaneCovers();
 	}
@@ -7236,15 +7316,25 @@ tempScore += '${lblScore}: ${songScore}';
 						vsliceBopTweenP1 = iconBopFunkin(iconP1, vsliceBopTweenP1);
 						vsliceBopTweenP2 = iconBopFunkin(iconP2, vsliceBopTweenP2);
 
-            	case "Codename" | "VSlice(Old)" | "NovaFlare" | "Kathy":
-						iconP1.scale.set(1.3, 1.3);
-						iconP2.scale.set(1.3, 1.3);
+            	case "Codename" | "NovaFlare" | "Kathy":
+							iconP1.scale.set(1.3, 1.3);
+							iconP2.scale.set(1.3, 1.3);
+
+						case "VSlice(Old)":
+							// 原版 Funkin 0.2.7.1 复刻：beat 时宽度+30px，高度自动等比缩放
+							iconP1.setGraphicSize(Std.int(iconP1.width + 30));
+							iconP2.setGraphicSize(Std.int(iconP2.width + 30));
 
 					case "Vanilla":
-						iconP1.scale.set(1.1, 1.1);
-						iconP2.scale.set(1.1, 1.1);
+							iconP1.scale.set(1.1, 1.1);
+							iconP2.scale.set(1.1, 1.1);
 
-					case "Psych (Legacy)":
+						case "Forever":
+							// Forever Engine 复刻：beat 时图标放大到 1.15x，指数衰减缩回
+							iconP1.scale.set(1.15, 1.15);
+							iconP2.scale.set(1.15, 1.15);
+
+						case "Psych (Legacy)":
 						// PsychEngine 0.4.2 忠实复刻：beat 时把图标整体放大 30px（仅给宽，高度按原比例自动缩放）
 						iconP1.setGraphicSize(Std.int(iconP1.width + 30));
 						iconP2.setGraphicSize(Std.int(iconP2.width + 30));
@@ -7368,15 +7458,23 @@ tempScore += '${lblScore}: ${songScore}';
 					iconP1.scale.add(0.2 * iconP1.startSize, 0.2 * iconP1.startSize);
 					iconP2.scale.add(0.2 * iconP2.startSize, 0.2 * iconP2.startSize);
 
-            	case "VSlice(New)" | "Codename" | "VSlice(Old)" | "NovaFlare" | "Kathy":
-                	iconP1.scale.set(1.3, 1.3);
-                	iconP2.scale.set(1.3, 1.3);
+            	case "VSlice(New)" | "Codename" | "NovaFlare" | "Kathy":
+	                	iconP1.scale.set(1.3, 1.3);
+	                	iconP2.scale.set(1.3, 1.3);
+
+					case "VSlice(Old)":
+						iconP1.setGraphicSize(Std.int(iconP1.width + 30));
+						iconP2.setGraphicSize(Std.int(iconP2.width + 30));
                 
             	case "Vanilla":
-                	iconP1.scale.set(1.1, 1.1);
-                	iconP2.scale.set(1.1, 1.1);
-                
-            	case "Dave":
+	                	iconP1.scale.set(1.1, 1.1);
+	                	iconP2.scale.set(1.1, 1.1);
+
+	            	case "Forever":
+	                	iconP1.scale.set(1.15, 1.15);
+	                	iconP2.scale.set(1.15, 1.15);
+	                
+	            	case "Dave":
                     // 原版 Dave Engine 复刻：每拍在现有尺寸上相乘累积压扁/拉长，回缩在 updateIconsScale 按帧进行
                     var daveFunny:Float = FlxMath.bound(healthBar.percent / 50, 0.1, 1.9);
                     if (playOpponent)
