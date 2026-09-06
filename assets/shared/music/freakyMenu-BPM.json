@@ -2,5 +2,6 @@
 	"note": "主菜单音乐样式配置。每个键既是设置里显示的选项名(display)，值可为 bpm 简写或对象。对象字段：audio=实际播放的音频文件(不含扩展名，可不同于键名)，bpm=对应BPM，display=别名(可选，默认用键名)。未在列表中的 freakyMenu-*.ogg 会被自动发现并显示。",
 	"Dave & Bambi": { "audio": "freakyMenu-Dave", "bpm": 148 },
 	"Dave & Bambi (Old)": { "audio": "freakyMenu-Dave_Legacy", "bpm": 150 },
-	"Azusa Funk": { "audio": "freakyMenu-AzusaFunk", "bpm": 180 }
+	"Azusa Funk": { "audio": "freakyMenu-AzusaFunk", "bpm": 180 },
+	"Forever Engine": { "audio": "freakyMenu-Forever", "bpm": 102 }
 }
