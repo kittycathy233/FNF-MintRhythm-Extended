@@ -3,5 +3,6 @@ Electric
 Sparkles
 Vanilla
 Leather
+Forever
 Tails
 None

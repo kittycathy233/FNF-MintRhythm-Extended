@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="noteSplashes-forever.png">
+	<!-- Created manually, Fuck you!! -->
+	<SubTexture name="left10000" x="0" y="0" width="210" height="210"/>
+	<SubTexture name="left10001" x="0" y="210" width="210" height="210"/>
+	<SubTexture name="left10002" x="0" y="420" width="210" height="210"/>
+	<SubTexture name="left10003" x="0" y="630" width="210" height="210"/>
+	<SubTexture name="left10004" x="0" y="840" width="210" height="210"/>
+
+	<SubTexture name="left20000" x="210" y="0" width="210" height="210"/>
+	<SubTexture name="left20001" x="210" y="210" width="210" height="210"/>
+	<SubTexture name="left20002" x="210" y="420" width="210" height="210"/>
+	<SubTexture name="left20003" x="210" y="630" width="210" height="210"/>
+	<SubTexture name="left20004" x="210" y="840" width="210" height="210"/>
+
+	<SubTexture name="down10000" x="420" y="0" width="210" height="210"/>
+	<SubTexture name="down10001" x="420" y="210" width="210" height="210"/>
+	<SubTexture name="down10002" x="420" y="420" width="210" height="210"/>
+	<SubTexture name="down10003" x="420" y="630" width="210" height="210"/>
+	<SubTexture name="down10004" x="420" y="840" width="210" height="210"/>
+
+	<SubTexture name="down20000" x="630" y="0" width="210" height="210"/>
+	<SubTexture name="down20001" x="630" y="210" width="210" height="210"/>
+	<SubTexture name="down20002" x="630" y="420" width="210" height="210"/>
+	<SubTexture name="down20003" x="630" y="630" width="210" height="210"/>
+	<SubTexture name="down20004" x="630" y="840" width="210" height="210"/>
+
+	<SubTexture name="up10000" x="840" y="0" width="210" height="210"/>
+	<SubTexture name="up10001" x="840" y="210" width="210" height="210"/>
+	<SubTexture name="up10002" x="840" y="420" width="210" height="210"/>
+	<SubTexture name="up10003" x="840" y="630" width="210" height="210"/>
+	<SubTexture name="up10004" x="840" y="840" width="210" height="210"/>
+
+	<SubTexture name="up20000" x="1050" y="0" width="210" height="210"/>
+	<SubTexture name="up20001" x="1050" y="210" width="210" height="210"/>
+	<SubTexture name="up20002" x="1050" y="420" width="210" height="210"/>
+	<SubTexture name="up20003" x="1050" y="630" width="210" height="210"/>
+	<SubTexture name="up20004" x="1050" y="840" width="210" height="210"/>
+
+	<SubTexture name="right10000" x="1260" y="0" width="210" height="210"/>
+	<SubTexture name="right10001" x="1260" y="210" width="210" height="210"/>
+	<SubTexture name="right10002" x="1260" y="420" width="210" height="210"/>
+	<SubTexture name="right10003" x="1260" y="630" width="210" height="210"/>
+	<SubTexture name="right10004" x="1260" y="840" width="210" height="210"/>
+
+	<SubTexture name="right20000" x="1470" y="0" width="210" height="210"/>
+	<SubTexture name="right20001" x="1470" y="210" width="210" height="210"/>
+	<SubTexture name="right20002" x="1470" y="420" width="210" height="210"/>
+	<SubTexture name="right20003" x="1470" y="630" width="210" height="210"/>
+	<SubTexture name="right20004" x="1470" y="840" width="210" height="210"/>
+</TextureAtlas>
